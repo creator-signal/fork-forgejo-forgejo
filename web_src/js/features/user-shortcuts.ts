@@ -110,7 +110,13 @@ export function initUserShortcuts() {
         document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
         break;
       case 'c':
-        goto(Page.Code);
+        if (goto(Page.Code)) {
+          document
+            .querySelector<HTMLAnchorElement>(
+              '.issue-list-new, .release-list-buttons .primary',
+            )
+            ?.click();
+        }
         break;
       case 'd':
         goto(Page.Dashboard);
@@ -151,10 +157,21 @@ export function initUserShortcuts() {
         }
         break;
       case 'w':
-        goto(Page.Wiki);
+        if (goto(Page.Wiki)) {
+          document
+            .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
+            ?.click();
+          e.preventDefault();
+        }
         break;
       case 'y':
         document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
+        break;
+      case '/':
+        document
+          .querySelector<HTMLInputElement>('input[type="search"]')
+          ?.focus();
+        e.preventDefault();
         break;
       case 'Escape':
         document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
