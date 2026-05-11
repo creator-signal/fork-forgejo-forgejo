@@ -11,7 +11,6 @@ import (
 	"regexp"
 
 	"forgejo.org/modules/json"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/util"
 
 	pep440 "github.com/aquasecurity/go-pep440-version"
