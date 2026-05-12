@@ -88,4 +88,4 @@
 @import "./issues.css";
 
 @tailwind utilities;
-@Keyboard shortcutsimport "./helpers.css";
+@import "./helpers.css";

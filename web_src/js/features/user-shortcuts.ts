@@ -53,7 +53,9 @@ function initPopupTabs() {
       btn.classList.toggle('active', btn.dataset.tab === name);
     }
     for (const tbl of tables) {
-      tbl.hidden = tbl.dataset.tab !== name;
+      const active = tbl.dataset.tab !== name;
+      tbl.style.visibility = active ? 'hidden' : 'visible';
+      tbl.toggleAttribute('aria-hidden', active);
     }
   };
   for (const btn of btns) {

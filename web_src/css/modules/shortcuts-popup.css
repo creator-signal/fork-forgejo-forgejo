@@ -9,6 +9,7 @@
 
 #shortcuts table {
   border: 2px solid var(--color-primary-contrast);
+  grid-area: 1 / 1;
   padding: 1rem;
   table-layout: auto;
   width: 100%;
