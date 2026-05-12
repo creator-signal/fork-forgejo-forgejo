@@ -5,6 +5,7 @@ package activitypub
 
 import (
 	"net/http"
+	"net/url"
 
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
@@ -15,6 +16,22 @@ import (
 )
 
 func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err error) {
+	// Verify that the canonical domain for federation is accessed regardless of
+	// if signatures are actually checked or not.
+
+	// This check does not cover the instance actor but that does not contain any
+	// potentially private information which should only be accessed via the
+	// canonical instance domain.
+	appURL, err := url.Parse(setting.AppURL)
+	if err != nil {
+		return false, err
+	}
+
+	if ctx.Req.Host != appURL.Host {
+		log.Error("%s", ctx.Req.Host)
+		return false, nil
+	}
+
 	if !setting.Federation.SignatureEnforced {
 		return true, nil
 	}
@@ -48,9 +65,9 @@ func ReqHTTPSignature() func(ctx *app_context.APIContext) {
 	return func(ctx *app_context.APIContext) {
 		if authenticated, err := verifyHTTPSignature(*ctx); err != nil {
 			log.Warn("verifyHttpSignature failed: %v", err)
-			ctx.Error(http.StatusBadRequest, "reqSignature", "request signature verification failed")
+			ctx.Error(http.StatusBadRequest, "reqSignature", "request verification failed")
 		} else if !authenticated {
-			ctx.Error(http.StatusForbidden, "reqSignature", "request signature verification failed")
+			ctx.Error(http.StatusForbidden, "reqSignature", "request verification failed")
 		}
 	}
 }

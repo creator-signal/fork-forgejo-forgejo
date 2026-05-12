@@ -32,7 +32,7 @@ func TestFederationHttpSigValidation(t *testing.T) {
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		userID := 2
-		userURL := fmt.Sprintf("%sapi/v1/activitypub/user-id/%d", u, userID)
+		userURL := fmt.Sprintf("%sapi/v1/activitypub/user-id/%d", setting.AppURL, userID)
 
 		user1 := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 1})
 
@@ -94,6 +94,17 @@ func TestFederationHttpSigValidation(t *testing.T) {
 			req := NewRequest(t, "GET", userURL)
 			MakeRequest(t, req, http.StatusOK)
 		})
+
+		// Request with wrong host header, this should always be checked, even if
+		// signature validation is disabled.
+
+		// The URL passed from the testing function does point to the correct
+		// instance but with the wrong host (localhost vs 127.0.0.1).
+		wrongHostUserURL := fmt.Sprintf("%sapi/v1/activitypub/user-id/%d", u, userID)
+		t.Run("WrongHostHeader", func(t *testing.T) {
+			req := NewRequest(t, "GET", wrongHostUserURL)
+			MakeRequest(t, req, http.StatusForbidden)
+		})
 	})
 }
 
@@ -141,7 +152,7 @@ func TestFederationAllRoutesCovered(t *testing.T) {
 			}
 
 			resp := MakeRequest(t, req, http.StatusBadRequest)
-			assert.Contains(t, resp.Body.String(), "request signature verification failed")
+			assert.Contains(t, resp.Body.String(), "request verification failed")
 		}
 	}
 
