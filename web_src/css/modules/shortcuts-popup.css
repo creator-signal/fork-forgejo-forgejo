@@ -14,24 +14,17 @@
   width: 100%;
 }
 
-#shortcuts table:not(:last-child) {
-  margin-bottom: 1rem;
-}
-
 #shortcuts header {
   display: flex;
   justify-content: space-between;
   padding: 1rem;
 }
 
-#shortcuts thead {
-  background-color: var(--color-box-header);
-}
-
-#shortcuts td, #shortcuts th {
+#shortcuts td,
+#shortcuts th {
   padding: 0.5rem;
 }
 
 #shortcuts tr:not(:last-child) {
-  border-bottom: 2px solid var(--color-secondary)
+  border-bottom: 2px solid var(--color-secondary);
 }

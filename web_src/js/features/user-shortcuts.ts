@@ -44,6 +44,28 @@ function keyboardSelector(up: boolean) {
   rows[cur].classList.remove('keyboard-selected');
 }
 
+function initPopupTabs() {
+  const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
+  const btns = dialog.querySelectorAll<HTMLButtonElement>('[data-tab]');
+  const tables = dialog.querySelectorAll('table');
+  const selectTable = (name: string) => {
+    for (const btn of btns) {
+      btn.classList.toggle('active', btn.dataset.tab === name);
+    }
+    for (const tbl of tables) {
+      tbl.hidden = tbl.dataset.tab !== name;
+    }
+  };
+  for (const btn of btns) {
+    btn.addEventListener('click', () => {
+      selectTable(btn.dataset.tab);
+    });
+  }
+  dialog.addEventListener('close', () => {
+    selectTable('site');
+  });
+}
+
 function goto(page: (typeof Page)[keyof typeof Page]) {
   if (!goto_state) return true;
   switch (page) {
@@ -88,6 +110,7 @@ function goto(page: (typeof Page)[keyof typeof Page]) {
 }
 
 export function initUserShortcuts() {
+  initPopupTabs();
   document.addEventListener('keydown', (e) => {
     if (
       e.altKey ||

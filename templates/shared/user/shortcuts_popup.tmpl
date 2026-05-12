@@ -6,15 +6,12 @@
 		</form>
 	</header>
 	<article class="content">
-		<table>
-			<thead>
-				<tr>
-					<th>
-						<h3>Site-wide shortcuts</h3>
-					</th>
-					<th></th>
-				</tr>
-			</thead>
+		<div class="ui buttons tw-mb-4 tw-flex tw-w-full">
+			<button class="ui button active" data-tab="site">Site Wide</button>
+			<button class="ui button" data-tab="repo">Repositories</button>
+			<button class="ui button" data-tab="code">Code View</button>
+		</div>
+		<table data-tab="site">
 			<tbody>
 				<tr>
 					<td>Move selection down</td>
@@ -46,19 +43,11 @@
 				</tr>
 			</tbody>
 		</table>
-		<table>
-			<thead>
-				<tr>
-					<th>
-						<h3>Repositories</h3>
-					</th>
-					<th></th>
-				</tr>
-			</thead>
+		<table data-tab="repo" hidden>
 			<tbody>
 				<tr>
 					<td>Create issue/pull request/release</td>
-					<td><kbd>c</kbd>
+					<td><kbd>c</kbd></td>
 				</tr>
 				<tr>
 					<td>Go to actions</td>
@@ -94,15 +83,7 @@
 				</tr>
 			</tbody>
 		</table>
-		<table>
-			<thead>
-				<tr>
-					<th>
-						<h3>Code View</h3>
-					</th>
-					<th></th>
-				</tr>
-			</thead>
+		<table data-tab="code" hidden>
 			<tbody>
 				<tr>
 					<td>View blame</td>
