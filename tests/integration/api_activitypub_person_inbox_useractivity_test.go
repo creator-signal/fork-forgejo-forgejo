@@ -20,7 +20,7 @@ import (
 	"forgejo.org/routers"
 	"forgejo.org/services/contexttest"
 	"forgejo.org/services/federation"
-	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	ap "github.com/go-ap/activitypub"
 	"github.com/stretchr/testify/assert"
@@ -50,8 +50,7 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 		localSession2 := loginUser(t, localUser2.LoginName)
 		localSecssion2Token := getTokenForLoggedInUser(t, localSession2, auth_model.AccessTokenScopeWriteIssue)
 
-		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, localUser2, tests.DeclarativeRepoOptions{})
-		defer f()
+		repo := forgery.CreateRepository(t, localUser2, nil)
 
 		// follow (distant follows local)
 		followActivity := fmt.Appendf(nil,
