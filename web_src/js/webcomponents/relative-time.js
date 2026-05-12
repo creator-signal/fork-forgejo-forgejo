@@ -31,6 +31,11 @@ function GetDurationFormatter(unit) {
   return DURATION_FORMATTERS[unit];
 }
 
+const DURATION_LIST_FORMAT = new Intl.ListFormat(navigator.language, {
+  style: 'long',
+  type: 'unit',
+});
+
 /**
  * A list of plural rules for all languages.
  * `plural_rules.go` defines the index for each of the 14 known plural rules.
@@ -104,26 +109,38 @@ function GetPluralizedStringOrFallback(key, n, unit) {
   return FALLBACK_DATETIME_FORMAT.format(-n, unit);
 }
 
+// Ordered coarsest-to-finest. For each entry, when the primary unit fits, we
+// also try to express the leftover in the `remainder` unit ("1 year, 5 days").
+// `next` is the recommended refresh interval, paced by the displayed remainder
+// so the visible text doesn't grow stale.
+const DURATION_UNITS = [
+  {primary: 'year',   remainder: 'day',    next: ONE_DAY},
+  {primary: 'month',  remainder: 'day',    next: ONE_DAY},
+  {primary: 'week',   remainder: 'day',    next: ONE_DAY},
+  {primary: 'day',    remainder: 'hour',   next: ONE_HOUR},
+  {primary: 'hour',   remainder: 'minute', next: ONE_MINUTE},
+  {primary: 'minute', remainder: 'second', next: HALF_MINUTE},
+];
+
 /**
  * Format the difference between two dayjs UTC instants as a localized,
- * absolute-value duration string (e.g. "2 months", "5 days") with no
- * "ago"/"in" suffix. Returns [text, recommendedUpdateIntervalMs].
+ * absolute-value duration string (e.g. "2 months, 5 days", "3 hours, 5
+ * minutes") with no "ago"/"in" suffix. Shows up to two units, joined with
+ * locale-correct separators via Intl.ListFormat; omits the remainder when
+ * it rounds down to zero. Returns [text, recommendedUpdateIntervalMs].
  */
 function FormatAsDuration(nowJS, thenJS) {
   if (nowJS.isBefore(thenJS)) [nowJS, thenJS] = [thenJS, nowJS];
 
-  const years = Math.floor(nowJS.diff(thenJS, 'year'));
-  if (years >= 1) return [GetDurationFormatter('year').format(years), ONE_DAY];
-  const months = Math.floor(nowJS.diff(thenJS, 'month'));
-  if (months >= 1) return [GetDurationFormatter('month').format(months), ONE_DAY];
-  const weeks = Math.floor(nowJS.diff(thenJS, 'week'));
-  if (weeks >= 1) return [GetDurationFormatter('week').format(weeks), ONE_DAY];
-  const days = Math.floor(nowJS.diff(thenJS, 'day'));
-  if (days >= 1) return [GetDurationFormatter('day').format(days), ONE_DAY];
-  const hours = Math.floor(nowJS.diff(thenJS, 'hour'));
-  if (hours >= 1) return [GetDurationFormatter('hour').format(hours), ONE_HOUR];
-  const minutes = Math.floor(nowJS.diff(thenJS, 'minute'));
-  if (minutes >= 1) return [GetDurationFormatter('minute').format(minutes), ONE_MINUTE];
+  for (const {primary, remainder, next} of DURATION_UNITS) {
+    const n = Math.floor(nowJS.diff(thenJS, primary));
+    if (n < 1) continue;
+    const parts = [GetDurationFormatter(primary).format(n)];
+    const r = Math.floor(nowJS.diff(thenJS.add(n, primary), remainder));
+    if (r >= 1) parts.push(GetDurationFormatter(remainder).format(r));
+    return [DURATION_LIST_FORMAT.format(parts), next];
+  }
+
   const seconds = Math.max(Math.floor(nowJS.diff(thenJS, 'second')), 0);
   return [GetDurationFormatter('second').format(seconds), HALF_MINUTE];
 }

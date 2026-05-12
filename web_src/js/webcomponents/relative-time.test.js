@@ -210,9 +210,11 @@ test('CalculateRelativeTimes', () => {
 
 test('CalculateDurationFormat', () => {
   // Compute expected strings via Intl so the test is locale-agnostic.
-  const fmt = (n, unit) => new Intl.NumberFormat(navigator.language, {
+  const fmtUnit = (n, unit) => new Intl.NumberFormat(navigator.language, {
     style: 'unit', unit, unitDisplay: 'long',
   }).format(n);
+  const listFmt = new Intl.ListFormat(navigator.language, {style: 'long', type: 'unit'});
+  const fmt = (...pairs) => listFmt.format(pairs.map(([n, unit]) => fmtUnit(n, unit)));
 
   const mock = document.createElement('relative-time');
   document.body.append(mock);
@@ -220,38 +222,44 @@ test('CalculateDurationFormat', () => {
 
   const now = Date.parse('2024-10-27T04:05:30+01:00');
 
-  // Server uptime of two months: must render as "2 months", not "2 months ago".
+  // Server uptime of just over two months: must render as "2 months, 2 days",
+  // not "2 months ago".
   mock.setAttribute('datetime', '2024-08-25T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual(fmt(2, 'month'));
+  expect(mock.textContent).toEqual(fmt([2, 'month'], [2, 'day']));
 
-  // One year of uptime.
+  // One year, some days remainder.
   mock.setAttribute('datetime', '2023-08-25T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual(fmt(1, 'year'));
+  expect(mock.textContent).toEqual(fmt([1, 'year'], [63, 'day']));
 
-  // Several days.
-  mock.setAttribute('datetime', '2024-10-22T01:00:00+02:00');
+  // Exactly one month, no remainder days — single unit.
+  mock.setAttribute('datetime', '2024-09-27T04:05:30+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual(fmt(5, 'day'));
+  expect(mock.textContent).toEqual(fmt([1, 'month']));
 
-  // Hours.
-  mock.setAttribute('datetime', '2024-10-27T01:05:00+01:00');
+  // Days with hours remainder.
+  mock.setAttribute('datetime', '2024-10-22T03:05:30+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual(fmt(3, 'hour'));
+  expect(mock.textContent).toEqual(fmt([5, 'day'], [1, 'hour']));
 
-  // Minutes.
-  mock.setAttribute('datetime', '2024-10-27T04:00:00+01:00');
+  // Hours with minutes remainder — refresh once a minute.
+  mock.setAttribute('datetime', '2024-10-27T01:00:30+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_MINUTE);
-  expect(mock.textContent).toEqual(fmt(5, 'minute'));
+  expect(mock.textContent).toEqual(fmt([3, 'hour'], [5, 'minute']));
+
+  // Minutes with seconds remainder.
+  mock.setAttribute('datetime', '2024-10-27T04:00:00+01:00');
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(HALF_MINUTE);
+  expect(mock.textContent).toEqual(fmt([5, 'minute'], [30, 'second']));
 
   // Sub-minute durations should still be expressed as a duration, not "now".
   mock.setAttribute('datetime', '2024-10-27T04:05:20+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(HALF_MINUTE);
-  expect(mock.textContent).toEqual(fmt(10, 'second'));
+  expect(mock.textContent).toEqual(fmtUnit(10, 'second'));
 
   // Future datetime should still produce a positive (absolute) duration.
   mock.setAttribute('datetime', '2024-10-27T04:08:30+01:00');
-  expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_MINUTE);
-  expect(mock.textContent).toEqual(fmt(3, 'minute'));
+  expect(DoUpdateRelativeTime(mock, now)).toEqual(HALF_MINUTE);
+  expect(mock.textContent).toEqual(fmt([3, 'minute']));
 });
