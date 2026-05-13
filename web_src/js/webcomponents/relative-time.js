@@ -114,11 +114,11 @@ function GetPluralizedStringOrFallback(key, n, unit) {
 // `next` is the recommended refresh interval, paced by the displayed remainder
 // so the visible text doesn't grow stale.
 const DURATION_UNITS = [
-  {primary: 'year',   remainder: 'day',    next: ONE_DAY},
-  {primary: 'month',  remainder: 'day',    next: ONE_DAY},
-  {primary: 'week',   remainder: 'day',    next: ONE_DAY},
-  {primary: 'day',    remainder: 'hour',   next: ONE_HOUR},
-  {primary: 'hour',   remainder: 'minute', next: ONE_MINUTE},
+  {primary: 'year', remainder: 'day', next: ONE_DAY},
+  {primary: 'month', remainder: 'day', next: ONE_DAY},
+  {primary: 'week', remainder: 'day', next: ONE_DAY},
+  {primary: 'day', remainder: 'hour', next: ONE_HOUR},
+  {primary: 'hour', remainder: 'minute', next: ONE_MINUTE},
   {primary: 'minute', remainder: 'second', next: HALF_MINUTE},
 ];
 
