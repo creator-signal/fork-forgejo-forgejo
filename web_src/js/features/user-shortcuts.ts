@@ -115,14 +115,13 @@ export function initUserShortcuts() {
   initPopupTabs();
   document.addEventListener('keydown', (e) => {
     if (
-      e.altKey ||
-      e.ctrlKey ||
-      e.metaKey ||
-      e.shiftKey ||
-      !(e.target instanceof Element) ||
-      e.target.closest(
-        'input, textarea, [contenteditable], .CodeMirror, .cm-editor',
-      )
+      (e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.shiftKey ||
+        !(e.target instanceof Element) ||
+        e.target.closest('input, textarea, [contenteditable]')) &&
+      (e.target as HTMLInputElement).type !== 'checkbox'
     ) {
       goto_state = false;
       return;
@@ -188,6 +187,13 @@ export function initUserShortcuts() {
             ?.click();
           e.preventDefault();
         }
+        break;
+      case 'x':
+        document
+          .querySelector<HTMLInputElement>(
+            '.keyboard-selected input[type="checkbox"]',
+          )
+          ?.click();
         break;
       case 'y':
         document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
