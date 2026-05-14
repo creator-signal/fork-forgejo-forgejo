@@ -133,7 +133,7 @@ func TeamsAction(ctx *context.Context) {
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
 				if setting.MailService != nil && validation.ValidateEmail(uname) == nil {
-					if err := org_service.CreateTeamInvite(ctx, ctx.Doer, ctx.Org.Team, uname); err != nil {
+					if err := org_service.CreateTeamInviteByEmail(ctx, ctx.Doer, ctx.Org.Team, uname); err != nil {
 						if org_model.IsErrTeamInviteAlreadyExist(err) {
 							ctx.Flash.Error(ctx.Tr("form.duplicate_invite_to_team"))
 						} else if org_model.IsErrUserEmailAlreadyAdded(err) {
