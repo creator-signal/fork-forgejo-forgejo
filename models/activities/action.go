@@ -676,7 +676,7 @@ func activityQueryCondition(ctx context.Context, opts GetFeedsOptions) (builder.
 				ActionPullRequestReadyForReview,
 				ActionAutoMergePullRequest,
 			),
-			builder.Like{"content", "[\"" + strconv.FormatInt(opts.RequestedIssue.ID, 10) + "\"%"}, // JSON, ["IssueIndex"...
+			builder.Like{"content", "[\"" + strconv.FormatInt(opts.RequestedIssue.Index, 10) + "\"%"}, // JSON, ["IssueIndex"...
 		)
 	}
 
