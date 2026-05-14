@@ -5,6 +5,7 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"forgejo.org/models"
@@ -41,10 +42,11 @@ type UpdateOptions struct {
 	RepoAdminChangeTeamAccess    optional.Option[bool]
 	EnableRepoUnitHints          optional.Option[bool]
 	KeepPronounsPrivate          optional.Option[bool]
+	IsBot                        optional.Option[bool]
 }
 
 func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) error {
-	cols := make([]string, 0, 20)
+	cols := make([]string, 0, 21)
 
 	if has, value := opts.KeepEmailPrivate.Get(); has {
 		u.KeepEmailPrivate = value
@@ -143,6 +145,17 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 	if opts.SetLastLogin {
 		u.SetLastLogin()
 		cols = append(cols, "last_login_unix")
+	}
+	if has, value := opts.IsBot.Get(); has {
+		if !u.IsUser() {
+			return errors.New("changing to bot account for non user account is not allowed")
+		}
+		if value {
+			u.Type = user_model.UserTypeBot
+		} else {
+			u.Type = user_model.UserTypeIndividual
+		}
+		cols = append(cols, "type")
 	}
 
 	return user_model.UpdateUserCols(ctx, u, cols...)

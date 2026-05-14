@@ -421,7 +421,7 @@ func Action(ctx *context.Context) {
 		}
 	}
 
-	if ctx.ContextUser.IsIndividual() {
+	if ctx.ContextUser.IsUser() {
 		shared_user.PrepareContextForProfileBigAvatar(ctx)
 		ctx.Data["IsHTMX"] = true
 		ctx.HTML(http.StatusOK, tplProfileBigAvatar)

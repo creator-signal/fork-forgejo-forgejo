@@ -47,6 +47,7 @@ type AdminEditUserForm struct {
 	Active                  bool
 	Admin                   bool
 	Restricted              bool
+	Bot                     bool
 	AllowGitHook            bool
 	AllowImportLocal        bool
 	AllowCreateOrganization bool

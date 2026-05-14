@@ -222,6 +222,8 @@
 	"admin.users.list_status_filter.not_prohibit_login": "Allow login",
 	"admin.users.list_status_filter.is_2fa_enabled": "2FA enabled",
 	"admin.users.list_status_filter.not_2fa_enabled": "2FA disabled",
+	"admin.users.is_bot": "Bot account",
+	"admin.users.bot.description": "Mark the account as a bot.",
 	"admin.monitor.queues": "Queues",
 	"admin.monitor.queue": "Queue: %s",
 	"admin.monitor.queue.name": "Name",

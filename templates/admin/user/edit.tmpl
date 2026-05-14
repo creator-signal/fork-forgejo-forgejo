@@ -137,6 +137,13 @@
 				</div>
 				<div class="inline field">
 					<div class="ui checkbox">
+						<label>{{ctx.Locale.Tr "admin.users.is_bot"}}</label>
+						<input name="bot" type="checkbox" {{if .User.IsBot}}checked{{end}}>
+					</div>
+					<span class="help tw-block">{{ctx.Locale.Tr "admin.users.bot.description"}}</span>
+				</div>
+				<div class="inline field">
+					<div class="ui checkbox">
 						<label>{{ctx.Locale.Tr "admin.users.is_restricted"}}</label>
 						<input name="restricted" type="checkbox" {{if .User.IsRestricted}}checked{{end}}>
 					</div>
