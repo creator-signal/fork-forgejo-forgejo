@@ -16,7 +16,7 @@ import (
 	"forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
-	"forgejo.org/services/authz"
+	auth_service "forgejo.org/services/auth"
 
 	"github.com/urfave/cli/v3"
 )
@@ -195,7 +195,7 @@ func runCreateAuthorizedIntegration(ctx context.Context, c *cli.Command) error {
 	for i := range repos {
 		rr[i] = &auth_model.AuthorizedIntegResourceRepo{RepoID: repos[i].ID}
 	}
-	if err := authz.ValidateAuthorizedIntegration(ai, rr); err != nil {
+	if err := auth_service.ValidateAuthorizedIntegration(ai, rr); err != nil {
 		return err
 	}
 
