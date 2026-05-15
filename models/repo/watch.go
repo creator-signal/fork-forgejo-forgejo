@@ -19,7 +19,6 @@ import (
 type WatchSource bool
 
 const (
-	// TOOD: properly migrate this
 	// WatchSourceExplicit means the user explicitly chose to watch certain things (or none or all) of this repo.
 	// It means that setting.Service.AutoWatchOnChanges doesn't have an effect on this user for this repo; they explicitly made their choice after all.
 	// This mode replaces the old WatchModeDont and WatchModeNormal states.
