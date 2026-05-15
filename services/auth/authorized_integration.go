@@ -4,10 +4,12 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
 	"forgejo.org/services/authz"
 )
 
@@ -24,4 +26,23 @@ func ValidateAuthorizedIntegration(ai *auth_model.AuthorizedIntegration, repoRes
 		return fmt.Errorf("%w: invalid UI: %q", ErrAuthorizedIntegrationBadUI, ai.UI)
 	}
 	return authz.ValidateRepositoryResource(ai.ResourceAllRepos, ai.Scope, len(repoResources))
+}
+
+// Validate and insert a new authorized integration.
+func InsertAuthorizedIntegration(ctx context.Context, ai *auth_model.AuthorizedIntegration, repoResources []*auth_model.AuthorizedIntegResourceRepo) error {
+	if err := ValidateAuthorizedIntegration(ai, repoResources); err != nil {
+		return err
+	}
+
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if err := auth_model.InsertAuthorizedIntegration(ctx, ai); err != nil {
+			return err
+		}
+		if !ai.ResourceAllRepos {
+			if err := auth_model.InsertAuthorizedIntegrationResourceRepos(ctx, ai.ID, repoResources); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
