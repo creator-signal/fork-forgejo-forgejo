@@ -59,7 +59,7 @@ var (
 	shortLinkPattern = regexp.MustCompile(`\[\[(.*?)\]\](\w*)`)
 
 	// anyHashPattern splits url containing SHA into parts
-	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
+	anyHashPattern = regexp.MustCompile(`https?://[^\s/]+/(\S+/(?:commit|tree|blob))/([0-9a-f]{7,64})(/[-+~_%.a-zA-Z0-9/]+)?(\?[-+~_%\.a-zA-Z0-9=&/]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
 
 	// comparePattern matches "http://domain/org/repo/compare/COMMIT1...COMMIT2#hash"
 	comparePattern = regexp.MustCompile(`https?://[^\s/]+/(?:\S+/)?([^\s/]+/[^\s/]+)/compare/([0-9a-f]{7,64})(\.\.\.?)([0-9a-f]{7,64})?(\?[-+~_%\.a-zA-Z0-9=&/]+)?(#[-+~_%.a-zA-Z0-9]+)?`)
@@ -1087,6 +1087,15 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 			filePath = node.Data[m[6]:m[7]]
 		}
 
+		// 4th capture group matches query, e.g., "?files=frogejo.png"
+		filePathQuery := ""
+		if m[9] > 0 {
+			query, err := url.ParseQuery(node.Data[m[8]:m[9]][1:])
+			if err == nil && query.Has("files") {
+				filePathQuery = query.Get("files")
+			}
+		}
+
 		// 5th capture group matches a optional url hash
 		hash := ""
 		if m[11] > 0 {
@@ -1107,9 +1116,17 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
-				hash = hash[:len(hash)-1]
+				if strings.HasSuffix(hash, ".") {
+					hash = hash[:len(hash)-1]
+				}
 			} else if filePath != "" {
-				filePath = filePath[:len(filePath)-1]
+				if strings.HasSuffix(filePath, ".") {
+					filePath = filePath[:len(filePath)-1]
+				}
+			} else if filePathQuery != "" {
+				if strings.HasSuffix(filePathQuery, ".") {
+					filePathQuery = filePathQuery[:len(filePathQuery)-1]
+				}
 			}
 		}
 
@@ -1123,7 +1140,13 @@ func fullHashPatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		if hash != "" {
-			text += " (" + hash + ")"
+			if filePathQuery != "" {
+				text += " (" + filePathQuery + "#" + hash + ")"
+			} else {
+				text += " (" + hash + ")"
+			}
+		} else if filePathQuery != "" {
+			text += " (" + filePathQuery + ")"
 		}
 		replaceContent(node, start, end, createCodeLink(urlFull, text, "commit"))
 		node = node.NextSibling.NextSibling
@@ -1163,6 +1186,11 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 		hash := ""
 		if m[13] > 0 {
 			hash = node.Data[m[12]:m[13]][1:]
+
+			// Truncate long diff IDs
+			if len(hash) > 15 && strings.HasPrefix(hash, "diff-") {
+				hash = hash[:15]
+			}
 		}
 
 		start := m[0]
@@ -1174,11 +1202,17 @@ func comparePatternProcessor(ctx *RenderContext, node *html.Node) {
 			end--
 			urlFull = urlFull[:len(urlFull)-1]
 			if hash != "" {
-				hash = hash[:len(hash)-1]
+				if strings.HasSuffix(hash, ".") {
+					hash = hash[:len(hash)-1]
+				}
 			} else if query != "" {
-				query = query[:len(query)-1]
+				if strings.HasSuffix(query, ".") {
+					query = query[:len(query)-1]
+				}
 			} else if text2 != "" {
-				text2 = text2[:len(text2)-1]
+				if strings.HasSuffix(text2, ".") {
+					text2 = text2[:len(text2)-1]
+				}
 			}
 		}
 
