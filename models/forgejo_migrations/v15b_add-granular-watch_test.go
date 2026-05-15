@@ -4,6 +4,7 @@
 package forgejo_migrations
 
 import (
+	"context"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -15,27 +16,11 @@ import (
 	"xorm.io/xorm/schemas"
 )
 
-// The main purpose of the WatchSource is to respect explicit user choice and not overwrite that with some automatic system.
-type WatchSource bool
-
-const (
-	// WatchSourceExplicit means the user explicitly chose to watch certain things (or none or all) of this repo.
-	// It means that setting.Service.AutoWatchOnChanges doesn't have an effect on this user for this repo; they explicitly made their choice after all.
-	// This mode replaces the old WatchModeDont and WatchModeNormal states.
-	WatchSourceExplicit WatchSource = false
-	// WatchSourceAutomatic means the user didn't explicitly select whether to watch this repo or not.
-	// Instead, the user either doesn't watch the repo because they didn't ever click the watch/unwatch button.
-	// Or they do watch the repo but only because the user pushed to the repo and setting.Service.AutoWatchOnChanges is true.
-	// When there is no record in the db this is the same as WatchSourceAutomatic combined with all watch selections turned off (i.e., not watching anything).
-	// This used to be WatchModeNone.
-	// When in this mode the watch selection is never fully deselected.
-	// Otherwise there'd be some automatic method to unwatch a repo; which does not exist.
-	// This mode replaces the old WatchModeAuto and WatchModeNone states.
-	WatchSourceAutomatic WatchSource = true
-
-	// There may not be more modes than the above two.
-	// I intend this to be a single bit.
-)
+type WatchSelection struct {
+	Issues       bool
+	PullRequests bool
+	Releases     bool
+}
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
@@ -54,6 +39,19 @@ type Watch struct {
 	CreatedUnix timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp `xorm:"INDEX updated"`
 }
+
+// Warning: this does not set the WatchMode.
+// The caller needs to do that properly.
+func (w *Watch) setWatchSelection(watchSelection WatchSelection) {
+	w.WatchSelectionIssues = watchSelection.Issues
+	w.WatchSelectionPullRequests = watchSelection.PullRequests
+	w.WatchSelectionReleases = watchSelection.Releases
+}
+
+var (
+	WatchAllSelection  = WatchSelection{Issues: true, PullRequests: true, Releases: true}
+	WatchNoneSelection = WatchSelection{Issues: false, PullRequests: false, Releases: false}
+)
 
 // GetWatch gets what kind of subscription a user has on a given repository; returns dummy record if none found
 func GetWatch(ctx context.Context, userID, repoID int64) (Watch, error) {
