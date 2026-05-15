@@ -128,7 +128,7 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 			}
 
 			issuerOIDCURL := issuerURL.JoinPath(".well-known/openid-configuration")
-			var oidcConfig openIDConfiguration
+			var oidcConfig auth_service.AuthorizedIntegrationOpenIDConfiguration
 			if err := auth_service.AuthorizedIntegrationFetchJSON(issuerOIDCURL.String(), &oidcConfig); err != nil {
 				return nil, fmt.Errorf("error when fetching .well-known/openid-configuration from %s: %w", issuerOIDCURL, err)
 			}
@@ -150,7 +150,7 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 				// but until a real-world case comes up where that is needed, this is a safety-first restriction.
 				return nil, fmt.Errorf("jwks_uri host mismatch: must be the same as issuer host %q, but was %q", issuerURL.Host, jwksURI.Host)
 			}
-			var keys openIDKeys
+			var keys auth_service.AuthorizedIntegrationOpenIDKeys
 			if err := auth_service.AuthorizedIntegrationFetchJSON(oidcConfig.JwksURI, &keys); err != nil {
 				return nil, fmt.Errorf("error when fetching JWKS from %s: %w", oidcConfig.JwksURI, err)
 			}
