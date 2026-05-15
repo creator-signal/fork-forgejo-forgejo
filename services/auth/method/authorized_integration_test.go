@@ -842,7 +842,7 @@ type AuthorizedIntegrationTester struct {
 	testServer      *httptest.Server
 	resetHTTPClient func()
 	tweaks          []tweak
-	ii              *MockInternalIssuer
+	ii              *auth.MockInternalIssuer
 }
 
 func newAITester(t *testing.T, tweaks ...tweak) *AuthorizedIntegrationTester {
@@ -956,8 +956,8 @@ func newInternalIssuerAITester(t *testing.T, tweaks ...tweak) *AuthorizedIntegra
 	}
 	innerTweaks = append(innerTweaks, tweaks...)
 	ait := newAITester(t, innerTweaks...)
-	ii := NewMockInternalIssuer(t)
-	internalIssuers["/fake-jwt-issuer"] = ii
+	ii := auth.NewMockInternalIssuer(t)
+	auth.RegisterInternalIssuerForTesting(t, "/fake-jwt-issuer", ii)
 	ii.On("IssuerPlaceholder").Return("urn:forgejo:authorized-issuer:internal:test1")
 	ii.On("SigningKey").Return(ait.jwtSigningKey)
 	ait.ii = ii
