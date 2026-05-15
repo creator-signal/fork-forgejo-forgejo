@@ -4,9 +4,28 @@
 package forgejo_migrations
 
 import (
-	repo_model "forgejo.org/models/repo"
-
 	"xorm.io/xorm"
+)
+
+type WatchSource bool
+const (
+	// TOOD: properly migrate this
+	// WatchSourceExplicit means the user explicitly chose to watch certain things (or none or all) of this repo.
+	// It means that setting.Service.AutoWatchOnChanges doesn't have an effect on this user for this repo; they explicitly made their choice after all.
+	// This mode replaces the old WatchModeDont and WatchModeNormal states.
+	WatchSourceExplicit WatchSource = false
+	// WatchSourceAutomatic means the user didn't explicitly select whether to watch this repo or not.
+	// Instead, the user either doesn't watch the repo because they didn't ever click the watch/unwatch button.
+	// Or they do watch the repo but only because the user pushed to the repo and setting.Service.AutoWatchOnChanges is true.
+	// When there is no record in the db this is the same as WatchSourceAutomatic combined with all watch selections turned off (i.e., not watching anything).
+	// This used to be WatchModeNone.
+	// When in this mode the watch selection is never fully deselected.
+	// Otherwise there'd be some automatic method to unwatch a repo; which does not exist.
+	// This mode replaces the old WatchModeAuto and WatchModeNone states.
+	WatchSourceAutomatic WatchSource = true
+
+	// There may not be more modes than the above two.
+	// I intend this to be a single bit.
 )
 
 func init() {
@@ -18,7 +37,7 @@ func init() {
 
 func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	type Watch struct {
-		Source                     repo_model.WatchSource `xorm:"BOOL DEFAULT TRUE"`
+		Source                     WatchSource `xorm:"BOOL DEFAULT TRUE"`
 		WatchSelectionIssues       bool                   `xorm:"BOOL DEFAULT TRUE"`
 		WatchSelectionPullRequests bool                   `xorm:"BOOL DEFAULT TRUE"`
 		WatchSelectionReleases     bool                   `xorm:"BOOL DEFAULT TRUE"`
@@ -52,19 +71,19 @@ func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	)
 	// end copy of old code //
 
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceAutomatic, WatchModeNone)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceAutomatic, WatchModeNone)
 	if err != nil {
 		return err
 	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceExplicit, WatchModeNormal)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceExplicit, WatchModeNormal)
 	if err != nil {
 		return err
 	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceExplicit, WatchModeDont)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceExplicit, WatchModeDont)
 	if err != nil {
 		return err
 	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", repo_model.WatchSourceAutomatic, WatchModeAuto)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceAutomatic, WatchModeAuto)
 	if err != nil {
 		return err
 	}
