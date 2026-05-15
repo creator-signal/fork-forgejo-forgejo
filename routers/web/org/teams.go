@@ -583,6 +583,12 @@ func TeamInvite(ctx *context.Context) {
 		return
 	}
 
+	linkedToUser, invitedUserID := invite.InvitedID.Get()
+	if linkedToUser && invitedUserID != ctx.Doer.ID {
+		ctx.NotFound("ErrTeamInviteNotFound", nil)
+		return
+	}
+
 	ctx.Data["Title"] = ctx.Tr("org.teams.invite_team_member", team.Name)
 	ctx.Data["Invite"] = invite
 	ctx.Data["Organization"] = org
@@ -601,6 +607,12 @@ func TeamInvitePost(ctx *context.Context) {
 		} else {
 			ctx.ServerError("getTeamInviteFromContext", err)
 		}
+		return
+	}
+
+	linkedToUser, invitedUserID := invite.InvitedID.Get()
+	if linkedToUser && invitedUserID != ctx.Doer.ID {
+		ctx.NotFound("ErrTeamInviteNotFound", nil)
 		return
 	}
 
