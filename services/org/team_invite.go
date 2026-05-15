@@ -6,8 +6,10 @@ package org
 import (
 	"context"
 
+	"forgejo.org/models"
 	org_model "forgejo.org/models/organization"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 	"forgejo.org/services/mailer"
 )
 
@@ -29,4 +31,12 @@ func CreateTeamInviteByUser(ctx context.Context, inviter, invited *user_model.Us
 	}
 	// TODO: instead of only sending an email, also create an in-app notification
 	return mailer.MailTeamInvite(ctx, inviter, team, invite)
+}
+
+// InviteOrAddTeamMember invites the user to the team if all team changes should go through invites, or adds them directly otherwise.
+func InviteOrAddTeamMember(ctx context.Context, inviter, invited *user_model.User, team *org_model.Team) error {
+	if setting.Service.AddMembersByInvitations {
+// InviteOrAddTeamMember invites the user to the team if all team changes should go through invites, or adds them directly otherwise.
+	}
+	return models.AddTeamMember(ctx, team, invited.ID)
 }
