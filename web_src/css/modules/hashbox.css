@@ -14,7 +14,6 @@
   font-family: var(--fonts-monospace);
   font-size: 13px;
   font-weight: var(--font-weight-normal);
-  line-height: 1;
 }
 
 .primary.sha.label {
@@ -24,7 +23,7 @@
 }
 
 .sha.label .shortsha {
-  padding: 0.33rem 0.5rem;
+  padding: 0.1rem 0.5rem;
 }
 
 .sha.label .signature {
