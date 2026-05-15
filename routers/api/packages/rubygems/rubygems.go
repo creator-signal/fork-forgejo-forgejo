@@ -191,7 +191,8 @@ func ServeVersionsFile(ctx *context.Context) {
 		return
 	}
 
-	ctx.PlainText(http.StatusOK, result)
+	if ctx.Req.Method == "GET" {
+		ctx.PlainText(http.StatusOK, result)
 	}
 }
 
