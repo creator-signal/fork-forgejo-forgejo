@@ -227,7 +227,6 @@ forgejo.org/routers/web/org
 forgejo.org/services/auth
 	UpdateAuthorizedIntegration
 	RegisterInternalIssuerForTesting
-	GetInternalIssuers
 
 forgejo.org/services/context
 	GetPrivateContext

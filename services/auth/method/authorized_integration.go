@@ -127,6 +127,10 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 				return nil, fmt.Errorf("failed parsing issuer: %w", err)
 			}
 
+			// Checks implemented here a variation of validateExternalIssuer used when creating an authorized
+			// integration.  Where possible, if validation changes are made on either implementation, they should be
+			// kept in sync with each other.
+
 			issuerOIDCURL := issuerURL.JoinPath(".well-known/openid-configuration")
 			var oidcConfig auth_service.AuthorizedIntegrationOpenIDConfiguration
 			if err := auth_service.AuthorizedIntegrationFetchJSON(issuerOIDCURL.String(), &oidcConfig); err != nil {

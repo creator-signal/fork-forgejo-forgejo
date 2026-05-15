@@ -24,10 +24,14 @@ import (
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/authz"
+
+	"github.com/gobwas/glob"
 )
 
 var (
 	ErrAuthorizedIntegrationBadUI = errors.New("invalid authorized integration UI")
+	ErrInvalidIssuer              = errors.New("invalid issuer")
+	ErrInvalidClaimRules          = errors.New("invalid claim rules")
 
 	// Authorized Integration's HTTP client for remote OIDC metadata and key fetches:
 	aiHTTPClient   *http.Client
@@ -172,9 +176,21 @@ func AuthorizedIntegrationFetchJSON[K any](urlString string, v *K) error {
 	return nil
 }
 
+type MissingFieldError struct {
+	Field string
+}
+
+func (e *MissingFieldError) Error() string {
+	return fmt.Sprintf("missing field %s", e.Field)
+}
+
 // Validate that an authorized integration's state is valid for creation.  For example, that it doesn't have a
 // conflicting set of resources (public-only and specific repositories), and other similar checks.
 func ValidateAuthorizedIntegration(ai *auth_model.AuthorizedIntegration, repoResources []*auth_model.AuthorizedIntegResourceRepo) error {
+	if ai.Name == "" {
+		return &MissingFieldError{Field: "Name"}
+	}
+
 	switch ai.UI {
 	case auth_model.AuthorizedIntegrationUIGeneric,
 		auth_model.AuthorizedIntegrationUIForgejoActionsLocal:
@@ -182,6 +198,24 @@ func ValidateAuthorizedIntegration(ai *auth_model.AuthorizedIntegration, repoRes
 	default:
 		return fmt.Errorf("%w: invalid UI: %q", ErrAuthorizedIntegrationBadUI, ai.UI)
 	}
+
+	internalIssuer := false
+	for _, ii := range GetInternalIssuers() {
+		if ai.Issuer == ii.IssuerPlaceholder() {
+			internalIssuer = true
+			break
+		}
+	}
+	if !internalIssuer {
+		if err := validateExternalIssuer(ai.Issuer); err != nil {
+			return err
+		}
+	}
+
+	if err := validateClaimRules(ai.ClaimRules, "root"); err != nil {
+		return err
+	}
+
 	return authz.ValidateRepositoryResource(ai.ResourceAllRepos, ai.Scope, len(repoResources))
 }
 
@@ -221,4 +255,90 @@ func UpdateAuthorizedIntegration(ctx context.Context, ai *auth_model.AuthorizedI
 		}
 		return auth_model.UpdateAuthorizedIntegrationResourceRepos(ctx, ai.ID, repoResources)
 	})
+}
+
+func validateExternalIssuer(issuer string) error {
+	issuerURL, err := url.Parse(issuer)
+	if err != nil {
+		return fmt.Errorf("%w: failed parsing issuer URL: %w", ErrInvalidIssuer, err)
+	}
+
+	// Checks implemented here a variation of [AuthorizedIntegration.Verify]'s checks on the remote issuer.  Where
+	// possible, if validation changes are made on either implementation, they should be kept in sync with each other.
+
+	issuerOIDCURL := issuerURL.JoinPath(".well-known/openid-configuration")
+	var oidcConfig AuthorizedIntegrationOpenIDConfiguration
+	if err := AuthorizedIntegrationFetchJSON(issuerOIDCURL.String(), &oidcConfig); err != nil {
+		return fmt.Errorf("%w: error when fetching .well-known/openid-configuration from %s: %w", ErrInvalidIssuer, issuerOIDCURL, err)
+	}
+	if oidcConfig.Issuer != issuer {
+		return fmt.Errorf("%w: .well-known/openid-configuration from %s has issuer %q, but input issuer was %q", ErrInvalidIssuer, issuerOIDCURL, oidcConfig.Issuer, issuer)
+	} else if len(oidcConfig.IDTokenSigningAlgValuesSupported) == 0 {
+		return fmt.Errorf("%w: .well-known/openid-configuration from %s lacks required field id_token_signing_alg_values_supported", ErrInvalidIssuer, issuerOIDCURL)
+	} else if oidcConfig.JwksURI == "" {
+		return fmt.Errorf("%w: .well-known/openid-configuration from %s lacks required field jwks_uri", ErrInvalidIssuer, issuerOIDCURL)
+	}
+
+	jwksURI, err := url.Parse(oidcConfig.JwksURI)
+	if err != nil {
+		return fmt.Errorf("%w: .well-known/openid-configuration from %s has invalid jwks_uri: %w", ErrInvalidIssuer, issuerOIDCURL, err)
+	} else if jwksURI.Host != issuerURL.Host {
+		return fmt.Errorf("%w: .well-known/openid-configuration from %s has jwks_uri host mismatch: must be the same as issuer host %q, but was %q", ErrInvalidIssuer, issuerOIDCURL, issuerURL.Host, jwksURI.Host)
+	}
+
+	var keys AuthorizedIntegrationOpenIDKeys
+	if err := AuthorizedIntegrationFetchJSON(oidcConfig.JwksURI, &keys); err != nil {
+		return fmt.Errorf("%w: error when fetching JWKS from %s: %w", ErrInvalidIssuer, oidcConfig.JwksURI, err)
+	} else if len(keys.Keys) == 0 {
+		return fmt.Errorf("%w: fetching JWKS from %s had zero keys", ErrInvalidIssuer, oidcConfig.JwksURI)
+	}
+
+	return nil
+}
+
+func validateClaimRules(cr *auth_model.ClaimRules, path string) error {
+	if cr == nil {
+		return fmt.Errorf("%w: claim rules are nil at %s", ErrInvalidClaimRules, path)
+	}
+
+	for ruleIndex, r := range cr.Rules {
+		if r.Claim == "" {
+			return fmt.Errorf("%w: claim is missing at %s[%d]", ErrInvalidClaimRules, path, ruleIndex)
+		}
+		switch r.Comparison {
+		case auth_model.ClaimEqual:
+			if r.Value == "" {
+				return fmt.Errorf("%w: claim value missing at %s[%d].value", ErrInvalidClaimRules, path, ruleIndex)
+			}
+		case auth_model.ClaimGlob:
+			if r.Value == "" {
+				return fmt.Errorf("%w: claim value missing at %s[%d].value", ErrInvalidClaimRules, path, ruleIndex)
+			} else if _, err := glob.Compile(r.Value); err != nil {
+				return fmt.Errorf("%w: claim glob invalid at %s[%d].value: %w", ErrInvalidClaimRules, path, ruleIndex, err)
+			}
+		case auth_model.ClaimIn:
+			if len(r.Values) == 0 {
+				return fmt.Errorf("%w: claim values missing at %s[%d].values", ErrInvalidClaimRules, path, ruleIndex)
+			}
+		case auth_model.ClaimGlobIn:
+			if len(r.Values) == 0 {
+				return fmt.Errorf("%w: claim values missing at %s[%d].values", ErrInvalidClaimRules, path, ruleIndex)
+			}
+			for globIndex, g := range r.Values {
+				if g == "" {
+					return fmt.Errorf("%w: claim glob empty string invalid, would match anything, at %s[%d].values[%d]", ErrInvalidClaimRules, path, ruleIndex, globIndex)
+				} else if _, err := glob.Compile(g); err != nil {
+					return fmt.Errorf("%w: claim glob invalid at %s[%d].values[%d]: %w", ErrInvalidClaimRules, path, ruleIndex, globIndex, err)
+				}
+			}
+		case auth_model.ClaimNested:
+			if err := validateClaimRules(r.Nested, fmt.Sprintf("%s.%s", path, r.Claim)); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("%w: compare %q is not valid at %s[%d]", ErrInvalidClaimRules, r.Comparison, path, ruleIndex)
+		}
+	}
+
+	return nil
 }
