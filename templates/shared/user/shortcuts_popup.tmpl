@@ -6,10 +6,15 @@
 		</form>
 	</header>
 	<article class="content">
-		<div class="ui buttons tw-mb-4 tw-flex tw-w-full">
+		<div class="ui buttons tw-flex tw-w-full">
 			<button class="ui button active" data-tab="site">Site Wide</button>
 			<button class="ui button" data-tab="repo">Repositories</button>
 			<button class="ui button" data-tab="code">Code View</button>
+		</div>
+		<div class="tw-my-4 tw-flex tw-justify-center">
+			<kbd>{{svg "octicon-arrow-left" 16}}</kbd>
+			&nbsp;Navigate with arrow keys&nbsp;
+			<kbd>{{svg "octicon-arrow-right" 16}}</kbd>
 		</div>
 		<div class="tw-items-start tw-grid tw-grid-cols-1">
 			<table data-tab="site">

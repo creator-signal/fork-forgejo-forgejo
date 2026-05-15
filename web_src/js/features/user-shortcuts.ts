@@ -204,6 +204,30 @@ export function initUserShortcuts() {
           ?.focus();
         e.preventDefault();
         break;
+      case 'ArrowLeft': {
+        const btns = Array.from(
+          document.querySelectorAll<HTMLButtonElement>(
+            '#shortcuts .buttons .button',
+          ),
+        );
+        const idx = btns.findIndex((btn) => btn.classList.contains('active'));
+        if (idx > 0) {
+          btns[idx - 1].click();
+        }
+        break;
+      }
+      case 'ArrowRight': {
+        const btns = Array.from(
+          document.querySelectorAll<HTMLButtonElement>(
+            '#shortcuts .buttons .button',
+          ),
+        );
+        const idx = btns.findIndex((btn) => btn.classList.contains('active'));
+        if (idx < btns.length - 1) {
+          btns[idx + 1].click();
+        }
+        break;
+      }
       case 'Escape':
         document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
     }
