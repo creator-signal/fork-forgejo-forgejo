@@ -371,6 +371,7 @@ func UploadPackageFile(ctx *context.Context) {
 		return
 	}
 
+	cache.Remove(fmt.Sprintf("RubyGems:/versions:%d", ctx.Package.Owner.ID))
 	ctx.Status(http.StatusCreated)
 }
 
@@ -401,6 +402,8 @@ func DeletePackage(ctx *context.Context) {
 		}
 		apiError(ctx, http.StatusInternalServerError, err)
 	}
+
+	cache.Remove(fmt.Sprintf("RubyGems:/versions:%d", ctx.Package.Owner.ID))
 }
 
 func writeRequirements(reqs []rubygems_module.VersionRequirement, result *strings.Builder) {
