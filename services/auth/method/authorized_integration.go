@@ -28,7 +28,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
-	"forgejo.org/services/auth"
+	auth_service "forgejo.org/services/auth"
 	"forgejo.org/services/authz"
 
 	"github.com/gobwas/glob"
@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	_ auth.Method = &AuthorizedIntegration{}
+	_ auth_service.Method = &AuthorizedIntegration{}
 
 	aiHTTPClient   *http.Client
 	initHTTPClient sync.Once
@@ -73,15 +73,15 @@ type AuthorizedIntegration struct {
 	fixedTime *time.Time
 }
 
-func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter, _ auth.SessionStore) auth.MethodOutput {
+func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter, _ auth_service.SessionStore) auth_service.MethodOutput {
 	hasToken, token := tokenFromAuthorizationBearer(req).Get()
 	if !hasToken {
 		if !a.PermitBasic {
-			return &auth.AuthenticationNotAttempted{}
+			return &auth_service.AuthenticationNotAttempted{}
 		}
 		hasBasic, basicToken := tokenFromAuthorizationBasic(req).Get()
 		if !hasBasic {
-			return &auth.AuthenticationNotAttempted{}
+			return &auth_service.AuthenticationNotAttempted{}
 		}
 		token = basicToken
 	}
@@ -115,10 +115,10 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 			// Check if there's an internal issuer that matches the JWT's issuer, and if so, change `queryIssuer` to the
 			// internal issuer's placeholder, and store `internalIssuer` for later:
 			queryIssuer := issuer
-			var internalIssuer auth.InternalIssuer
+			var internalIssuer auth_service.InternalIssuer
 			issuerSuffix := strings.TrimPrefix(issuer, setting.AppURL)
 			if issuer != issuerSuffix { // TrimPrefix will return a different string when the prefix was present
-				if ii, ok := auth.GetInternalIssuerByURLSuffix(issuerSuffix); ok {
+				if ii, ok := auth_service.GetInternalIssuerByURLSuffix(issuerSuffix); ok {
 					internalIssuer = ii
 					queryIssuer = internalIssuer.IssuerPlaceholder()
 				}
@@ -212,18 +212,18 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 	)
 	if err != nil && errors.Is(err, errParseInternalServer) {
 		// Errors from parsing marked errParseInternalServer are AuthenticationError, not incorrect creds:
-		return &auth.AuthenticationError{Error: err}
+		return &auth_service.AuthenticationError{Error: err}
 	} else if err != nil {
-		return &auth.AuthenticationAttemptedIncorrectCredential{Error: fmt.Errorf("authorized integration: parse JWT error: %w", err)}
+		return &auth_service.AuthenticationAttemptedIncorrectCredential{Error: fmt.Errorf("authorized integration: parse JWT error: %w", err)}
 	} else if !parsedToken.Valid {
-		return &auth.AuthenticationAttemptedIncorrectCredential{Error: errors.New("authorized integration: JWT not valid")}
+		return &auth_service.AuthenticationAttemptedIncorrectCredential{Error: errors.New("authorized integration: JWT not valid")}
 	} else if authorizedIntegration == nil { // shouldn't be possible, but overly safe
-		return &auth.AuthenticationError{Error: errors.New("authorized integration: nil authorized integration")}
+		return &auth_service.AuthenticationError{Error: errors.New("authorized integration: nil authorized integration")}
 	}
 
 	u, err := user_model.GetUserByID(req.Context(), authorizedIntegration.UserID)
 	if err != nil {
-		return &auth.AuthenticationError{Error: fmt.Errorf("authorized integration: GetUserByID: %w", err)}
+		return &auth_service.AuthenticationError{Error: fmt.Errorf("authorized integration: GetUserByID: %w", err)}
 	}
 
 	if err = authorizedIntegration.UpdateLastUsed(req.Context()); err != nil {
@@ -232,17 +232,17 @@ func (a *AuthorizedIntegration) Verify(req *http.Request, w http.ResponseWriter,
 
 	reducer, err := authz.GetAuthorizationReducerForAuthorizedIntegration(req.Context(), authorizedIntegration)
 	if err != nil {
-		return &auth.AuthenticationError{Error: fmt.Errorf("authorized integration GetAuthorizationReducerForAuthorizedIntegration: %w", err)}
+		return &auth_service.AuthenticationError{Error: fmt.Errorf("authorized integration GetAuthorizationReducerForAuthorizedIntegration: %w", err)}
 	}
 
 	var optionalExp optional.Option[timeutil.TimeStamp]
 	if exp, err := parsedToken.Claims.GetExpirationTime(); err != nil {
-		return &auth.AuthenticationError{Error: fmt.Errorf("authorized integration GetExpirationTime: %w", err)}
+		return &auth_service.AuthenticationError{Error: fmt.Errorf("authorized integration GetExpirationTime: %w", err)}
 	} else if exp != nil {
 		optionalExp = optional.Some(timeutil.TimeStamp(exp.Unix()))
 	}
 
-	return &auth.AuthenticationSuccess{
+	return &auth_service.AuthenticationSuccess{
 		Result: &authorizedIntegrationAuthenticationResult{
 			user:      u,
 			scope:     authorizedIntegration.Scope,
