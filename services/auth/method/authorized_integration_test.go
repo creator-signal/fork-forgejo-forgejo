@@ -657,7 +657,7 @@ func TestAuthorizedIntegration(t *testing.T) {
 	t.Run("cache", func(t *testing.T) {
 		t.Run("miss and store", func(t *testing.T) {
 			c := cache.NewMockCache(t)
-			defer test.MockVariableValue(&getCache, func() mc.Cache { return c })()
+			defer test.MockVariableValue(&auth.GetAuthorizedIntegrationCache, func() mc.Cache { return c })()
 			defer test.MockVariableValue(&setting.AuthorizedIntegration.CacheTTL, 10*time.Minute)()
 
 			var cacheKey string
@@ -714,7 +714,7 @@ func TestAuthorizedIntegration(t *testing.T) {
 
 			t.Run("cache returns []byte", func(t *testing.T) {
 				c := cache.NewMockCache(t)
-				defer test.MockVariableValue(&getCache, func() mc.Cache { return c })()
+				defer test.MockVariableValue(&auth.GetAuthorizedIntegrationCache, func() mc.Cache { return c })()
 
 				c.On("Get",
 					mock.MatchedBy(func(key string) bool {
@@ -732,7 +732,7 @@ func TestAuthorizedIntegration(t *testing.T) {
 
 			t.Run("cache returns string", func(t *testing.T) {
 				c := cache.NewMockCache(t)
-				defer test.MockVariableValue(&getCache, func() mc.Cache { return c })()
+				defer test.MockVariableValue(&auth.GetAuthorizedIntegrationCache, func() mc.Cache { return c })()
 
 				c.On("Get",
 					mock.MatchedBy(func(key string) bool {
@@ -913,11 +913,11 @@ func newAITester(t *testing.T, tweaks ...tweak) *AuthorizedIntegrationTester {
 	}))
 
 	// trust TLS cert of our mock client by inserting the test client for our test server into the global aiHTTPClient
-	ait.resetHTTPClient = test.MockVariableValue(&aiHTTPClient, ait.testServer.Client())
-	// prevent self-initialization of the HTTP client during unit testing -- this means that a real client cant' be
-	// created and aiHTTPClient will always be nil (other than when mocked), but that's fine because we don't want to do
-	// external HTTP traffic in these tests
-	initHTTPClient.Do(func() {})
+	ait.resetHTTPClient = test.MockVariableValue(
+		&auth.GetAuthorizedIntegrationHTTPClient,
+		func() *http.Client {
+			return ait.testServer.Client()
+		})
 
 	ait.dbAI = &auth_model.AuthorizedIntegration{
 		UserID:   2,
