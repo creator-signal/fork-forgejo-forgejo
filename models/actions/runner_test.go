@@ -10,6 +10,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	"forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/timeutil"
 
@@ -234,4 +235,306 @@ func TestRunnerEditable(t *testing.T) {
 			assert.Equal(t, testCase.editable, result)
 		})
 	}
+}
+
+func TestRunner_GetVisibleRunnerByID(t *testing.T) {
+	defer unittest.OverrideFixtures("models/actions/TestRunner_GetVisibleRunnerByID")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repository32 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 32, OwnerID: 3})
+	repository1 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 1, OwnerID: 2})
+
+	runner1 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719931, OwnerID: 3, RepoID: 0}) // Owned by org3
+	runner2 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719932, OwnerID: 2, RepoID: 0}) // Owned by user2
+	runner3 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719933, OwnerID: 0, RepoID: 0})
+	runner4 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719934, OwnerID: 0, RepoID: repository32.ID})
+
+	testCases := []struct {
+		name          string
+		runner        *ActionRunner
+		ownerID       int64
+		repoID        int64
+		expectedError string
+	}{
+		{
+			name:          "Organization runner",
+			runner:        runner1,
+			ownerID:       3,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "Organization runner visible to admins",
+			runner:        runner1,
+			ownerID:       0,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "Organization runner invisible to different owner",
+			runner:        runner1,
+			ownerID:       2,
+			repoID:        0,
+			expectedError: fmt.Sprintf("runner with ID %d: resource does not exist", runner1.ID),
+		},
+		{
+			name:          "Organization runner visible to its repositories",
+			runner:        runner1,
+			ownerID:       0,
+			repoID:        repository32.ID,
+			expectedError: "",
+		},
+		{
+			name:          "Organization runner invisible to repositories owned by somebody else",
+			runner:        runner1,
+			ownerID:       0,
+			repoID:        repository1.ID,
+			expectedError: fmt.Sprintf("runner with ID %d: resource does not exist", runner1.ID),
+		},
+		{
+			name:          "User runner",
+			runner:        runner2,
+			ownerID:       2,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "User runner invisible to different user",
+			runner:        runner2,
+			ownerID:       1,
+			repoID:        0,
+			expectedError: fmt.Sprintf("runner with ID %d: resource does not exist", runner2.ID),
+		},
+		{
+			name:          "User runner visible to repository owned by user",
+			runner:        runner2,
+			ownerID:       0,
+			repoID:        repository1.ID,
+			expectedError: "",
+		},
+		{
+			name:          "User runner invisible to repository owned by different user",
+			runner:        runner2,
+			ownerID:       0,
+			repoID:        repository32.ID,
+			expectedError: fmt.Sprintf("runner with ID %d: resource does not exist", runner2.ID),
+		},
+		{
+			name:          "Global runner",
+			runner:        runner3,
+			ownerID:       0,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "Global runner is visible to any user",
+			runner:        runner3,
+			ownerID:       2,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "Global runner is visible to any repository",
+			runner:        runner3,
+			ownerID:       0,
+			repoID:        repository32.ID,
+			expectedError: "",
+		},
+		{
+			name:          "Repository runner",
+			runner:        runner4,
+			ownerID:       0,
+			repoID:        repository32.ID,
+			expectedError: "",
+		},
+		{
+			name:          "Repository runner is visible to admins",
+			runner:        runner4,
+			ownerID:       0,
+			repoID:        0,
+			expectedError: "",
+		},
+		{
+			name:          "Repository runner is invisible to repository owner",
+			runner:        runner4,
+			ownerID:       repository32.OwnerID,
+			repoID:        0,
+			expectedError: fmt.Sprintf("runner with ID %d: resource does not exist", runner4.ID),
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := GetVisibleRunnerByID(t.Context(), testCase.runner.ID, testCase.ownerID, testCase.repoID)
+			if testCase.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, testCase.expectedError)
+			}
+		})
+	}
+}
+
+func TestRunner_FindRunnerOptionsToConds(t *testing.T) {
+	defer unittest.OverrideFixtures("models/actions/TestRunner_FindRunnerOptionsToConds")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	runner1 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719931, OwnerID: 3, RepoID: 0}) // Owned by org3
+	runner2 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719932, OwnerID: 2, RepoID: 0}) // Owned by user2
+	runner3 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719933, OwnerID: 0, RepoID: 0})
+	runner4 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719934, OwnerID: 0, RepoID: 32})
+	runner5 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719935, OwnerID: 0, RepoID: 36})
+
+	testCases := []struct {
+		name              string
+		opts              FindRunnerOptions
+		expectedRunners   RunnerList
+		unexpectedRunners RunnerList
+	}{
+		{
+			name:              "Only runners owned by instance",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 0, WithVisible: false},
+			expectedRunners:   RunnerList{runner3},
+			unexpectedRunners: RunnerList{runner1, runner2, runner4, runner5},
+		},
+		{
+			name:              "All runners on instance",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 0, WithVisible: true},
+			expectedRunners:   RunnerList{runner1, runner2, runner3, runner4, runner5},
+			unexpectedRunners: RunnerList{},
+		},
+		{
+			name:              "Only runners owned by organization",
+			opts:              FindRunnerOptions{OwnerID: 3, RepoID: 0, WithVisible: false},
+			expectedRunners:   RunnerList{runner1},
+			unexpectedRunners: RunnerList{runner2, runner3, runner4, runner5},
+		},
+		{
+			name:              "Runners available to organization",
+			opts:              FindRunnerOptions{OwnerID: 3, RepoID: 0, WithVisible: true},
+			expectedRunners:   RunnerList{runner1, runner3},
+			unexpectedRunners: RunnerList{runner2, runner4, runner5},
+		},
+		{
+			name:              "Only runners owned by user",
+			opts:              FindRunnerOptions{OwnerID: 2, RepoID: 0, WithVisible: false},
+			expectedRunners:   RunnerList{runner2},
+			unexpectedRunners: RunnerList{runner1, runner3, runner4, runner5},
+		},
+		{
+			name:              "Runners available to user",
+			opts:              FindRunnerOptions{OwnerID: 2, RepoID: 0, WithVisible: true},
+			expectedRunners:   RunnerList{runner2, runner3},
+			unexpectedRunners: RunnerList{runner1, runner4, runner5},
+		},
+		{
+			name:              "Only runners owned by organization repository",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 32, WithVisible: false},
+			expectedRunners:   RunnerList{runner4},
+			unexpectedRunners: RunnerList{runner1, runner2, runner3, runner5},
+		},
+		{
+			name:              "Runners available to organization repository",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 32, WithVisible: true},
+			expectedRunners:   RunnerList{runner1, runner3, runner4},
+			unexpectedRunners: RunnerList{runner2, runner5},
+		},
+		{
+			name:              "Only runners owned by user repository",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 36, WithVisible: false},
+			expectedRunners:   RunnerList{runner5},
+			unexpectedRunners: RunnerList{runner1, runner2, runner3, runner4},
+		},
+		{
+			name:              "Runners available to user repository",
+			opts:              FindRunnerOptions{OwnerID: 0, RepoID: 36, WithVisible: true},
+			expectedRunners:   RunnerList{runner2, runner3, runner5},
+			unexpectedRunners: RunnerList{runner1, runner4},
+		},
+		{
+			name:              "Runners with partially matching name",
+			opts:              FindRunnerOptions{Filter: "er-3"},
+			expectedRunners:   RunnerList{runner3},
+			unexpectedRunners: RunnerList{runner1, runner2, runner4, runner5},
+		},
+		{
+			name:              "Runners with partially matching UUID",
+			opts:              FindRunnerOptions{Filter: "21f75233798b"},
+			expectedRunners:   RunnerList{runner4},
+			unexpectedRunners: RunnerList{runner1, runner2, runner3, runner5},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			runners, err := db.Find[ActionRunner](t.Context(), testCase.opts)
+			require.NoError(t, err)
+
+			for _, expectedRunner := range testCase.expectedRunners {
+				assert.Contains(t, runners, expectedRunner)
+			}
+			for _, unexpectedRunner := range testCase.unexpectedRunners {
+				assert.NotContains(t, runners, unexpectedRunner)
+			}
+		})
+	}
+}
+
+func TestDeleteEphemeralRunner(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	persistentRunnerOne := &ActionRunner{
+		ID:        606526,
+		UUID:      "d53a1222-ae7a-4430-97f8-8fcb6efd04c9",
+		Name:      "persistent-runner-one",
+		OwnerID:   2,
+		RepoID:    0,
+		Ephemeral: false,
+		TokenHash: "J9YDsQL",
+	}
+	persistentRunnerTwo := &ActionRunner{
+		ID:        606527,
+		UUID:      "3dc23067-b2fd-4daf-b428-dddad80d7f37",
+		Name:      "persistent-runner-two",
+		OwnerID:   2,
+		RepoID:    0,
+		Ephemeral: false,
+		TokenHash: "jvIylZtHsS",
+	}
+	ephemeralRunnerOne := &ActionRunner{
+		ID:        606528,
+		UUID:      "2d9bc0a1-7019-4ed3-ba67-6415415ac2a9",
+		Name:      "ephemeral-runner-one",
+		OwnerID:   2,
+		RepoID:    0,
+		Ephemeral: true,
+		TokenHash: "t9C8L0kM3W",
+	}
+	ephemeralRunnerTwo := &ActionRunner{
+		ID:        606529,
+		UUID:      "da7a03f8-ab39-4c54-9ec9-2bd312fe3be1",
+		Name:      "ephemeral-runner-two",
+		OwnerID:   2,
+		RepoID:    0,
+		Ephemeral: true,
+		TokenHash: "g9oTOFM",
+	}
+
+	require.NoError(t, CreateRunner(t.Context(), persistentRunnerOne))
+	require.NoError(t, CreateRunner(t.Context(), persistentRunnerTwo))
+	require.NoError(t, CreateRunner(t.Context(), ephemeralRunnerOne))
+	require.NoError(t, CreateRunner(t.Context(), ephemeralRunnerTwo))
+
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: persistentRunnerOne.ID})
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: persistentRunnerTwo.ID})
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: ephemeralRunnerOne.ID})
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: ephemeralRunnerTwo.ID})
+
+	require.NoError(t, DeleteEphemeralRunner(t.Context(), persistentRunnerOne.ID))
+	require.NoError(t, DeleteEphemeralRunner(t.Context(), ephemeralRunnerOne.ID))
+
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: persistentRunnerOne.ID})
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: persistentRunnerTwo.ID})
+	unittest.AssertNotExistsBean(t, &ActionRunner{ID: ephemeralRunnerOne.ID})
+	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: ephemeralRunnerTwo.ID})
 }

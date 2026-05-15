@@ -194,12 +194,7 @@ func (at ActionType) WatchSelection() repo_model.WatchSelection {
 }
 
 func (at ActionType) InActions(actions ...string) bool {
-	for _, action := range actions {
-		if action == at.String() {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(actions, at.String())
 }
 
 // Action represents user operation type and other information to
@@ -878,4 +873,37 @@ func FixActionCreatedUnixString(ctx context.Context) (int64, error) {
 		return res.RowsAffected()
 	}
 	return 0, nil
+}
+
+func (a *Action) IsActionPrivate(ctx context.Context) (bool, error) {
+	if a.IsPrivate {
+		return true, nil
+	}
+
+	a.loadRepo(ctx)
+	if a.Repo == nil {
+		return true, repo_model.ErrRepoNotExist{}
+	}
+
+	repo := a.Repo
+	err := repo.LoadOwner(ctx)
+	if err != nil {
+		return true, err
+	}
+
+	if repo.IsPrivate || repo.Owner.KeepActivityPrivate || repo.Owner.Visibility != structs.VisibleTypePublic {
+		return true, nil
+	}
+
+	a.LoadActUser(ctx)
+	if a.ActUser == nil {
+		return true, user_model.ErrUserNotExist{}
+	}
+
+	user := a.ActUser
+	if user.KeepActivityPrivate || user.Visibility != structs.VisibleTypePublic {
+		return true, nil
+	}
+
+	return false, nil
 }

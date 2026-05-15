@@ -166,6 +166,8 @@ func SearchIssues(ctx *context.APIContext) {
 			// MySQL will return different results when sorting by null in some cases
 			OrderBy: db.SearchOrderByAlphabetically,
 			Actor:   ctx.Doer,
+
+			AuthorizationReducer: ctx.Reducer,
 		}
 		if ctx.IsSigned {
 			opts.Private = !ctx.PublicOnly
@@ -419,6 +421,8 @@ func ListIssues(ctx *context.APIContext) {
 	//     "$ref": "#/responses/IssueList"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 	before, since, err := context.GetQueryBeforeSince(ctx.Base)
 	if err != nil {
 		ctx.Error(http.StatusUnprocessableEntity, "GetQueryBeforeSince", err)

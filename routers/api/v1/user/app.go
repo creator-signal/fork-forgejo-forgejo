@@ -5,11 +5,7 @@
 package user
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
@@ -49,26 +45,7 @@ func ListAccessTokens(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	opts := auth_model.ListAccessTokensOptions{UserID: ctx.ContextUser.ID, ListOptions: utils.GetListOptions(ctx)}
-
-	tokens, count, err := db.FindAndCount[auth_model.AccessToken](ctx, opts)
-	if err != nil {
-		ctx.InternalServerError(err)
-		return
-	}
-
-	apiTokens := make([]*api.AccessToken, len(tokens))
-	for i := range tokens {
-		apiTokens[i] = &api.AccessToken{
-			ID:             tokens[i].ID,
-			Name:           tokens[i].Name,
-			TokenLastEight: tokens[i].TokenLastEight,
-			Scopes:         tokens[i].Scope.StringSlice(),
-		}
-	}
-
-	ctx.SetTotalCountHeader(count)
-	ctx.JSON(http.StatusOK, &apiTokens)
+	utils.ListAccessTokens(ctx)
 }
 
 // CreateAccessToken creates an access token
@@ -100,49 +77,7 @@ func CreateAccessToken(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	form := web.GetForm(ctx).(*api.CreateAccessTokenOption)
-
-	t := &auth_model.AccessToken{
-		UID:  ctx.ContextUser.ID,
-		Name: form.Name,
-	}
-
-	exist, err := auth_model.AccessTokenByNameExists(ctx, t)
-	if err != nil {
-		ctx.InternalServerError(err)
-		return
-	}
-	if exist {
-		ctx.Error(http.StatusBadRequest, "AccessTokenByNameExists", errors.New("access token name has been used already"))
-		return
-	}
-
-	scope, err := auth_model.AccessTokenScope(strings.Join(form.Scopes, ",")).Normalize()
-	if err != nil {
-		ctx.Error(http.StatusBadRequest, "AccessTokenScope.Normalize", fmt.Errorf("invalid access token scope provided: %w", err))
-		return
-	}
-	if scope == "" {
-		ctx.Error(http.StatusBadRequest, "AccessTokenScope", "access token must have a scope")
-		return
-	}
-	t.Scope = scope
-
-	// maintain legacy behaviour until new API options are added -- token has access to all resources, is not
-	// fine-grained
-	t.ResourceAllRepos = true
-
-	if err := auth_model.NewAccessToken(ctx, t); err != nil {
-		ctx.Error(http.StatusInternalServerError, "NewAccessToken", err)
-		return
-	}
-	ctx.JSON(http.StatusCreated, &api.AccessToken{
-		Name:           t.Name,
-		Token:          t.Token,
-		ID:             t.ID,
-		TokenLastEight: t.TokenLastEight,
-		Scopes:         t.Scope.StringSlice(),
-	})
+	utils.CreateAccessToken(ctx)
 }
 
 // DeleteAccessToken deletes an access token
@@ -173,45 +108,7 @@ func DeleteAccessToken(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/error"
 
-	token := ctx.Params(":id")
-	tokenID, _ := strconv.ParseInt(token, 0, 64)
-
-	if tokenID == 0 {
-		tokens, err := db.Find[auth_model.AccessToken](ctx, auth_model.ListAccessTokensOptions{
-			Name:   token,
-			UserID: ctx.ContextUser.ID,
-		})
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "ListAccessTokens", err)
-			return
-		}
-
-		switch len(tokens) {
-		case 0:
-			ctx.NotFound()
-			return
-		case 1:
-			tokenID = tokens[0].ID
-		default:
-			ctx.Error(http.StatusUnprocessableEntity, "DeleteAccessTokenByID", fmt.Errorf("multiple matches for token name '%s'", token))
-			return
-		}
-	}
-	if tokenID == 0 {
-		ctx.Error(http.StatusInternalServerError, "Invalid TokenID", nil)
-		return
-	}
-
-	if err := auth_model.DeleteAccessTokenByID(ctx, tokenID, ctx.ContextUser.ID); err != nil {
-		if auth_model.IsErrAccessTokenNotExist(err) {
-			ctx.NotFound()
-		} else {
-			ctx.Error(http.StatusInternalServerError, "DeleteAccessTokenByID", err)
-		}
-		return
-	}
-
-	ctx.Status(http.StatusNoContent)
+	utils.DeleteAccessToken(ctx)
 }
 
 // CreateOauth2Application is the handler to create a new OAuth2 Application for the authenticated user

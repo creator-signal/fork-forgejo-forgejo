@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/web"
 	web_types "forgejo.org/modules/web/types"
 	actions_service "forgejo.org/services/actions"
+	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/context"
 )
 
@@ -48,7 +49,7 @@ type OIDCContext struct {
 
 func InitOIDC() error {
 	var err error
-	jwtSigningKey, err = jwtx.InitAsymmetricSigningKey(setting.Actions.IDTokenSigningPrivateKeyFile, string(setting.Actions.IDTokenSigningAlgorithm))
+	jwtSigningKey, err = jwtx.InitSigningKey(&setting.Actions.KeyCfg.Signing)
 	if err != nil {
 		return err
 	}
@@ -66,6 +67,7 @@ func init() {
 	web.RegisterResponseStatusProvider[*OIDCContext](func(req *http.Request) web_types.ResponseStatusProvider {
 		return req.Context().Value(oidcContextKey).(*OIDCContext)
 	})
+	auth_method.RegisterInternalIssuer("api/actions", internalIssuer{})
 }
 
 func OIDCContexter() func(next http.Handler) http.Handler {
@@ -99,11 +101,9 @@ func OIDCRoutes(prefix string) *web.Route {
 
 	// Add custom claims by iterating over [actions_service.IDTokenCustomClaims]
 	// and inspecting the names of the json struct tags
-	customClaims := actions_service.IDTokenCustomClaims{}
-	rt := reflect.TypeOf(customClaims)
+	rt := reflect.TypeFor[actions_service.IDTokenCustomClaims]()
 
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
+	for f := range rt.Fields() {
 		v := strings.Split(f.Tag.Get("json"), ",")[0]
 		if v == "" || v == "-" {
 			continue
@@ -119,7 +119,7 @@ func OIDCRoutes(prefix string) *web.Route {
 			SubjectTypesSupported:            []string{"public"},
 			ResponseTypesSupported:           []string{"id_token"},
 			ClaimsSupported:                  claimsSupported,
-			IDTokenSigningAlgValuesSupported: []string{string(setting.Actions.IDTokenSigningAlgorithm)},
+			IDTokenSigningAlgValuesSupported: []string{jwtSigningKey.SigningMethod().Alg()},
 			ScopesSupported:                  []string{"openid"},
 		},
 		jwks: map[string][]map[string]string{
@@ -143,4 +143,17 @@ func (o *oidcRoutes) configuration(ctx *OIDCContext) {
 
 func (o *oidcRoutes) keys(ctx *OIDCContext) {
 	ctx.JSON(http.StatusOK, o.jwks)
+}
+
+// Register Actions OIDC as an internal issuer for authorized integrations.  This allows an authorized integration to
+// have the value `urn:forgejo:authorized-integrations:actions` as an issuer, and perform JWT signature validation
+// against the in-memory signing key defined in this module.
+type internalIssuer struct{}
+
+func (internalIssuer) IssuerPlaceholder() string {
+	return "urn:forgejo:authorized-integrations:actions"
+}
+
+func (internalIssuer) SigningKey() jwtx.SigningKey {
+	return jwtSigningKey
 }

@@ -4,9 +4,12 @@
 package context
 
 import (
+	"fmt"
 	"net/http"
+	"slices"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/log"
@@ -45,10 +48,8 @@ func CanEnableEditor() func(ctx *Context) {
 // RequireRepoWriterOr returns a middleware for requiring repository write to one of the unit permission
 func RequireRepoWriterOr(unitTypes ...unit.Type) func(ctx *Context) {
 	return func(ctx *Context) {
-		for _, unitType := range unitTypes {
-			if ctx.Repo.CanWrite(unitType) {
-				return
-			}
+		if slices.ContainsFunc(unitTypes, ctx.Repo.CanWrite) {
+			return
 		}
 		ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
 	}
@@ -57,6 +58,23 @@ func RequireRepoWriterOr(unitTypes ...unit.Type) func(ctx *Context) {
 // RequireRepoReader returns a middleware for requiring repository read to the specify unitType
 func RequireRepoReader(unitType unit.Type) func(ctx *Context) {
 	return func(ctx *Context) {
+		// Typically checks for authentication scopes won't be relevant for non-API requests where this middleware is
+		// used; but, some paths like `/user/repo/raw/...` can be accessed with API authentication mechanisms.  In those
+		// edge cases, check that `read:repository` scope is present if the authentication method indicates a limited
+		// scope.
+		hasScope, scope := ctx.Authentication.Scope().Get()
+		if hasScope {
+			allow, err := scope.HasScope(auth_model.AccessTokenScopeReadRepository)
+			if err != nil {
+				ctx.ServerError("checking scope failed", err)
+				return
+			}
+			if !allow {
+				ctx.Error(http.StatusForbidden, "scopedAccessCheck", fmt.Sprintf("token does not have at least one of required scope(s): %v", auth_model.AccessTokenScopeReadRepository))
+				return
+			}
+		}
+
 		if !ctx.Repo.CanRead(unitType) {
 			if log.IsTrace() {
 				if ctx.IsSigned {
@@ -83,10 +101,8 @@ func RequireRepoReader(unitType unit.Type) func(ctx *Context) {
 // RequireRepoReaderOr returns a middleware for requiring repository write to one of the unit permission
 func RequireRepoReaderOr(unitTypes ...unit.Type) func(ctx *Context) {
 	return func(ctx *Context) {
-		for _, unitType := range unitTypes {
-			if ctx.Repo.CanRead(unitType) {
-				return
-			}
+		if slices.ContainsFunc(unitTypes, ctx.Repo.CanRead) {
+			return
 		}
 		if log.IsTrace() {
 			var format string
@@ -126,12 +142,7 @@ func CheckRepoDelegateActionTrust(ctx *Context) bool {
 
 // CheckRepoScopedToken check whether personal access token has repo scope
 func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_model.AccessTokenScopeLevel) {
-	if !ctx.IsBasicAuth || ctx.Data["IsApiToken"] != true {
-		return
-	}
-
-	scope, ok := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
-	if ok { // it's a personal access token but not oauth2 token
+	if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
 		var scopeMatched bool
 
 		requiredScopes := auth_model.GetRequiredScopes(level, auth_model.AccessTokenScopeCategoryRepository)
@@ -156,6 +167,47 @@ func CheckRepoScopedToken(ctx *Context, repo *repo_model.Repository, level auth_
 
 		if !scopeMatched {
 			ctx.Error(http.StatusForbidden)
+			return
+		}
+	}
+
+	if reducer := ctx.Authentication.Reducer(); reducer != nil {
+		var accessMode perm.AccessMode
+		switch level {
+		case auth_model.Read:
+			accessMode = perm.AccessModeRead
+		case auth_model.Write:
+			accessMode = perm.AccessModeWrite
+		case auth_model.NoAccess:
+			fallthrough
+		default:
+			accessMode = perm.AccessModeNone
+		}
+		actualAccessMode, err := reducer.ReduceRepoAccess(ctx, repo, accessMode)
+		if err != nil {
+			ctx.ServerError("HasScope", err)
+			return
+		} else if actualAccessMode != accessMode {
+			ctx.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+func CheckRuntimeDeterminedScope(ctx *APIContext, scopeCategory auth_model.AccessTokenScopeCategory, level auth_model.AccessTokenScopeLevel, msg string) {
+	if hasScope, scope := ctx.Authentication.Scope().Get(); hasScope {
+		var scopeMatched bool
+
+		requiredScopes := auth_model.GetRequiredScopes(level, scopeCategory)
+
+		scopeMatched, err := scope.HasScope(requiredScopes...)
+		if err != nil {
+			ctx.ServerError("HasScope", err)
+			return
+		}
+
+		if !scopeMatched {
+			ctx.Error(http.StatusForbidden, "!scopeMatched", msg)
 			return
 		}
 	}

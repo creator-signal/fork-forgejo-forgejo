@@ -196,7 +196,6 @@
   --color-orange-badge: #ea580c;
   --color-orange-badge-bg: #ea580c22;
   --color-orange-badge-hover-bg: #ea580c44;
-
   /* Colors for thin elements: octicons, text, borders */
   --thin-lightness: 0.68;
   --regular-chroma: 0.19;
@@ -281,6 +280,12 @@
   /* pattern colors for image diff */
   --checkerboard-color-1: #474747;
   --checkerboard-color-2: #313131;
+  --color-indicator-offline: #a1a1aa;
+  --color-indicator-offline-20: #a1a1aa1a;
+  --color-indicator-idle: #16a34a;
+  --color-indicator-idle-20: #16a34a1a;
+  --color-indicator-active: #2185d0;
+  --color-indicator-active-20: #2185d033;
   accent-color: var(--color-accent);
   color-scheme: dark;
 }
@@ -331,7 +336,7 @@ i.grey.icon.icon.icon.icon {
 #review-box .review-comments-counter {
   background-color: var(--color-shadow) !important;
   color: var(--color-white) !important;
-  margin-left: 0.5em;
+  margin-inline-start: 0.5em;
 }
 .ui.basic.labels .primary.label,
 .ui.ui.ui.basic.primary.label {

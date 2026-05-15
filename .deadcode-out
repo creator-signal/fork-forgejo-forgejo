@@ -19,7 +19,6 @@ forgejo.org/models/auth
 forgejo.org/models/db
 	TruncateBeans
 	TruncateBeansCascade
-	InTransaction
 	DumpTables
 	GetTableNames
 	extendBeansForCascade
@@ -49,7 +48,6 @@ forgejo.org/models/organization
 	SearchMembersOptions.ToConds
 
 forgejo.org/models/perm/access
-	GetUserRepoPermissionWithReducer
 	GetRepoWriters
 
 forgejo.org/models/user
@@ -60,7 +58,6 @@ forgejo.org/models/user
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
-	GetFederatedUser
 
 forgejo.org/modules/activitypub
 	NewContext
@@ -90,7 +87,6 @@ forgejo.org/modules/eventsource
 	Event.String
 
 forgejo.org/modules/forgefed
-	NewForgeFollow
 	NewForgeUndoLike
 	ForgeUndoLike.UnmarshalJSON
 	ForgeUndoLike.Validate
@@ -136,6 +132,9 @@ forgejo.org/modules/json
 	StdJSON.Indent
 
 forgejo.org/modules/log
+	eventWriterBuffer.Close
+	eventWriterBuffer.Write
+	eventWriterBuffer.GetString
 	NewEventWriterBuffer
 
 forgejo.org/modules/markup
@@ -225,9 +224,6 @@ forgejo.org/routers/web/org
 
 forgejo.org/services/context
 	GetPrivateContext
-
-forgejo.org/services/federation
-	FollowRemoteActor
 
 forgejo.org/services/notify
 	UnregisterNotifier

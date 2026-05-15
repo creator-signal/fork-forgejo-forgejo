@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -200,8 +201,12 @@ func standardCommitAndPushTest(t *testing.T, dstPath string) (little, big string
 func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS string) {
 	t.Run("LFS", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+
+		err := git.NewCommand(git.DefaultContext, "config", "core.hooksPath", "$GIT/.hooks").AddArguments("--local").Run(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+
 		prefix := "lfs-data-file-"
-		err := git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
+		err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
 		_, _, err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("track").AddDynamicArguments(prefix + "*").RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
@@ -230,6 +235,7 @@ func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS strin
 			lockTest(t, dstPath)
 		})
 	})
+
 	return littleLFS, bigLFS
 }
 
@@ -487,9 +493,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 			"rule_name": branch,
 		}
 		if len(addParameter) > 0 {
-			for k, v := range addParameter[0] {
-				parameter[k] = v
-			}
+			maps.Copy(parameter, addParameter[0])
 		}
 
 		// Change branch to protected
@@ -856,6 +860,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			assert.False(t, prMsg.HasMerged)
 			assert.Contains(t, "Testing commit 1", prMsg.Body)
 			assert.Equal(t, commit, prMsg.Head.Sha)
+			assert.Equal(t, "user2/"+headBranch, prMsg.Head.Name)
 
 			_, _, err = git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments("HEAD:refs/for/master/test/" + headBranch).RunStdString(&git.RunOpts{Dir: dstPath})
 			require.NoError(t, err)
@@ -874,6 +879,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			prMsg = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
 
 			assert.Equal(t, "user2/test/"+headBranch, pr2.HeadBranch)
+			assert.Equal(t, "user2/test/"+headBranch, prMsg.Head.Name)
 			assert.False(t, prMsg.HasMerged)
 		})
 
@@ -1162,15 +1168,15 @@ func doLFSNoAccess(ctx APITestContext, publicKeyID int64, objectFormat git.Objec
 }
 
 func extractRemoteMessages(stderr string) string {
-	var remoteMsg string
+	var remoteMsg strings.Builder
 	for line := range strings.SplitSeq(stderr, "\n") {
 		msg, found := strings.CutPrefix(line, "remote: ")
 		if found {
-			remoteMsg += msg
-			remoteMsg += "\n"
+			remoteMsg.WriteString(msg)
+			remoteMsg.WriteString("\n")
 		}
 	}
-	return remoteMsg
+	return remoteMsg.String()
 }
 
 func doTestForkPushMessages(apictx APITestContext, dstPath string) func(*testing.T) {
@@ -1264,4 +1270,70 @@ func doTestPushMessages(ctx APITestContext, u *url.URL, objectFormat git.ObjectF
 		// Delete this test repository
 		doAPIDeleteRepository(ctx)(t)
 	}
+}
+
+// Cloning a git repo uses CheckRepoScopedToken to validate a PAT; here we run that through all variations of access
+// token resource access.
+func TestCloneAccessTokenResources(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		t.Run("all access token", func(t *testing.T) {
+			session := loginUser(t, "user2")
+			allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+			u.User = url.UserPassword("token", allToken)
+
+			t.Run("allowed public repo1", func(t *testing.T) {
+				u.Path = "/user2/repo1.git"
+				doGitClone(t.TempDir(), u)(t)
+			})
+			t.Run("allowed private repo2", func(t *testing.T) {
+				u.Path = "/user2/repo2.git"
+				require.NoError(t, git.CloneWithArgs(t.Context(), git.AllowLFSFiltersArgs(), u.String(), t.TempDir(), git.CloneRepoOptions{}))
+			})
+			// repo16 is a second repo used in fine-grain testing below, so we include it in other tests as a baseline
+			t.Run("allowed private repo16", func(t *testing.T) {
+				u.Path = "/user2/repo16.git"
+				require.NoError(t, git.CloneWithArgs(t.Context(), git.AllowLFSFiltersArgs(), u.String(), t.TempDir(), git.CloneRepoOptions{}))
+			})
+		})
+
+		t.Run("public-only access token", func(t *testing.T) {
+			session := loginUser(t, "user2")
+			publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadRepository)
+			u.User = url.UserPassword("token", publicOnlyToken)
+
+			t.Run("allowed public repo1", func(t *testing.T) {
+				u.Path = "/user2/repo1.git"
+				doGitClone(t.TempDir(), u)(t)
+			})
+			t.Run("denied private repo2", func(t *testing.T) {
+				u.Path = "/user2/repo2.git"
+				doGitCloneFail(u)(t)
+			})
+			t.Run("denied private repo16", func(t *testing.T) {
+				u.Path = "/user2/repo16.git"
+				doGitCloneFail(u)(t)
+			})
+		})
+
+		t.Run("specific repo access token", func(t *testing.T) {
+			repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+				[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadRepository},
+				[]int64{2},
+			)
+			u.User = url.UserPassword("token", repo2OnlyToken)
+
+			t.Run("allowed public repo1", func(t *testing.T) {
+				u.Path = "/user2/repo1.git"
+				doGitClone(t.TempDir(), u)(t)
+			})
+			t.Run("allowed inside fine-grain repo2", func(t *testing.T) {
+				u.Path = "/user2/repo2.git"
+				require.NoError(t, git.CloneWithArgs(t.Context(), git.AllowLFSFiltersArgs(), u.String(), t.TempDir(), git.CloneRepoOptions{}))
+			})
+			t.Run("denied private outside fine-grain repo16", func(t *testing.T) {
+				u.Path = "/user2/repo16.git"
+				doGitCloneFail(u)(t)
+			})
+		})
+	})
 }

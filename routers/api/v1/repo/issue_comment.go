@@ -18,6 +18,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
+	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	issue_service "forgejo.org/services/issue"
@@ -214,9 +215,14 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		return
 	}
 
+	if err := comments.LoadResolveDoers(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadResolveDoers", err)
+		return
+	}
+
 	var apiComments []*api.TimelineComment
 	for _, comment := range comments {
-		if comment.Type != issues_model.CommentTypeCode && isXRefCommentAccessible(ctx, ctx.Doer, comment, issue.RepoID) {
+		if comment.Type != issues_model.CommentTypeCode && isXRefCommentAccessible(ctx, ctx.Doer, comment, issue.RepoID, ctx.Reducer) {
 			comment.Issue = issue
 			apiComments = append(apiComments, convert.ToTimelineComment(ctx, issue.Repo, comment, ctx.Doer))
 		}
@@ -226,7 +232,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 
-func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issues_model.Comment, issueRepoID int64) bool {
+func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issues_model.Comment, issueRepoID int64, reducer authz.AuthorizationReducer) bool {
 	// Remove comments that the user has no permissions to see
 	if issues_model.CommentTypeIsRef(c.Type) && c.RefRepoID != issueRepoID && c.RefRepoID != 0 {
 		var err error
@@ -235,7 +241,7 @@ func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issue
 		if err != nil {
 			return false
 		}
-		perm, err := access_model.GetUserRepoPermission(ctx, c.RefRepo, user)
+		perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, c.RefRepo, user, reducer)
 		if err != nil {
 			return false
 		}
@@ -417,7 +423,7 @@ func CreateIssueComment(ctx *context.APIContext) {
 		return
 	}
 
-	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !ctx.Doer.IsAdmin {
+	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !ctx.IsUserSiteAdmin() {
 		ctx.Error(http.StatusForbidden, "CreateIssueComment", errors.New(ctx.Locale.TrString("repo.issues.comment_on_locked")))
 		return
 	}

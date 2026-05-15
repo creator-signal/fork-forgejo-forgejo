@@ -375,7 +375,15 @@ func repoAssignment(ctx *Context, repo *repo_model.Repository) {
 		return
 	}
 
-	ctx.Repo.Permission, err = access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	// Typically checks for authorization reducers won't be relevant for non-API requests where this middleware is used;
+	// but, some paths like `/user/repo/raw/...` can be accessed with API authentication mechanisms.  In those edge
+	// cases, initialize `ctx.Repo.Permission` based upon the reduced permission set available.
+	authorizationReducer := ctx.Authentication.Reducer()
+	if authorizationReducer == nil {
+		ctx.Repo.Permission, err = access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	} else {
+		ctx.Repo.Permission, err = access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, authorizationReducer)
+	}
 	if err != nil {
 		ctx.ServerError("GetUserRepoPermission", err)
 		return
@@ -395,14 +403,14 @@ func repoAssignment(ctx *Context, repo *repo_model.Repository) {
 
 	followingRepoList, err := repo_model.FindFollowingReposByRepoID(ctx, repo.ID)
 	if err == nil {
-		followingRepoString := ""
+		var followingRepoString strings.Builder
 		for idx, followingRepo := range followingRepoList {
 			if idx > 0 {
-				followingRepoString += ";"
+				followingRepoString.WriteString(";")
 			}
-			followingRepoString += followingRepo.URI
+			followingRepoString.WriteString(followingRepo.URI)
 		}
-		ctx.Data["FollowingRepos"] = followingRepoString
+		ctx.Data["FollowingRepos"] = followingRepoString.String()
 	} else if err != repo_model.ErrMirrorNotExist {
 		ctx.ServerError("FindFollowingRepoByRepoID", err)
 		return

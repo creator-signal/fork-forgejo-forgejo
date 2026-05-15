@@ -78,10 +78,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	limit := ctx.FormInt("limit")
 	if limit == 0 {
 		limit = setting.API.DefaultPagingNum
@@ -115,9 +112,9 @@ func GetIssueDependencies(ctx *context.APIContext) {
 			perm = existPerm
 		} else {
 			var err error
-			perm, err = access_model.GetUserRepoPermission(ctx, &blocker.Repository, ctx.Doer)
+			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &blocker.Repository, ctx.Doer, ctx.Reducer)
 			if err != nil {
-				ctx.ServerError("GetUserRepoPermission", err)
+				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
 				return
 			}
 			repoPerms[blocker.RepoID] = perm
@@ -332,10 +329,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	limit := ctx.FormInt("limit")
 	if limit <= 1 {
 		limit = setting.API.DefaultPagingNum
@@ -369,9 +363,9 @@ func GetIssueBlocks(ctx *context.APIContext) {
 			perm = existPerm
 		} else {
 			var err error
-			perm, err = access_model.GetUserRepoPermission(ctx, &depMeta.Repository, ctx.Doer)
+			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &depMeta.Repository, ctx.Doer, ctx.Reducer)
 			if err != nil {
-				ctx.ServerError("GetUserRepoPermission", err)
+				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
 				return
 			}
 			repoPerms[depMeta.RepoID] = perm
@@ -557,9 +551,9 @@ func getPermissionForRepo(ctx *context.APIContext, repo *repo_model.Repository) 
 		return &ctx.Repo.Permission
 	}
 
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 		return nil
 	}
 

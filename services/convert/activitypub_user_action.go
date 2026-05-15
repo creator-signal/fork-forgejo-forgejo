@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"html"
 	"net/url"
+	"strings"
 	"time"
 
 	activities_model "forgejo.org/models/activities"
 	issues_model "forgejo.org/models/issues"
+	"forgejo.org/models/repo"
 	fm "forgejo.org/modules/forgefed"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/markup"
@@ -19,6 +21,10 @@ import (
 )
 
 func ActionToForgeUserActivity(ctx context.Context, action *activities_model.Action) (fm.ForgeUserActivity, error) {
+	if action.Repo == nil {
+		return fm.ForgeUserActivity{}, repo.ErrRepoNotExist{}
+	}
+
 	render := func(format string, args ...any) string {
 		return fmt.Sprintf(`<a href="%s" rel="nofollow">%s</a> %s`, action.ActUser.HTMLURL(), action.GetActDisplayName(ctx), fmt.Sprintf(format, args...))
 	}
@@ -73,7 +79,7 @@ func ActionToForgeUserActivity(ctx context.Context, action *activities_model.Act
 		if err := json.Unmarshal([]byte(action.GetContent()), commits); err != nil {
 			return fm.ForgeUserActivity{}, err
 		}
-		commitsHTML := ""
+		var commitsHTML strings.Builder
 		renderCommit := func(commit *PushCommit) string {
 			return fmt.Sprintf(`<li><a href="%s" rel="nofollow">%s</a> <pre>%s</pre></li>`,
 				fmt.Sprintf("%s/commit/%s", action.GetRepoAbsoluteLink(ctx), url.PathEscape(commit.Sha1)),
@@ -82,9 +88,9 @@ func ActionToForgeUserActivity(ctx context.Context, action *activities_model.Act
 			)
 		}
 		for _, commit := range commits.Commits {
-			commitsHTML += renderCommit(commit)
+			commitsHTML.WriteString(renderCommit(commit))
 		}
-		return makeUserActivity("pushed to %s at %s: <ul>%s</ul>", renderBranch(), renderRepo(), commitsHTML)
+		return makeUserActivity("pushed to %s at %s: <ul>%s</ul>", renderBranch(), renderRepo(), commitsHTML.String())
 	case activities_model.ActionCreateIssue:
 		if err := action.LoadIssue(ctx); err != nil {
 			return fm.ForgeUserActivity{}, err
@@ -164,13 +170,6 @@ func ActionToForgeUserActivity(ctx context.Context, action *activities_model.Act
 			renderIssue(action.Comment.Issue),
 			renderedComment,
 		)
-	case activities_model.ActionMirrorSyncPush:
-	case activities_model.ActionMirrorSyncCreate:
-	case activities_model.ActionMirrorSyncDelete:
-	case activities_model.ActionPublishRelease:
-	case activities_model.ActionPullReviewDismissed:
-	case activities_model.ActionPullRequestReadyForReview:
-	case activities_model.ActionAutoMergePullRequest:
 	}
 
 	return makeUserActivity("performed an unrecognised action: %s", action.OpType.String())

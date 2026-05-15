@@ -526,3 +526,24 @@ type swaggerActionRun struct {
 	// in:body
 	Body api.ActionRun `json:"body"`
 }
+
+// ActionRunJobList
+// swagger:response ActionRunJobList
+type swaggerActionRunJobList struct {
+	// in:body
+	Body []api.ActionRunJob `json:"body"`
+}
+
+// ActionArtifactList
+// swagger:response ActionArtifactList
+type swaggerActionArtifactList struct {
+	// in:body
+	Body []api.ActionArtifact `json:"body"`
+}
+
+// ActionArtifact
+// swagger:response ActionArtifact
+type swaggerActionArtifact struct {
+	// in:body
+	Body api.ActionArtifact `json:"body"`
+}

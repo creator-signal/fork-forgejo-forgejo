@@ -61,10 +61,12 @@ func init() {
 
 // InitIssueIndexer initialize issue indexer, syncReindex is true then reindex until
 // all issue index done.
-func InitIssueIndexer(syncReindex bool) {
+// The return value is a done channel that signals that the indexer can be safely used.
+func InitIssueIndexer(syncReindex bool) <-chan struct{} {
 	ctx, _, finished := process.GetManager().AddTypedContext(context.Background(), "Service: IssueIndexer", process.SystemProcessType, false)
 
 	indexerInitWaitChannel := make(chan time.Duration, 1)
+	done := make(chan struct{}, 1)
 
 	// Create the Queue
 	issueIndexerQueue = queue.CreateUniqueQueue(ctx, "issue_indexer", getIssueIndexerQueueHandler(ctx))
@@ -136,12 +138,15 @@ func InitIssueIndexer(syncReindex bool) {
 
 		indexerInitWaitChannel <- time.Since(start)
 		close(indexerInitWaitChannel)
+		close(done)
 	}()
 
 	if syncReindex {
 		select {
 		case <-indexerInitWaitChannel:
+			break
 		case <-graceful.GetManager().IsShutdown():
+			break
 		}
 	} else if setting.Indexer.StartupTimeout > 0 {
 		go func() {
@@ -161,6 +166,8 @@ func InitIssueIndexer(syncReindex bool) {
 			}
 		}()
 	}
+
+	return done
 }
 
 func getIssueIndexerQueueHandler(ctx context.Context) func(items ...*IndexerMetadata) []*IndexerMetadata {
@@ -259,6 +266,19 @@ func UpdateIssueIndexer(ctx context.Context, issueID int64) {
 func DeleteRepoIssueIndexer(ctx context.Context, repoID int64) {
 	if err := deleteRepoIssueIndexer(ctx, repoID); err != nil {
 		log.Error("Unable to push deleted repo %d to issue indexer: %v", repoID, err)
+	}
+}
+
+// DeleteIssueIndexer deletes a single issue by it's ID
+//
+// NOTE: This does not perform any DB validation.
+// Hence, the issueID does not need to be present in the DB.
+func DeleteIssueIndexer(ctx context.Context, issueID int64) {
+	if err := pushIssueIndexerQueue(ctx, &IndexerMetadata{
+		IDs:      []int64{issueID},
+		IsDelete: true,
+	}); err != nil {
+		log.Error("Unable to push deleted issue %d to issue indexer: %v", issueID, err)
 	}
 }
 

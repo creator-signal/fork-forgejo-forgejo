@@ -34,6 +34,7 @@ func TestRepoCommits(t *testing.T) {
 	commitURL, exists := doc.doc.Find("#commits-table tbody tr td.sha a").Attr("href")
 	assert.True(t, exists)
 	assert.NotEmpty(t, commitURL)
+	doc.AssertElement(t, ".repo-path", false)
 }
 
 func doTestRepoCommitWithStatus(t *testing.T, state string, classes ...string) {
@@ -146,7 +147,7 @@ func TestRepoCommitsStatusParallel(t *testing.T) {
 	assert.NotEmpty(t, commitURL)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(parentT *testing.T, i int) {
 			parentT.Run(fmt.Sprintf("ParallelCreateStatus_%d", i), func(t *testing.T) {

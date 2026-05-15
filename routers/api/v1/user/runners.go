@@ -9,10 +9,16 @@ import (
 )
 
 // GetRegistrationToken returns a token to register user-level runners
+//
+// Deprecated: This operation has been deprecated in Forgejo 15. Use the web UI or RegisterRunner instead.
 func GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /user/actions/runners/registration-token user userGetRunnerRegistrationToken
 	// ---
 	// summary: Get the user's runner registration token
+	// description: >
+	//   This operation has been deprecated in Forgejo 15.
+	//   Use the web UI or [`/user/actions/runners`](#/user/registerUserRunner) instead.
+	// deprecated: true
 	// produces:
 	// - application/json
 	// parameters:
@@ -57,6 +63,10 @@ func ListRunners(ctx *context.APIContext) {
 	// produces:
 	// - application/json
 	// parameters:
+	// - name: visible
+	//   in: query
+	//   description: whether to include all visible runners (true) or only those that are directly owned by the user (false)
+	//   type: boolean
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)

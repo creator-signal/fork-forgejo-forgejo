@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
@@ -174,6 +175,34 @@ func FindReactions(ctx context.Context, opts FindReactionsOptions) (ReactionList
 	reactions := make([]*Reaction, 0, 10)
 	count, err := sess.FindAndCount(&reactions)
 	return reactions, count, err
+}
+
+func getReactionsForComments(ctx context.Context, issueID int64, commentIDs []int64) (map[int64]ReactionList, error) {
+	reactions := make(map[int64]ReactionList, len(commentIDs))
+
+	for commentIDChunk := range slices.Chunk(commentIDs, db.DefaultMaxInSize) {
+		rows, err := db.GetEngine(ctx).
+			Where(builder.Eq{"issue_id": issueID}).
+			In("reaction.`type`", setting.UI.Reactions).
+			In("comment_id", commentIDChunk).
+			Rows(&Reaction{})
+		if err != nil {
+			return nil, err
+		}
+
+		for rows.Next() {
+			var reaction Reaction
+			err = rows.Scan(&reaction)
+			if err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			reactions[reaction.CommentID] = append(reactions[reaction.CommentID], &reaction)
+		}
+
+		_ = rows.Close()
+	}
+	return reactions, nil
 }
 
 func createReaction(ctx context.Context, opts *ReactionOptions) (*Reaction, error) {

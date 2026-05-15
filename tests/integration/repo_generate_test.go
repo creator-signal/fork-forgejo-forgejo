@@ -17,12 +17,11 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -120,6 +119,10 @@ Clone URL: %s%s/%s.git`,
 	req = NewRequestf(t, "GET", "/%s/%s/raw/branch/master/%s.log", generateOwner.Name, generateRepoName, generateRepoName)
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	assert.Equal(t, generateRepoName, resp.Body.String())
+
+	// The .gitea/template file should not be present in the generated repo
+	req = NewRequestf(t, "GET", "/%s/%s/raw/branch/master/.gitea/template", generateOwner.Name, generateRepoName)
+	session.MakeRequest(t, req, http.StatusNotFound)
 }
 
 // test form elements before and after POST error response
@@ -239,40 +242,27 @@ func TestRepoGenerateTemplating(t *testing.T) {
 		expected := `# %s
 	This is a Repo By %s
 	ThisIsThe%sInAnInlineWay`
-		templateName := "my_template"
-		generatedName := "my_generated"
 
-		userName := "user1"
-		session := loginUser(t, userName)
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
-
-		template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:       optional.Some(templateName),
-			IsTemplate: optional.Some(true),
-			Files: optional.Some([]*files_service.ChangeRepoFile{
-				{
-					Operation:     "create",
-					TreePath:      ".forgejo/template",
-					ContentReader: strings.NewReader("**/Readme.md"),
-				},
-				{
-					Operation:     "create",
-					TreePath:      "dira-${REPO_NAME}/dirb-${REPO_NAME}/Readme.md",
-					ContentReader: strings.NewReader(input),
-				},
-			}),
+		template := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+			IsTemplate: true,
+			Files: forgery.MapFS{
+				".forgejo/template":                             forgery.MapFile("**/Readme.md"),
+				"dira-${REPO_NAME}/dirb-${REPO_NAME}/Readme.md": forgery.MapFile(input),
+			},
 		})
-		defer f()
+		user := template.Owner
+		session := loginUser(t, user.Name)
 
 		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 		templateID := strconv.FormatInt(template.ID, 10)
+		generatedName := "my_generated"
 
 		testRepoGenerateSuccess(
 			t,
 			session,
 			templateID,
 			user.Name,
-			templateName,
+			template.Name,
 			user,
 			user,
 			generatedName,
@@ -291,14 +281,25 @@ func TestRepoGenerateTemplating(t *testing.T) {
 			user.Name,
 			generatedName)
 		assert.Equal(t, body, resp.Body.String())
+
+		// The .forgejo/template file should not be present in the generated repo
+		req = NewRequestf(
+			t,
+			"GET", "/%s/%s/raw/branch/%s/.forgejo/template",
+			user.Name,
+			generatedName,
+			template.DefaultBranch,
+		)
+		session.MakeRequest(t, req, http.StatusNotFound)
 	})
 }
 
 func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		userName := "user1"
-		session := loginUser(t, userName)
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
+		user := forgery.CreateUser(t, &forgery.CreateUserOptions{
+			IsAdmin: true, // required to see the detailed error message on the error response
+		})
+		session := loginUser(t, user.Name)
 
 		testCases := []struct {
 			name          string
@@ -323,34 +324,18 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 
 		for i, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				templateName := fmt.Sprintf("my_template-%d", i)
-				generatedName := fmt.Sprintf("my_generated-%d", i)
-				template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-					Name:       optional.Some(templateName),
-					IsTemplate: optional.Some(true),
-					Files: optional.Some([]*files_service.ChangeRepoFile{
-						{
-							Operation:     "create",
-							TreePath:      ".forgejo/template",
-							ContentReader: strings.NewReader("**/Readme.md"),
-						},
-						{
-							Operation:     "create",
-							TreePath:      "actual-contents.txt",
-							ContentReader: strings.NewReader("Here are some contents. $REPO_NAME"),
-						},
-						{
-							Operation:     "create",
-							TreePath:      "problem/Readme.md",
-							ContentReader: strings.NewReader(tc.symlinkTarget),
-							Options:       files_service.RepoFileOptionMode(git.EntryModeSymlink),
-						},
-					}),
+				template := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+					IsTemplate: true,
+					Files: forgery.MapFS{
+						".forgejo/template":   forgery.MapFile("**/Readme.md"),
+						"actual-contents.txt": forgery.MapFile("Here are some contents. $REPO_NAME"),
+						"problem/Readme.md":   forgery.MapSymlink(tc.symlinkTarget),
+					},
 				})
-				defer f()
 
 				// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 				templateID := strconv.FormatInt(template.ID, 10)
+				generatedName := fmt.Sprintf("my_generated-%d", i)
 
 				if tc.expectedError != "" {
 					resp := testRepoGenerateFailure(
@@ -358,7 +343,7 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 						session,
 						templateID,
 						user.Name,
-						templateName,
+						template.Name,
 						user,
 						user,
 						generatedName,
@@ -370,7 +355,7 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 						session,
 						templateID,
 						user.Name,
-						templateName,
+						template.Name,
 						user,
 						user,
 						generatedName,
@@ -405,36 +390,28 @@ func TestRepoGenerateTemplatingSymlink(t *testing.T) {
 
 func TestRepoGenerateTemplatingSymlinkGlobFile(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		templateName := "my_template"
-		generatedName := "my_generated"
-
-		userName := "user1"
-		session := loginUser(t, userName)
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: userName})
-
-		template, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:       optional.Some(templateName),
-			IsTemplate: optional.Some(true),
-			Files: optional.Some([]*files_service.ChangeRepoFile{
-				{
-					Operation:     "create",
-					TreePath:      ".forgejo/template",
-					ContentReader: strings.NewReader("/etc/passwd"),
-					Options:       files_service.RepoFileOptionMode(git.EntryModeSymlink),
-				},
-			}),
+		user := forgery.CreateUser(t, &forgery.CreateUserOptions{
+			IsAdmin: true, // required to see the detailed error message on the error response
 		})
-		defer f()
+		session := loginUser(t, user.Name)
+
+		template := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+			IsTemplate: true,
+			Files: forgery.MapFS{
+				".forgejo/template": forgery.MapSymlink("/etc/passwd"),
+			},
+		})
 
 		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
 		templateID := strconv.FormatInt(template.ID, 10)
+		generatedName := "my_generated"
 
 		resp := testRepoGenerateFailure(
 			t,
 			session,
 			templateID,
 			user.Name,
-			templateName,
+			template.Name,
 			user,
 			user,
 			generatedName,

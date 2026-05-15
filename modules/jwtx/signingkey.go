@@ -25,6 +25,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// The ...KeyCfg types are only used for handover from setting to signingkey
+// see comment in setting/security.go
+
+type SigningKeyCfg struct {
+	Algorithm      string
+	SecretBytes    *[]byte
+	PrivateKeyPath *string
+}
+
+type KeyCfg struct {
+	Signing *SigningKeyCfg
+	// more later
+}
+
 // ErrInvalidAlgorithmType represents an invalid algorithm error.
 type ErrInvalidAlgorithmType struct {
 	Algorithm string
@@ -239,8 +253,8 @@ func (key ecdsaSigningKey) ToJWK() (map[string]string, error) {
 		"alg": key.SigningMethod().Alg(),
 		"kid": key.id,
 		"crv": pubKey.Params().Name,
-		"x":   base64.RawURLEncoding.EncodeToString(pubKey.X.Bytes()),
-		"y":   base64.RawURLEncoding.EncodeToString(pubKey.Y.Bytes()),
+		"x":   base64.RawURLEncoding.EncodeToString(pubKey.X.Bytes()), //nolint:staticcheck // no easy replacement. JWTX specification mandates marshalling to x, even if unsafe.
+		"y":   base64.RawURLEncoding.EncodeToString(pubKey.Y.Bytes()), //nolint:staticcheck // no easy replacement. JWTX specification mandates marshalling to y, even if unsafe.
 	}, nil
 }
 
@@ -399,50 +413,39 @@ func loadOrCreateAsymmetricKey(keyPath, algorithm string) (any, error) {
 	return loadAsymmetricKey(keyPath)
 }
 
-// InitSigningKey creates a signing key from settings or creates a random key.
-func InitSigningKey(getGeneralTokenSigningSecret func() []byte, keyPath, algorithm string) (SigningKey, error) {
+// InitSigningKey creates a signing key from SigningKeyCfg
+// cfgP is set to nil to mark that is has been processed
+func InitSigningKey(cfgP **SigningKeyCfg) (SigningKey, error) {
+	cfg := *cfgP
+	*cfgP = nil
 	var err error
 	var key SigningKey
 
-	key, err = InitSymmetricSigningKey(getGeneralTokenSigningSecret, algorithm)
-	if err != nil {
-		key, err = InitAsymmetricSigningKey(keyPath, algorithm)
-		if err != nil {
-			return nil, err
-		}
+	if IsValidSymmetricAlgorithm(cfg.Algorithm) {
+		key, err = CreateSigningKey(cfg.Algorithm, *cfg.SecretBytes)
+	} else if IsValidAsymmetricAlgorithm(cfg.Algorithm) {
+		key, err = InitAsymmetricSigningKey(*cfg.PrivateKeyPath, cfg.Algorithm)
+	} else {
+		// should never happen, setting.loadSigningKeyCfg() ensures
+		err = ErrInvalidAlgorithmType{Algorithm: cfg.Algorithm}
 	}
 
-	return key, nil
+	return key, err
 }
+
+var (
+	ValidSymmetricAlgorighms  = []string{"HS256", "HS384", "HS512"}
+	ValidAsymmetricAlgorithms = []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"}
+)
 
 // IsValidSymmetricAlgorithm checks if the passed in algorithm is a supported symettric algorithm.
 func IsValidSymmetricAlgorithm(algorithm string) bool {
-	validAlgs := []string{"HS256", "HS384", "HS512"}
-
-	return slices.Contains(validAlgs, algorithm)
-}
-
-// InitSymmetricSigningKey creates a symmetric signing key from settings.
-func InitSymmetricSigningKey(getGeneralTokenSigningSecret func() []byte, algorithm string) (SigningKey, error) {
-	var err error
-
-	if !IsValidSymmetricAlgorithm(algorithm) {
-		return nil, fmt.Errorf("invalid algorithm: %s", algorithm)
-	}
-
-	signingKey, err := CreateSigningKey(algorithm, getGeneralTokenSigningSecret())
-	if err != nil {
-		return nil, err
-	}
-
-	return signingKey, nil
+	return slices.Contains(ValidSymmetricAlgorighms, algorithm)
 }
 
 // IsValidAsymmetricAlgorithm checks if the passed in algorithm is a supported asymmetric algorithm.
 func IsValidAsymmetricAlgorithm(algorithm string) bool {
-	validAlgs := []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"}
-
-	return slices.Contains(validAlgs, algorithm)
+	return slices.Contains(ValidAsymmetricAlgorithms, algorithm)
 }
 
 // InitAsymmetricSigningKey creates an asymmetric signing key from settings or creates a random key.
@@ -465,4 +468,98 @@ func InitAsymmetricSigningKey(keyPath, algorithm string) (SigningKey, error) {
 	}
 
 	return signingKey, nil
+}
+
+func requiredJWKStr(jwk map[string]any, key string) (string, error) {
+	vAny, ok := jwk[key]
+	if !ok {
+		return "", fmt.Errorf("JWK missing required field %q", key)
+	}
+	vStr, ok := vAny.(string)
+	if !ok {
+		return "", fmt.Errorf("JWK field %q must be string, but was %T", key, vAny)
+	}
+	return vStr, nil
+}
+
+// Reconstructs public key from a JWKS entry (such as those produced by [SigningKey.ToJWK]), parsing the JWK output and
+// returning a key object.  The key object produced must be usable for [jwt.SigningMethod] interface's [Verify] method,
+// for the related signing method -- an [rsa.PublicKey] object, an [ed25519.PublicKey] object, or [ecdsa.PublicKey]
+// object, with the currently supported asymmetric algorithms.
+func ParseJWKToPublicKey(jwk map[string]any) (any, error) {
+	kty := jwk["kty"]
+
+	switch kty {
+	case "RSA":
+		eStr, err := requiredJWKStr(jwk, "e")
+		if err != nil {
+			return nil, err
+		}
+		nStr, err := requiredJWKStr(jwk, "n")
+		if err != nil {
+			return nil, err
+		}
+		eBytes, err := base64.RawURLEncoding.DecodeString(eStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid RSA JWK 'e' field: %w", err)
+		}
+		nBytes, err := base64.RawURLEncoding.DecodeString(nStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid RSA JWK 'n' field: %w", err)
+		}
+		pubKey := &rsa.PublicKey{
+			E: int(new(big.Int).SetBytes(eBytes).Int64()),
+			N: new(big.Int).SetBytes(nBytes),
+		}
+		return pubKey, nil
+	case "OKP":
+		if jwk["crv"] != "Ed25519" {
+			return nil, fmt.Errorf("OKP curve %d is not supported; only Ed25519", jwk["crv"])
+		}
+		xStr, err := requiredJWKStr(jwk, "x")
+		if err != nil {
+			return nil, err
+		}
+		xBytes, err := base64.RawURLEncoding.DecodeString(xStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid EdDSA JWK 'x' field: %w", err)
+		}
+		return ed25519.PublicKey(xBytes), nil
+	case "EC":
+		xStr, err := requiredJWKStr(jwk, "x")
+		if err != nil {
+			return nil, err
+		}
+		yStr, err := requiredJWKStr(jwk, "y")
+		if err != nil {
+			return nil, err
+		}
+		var curve elliptic.Curve
+		switch jwk["crv"] {
+		case "P-256":
+			curve = elliptic.P256()
+		case "P-384":
+			curve = elliptic.P384()
+		case "P-521":
+			curve = elliptic.P521()
+		default:
+			return nil, fmt.Errorf("unsupported ECDSA curve in JWK: %s", jwk["crv"])
+		}
+		xBytes, err := base64.RawURLEncoding.DecodeString(xStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ECDSA JWK 'x' field: %w", err)
+		}
+		yBytes, err := base64.RawURLEncoding.DecodeString(yStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ECDSA JWK 'y' field: %w", err)
+		}
+		pubKey := &ecdsa.PublicKey{
+			Curve: curve,
+			X:     new(big.Int).SetBytes(xBytes),
+			Y:     new(big.Int).SetBytes(yBytes),
+		}
+		return pubKey, nil
+	default:
+		return nil, fmt.Errorf("unsupported key type in JWK: %s", kty)
+	}
 }

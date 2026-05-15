@@ -192,6 +192,15 @@ func HasTaskForRunner(ctx context.Context, runnerID int64) (bool, error) {
 	return db.GetEngine(ctx).Where("runner_id = ?", runnerID).Exist(&ActionTask{})
 }
 
+func GetTasksOfJob(ctx context.Context, jobID int64) ([]*ActionTask, error) {
+	var tasks []*ActionTask
+	err := db.GetEngine(ctx).Where("job_id=?", jobID).Find(&tasks)
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch tasks of job %d: %w", jobID, err)
+	}
+	return tasks, nil
+}
+
 func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
 	var task ActionTask
 	has, err := db.GetEngine(ctx).Where("job_id=?", jobID).Where("attempt=?", attempt).Get(&task)
@@ -347,7 +356,7 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	return jobs, nil
 }
 
-func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey *string) (*ActionTask, bool, error) {
+func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, bool, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return nil, false, err
@@ -364,9 +373,9 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey *
 	// TODO: a more efficient way to filter labels
 	var job *ActionRunJob
 	log.Trace("runner labels: %v", runner.AgentLabels)
-	for _, v := range jobs {
-		if v.ItRunsOn(runner.AgentLabels) {
-			job = v
+	for _, j := range jobs {
+		if j.IsRequestedByRunner(handle) && j.ItRunsOn(runner.AgentLabels) {
+			job = j
 			break
 		}
 	}
@@ -378,7 +387,6 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey *
 	}
 
 	now := timeutil.TimeStampNow()
-	job.Attempt++
 	job.Started = now
 	job.Status = StatusRunning
 
@@ -452,9 +460,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey *
 }
 
 // Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to
-// a runner, specifically in the case of a workflow call's outer job. It is the responsibility of the caller to
-// increment the job's Attempt field before invoking this method, and to update that field in the database, so that
-// reruns can function for placeholder tasks and provide updated outputs.
+// a runner, specifically in the case of a workflow call's outer job.
 func CreatePlaceholderTask(ctx context.Context, job *ActionRunJob, outputs map[string]string) (*ActionTask, error) {
 	actionTask := &ActionTask{
 		JobID:             job.ID,
@@ -498,6 +504,27 @@ func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {
 	}
 	_, err := sess.Update(task)
 	return err
+}
+
+// DeleteTask removes the given task including all its steps and outputs. Removing logs and ephemeral runners is the
+// caller's responsibility.
+func DeleteTask(ctx context.Context, taskID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		_, err = db.GetEngine(ctx).Delete(&ActionTaskStep{TaskID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete steps of task %d: %w", taskID, err)
+		}
+		_, err = db.GetEngine(ctx).Delete(&ActionTaskOutput{TaskID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete outputs of task %d: %w", taskID, err)
+		}
+		_, err = db.GetEngine(ctx).Delete(&ActionTask{ID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete task %d: %w", taskID, err)
+		}
+		return nil
+	})
 }
 
 func FindOldTasksToExpire(ctx context.Context, olderThan timeutil.TimeStamp, limit int) ([]*ActionTask, error) {

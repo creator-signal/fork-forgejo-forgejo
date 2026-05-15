@@ -379,6 +379,74 @@ func TestRelease_Update(t *testing.T) {
 	assert.Equal(t, release.ID, release.Attachments[0].ReleaseID)
 	assert.Equal(t, "test2", release.Attachments[0].Name)
 	assert.Equal(t, "https://about.gitea.com/", release.Attachments[0].ExternalURL)
+
+	// delete the attachment
+	require.NoError(t, UpdateRelease(db.DefaultContext, user, gitRepo, release, false, []*AttachmentChange{
+		{
+			Action: "delete",
+			UUID:   externalAttachmentUUID,
+		},
+	}))
+	release.Attachments = nil
+	require.NoError(t, repo_model.GetReleaseAttachments(db.DefaultContext, release))
+	assert.Empty(t, release.Attachments)
+
+	t.Run("Permission denied", func(t *testing.T) {
+		require.NoError(t, UpdateRelease(t.Context(), user, gitRepo, release, false, []*AttachmentChange{
+			{
+				Action: "add",
+				Type:   "attachment",
+				UUID:   "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+			},
+		}))
+		require.NoError(t, repo_model.GetReleaseAttachments(t.Context(), release))
+		assert.Empty(t, release.Attachments)
+
+		require.NoError(t, UpdateRelease(t.Context(), user, gitRepo, release, false, []*AttachmentChange{
+			{
+				Action: "update",
+				Name:   "test2.txt",
+				UUID:   "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+			},
+		}))
+		require.NoError(t, repo_model.GetReleaseAttachments(t.Context(), release))
+		assert.Empty(t, release.Attachments)
+	})
+
+	t.Run("Delete and edit", func(t *testing.T) {
+		// Add a attachment.
+		attach, err := attachment.NewAttachment(t.Context(), &repo_model.Attachment{
+			RepoID:     repo.ID,
+			UploaderID: user.ID,
+			Name:       "test.txt",
+		}, strings.NewReader("beep"), 4)
+		require.NoError(t, err)
+
+		require.NoError(t, UpdateRelease(t.Context(), user, gitRepo, release, false, []*AttachmentChange{
+			{
+				Action: "add",
+				Type:   "attachment",
+				UUID:   attach.UUID,
+			},
+		}))
+		require.NoError(t, repo_model.GetReleaseAttachments(t.Context(), release))
+		assert.Len(t, release.Attachments, 1)
+
+		// Delete and edit at the same time, this is identical how the browser would delete a attachment.
+		require.NoError(t, UpdateRelease(t.Context(), user, gitRepo, release, false, []*AttachmentChange{
+			{
+				Action: "update",
+				Name:   "test.txt",
+				UUID:   attach.UUID,
+			},
+			{
+				Action: "delete",
+				UUID:   attach.UUID,
+			},
+		}))
+		require.NoError(t, repo_model.GetReleaseAttachments(t.Context(), release))
+		assert.Empty(t, release.Attachments)
+	})
 }
 
 func TestRelease_createTag(t *testing.T) {

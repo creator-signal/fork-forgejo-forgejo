@@ -114,10 +114,13 @@ func TestE2e(t *testing.T) {
 				defer test.MockVariableValue(&setting.Quota.Enabled, true)()
 				defer test.MockVariableValue(&testE2eWebRoutes, routers.NormalRoutes())()
 			}
+			if testname == "runner-management.test.e2e" {
+				defer unittest.OverrideFixtures("tests/e2e/fixtures/runner-management")()
+			}
 
 			// Default 2 minute timeout
 			onForgejoRun(t, func(*testing.T, *url.URL) {
-				defer DeclareGitRepos(t)()
+				DeclareGitRepos(t)
 				thisTest := runArgs
 				// when all tests are run, use unique artifacts directories per test to preserve artifacts from other tests
 				if testVisual {

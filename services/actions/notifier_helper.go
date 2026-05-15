@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -574,8 +576,23 @@ func handleSchedules(
 			continue
 		}
 
+		now := time.Now()
+		specs := make([]*actions_model.ActionScheduleSpec, 0, len(schedules))
+		for _, schedule := range schedules {
+			scheduleSpec, err := actions_model.NewActionScheduleSpec(schedule.Cron, optional.FromNonDefault(schedule.TimeZone), now)
+			if err != nil {
+				return err
+			}
+			specs = append(specs, scheduleSpec)
+		}
+
+		title := workflow.Name
+		if len(title) < 1 {
+			title = dwf.GetWorkflowPath()
+		}
+
 		run := &actions_model.ActionSchedule{
-			Title:             strings.SplitN(commit.CommitMessage, "\n", 2)[0],
+			Title:             title,
 			RepoID:            input.Repo.ID,
 			OwnerID:           input.Repo.OwnerID,
 			WorkflowID:        dwf.EntryName,
@@ -585,7 +602,7 @@ func handleSchedules(
 			CommitSHA:         commit.ID.String(),
 			Event:             input.Event,
 			EventPayload:      string(p),
-			Specs:             schedules,
+			Specs:             specs,
 			Content:           dwf.Content,
 		}
 		crons = append(crons, run)

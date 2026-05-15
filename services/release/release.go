@@ -192,7 +192,7 @@ func CreateRelease(gitRepo *git.Repository, rel *repo_model.Release, msg string,
 		}
 	}
 
-	if err = repo_model.AddReleaseAttachments(gitRepo.Ctx, rel.ID, addAttachmentUUIDs.Values()); err != nil {
+	if err = repo_model.AddReleaseAttachments(gitRepo.Ctx, rel, addAttachmentUUIDs.Values()); err != nil {
 		return err
 	}
 
@@ -267,7 +267,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 	addAttachmentUUIDs := make(container.Set[string])
 	delAttachmentUUIDs := make(container.Set[string])
 	updateAttachmentUUIDs := make(container.Set[string])
-	updateAttachments := make(container.Set[*AttachmentChange])
+	updateAttachments := map[string]*AttachmentChange{}
 
 	for _, attachmentChange := range attachmentChanges {
 		switch attachmentChange.Action {
@@ -305,7 +305,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 			delAttachmentUUIDs.Add(attachmentChange.UUID)
 		case "update":
 			updateAttachmentUUIDs.Add(attachmentChange.UUID)
-			updateAttachments.Add(attachmentChange)
+			updateAttachments[attachmentChange.UUID] = attachmentChange
 		default:
 			if attachmentChange.Action == "" {
 				return errors.New("missing attachment action")
@@ -314,50 +314,35 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 		}
 	}
 
-	if err = repo_model.AddReleaseAttachments(ctx, rel.ID, addAttachmentUUIDs.Values()); err != nil {
+	if err = repo_model.AddReleaseAttachments(ctx, rel, addAttachmentUUIDs.Values()); err != nil {
 		return fmt.Errorf("AddReleaseAttachments: %w", err)
 	}
 
-	deletedUUIDs := make(container.Set[string])
 	if len(delAttachmentUUIDs) > 0 {
-		// Check attachments
-		attachments, err := repo_model.GetAttachmentsByUUIDs(ctx, delAttachmentUUIDs.Values())
+		// Check delAttachments
+		delAttachments, err := repo_model.FindRepoAttachmentsByUUID(ctx, rel.RepoID, delAttachmentUUIDs.Values(), repo_model.FindAttachmentOptions{ReleaseID: rel.ID})
 		if err != nil {
-			return fmt.Errorf("GetAttachmentsByUUIDs [uuids: %v]: %w", delAttachmentUUIDs, err)
-		}
-		for _, attach := range attachments {
-			if attach.ReleaseID != rel.ID {
-				return util.SilentWrap{
-					Message: "delete attachment of release permission denied",
-					Err:     util.ErrPermissionDenied,
-				}
-			}
-			deletedUUIDs.Add(attach.UUID)
+			return fmt.Errorf("FindRepoAttachmentsByUUID[uuids=%q,repoID=%d,releaseID=%d]: %w", delAttachmentUUIDs.Values(), rel.RepoID, rel.ID, err)
 		}
 
-		if _, err := repo_model.DeleteAttachments(ctx, attachments, true); err != nil {
+		if _, err := repo_model.DeleteAttachments(ctx, delAttachments, true); err != nil {
 			return fmt.Errorf("DeleteAttachments [uuids: %v]: %w", delAttachmentUUIDs, err)
 		}
 	}
 
 	if len(updateAttachmentUUIDs) > 0 {
-		// Check attachments
-		attachments, err := repo_model.GetAttachmentsByUUIDs(ctx, updateAttachmentUUIDs.Values())
+		// Check that attachments actually belong to repository and release.
+		attachments, err := repo_model.FindRepoAttachmentsByUUID(ctx, rel.RepoID, updateAttachmentUUIDs.Values(), repo_model.FindAttachmentOptions{ReleaseID: rel.ID})
 		if err != nil {
-			return fmt.Errorf("GetAttachmentsByUUIDs [uuids: %v]: %w", updateAttachmentUUIDs, err)
+			return fmt.Errorf("FindRepoAttachmentsByUUID[uuids=%q,repoID=%d,releaseID=%d]: %w", updateAttachmentUUIDs.Values(), rel.RepoID, rel.ID, err)
 		}
-		for _, attach := range attachments {
-			if attach.ReleaseID != rel.ID {
-				return util.SilentWrap{
-					Message: "update attachment of release permission denied",
-					Err:     util.ErrPermissionDenied,
-				}
-			}
-		}
-	}
 
-	for attachmentChange := range updateAttachments {
-		if !deletedUUIDs.Contains(attachmentChange.UUID) {
+		for _, attachment := range attachments {
+			attachmentChange, ok := updateAttachments[attachment.UUID]
+			if !ok {
+				continue
+			}
+
 			if err = repo_model.UpdateAttachmentByUUID(ctx, &repo_model.Attachment{
 				UUID:        attachmentChange.UUID,
 				Name:        attachmentChange.Name,

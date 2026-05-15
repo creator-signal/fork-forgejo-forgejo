@@ -417,9 +417,44 @@ func TestPackageAccess(t *testing.T) {
 			{limitedOrgNoMember, http.StatusOK},
 			{publicOrgNoMember, http.StatusOK},
 		} {
-			req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s", target.Owner.Name)).
-				AddTokenAuth(tokenReadPackage)
-			MakeRequest(t, req, target.ExpectedStatus)
+			t.Run(target.Owner.Name, func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s", target.Owner.Name)).
+					AddTokenAuth(tokenReadPackage)
+				MakeRequest(t, req, target.ExpectedStatus)
+			})
+		}
+	})
+
+	t.Run("Authorized Integration", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		ait := newAITester(t, func(ai *auth_model.AuthorizedIntegration) {
+			ai.Scope = auth_model.AccessTokenScopeReadPackage
+			ai.UserID = user.ID
+		})
+		defer ait.close()
+		token := ait.signedJWT()
+
+		for _, target := range []Target{
+			{admin, http.StatusOK},
+			{inactive, http.StatusOK},
+			{user, http.StatusOK},
+			{limitedUser, http.StatusOK},
+			{privateUser, http.StatusForbidden},
+			{privateOrgMember, http.StatusOK},
+			{limitedOrgMember, http.StatusOK},
+			{publicOrgMember, http.StatusOK},
+			{privateOrgNoMember, http.StatusForbidden},
+			{limitedOrgNoMember, http.StatusOK},
+			{publicOrgNoMember, http.StatusOK},
+		} {
+			t.Run(target.Owner.Name, func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/packages/%s", target.Owner.Name)).
+					AddTokenAuth(token)
+				MakeRequest(t, req, target.ExpectedStatus)
+			})
 		}
 	})
 }
@@ -491,6 +526,42 @@ func TestPackageCleanup(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	duration, _ := time.ParseDuration("-1h")
+
+	t.Run("Debian", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		// Debian does a repository rebuild.
+
+		distribution := "forgejo"
+		component := "main"
+		architecture := "amd64"
+		packageName := "runner"
+		packageDescription := "Forgejo Runner"
+
+		rootURL := fmt.Sprintf("/api/packages/%s/debian", user.Name)
+		uploadURL := fmt.Sprintf("%s/pool/%s/%s/upload", rootURL, distribution, component)
+
+		req := NewRequestWithBody(t, "PUT", uploadURL,
+			createDebianArchive(packageName, "1.0.0", architecture, packageDescription)).
+			AddBasicAuth(user.Name)
+		MakeRequest(t, req, http.StatusCreated)
+
+		resp := MakeRequest(t, NewRequestf(t, "GET", "%s/dists/%s/%s/binary-%s/Packages", rootURL, distribution, component, architecture), http.StatusOK)
+		assert.Contains(t, resp.Body.String(), "pool/forgejo/main/runner_1.0.0_amd64.deb")
+
+		pcr, err := packages_model.InsertCleanupRule(t.Context(), &packages_model.PackageCleanupRule{
+			Enabled:       true,
+			RemovePattern: `.+`,
+			OwnerID:       user.ID,
+			Type:          packages_model.TypeDebian,
+		})
+		require.NoError(t, err)
+
+		require.NoError(t, packages_cleanup_service.CleanupTask(t.Context(), duration))
+
+		MakeRequest(t, NewRequestf(t, "GET", "%s/dists/%s/%s/binary-%s/Packages", rootURL, distribution, component, architecture), http.StatusNotFound)
+
+		require.NoError(t, packages_model.DeleteCleanupRuleByID(t.Context(), pcr.ID))
+	})
 
 	t.Run("Common", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()

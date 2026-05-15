@@ -164,8 +164,6 @@ func serveInstall(_ context.Context, ctx *cli.Command) error {
 }
 
 func serveInstalled(_ context.Context, ctx *cli.Command) error {
-	setting.InitCfgProvider(setting.CustomConf)
-	setting.LoadCommonSettings()
 	setting.MustInstalled()
 
 	showWebStartupMessage("Prepare to run web server")
@@ -278,8 +276,11 @@ func setPort(port string) error {
 
 	switch setting.Protocol {
 	case setting.HTTPUnix:
+		break
 	case setting.FCGI:
+		break
 	case setting.FCGIUnix:
+		break
 	default:
 		defaultLocalURL := string(setting.Protocol) + "://"
 		if setting.HTTPAddr == "0.0.0.0" {

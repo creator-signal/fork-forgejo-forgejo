@@ -96,7 +96,7 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 
 	username := "user2"
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: username})
-	baseAPITestContext := NewAPITestContext(t, username, "repo1")
+	baseAPITestContext := NewAPITestContext(t, username, "repo1", auth_model.AccessTokenScopeReadRepository)
 	u.Path = baseAPITestContext.GitPath()
 
 	suffix := "-" + signingFormat + "-" + objectFormat.Name()
@@ -433,7 +433,7 @@ func crudActionCreateFile(_ *testing.T, ctx APITestContext, user *user_model.Use
 				Email: user.Email,
 			},
 		},
-		ContentBase64: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("This is new text for %s", path))),
+		ContentBase64: base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "This is new text for %s", path)),
 	}, callback...)
 }
 

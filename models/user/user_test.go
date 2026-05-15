@@ -273,9 +273,9 @@ func TestHashPasswordDeterministic(t *testing.T) {
 	b := make([]byte, 16)
 	u := &user_model.User{}
 	algos := hash.RecommendedHashAlgorithms
-	for j := 0; j < len(algos); j++ {
+	for j := range algos {
 		u.PasswdHashAlgo = algos[j]
-		for i := 0; i < 50; i++ {
+		for range 50 {
 			// generate a random password
 			rand.Read(b)
 			pass := string(b)
@@ -982,23 +982,25 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 	assert.True(t, ok)
 
 	t.Run("Wrong purpose", func(t *testing.T) {
-		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.PasswordReset)
+		u, _, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.PasswordReset)
 		require.NoError(t, err)
 		assert.Nil(t, u)
 	})
 
 	t.Run("No delete", func(t *testing.T) {
-		u, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
+		u, authToken, _, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
 		assert.Equal(t, user.ID, u.ID)
+		require.NotNil(t, authToken)
+		assert.False(t, authToken.LoginSourceID.Has())
 
-		authToken, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
+		stored, err := auth.FindAuthToken(db.DefaultContext, lookupKey, auth.UserActivation)
 		require.NoError(t, err)
-		assert.NotNil(t, authToken)
+		assert.NotNil(t, stored)
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		u, deleteToken, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
+		u, _, deleteToken, err := user_model.VerifyUserAuthorizationToken(db.DefaultContext, code, auth.UserActivation)
 		require.NoError(t, err)
 		assert.Equal(t, user.ID, u.ID)
 		require.NoError(t, deleteToken())

@@ -159,6 +159,48 @@ func TestPersonIdValidation(t *testing.T) {
 	result, err = validation.IsValid(sut)
 	assert.False(t, result)
 	require.EqualError(t, err, "Validation Error: forgefed.PersonID: Field Source contains the value forgejox, which is not in allowed subset [forgejo gitea mastodon gotosocial]")
+
+	sut = forgefed.PersonID{}
+	sut.ID = "actor"
+	sut.Source = "forgejo"
+	sut.HostSchema = "https"
+	sut.Path = "api/v1/activitypub"
+	sut.Host = "example.com"
+	sut.HostPort = 443
+	sut.IsPortSupplemented = true
+	sut.UnvalidatedInput = "https://example.com/api/v1/activitypub/actor"
+
+	result, err = validation.IsValid(sut)
+	assert.True(t, result)
+	require.NoError(t, err)
+
+	sut = forgefed.PersonID{}
+	sut.ID = "actor"
+	sut.Source = "forgejo"
+	sut.HostSchema = "https"
+	sut.Path = "api/activitypub"
+	sut.Host = "example.com"
+	sut.HostPort = 443
+	sut.IsPortSupplemented = true
+	sut.UnvalidatedInput = "https://example.com/api/activitypub/actor"
+
+	result, err = validation.IsValid(sut)
+	assert.True(t, result)
+	require.NoError(t, err)
+
+	sut = forgefed.PersonID{}
+	sut.ID = "1"
+	sut.Source = "forgejo"
+	sut.HostSchema = "https"
+	sut.Path = "api/v1/activitypub"
+	sut.Host = "example.com"
+	sut.HostPort = 443
+	sut.IsPortSupplemented = true
+	sut.UnvalidatedInput = "https://example.com/api/v1/activitypub/1"
+
+	result, err = validation.IsValid(sut)
+	assert.False(t, result)
+	require.EqualError(t, err, "Validation Error: forgefed.PersonID: path: \"api/v1/activitypub\" has to be a person specific api path")
 }
 
 func TestWebfingerId(t *testing.T) {
@@ -194,9 +236,9 @@ func TestShouldThrowErrorOnInvalidInput(t *testing.T) {
 
 func Test_PersonMarshalJSON(t *testing.T) {
 	sut := forgefed.ForgePerson{}
-	sut.Type = "Person"
+	sut.Type = ap.PersonType
 	sut.PreferredUsername = ap.NaturalLanguageValuesNew()
-	sut.PreferredUsername.Set("en", ap.Content("MaxMuster"))
+	sut.PreferredUsername.Set(ap.English, ap.Content("MaxMuster"))
 	result, _ := sut.MarshalJSON()
 	assert.JSONEq(t, `{"type":"Person","preferredUsername":"MaxMuster"}`, string(result), "Expected string is not equal")
 }
@@ -204,9 +246,9 @@ func Test_PersonMarshalJSON(t *testing.T) {
 func Test_PersonUnmarshalJSON(t *testing.T) {
 	expected := &forgefed.ForgePerson{
 		Actor: ap.Actor{
-			Type: "Person",
+			Type: ap.PersonType,
 			PreferredUsername: ap.NaturalLanguageValues{
-				ap.LangRefValue{Ref: "en", Value: []byte("MaxMuster")},
+				ap.English: []byte("MaxMuster"),
 			},
 		},
 	}

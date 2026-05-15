@@ -159,6 +159,48 @@ __metadata:
 			},
 		},
 		{
+			name: "unblocked workflow call outer job with success and skip",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusSuccess,
+			},
+		},
+		{
+			name: "unblocked workflow call outer job with only skip",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusSkipped,
+			},
+		},
+		{
 			name: "unblocked workflow call outer job, incomplete `with`",
 			jobs: actions_model.ActionJobList{
 				{ID: 1, JobID: "job0", Status: actions_model.StatusSuccess, Needs: []string{}},
@@ -230,6 +272,51 @@ __metadata:
 			want: map[int64]actions_model.Status{
 				3: actions_model.StatusFailure,
 			},
+		},
+		{
+			name: "unblocked workflow call outer job with internal failure",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusFailure, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusFailure,
+			},
+		},
+		{
+			name: "blocked if needs are unknown",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "build", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 2, JobID: "test", Status: actions_model.StatusBlocked, Needs: []string{"build", "unknown"}},
+			},
+			want: map[int64]actions_model.Status{},
+		},
+		{
+			name: "blocked if needs are unknown despite always()",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "build", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 45, JobID: "test", Needs: []string{"build", "unknown"}, Status: actions_model.StatusBlocked, WorkflowPayload: []byte(`
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    needs: [build, unknown]
+    if: always()
+    steps: []
+`)},
+			},
+			want: map[int64]actions_model.Status{},
 		},
 	}
 	for _, tt := range tests {

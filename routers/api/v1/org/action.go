@@ -168,11 +168,17 @@ func (Action) DeleteSecret(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// GetRegistrationToken returns the organization's runner registration token
+// GetRegistrationToken returns the organization's runner registration token.
+//
+// Deprecated: This operation has been deprecated in Forgejo 15. Use the web UI or RegisterRunner instead.
 func (Action) GetRegistrationToken(ctx *context.APIContext) {
 	// swagger:operation GET /orgs/{org}/actions/runners/registration-token organization orgGetRunnerRegistrationToken
 	// ---
 	// summary: Get the organization's runner registration token
+	// description: >
+	//   This operation has been deprecated in Forgejo 15.
+	//   Use the web UI or [`/orgs/{org}/actions/runners`](#/organization/registerOrgRunner) instead.
+	// deprecated: true
 	// produces:
 	// - application/json
 	// parameters:
@@ -278,6 +284,10 @@ func (Action) ListRunners(ctx *context.APIContext) {
 	//   description: name of the organization
 	//   type: string
 	//   required: true
+	// - name: visible
+	//   in: query
+	//   description: whether to include all visible runners (true) or only those that are directly owned by the organization (false)
+	//   type: boolean
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)
