@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
@@ -30,6 +31,9 @@ func ValidateAuthorizedIntegration(ai *auth_model.AuthorizedIntegration, repoRes
 
 // Validate and insert a new authorized integration.
 func InsertAuthorizedIntegration(ctx context.Context, ai *auth_model.AuthorizedIntegration, repoResources []*auth_model.AuthorizedIntegResourceRepo) error {
+	ai.Name = strings.TrimSpace(ai.Name)
+	ai.Description = strings.TrimSpace(ai.Description)
+
 	if err := ValidateAuthorizedIntegration(ai, repoResources); err != nil {
 		return err
 	}
@@ -44,5 +48,21 @@ func InsertAuthorizedIntegration(ctx context.Context, ai *auth_model.AuthorizedI
 			}
 		}
 		return nil
+	})
+}
+
+func UpdateAuthorizedIntegration(ctx context.Context, ai *auth_model.AuthorizedIntegration, repoResources []*auth_model.AuthorizedIntegResourceRepo) error {
+	ai.Name = strings.TrimSpace(ai.Name)
+	ai.Description = strings.TrimSpace(ai.Description)
+
+	if err := ValidateAuthorizedIntegration(ai, repoResources); err != nil {
+		return err
+	}
+
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if err := auth_model.UpdateAuthorizedIntegration(ctx, ai); err != nil {
+			return err
+		}
+		return auth_model.UpdateAuthorizedIntegrationResourceRepos(ctx, ai.ID, repoResources)
 	})
 }
