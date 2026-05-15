@@ -331,6 +331,11 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 		line = opts.OldLineNum * -1
 	}
 
+	if opts.ExtraLinesCount < 0 {
+		ctx.Error(http.StatusUnprocessableEntity, "invalid extra_lines_count", errors.New("extra_lines_count must be >= 0"))
+		return
+	}
+
 	comment, err := pull_service.CreateCodeCommentKnownReviewID(ctx,
 		ctx.Doer,
 		pr.Issue.Repo,
@@ -497,6 +502,11 @@ func CreatePullReview(ctx *context.APIContext) {
 
 	// create review comments
 	for _, c := range opts.Comments {
+		if c.ExtraLinesCount < 0 {
+			ctx.Error(http.StatusUnprocessableEntity, "invalid extra_lines_count", errors.New("extra_lines_count must be >= 0"))
+			return
+		}
+
 		line := c.NewLineNum
 		if c.OldLineNum > 0 {
 			line = c.OldLineNum * -1

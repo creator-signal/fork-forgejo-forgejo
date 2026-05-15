@@ -46,7 +46,9 @@ func checkInvalidation(ctx context.Context, c *issues_model.Comment, repo *repo_
 	reverseBlame, err := c.ResolveCurrentLine(ctx, repo, newCommitID)
 	if err != nil {
 		log.Warn("ResolveCurrentLine failed: %s", err.Error())
-	} else if reverseBlame.CommitID != newCommitID {
+		return nil
+	}
+	if reverseBlame.CommitID != newCommitID {
 		c.Invalidated = true
 		return issues_model.UpdateCommentInvalidate(ctx, c)
 	}

@@ -215,6 +215,21 @@ func TestAPIPullReviewMultiLineComment(t *testing.T) {
 	require.Len(t, singleComments, 1)
 	assert.EqualValues(t, 0, singleComments[0].ExtraLinesCount)
 
+	// Create a review with negative extra_lines_count → should be rejected
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews", repo.OwnerName, repo.Name, pullIssue.Index), &api.CreatePullReviewOptions{
+		Body:  "negative review",
+		Event: "COMMENT",
+		Comments: []api.CreatePullReviewComment{
+			{
+				Path:            "README.md",
+				Body:            "negative extra_lines_count",
+				NewLineNum:      1,
+				ExtraLinesCount: -1,
+			},
+		},
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+
 	// Cleanup
 	req = NewRequestf(t, http.MethodDelete, "/api/v1/repos/%s/%s/pulls/%d/reviews/%d", repo.OwnerName, repo.Name, pullIssue.Index, review.ID).
 		AddTokenAuth(token)

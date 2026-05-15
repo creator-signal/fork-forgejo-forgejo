@@ -690,7 +690,8 @@ export function initRepoPullRequestReview() {
     multiLineDrag = null;
   });
   $(document).on('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && multiLineDrag) {
+      document.body.style.userSelect = '';
       clearMultiLineSelection();
       multiLineDrag = null;
     }
