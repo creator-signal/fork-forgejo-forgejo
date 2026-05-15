@@ -46,7 +46,7 @@ func ServeContentWithCacheControl(w http.ResponseWriter, req *http.Request, name
 func HandleGenericETagCache(req *http.Request, w http.ResponseWriter, etag string) (handled bool) {
 	if len(etag) > 0 {
 		w.Header().Set("Etag", etag)
-		if checkIfNoneMatchIsValid(req, etag) {
+		if CheckIfNoneMatchIsValid(req, etag) {
 			w.WriteHeader(http.StatusNotModified)
 			return true
 		}
@@ -56,7 +56,7 @@ func HandleGenericETagCache(req *http.Request, w http.ResponseWriter, etag strin
 }
 
 // checkIfNoneMatchIsValid tests if the header If-None-Match matches the ETag
-func checkIfNoneMatchIsValid(req *http.Request, etag string) bool {
+func CheckIfNoneMatchIsValid(req *http.Request, etag string) bool {
 	ifNoneMatch := req.Header.Get("If-None-Match")
 	if len(ifNoneMatch) > 0 {
 		for item := range strings.SplitSeq(ifNoneMatch, ",") {
@@ -81,7 +81,7 @@ func HandleGenericETagTimeCache(req *http.Request, w http.ResponseWriter, etag s
 	}
 
 	if len(etag) > 0 {
-		if checkIfNoneMatchIsValid(req, etag) {
+		if CheckIfNoneMatchIsValid(req, etag) {
 			w.WriteHeader(http.StatusNotModified)
 			return true
 		}

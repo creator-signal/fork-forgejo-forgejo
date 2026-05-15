@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	packages_model "forgejo.org/models/packages"
+	"forgejo.org/modules/cache"
+	"forgejo.org/modules/httpcache"
 	"forgejo.org/modules/optional"
 	packages_module "forgejo.org/modules/packages"
 	rubygems_module "forgejo.org/modules/packages/rubygems"
@@ -124,58 +126,73 @@ func ServePackageInfo(ctx *context.Context) {
 // ServeVersionsFile creates rubygems.org compatible /versions file.
 // See also https://guides.rubygems.org/rubygems-org-compact-index-api/.
 func ServeVersionsFile(ctx *context.Context) {
-	packages, err := packages_model.GetPackagesByType(
-		ctx, ctx.Package.Owner.ID, packages_model.TypeRubyGems)
+	httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0)
+
+	result, err := cache.GetString(fmt.Sprintf("RubyGems:/versions:%d", ctx.Package.Owner.ID), func() (string, error) {
+		result := new(strings.Builder)
+		packages, err := packages_model.GetPackagesByType(ctx, ctx.Package.Owner.ID, packages_model.TypeRubyGems)
+		if err != nil {
+			return "", err
+		}
+		result.WriteString(Sep)
+		for _, pack := range packages {
+			versions, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypeRubyGems, pack.Name)
+			if err != nil {
+				return "", err
+			}
+			if len(versions) == 0 {
+				// No versions left for this package, we should continue.
+				continue
+			}
+
+			fmt.Fprintf(result, "%s ", pack.Name)
+			for i, v := range versions {
+				result.WriteString(v.Version)
+
+				pd, err := packages_model.GetPackageDescriptor(ctx, v)
+				if err != nil {
+					return "", err
+				}
+
+				metadata := pd.Metadata.(*rubygems_module.Metadata)
+
+				if metadata.Platform != "ruby" {
+					result.WriteString("_")
+					result.WriteString(metadata.Platform)
+				}
+
+				if i != len(versions)-1 {
+					result.WriteString(",")
+				}
+			}
+
+			info, err := buildInfoFileForPackage(ctx, versions)
+			if err != nil {
+				return "", err
+			}
+
+			checksum := md5.Sum([]byte(*info))
+			fmt.Fprintf(result, " %x\n", checksum)
+		}
+
+		return result.String(), nil
+	})
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return
 	}
-	result := new(strings.Builder)
-	result.WriteString(Sep)
-	for _, pack := range packages {
-		versions, err := packages_model.GetVersionsByPackageName(
-			ctx, ctx.Package.Owner.ID, packages_model.TypeRubyGems, pack.Name)
-		if err != nil {
-			apiError(ctx, http.StatusInternalServerError, err)
-			return
-		}
-		if len(versions) == 0 {
-			// No versions left for this package, we should continue.
-			continue
-		}
 
-		fmt.Fprintf(result, "%s ", pack.Name)
-		for i, v := range versions {
-			result.WriteString(v.Version)
+	etag := fmt.Sprintf(`"%x"`, md5.Sum([]byte(result)))
 
-			pd, err := packages_model.GetPackageDescriptor(ctx, v)
-			if err != nil {
-				apiError(ctx, http.StatusInternalServerError, err)
-				return
-			}
+	ctx.Resp.Header().Set("Etag", etag)
 
-			metadata := pd.Metadata.(*rubygems_module.Metadata)
-
-			if metadata.Platform != "ruby" {
-				result.WriteString("_")
-				result.WriteString(metadata.Platform)
-			}
-
-			if i != len(versions)-1 {
-				result.WriteString(",")
-			}
-		}
-
-		info, err := buildInfoFileForPackage(ctx, versions)
-		if err != nil {
-			apiError(ctx, http.StatusInternalServerError, err)
-			return
-		}
-
-		checksum := md5.Sum([]byte(*info))
-		fmt.Fprintf(result, " %x\n", checksum)
+	if httpcache.CheckIfNoneMatchIsValid(ctx.Req, etag) {
+		ctx.Resp.WriteHeader(http.StatusNotModified)
+		return
 	}
-	ctx.PlainText(http.StatusOK, result.String())
+
+	ctx.PlainText(http.StatusOK, result)
+	}
 }
 
 // ServePackageSpecification serves the compressed Gemspec file of a package
