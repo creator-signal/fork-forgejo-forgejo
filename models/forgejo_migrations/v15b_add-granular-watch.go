@@ -8,6 +8,7 @@ import (
 )
 
 type WatchSource bool
+
 const (
 	// TOOD: properly migrate this
 	// WatchSourceExplicit means the user explicitly chose to watch certain things (or none or all) of this repo.
@@ -38,9 +39,9 @@ func init() {
 func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	type Watch struct {
 		Source                     WatchSource `xorm:"BOOL DEFAULT TRUE"`
-		WatchSelectionIssues       bool                   `xorm:"BOOL DEFAULT TRUE"`
-		WatchSelectionPullRequests bool                   `xorm:"BOOL DEFAULT TRUE"`
-		WatchSelectionReleases     bool                   `xorm:"BOOL DEFAULT TRUE"`
+		WatchSelectionIssues       bool        `xorm:"BOOL DEFAULT TRUE"`
+		WatchSelectionPullRequests bool        `xorm:"BOOL DEFAULT TRUE"`
+		WatchSelectionReleases     bool        `xorm:"BOOL DEFAULT TRUE"`
 	}
 
 	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Watch))
