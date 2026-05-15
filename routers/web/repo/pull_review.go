@@ -117,6 +117,7 @@ func CreateCodeComment(ctx *context.Context) {
 		ctx.Repo.GitRepo,
 		issue,
 		signedLine,
+		form.ExtraLinesCount,
 		form.Content,
 		form.TreePath,
 		pendingReview,

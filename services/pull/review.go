@@ -50,7 +50,30 @@ func checkInvalidation(ctx context.Context, c *issues_model.Comment, repo *repo_
 		c.Invalidated = true
 		return issues_model.UpdateCommentInvalidate(ctx, c)
 	}
+
+	// For multi-line comments, check additional lines in the range
+	if c.ExtraLinesCount > 0 {
+		invalidated, err := checkMultiLineInvalidation(ctx, c, repo, newCommitID)
+		if err != nil {
+			log.Warn("checkMultiLineInvalidation failed: %s", err.Error())
+		} else if invalidated {
+			c.Invalidated = true
+			return issues_model.UpdateCommentInvalidate(ctx, c)
+		}
+	}
+
 	return nil
+}
+
+// checkMultiLineInvalidation checks if any additional line in a multi-line comment range
+// has been changed. Returns true if the comment should be invalidated.
+// Uses cached results via Comment.CheckLineRangeValid.
+func checkMultiLineInvalidation(ctx context.Context, c *issues_model.Comment, repo *repo_model.Repository, newCommitID string) (bool, error) {
+	valid, err := c.CheckLineRangeValid(ctx, repo, newCommitID)
+	if err != nil {
+		return false, err
+	}
+	return !valid, nil
 }
 
 // InvalidateCodeComments will lookup the prs for code comments which got invalidated by change
@@ -79,7 +102,7 @@ func InvalidateCodeComments(ctx context.Context, prs issues_model.PullRequestLis
 
 // CreateCodeComment creates a comment on the code line
 func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.Repository,
-	issue *issues_model.Issue, line int64, content, treePath string, pendingReview bool,
+	issue *issues_model.Issue, line, extraLinesCount int64, content, treePath string, pendingReview bool,
 	replyReviewID int64, beforeCommitID, latestCommitID string, attachments []string,
 ) (*issues_model.Comment, error) {
 	var (
@@ -115,6 +138,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 			beforeCommitID,
 			latestCommitID,
 			line,
+			extraLinesCount,
 			replyReviewID,
 			attachments,
 		)
@@ -158,6 +182,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 		beforeCommitID,
 		latestCommitID,
 		line,
+		extraLinesCount,
 		review.ID,
 		attachments,
 	)
@@ -180,7 +205,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 // CreateCodeCommentKnownReviewID creates a plain code comment at the specified line / path
 func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, repo *repo_model.Repository,
 	issue *issues_model.Issue, content, treePath, beforeCommitID, afterCommitID string,
-	line, reviewID int64, attachments []string,
+	line, extraLinesCount, reviewID int64, attachments []string,
 ) (*issues_model.Comment, error) {
 	var commitID, blamedCommitID, patch string
 	blamedLine := line
@@ -292,25 +317,29 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			_ = writer.Close()
 		}()
 
-		patch, err = git.CutDiffAroundLine(reader, int64((&issues_model.Comment{Line: line}).UnsignedLine()), line < 0, setting.UI.CodeCommentLines)
+		// For multi-line comments, center the patch on the last line and expand context to include the full range
+		displayLine := int64((&issues_model.Comment{Line: line, ExtraLinesCount: extraLinesCount}).UnsignedDisplayLine())
+		contextLines := setting.UI.CodeCommentLines + int(extraLinesCount)
+		patch, err = git.CutDiffAroundLine(reader, displayLine, line < 0, contextLines)
 		if err != nil {
 			log.Error("Error whilst generating patch: %v", err)
 			return nil, err
 		}
 	}
 	return issues_model.CreateComment(ctx, &issues_model.CreateCommentOptions{
-		Type:        issues_model.CommentTypeCode,
-		Doer:        doer,
-		Repo:        repo,
-		Issue:       issue,
-		Content:     content,
-		LineNum:     blamedLine,
-		TreePath:    treePath,
-		CommitSHA:   blamedCommitID,
-		ReviewID:    reviewID,
-		Patch:       patch,
-		Invalidated: invalidated,
-		Attachments: attachments,
+		Type:            issues_model.CommentTypeCode,
+		Doer:            doer,
+		Repo:            repo,
+		Issue:           issue,
+		Content:         content,
+		LineNum:         blamedLine,
+		ExtraLinesCount: extraLinesCount,
+		TreePath:        treePath,
+		CommitSHA:       blamedCommitID,
+		ReviewID:        reviewID,
+		Patch:           patch,
+		Invalidated:     invalidated,
+		Attachments:     attachments,
 	})
 }
 

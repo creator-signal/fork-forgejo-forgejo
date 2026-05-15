@@ -154,6 +154,34 @@ func TestCutDiffAroundLine(t *testing.T) {
 	assert.Equal(t, expected, minusDiff)
 }
 
+func TestCutDiffAroundLineMultiRange(t *testing.T) {
+	// Simulate multi-line comment: lines 2-4 on new side (
+	// 	displayLine=4 -> last line of the comment
+	// context=3+2=5 -> 3 lines of context + 2 lines of the comment that are above the display line
+	// )
+	// This mirrors how services/pull/review.go computes the patch for multi-line comments:
+	//   displayLine = UnsignedDisplayLine() (last line of range)
+	//   contextLines = setting.UI.CodeCommentLines + extraLinesCount
+	result, err := CutDiffAroundLine(strings.NewReader(breakingDiff), 4, false, 5)
+	require.NoError(t, err)
+
+	// Should include lines 1-4 of the new side (--some comment, --some comment 2, -- some comment 3, create or replace...)
+	assert.Contains(t, result, "--some comment 2")
+	assert.Contains(t, result, "-- some comment 3")
+	assert.Contains(t, result, "create or replace procedure")
+
+	// Simulate single line (extraLinesCount=0): displayLine=2, context=3
+	singleResult, err := CutDiffAroundLine(strings.NewReader(breakingDiff), 2, false, 3)
+	require.NoError(t, err)
+	assert.Contains(t, singleResult, "--some comment 2")
+
+	// Multi-line on exampleDiff: lines 3-5 new side (displayLine=5, context=3+2=5)
+	multiResult, err := CutDiffAroundLine(strings.NewReader(exampleDiff), 5, false, 5)
+	require.NoError(t, err)
+	assert.Contains(t, multiResult, "Build Status")
+	assert.Contains(t, multiResult, "Docker Pulls")
+}
+
 func BenchmarkCutDiffAroundLine(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		CutDiffAroundLine(strings.NewReader(exampleDiff), 3, true, 3)

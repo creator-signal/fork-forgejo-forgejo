@@ -10,6 +10,7 @@ import {initImageDiff} from './imagediff.js';
 import {showErrorToast} from '../modules/toast.js';
 import {submitEventSubmitter, queryElemSiblings, hideElem, showElem} from '../utils/dom.js';
 import {POST, GET} from '../modules/fetch.js';
+import {clearMultiLineSelection} from './repo-issue.js';
 
 const {pageData, i18n} = window.config;
 
@@ -80,6 +81,7 @@ function initRepoDiffConversationForm() {
       const {path, side, idx} = $newConversationHolder.data();
 
       $form.closest('.conversation-holder').replaceWith($newConversationHolder);
+      clearMultiLineSelection();
       let selector;
       if ($form.closest('tr').data('line-type') === 'same') {
         selector = `[data-path="${path}"] .add-code-comment[data-idx="${idx}"]`;

@@ -340,6 +340,7 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 		pr.MergeBase,
 		review.CommitID,
 		line,
+		opts.ExtraLinesCount,
 		review.ID,
 		nil,
 	)
@@ -506,6 +507,7 @@ func CreatePullReview(ctx *context.APIContext) {
 			ctx.Repo.GitRepo,
 			pr.Issue,
 			line,
+			c.ExtraLinesCount,
 			c.Body,
 			c.Path,
 			true, // pending review

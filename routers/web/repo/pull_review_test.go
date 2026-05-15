@@ -51,7 +51,7 @@ func TestRenderConversation(t *testing.T) {
 	var preparedComment *issues_model.Comment
 	run("prepare", func(t *testing.T, ctx *context.Context, resp *httptest.ResponseRecorder) {
 		comment, err := pull.CreateCodeComment(ctx, pr.Issue.Poster, ctx.Repo.GitRepo, pr.Issue,
-			1, "content", "", false, 0, pr.MergeBase,
+			1, 0, "content", "", false, 0, pr.MergeBase,
 			prHeadCommitID, nil)
 		require.NoError(t, err)
 
@@ -110,5 +110,35 @@ func TestRenderConversation(t *testing.T) {
 		renderConversation(ctx, preparedComment, "timeline")
 		assert.Equal(t, http.StatusOK, resp.Code)
 		assert.NotContains(t, resp.Body.String(), `status-page-500`)
+	})
+
+	// Test multi-line comment rendering
+	var multiLineComment *issues_model.Comment
+	run("prepare multi-line comment", func(t *testing.T, ctx *context.Context, resp *httptest.ResponseRecorder) {
+		comment, err := pull.CreateCodeComment(ctx, pr.Issue.Poster, ctx.Repo.GitRepo, pr.Issue,
+			1, 2, "multi-line content", "", false, 0, pr.MergeBase,
+			prHeadCommitID, nil)
+		require.NoError(t, err)
+		assert.EqualValues(t, 2, comment.ExtraLinesCount)
+		multiLineComment = comment
+	})
+	if !assert.NotNil(t, multiLineComment) {
+		return
+	}
+	run("timeline multi-line comment renders", func(t *testing.T, ctx *context.Context, resp *httptest.ResponseRecorder) {
+		renderConversation(ctx, multiLineComment, "timeline")
+		body := resp.Body.String()
+		assert.Contains(t, body, `<div id="code-comments-`)
+		assert.Contains(t, body, "multi-line content")
+		// Verify the "Lines X-Y" label is rendered in the conversation header
+		assert.Contains(t, body, "Lines ")
+	})
+	run("diff multi-line comment renders", func(t *testing.T, ctx *context.Context, resp *httptest.ResponseRecorder) {
+		ctx.Data["ShowOutdatedComments"] = true
+		renderConversation(ctx, multiLineComment, "diff")
+		body := resp.Body.String()
+		assert.Contains(t, body, `<div class="content comment-container"`)
+		// Verify the conversation-holder has data-extra-lines-count attribute
+		assert.Contains(t, body, `data-extra-lines-count="2"`)
 	})
 }

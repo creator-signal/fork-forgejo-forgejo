@@ -1792,6 +1792,53 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			}
 			tester.assertFilesChangedDiff(diff3, "checking overall contents in full PR diff")
 		})
+
+		t.Run("multi-line comment stores ExtraLinesCount correctly", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify lines 48-50
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 48\n", "Line 48--modified\n", 1)
+			content = strings.Replace(content, "Line 49\n", "Line 49--modified\n", 1)
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Create a multi-line comment on lines 48-50 (line=48, extraLinesCount=2)
+			comment := tester.multiLineCommentFromFilesChanged("file1.md", 48, 2)
+			assert.EqualValues(t, 48, comment.Line)
+			assert.EqualValues(t, 2, comment.ExtraLinesCount)
+			assert.EqualValues(t, 50, comment.UnsignedDisplayLine())
+			assert.EqualValues(t, 50, comment.DisplayLine())
+			assert.False(t, comment.Invalidated)
+		})
+
+		t.Run("multi-line comment invalidated by DB update", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 48\n", "Line 48--modified\n", 1)
+			content = strings.Replace(content, "Line 49\n", "Line 49--modified\n", 1)
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			comment := tester.multiLineCommentFromFilesChanged("file1.md", 48, 2)
+			assert.False(t, comment.Invalidated)
+
+			// Manually mark as invalidated (same pattern as existing invalidation tests)
+			require.NoError(t, issues_model.UpdateCommentInvalidate(t.Context(), &issues_model.Comment{
+				ID:          comment.ID,
+				Invalidated: true,
+			}))
+
+			// Reload and verify
+			updatedComment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
+			assert.True(t, updatedComment.Invalidated)
+			assert.EqualValues(t, 2, updatedComment.ExtraLinesCount)
+		})
 	})
 }
 
@@ -1945,6 +1992,10 @@ func (tester *PullRequestCommentPlacementTester) commentOnPreviousFromSpecificCo
 }
 
 func (tester *PullRequestCommentPlacementTester) commentFromNewCommentForm(resp *httptest.ResponseRecorder, filename string, line int, side string) *issues_model.Comment {
+	return tester.commentFromNewCommentFormWithExtraLinesCount(resp, filename, line, 0, side)
+}
+
+func (tester *PullRequestCommentPlacementTester) commentFromNewCommentFormWithExtraLinesCount(resp *httptest.ResponseRecorder, filename string, line, extraLinesCount int, side string) *issues_model.Comment {
 	commentContent := uuid.New().String()
 	doc := NewHTMLParser(tester.t, resp.Body)
 	tester.t.Logf("doc.before = %q", doc.GetInputValueByName("before_commit_id"))
@@ -1952,22 +2003,30 @@ func (tester *PullRequestCommentPlacementTester) commentFromNewCommentForm(resp 
 	req := NewRequestWithValues(tester.t, "POST",
 		fmt.Sprintf("/%s/%s/pulls/%d/files/reviews/comments", tester.repo.OwnerName, tester.repo.Name, tester.pr.Index),
 		map[string]string{
-			"origin":           doc.GetInputValueByName("origin"),
-			"before_commit_id": doc.GetInputValueByName("before_commit_id"),
-			"latest_commit_id": doc.GetInputValueByName("latest_commit_id"),
-			"side":             side, // "proposed" (RHS) or "previous" (LHS)
-			"line":             strconv.Itoa(line),
-			"path":             filename,
-			"diff_start_cid":   doc.GetInputValueByName("diff_start_cid"),
-			"diff_end_cid":     doc.GetInputValueByName("diff_end_cid"),
-			"diff_base_cid":    doc.GetInputValueByName("diff_base_cid"),
-			"content":          commentContent,
-			"single_review":    "true",
+			"origin":            doc.GetInputValueByName("origin"),
+			"before_commit_id":  doc.GetInputValueByName("before_commit_id"),
+			"latest_commit_id":  doc.GetInputValueByName("latest_commit_id"),
+			"side":              side,
+			"line":              strconv.Itoa(line),
+			"extra_lines_count": strconv.Itoa(extraLinesCount),
+			"path":              filename,
+			"diff_start_cid":    doc.GetInputValueByName("diff_start_cid"),
+			"diff_end_cid":      doc.GetInputValueByName("diff_end_cid"),
+			"diff_base_cid":     doc.GetInputValueByName("diff_base_cid"),
+			"content":           commentContent,
+			"single_review":     "true",
 		})
 	tester.session.MakeRequest(tester.t, req, http.StatusOK)
 
 	comment := unittest.AssertExistsAndLoadBean(tester.t, &issues_model.Comment{Content: commentContent})
 	return comment
+}
+
+func (tester *PullRequestCommentPlacementTester) multiLineCommentFromFilesChanged(filename string, line, extraLinesCount int) *issues_model.Comment {
+	req := NewRequest(tester.t, "GET",
+		fmt.Sprintf("/%s/%s/pulls/%d/files/reviews/new_comment", tester.repo.OwnerName, tester.repo.Name, tester.pr.Index))
+	resp := tester.session.MakeRequest(tester.t, req, http.StatusOK)
+	return tester.commentFromNewCommentFormWithExtraLinesCount(resp, filename, line, extraLinesCount, "proposed")
 }
 
 func (tester *PullRequestCommentPlacementTester) withBranchCheckout(action func(string)) {

@@ -53,12 +53,12 @@ func newCodeConversationsAtLineAndTreePath(ctx context.Context, comments []*Comm
 
 func (tree CodeConversationsAtLineAndTreePath) insertComment(comment *Comment, blame *git.ReverseLineBlame) {
 	treePath := comment.TreePath
-	line := comment.Line
+	line := comment.DisplayLine()
 	if blame != nil {
 		treePath = blame.FilePath
-		line = int64(blame.LineNumber)
+		line = int64(blame.LineNumber) + comment.ExtraLinesCount
 		if comment.Line < 0 {
-			line *= -1
+			line = int64(blame.LineNumber)*-1 - comment.ExtraLinesCount
 		}
 	}
 
@@ -117,7 +117,8 @@ func fetchCodeCommentsByReview(ctx context.Context, issue *Issue, doer *user_mod
 		if pathToLineToComment[comment.TreePath] == nil {
 			pathToLineToComment[comment.TreePath] = make(map[int64][]*Comment)
 		}
-		pathToLineToComment[comment.TreePath][comment.Line] = append(pathToLineToComment[comment.TreePath][comment.Line], comment)
+		displayLine := comment.DisplayLine()
+		pathToLineToComment[comment.TreePath][displayLine] = append(pathToLineToComment[comment.TreePath][displayLine], comment)
 	}
 	return pathToLineToComment, nil
 }
