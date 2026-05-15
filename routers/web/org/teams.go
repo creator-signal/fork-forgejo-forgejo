@@ -396,6 +396,12 @@ func TeamMembers(ctx *context.Context) {
 		ctx.ServerError("GetInvitesByTeamID", err)
 		return
 	}
+	for _, invite := range invites {
+		if invite.LoadInvitedUser(ctx) != nil {
+			ctx.ServerError("LoadInvitedUser", err)
+			return
+		}
+	}
 	ctx.Data["Invites"] = invites
 	ctx.Data["IsEmailInviteEnabled"] = setting.MailService != nil
 

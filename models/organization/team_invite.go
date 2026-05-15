@@ -81,6 +81,7 @@ type TeamInvite struct {
 	TeamID      int64                  `xorm:"UNIQUE(team_mail) INDEX NOT NULL DEFAULT 0"`
 	Email       string                 `xorm:"UNIQUE(team_mail) NOT NULL DEFAULT ''"`
 	InvitedID   optional.Option[int64] `xorm:"index REFERENCES(user, id)"`
+	InvitedUser *user_model.User       `xorm:"-"`
 	CreatedUnix timeutil.TimeStamp     `xorm:"INDEX created"`
 	UpdatedUnix timeutil.TimeStamp     `xorm:"INDEX updated"`
 }
@@ -172,12 +173,13 @@ func CreateTeamInviteForUser(ctx context.Context, doer, invited *user_model.User
 	token := util.CryptoRandomString(util.RandomStringMedium)
 
 	invite := &TeamInvite{
-		Token:     token,
-		InviterID: doer.ID,
-		OrgID:     team.OrgID,
-		TeamID:    team.ID,
-		Email:     invited.Email,
-		InvitedID: optional.Some(invited.ID),
+		Token:       token,
+		InviterID:   doer.ID,
+		OrgID:       team.OrgID,
+		TeamID:      team.ID,
+		Email:       invited.Email,
+		InvitedID:   optional.Some(invited.ID),
+		InvitedUser: invited,
 	}
 
 	return invite, db.Insert(ctx, invite)
@@ -209,4 +211,18 @@ func GetInviteByToken(ctx context.Context, token string) (*TeamInvite, error) {
 		return nil, ErrTeamInviteNotFound{Token: token}
 	}
 	return invite, nil
+}
+
+func (i *TeamInvite) LoadInvitedUser(ctx context.Context) error {
+	if i.InvitedUser == nil {
+		hasInvitedUser, userID := i.InvitedID.Get()
+		if hasInvitedUser {
+			user, err := user_model.GetUserByID(ctx, userID)
+			if err != nil {
+				return err
+			}
+			i.InvitedUser = user
+		}
+	}
+	return nil
 }

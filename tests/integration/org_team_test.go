@@ -72,3 +72,22 @@ func TestPaginatedRepos(t *testing.T) {
 	doc := NewHTMLParser(t, body)
 	assert.Contains(t, strings.TrimSpace(doc.Find("a.item.navigation:contains('Next')").AttrOr("href", "")), fmt.Sprintf("%s?page=2", teamURL))
 }
+
+func TestDisplayInvites(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestDisplayInvites")()
+	defer tests.PrepareTestEnv(t)()
+
+	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	session := loginUser(t, user.Name)
+
+	teamURL := fmt.Sprintf("/org/%s/teams/%s", org.Name, team.LowerName)
+	body := session.MakeRequest(t, NewRequest(t, "GET", teamURL), http.StatusOK).Body
+	doc := NewHTMLParser(t, body)
+
+	// the two invited users are shown
+	assert.Equal(t, "/user31", doc.Find("a:contains('user31')").AttrOr("href", ""))
+	assert.Equal(t, 1, doc.Find("div.flex-item-main:contains('external_user@example.com')").Length())
+}
