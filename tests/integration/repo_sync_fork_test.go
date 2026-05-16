@@ -135,7 +135,7 @@ func TestWebRepoSyncForkHomepage(t *testing.T) {
 
 		// Verify correct escaping of branch name in the message
 		raw, _ := doc.Find("#sync_fork_msg").Html()
-		assert.Contains(t, raw, fmt.Sprintf(`This branch is 1 commit behind <a href="http://localhost:%s/user2/repo1/src/branch/%s">user2/repo1:%s</a>`,
+		assert.Contains(t, raw, fmt.Sprintf(`This branch is 1 commit behind <a href="http://127.0.0.1:%s/user2/repo1/src/branch/%s">user2/repo1:%s</a>`,
 			u.Port(), branchURLEscaped, branchHTMLEscaped))
 
 		// Verify that the form link doesn't do anything for a GET request

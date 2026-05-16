@@ -167,7 +167,7 @@ func TestMirrorPull(t *testing.T) {
 
 	// Not using MockVariableValue due to need to undo `migrations.Init()`
 	prev := setting.Migrations.AllowedDomains
-	setting.Migrations.AllowedDomains = "localhost"
+	setting.Migrations.AllowedDomains = "127.0.0.1"
 	migrations.Init() // reinitialize for changed allowList
 	defer func() {
 		setting.Migrations.AllowedDomains = prev

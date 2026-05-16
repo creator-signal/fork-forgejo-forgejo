@@ -19,6 +19,7 @@ import (
 
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
@@ -78,7 +79,9 @@ func onApplicationRun[T testing.TB](t T, callback func(T, *url.URL)) {
 		i++
 	}
 	require.NoError(t, err)
+
 	u.Host = listener.Addr().String()
+	defer test.MockVariableValue(&setting.AppURL, u.String())()
 
 	// Override repository root in config.
 	conf, err := os.ReadFile(setting.CustomConf)

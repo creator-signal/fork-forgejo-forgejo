@@ -640,6 +640,11 @@ func NewRequestWithBody(t testing.TB, method, urlStr string, body io.Reader) *Re
 	require.NoError(t, err)
 	req.RequestURI = urlStr
 
+	appURL, err := url.Parse(setting.AppURL)
+	require.NoError(t, err)
+
+	req.Host = appURL.Host
+
 	return &RequestWrapper{req}
 }
 
