@@ -1,50 +1,54 @@
 <dialog id="shortcuts">
 	<header>
-		<span>Keyboard shortcuts</span>
+		<span>{{ctx.Locale.Tr "shortcuts.title"}}</span>
 		<form method="dialog">
 			<button type="submit" class="ui compact icon button" aria-label="Close">{{svg "octicon-x" 16}}</button>
 		</form>
 	</header>
 	<article class="content">
 		<div class="ui buttons tw-flex tw-w-full">
-			<button class="ui button active" data-tab="site">Site Wide</button>
-			<button class="ui button" data-tab="repo">Repositories</button>
-			<button class="ui button" data-tab="code">Code View</button>
+			<button class="ui button active" data-tab="site">{{ctx.Locale.Tr "shortcuts.btn.site"}}</button>
+			<button class="ui button" data-tab="repo">{{ctx.Locale.Tr "shortcuts.btn.repo"}}</button>
+			<button class="ui button" data-tab="code">{{ctx.Locale.Tr "shortcuts.btn.code"}}</button>
 		</div>
 		<div class="tw-my-4 tw-flex tw-justify-center">
 			<kbd>{{svg "octicon-arrow-left" 16}}</kbd>
-			&nbsp;Navigate with arrow keys&nbsp;
+			&nbsp;{{ctx.Locale.Tr "shortcuts.hint"}}&nbsp;
 			<kbd>{{svg "octicon-arrow-right" 16}}</kbd>
 		</div>
 		<div class="tw-items-start tw-grid tw-grid-cols-1">
 			<table data-tab="site">
 				<tbody>
 					<tr>
-						<td>Move selection down</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.down"}}</td>
 						<td><kbd>j</kbd></td>
 					</tr>
 					<tr>
-						<td>Move selection up</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.up"}}</td>
 						<td><kbd>k</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to Dashboard (home)</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.home"}}</td>
 						<td><kbd>g</kbd> <kbd>d</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to notifications</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.notifications"}}</td>
 						<td><kbd>g</kbd> <kbd>n</kbd></td>
 					</tr>
 					<tr>
-						<td>Focus on searchbar</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.toggle"}}</td>
+						<td><kbd>x</kbd></td>
+					</tr>
+					<tr>
+						<td>{{ctx.Locale.Tr "shortcuts.site.search"}}</td>
 						<td><kbd>/</kbd></td>
 					</tr>
 					<tr>
-						<td>Show keyboard shortcuts dialog</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.popup"}}</td>
 						<td><kbd>?</kbd></td>
 					</tr>
 					<tr>
-						<td>Close this dialog</td>
+						<td>{{ctx.Locale.Tr "shortcuts.site.close"}}</td>
 						<td><kbd>Escape</kbd></td>
 					</tr>
 				</tbody>
@@ -52,39 +56,39 @@
 			<table data-tab="repo" style="visibility: hidden" aria-hidden="true">
 				<tbody>
 					<tr>
-						<td>Create issue/pull request/release</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.create"}}</td>
 						<td><kbd>c</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to actions</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.action"}}</td>
 						<td><kbd>g</kbd> <kbd>a</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to code</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.code"}}</td>
 						<td><kbd>g</kbd> <kbd>c</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to issues</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.issue"}}</td>
 						<td><kbd>g</kbd> <kbd>i</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to projects</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.project"}}</td>
 						<td><kbd>g</kbd> <kbd>o</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to pull requests</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.pr"}}</td>
 						<td><kbd>g</kbd> <kbd>p</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to releases</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.release"}}</td>
 						<td><kbd>g</kbd> <kbd>r</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to wiki</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.wiki"}}</td>
 						<td><kbd>g</kbd> <kbd>w</kbd></td>
 					</tr>
 					<tr>
-						<td>Switch branch/tag</td>
+						<td>{{ctx.Locale.Tr "shortcuts.repo.switch"}}</td>
 						<td><kbd>w</kbd></td>
 					</tr>
 				</tbody>
@@ -92,19 +96,19 @@
 			<table data-tab="code" style="visibility: hidden" aria-hidden="true">
 				<tbody>
 					<tr>
-						<td>View blame</td>
+						<td>{{ctx.Locale.Tr "shortcuts.code.blame"}}</td>
 						<td><kbd>b</kbd></td>
 					</tr>
 					<tr>
-						<td>Go to history</td>
+						<td>{{ctx.Locale.Tr "shortcuts.code.history"}}</td>
 						<td><kbd>h</kbd></td>
 					</tr>
 					<tr>
-						<td>View raw</td>
+						<td>{{ctx.Locale.Tr "shortcuts.code.raw"}}</td>
 						<td><kbd>r</kbd></td>
 					</tr>
 					<tr>
-						<td>Get permalink</td>
+						<td>{{ctx.Locale.Tr "shortcuts.code.permalink"}}</td>
 						<td><kbd>y</kbd></td>
 					</tr>
 				</tbody>
