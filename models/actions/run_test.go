@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
@@ -187,7 +188,7 @@ func TestRepoNumOpenActions(t *testing.T) {
 	t.Run("Repo 4", func(t *testing.T) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 		clearRepoRunCountCache(t.Context(), repo)
-		assert.Equal(t, 0, RepoNumOpenActions(t.Context(), repo.ID))
+		assert.Equal(t, 3, RepoNumOpenActions(t.Context(), repo.ID))
 	})
 
 	t.Run("Repo 63", func(t *testing.T) {
@@ -618,6 +619,52 @@ func TestComputeRunStatus(t *testing.T) {
 		assert.Equal(t, StatusSuccess, run.Status)
 		assert.NotEqualValues(t, 0, run.Stopped)
 		assert.NotContains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.Contains(t, columns, "stopped")
+	})
+
+	t.Run("single completed job does not cause completed status", func(t *testing.T) {
+		defer unittest.OverrideFixtures("models/actions/TestComputeRunStatus")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(521531).Update(&ActionRunJob{Status: StatusFailure})
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 371311)
+		require.NoError(t, err)
+		assert.Equal(t, StatusWaiting, run.Status)
+		assert.EqualValues(t, 0, run.Stopped)
+		assert.Contains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.NotContains(t, columns, "stopped")
+	})
+
+	t.Run("terminal status can shift", func(t *testing.T) {
+		defer unittest.OverrideFixtures("models/actions/TestComputeRunStatus")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		affected, err := db.GetEngine(t.Context()).Cols("status").ID(521531).Update(&ActionRunJob{Status: StatusFailure})
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err := ComputeRunStatus(t.Context(), 371311)
+		require.NoError(t, err)
+		assert.Equal(t, StatusWaiting, run.Status)
+		assert.EqualValues(t, 0, run.Stopped)
+		assert.Contains(t, columns, "status")
+		assert.NotContains(t, columns, "started")
+		assert.NotContains(t, columns, "stopped")
+
+		affected, err = db.GetEngine(t.Context()).Cols("status").ID(521532).Update(&ActionRunJob{Status: StatusCancelled})
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+
+		run, columns, err = ComputeRunStatus(t.Context(), run.ID)
+		require.NoError(t, err)
+		assert.Equal(t, StatusCancelled, run.Status)
+		assert.Greater(t, run.Stopped, timeutil.TimeStamp(0))
+		assert.Contains(t, columns, "status")
 		assert.NotContains(t, columns, "started")
 		assert.Contains(t, columns, "stopped")
 	})
