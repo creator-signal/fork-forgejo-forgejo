@@ -206,9 +206,7 @@ export function initUserShortcuts() {
         break;
       case 'ArrowLeft': {
         const btns = Array.from(
-          document.querySelectorAll<HTMLButtonElement>(
-            '#shortcuts .buttons .button',
-          ),
+          document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
         );
         const idx = btns.findIndex((btn) => btn.classList.contains('active'));
         if (idx > 0) {
@@ -218,9 +216,7 @@ export function initUserShortcuts() {
       }
       case 'ArrowRight': {
         const btns = Array.from(
-          document.querySelectorAll<HTMLButtonElement>(
-            '#shortcuts .buttons .button',
-          ),
+          document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
         );
         const idx = btns.findIndex((btn) => btn.classList.contains('active'));
         if (idx < btns.length - 1) {
