@@ -445,6 +445,38 @@ func TestRender_emoji(t *testing.T) {
 		`<p>:not exist:</p>`)
 }
 
+func TestRender_InlineDiff(t *testing.T) {
+	test := func(input, expected string) {
+		buffer, err := markup.RenderString(&markup.RenderContext{
+			Ctx:  git.DefaultContext,
+			Type: "markdown",
+		}, input)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(buffer))
+	}
+
+	// Basic insertion/deletion syntax
+	test("{+added text+}", `<p><ins>added text</ins></p>`)
+	test("{-removed text-}", `<p><del>removed text</del></p>`)
+	// CriticMarkup style (extra + or -)
+	test("{++added++}", `<p><ins>added</ins></p>`)
+	test("{--removed--}", `<p><del>removed</del></p>`)
+	// Mixed in prose
+	test("This is {+an insertion+} and {-a deletion-} in text.",
+		`<p>This is <ins>an insertion</ins> and <del>a deletion</del> in text.</p>`)
+	// Whitespace handling: leading and trailing spaces
+	test("{+ added +}", `<p><ins> added </ins></p>`)
+	test("{- removed -}", `<p><del> removed </del></p>`)
+	// Whitespace handling: whitespace-only diffs
+	test("Foo.{+   +} bar", `<p>Foo.<ins>   </ins> bar</p>`)
+	test("Foo.{-   -} bar", `<p>Foo.<del>   </del> bar</p>`)
+	// Edge case: should not match across newlines
+	test("{+no\nmatch+}", "<p>{+no<br/>\nmatch+}</p>")
+	// Edge case: should not match empty content
+	test("{++}", `<p>{++}</p>`)
+	test("{--}", `<p>{--}</p>`)
+}
+
 func TestRender_ShortLinks(t *testing.T) {
 	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 	tree := util.URLJoin(markup.TestRepoURL, "src", "master")

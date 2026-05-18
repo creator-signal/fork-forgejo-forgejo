@@ -87,6 +87,11 @@ var (
 	EmojiShortCodeRegex = regexp.MustCompile(`:[-+\w]+:`)
 
 	InlineCodeBlockRegex = regexp.MustCompile("`[^`]+`")
+
+	// inlineDiffRegex matches inline diff markup, supporting:
+	//   - {+inserted+} / {-deleted-}     (GitLab style)
+	//   - {++inserted++} / {--deleted--} (CriticMarkup style)
+	inlineDiffRegex = regexp.MustCompile(`\{\+\+?([^\n]+?)\+?\+\}|\{--?([^\n]+?)-?-\}`)
 )
 
 // CSS class for action keywords (e.g. "closes: #1")
@@ -161,6 +166,7 @@ var defaultProcessors = []processor{
 	hashCurrentPatternProcessor,
 	fediAddressProcessor,
 	emailAddressProcessor,
+	inlineDiffProcessor,
 	emojiProcessor,
 	emojiShortCodeProcessor,
 }
@@ -1292,6 +1298,25 @@ func inlineCodeBlockProcessor(ctx *RenderContext, node *html.Node) {
 
 		code := node.Data[m[0]+1 : m[1]-1]
 		replaceContent(node, m[0], m[1], createInlineCode(code))
+		node = node.NextSibling.NextSibling
+	}
+}
+
+// inlineDiffProcessor renders inline diff markup using <ins>/<del>.
+func inlineDiffProcessor(ctx *RenderContext, node *html.Node) {
+	next := node.NextSibling
+	for node != nil && node != next && len(node.Data) > 0 {
+		match := inlineDiffRegex.FindStringSubmatchIndex(node.Data)
+		if match == nil {
+			return
+		}
+		element, contentStart, contentEnd := "ins", match[2], match[3]
+		if contentStart < 0 { // second alternative matched (deletion)
+			element, contentStart, contentEnd = "del", match[4], match[5]
+		}
+		newNode := &html.Node{Type: html.ElementNode, Data: element}
+		newNode.AppendChild(&html.Node{Type: html.TextNode, Data: node.Data[contentStart:contentEnd]})
+		replaceContent(node, match[0], match[1], newNode)
 		node = node.NextSibling.NextSibling
 	}
 }

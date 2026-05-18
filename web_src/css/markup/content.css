@@ -450,6 +450,18 @@
   text-decoration: inherit;
 }
 
+.markup ins {
+  background-color: var(--color-diff-added-word-bg);
+  text-decoration: none;
+  white-space: pre-wrap;
+}
+
+.markup del {
+  background-color: var(--color-diff-removed-word-bg);
+  text-decoration: none;
+  white-space: pre-wrap;
+}
+
 .markup pre > code,
 .markup .file-preview code {
   padding: 0;
