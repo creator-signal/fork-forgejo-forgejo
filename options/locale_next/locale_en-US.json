@@ -939,5 +939,41 @@
 	"form.RunnerName": "Name",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
+	"shortcuts": {
+		"title": "Keyboard Shortcuts",
+		"hint": "Navigate with arrow keys",
+		"button": {
+			"site": "Site Wide",
+			"repo": "Repositories",
+			"code": "Code View"
+		},
+		"site": {
+			"down": "Navigate down in list",
+			"up": "Navigate up in list",
+			"home": "Go to Dashboard (home)",
+			"notifications": "Go to Notifications",
+			"toggle": "Toggle checkbox on list",
+			"search": "Focus on searchbar",
+			"popup": "Show keyboard shortcuts dialog",
+			"close": "Close this dialog"
+		},
+		"repo": {
+			"create": "Create issue/pull request/release",
+			"action": "Go to actions",
+			"code": "Go to code",
+			"issue": "Go to issues",
+			"project": "Go to projects",
+			"pr": "Go to pull requests",
+			"release": "Go to releases",
+			"wiki": "Go to wiki",
+			"switch": "Switch branch/tag"
+		},
+		"code": {
+			"blame": "Toggle between blame and normal",
+			"history": "Go to history",
+			"raw": "View raw",
+			"permalink": "Get permalink"
+		}
+	},
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
