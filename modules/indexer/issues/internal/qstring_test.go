@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/optional"
@@ -432,6 +433,115 @@ func TestIssueQueryStringWithFilters(t *testing.T) {
 			assert.Equal(t, c.Opts, opts)
 		})
 	}
+}
+
+func TestIssueQueryStringWithLabelFilters(t *testing.T) {
+	// Two repos: one for the repo-scoped path, both for the cross-repo path.
+	for _, l := range []*issues_model.Label{
+		{ID: 200, RepoID: 100, Name: "bug", Color: "#ff0000"},
+		{ID: 201, RepoID: 100, Name: "critical", Color: "#ffaa00"},
+		{ID: 202, RepoID: 100, Name: "wontfix", Color: "#888888"},
+		{ID: 203, RepoID: 100, Name: "good first issue", Color: "#00ff00"},
+		{ID: 210, RepoID: 101, Name: "bug", Color: "#ff0000"},
+	} {
+		require.NoError(t, issues_model.NewLabel(t.Context(), l))
+	}
+
+	for _, c := range []struct {
+		Name    string
+		Initial *SearchOptions
+		Keyword string
+		Want    *SearchOptions
+	}{
+		{
+			Name:    "single positive label",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:bug",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{200},
+			},
+		},
+		{
+			Name:    "single negative label",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "-label:wontfix",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				ExcludedLabelIDs: []int64{202},
+			},
+		},
+		{
+			// GetLabelIDsInRepoByNames orders by name asc, so "bug"
+			// (200) comes before "critical" (201).
+			Name:    "two positive labels are AND-ed",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:bug label:critical",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{200, 201},
+			},
+		},
+		{
+			Name:    "label name with spaces requires quoting",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: `label:"good first issue"`,
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{203},
+			},
+		},
+		{
+			Name:    "no:label sets NoLabelOnly",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "no:label",
+			Want: &SearchOptions{
+				RepoIDs:     []int64{100},
+				NoLabelOnly: true,
+			},
+		},
+		{
+			Name:    "unknown label name is silently dropped",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:nonexistent",
+			Want:    &SearchOptions{RepoIDs: []int64{100}},
+		},
+		{
+			Name:    "appends to existing IncludedLabelIDs from URL ?labels=",
+			Initial: &SearchOptions{RepoIDs: []int64{100}, IncludedLabelIDs: []int64{42}},
+			Keyword: "label:bug",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{42, 200},
+			},
+		},
+		{
+			Name:    "mixing positive and negative labels in one query",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:bug -label:wontfix",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{200},
+				ExcludedLabelIDs: []int64{202},
+			},
+		},
+	} {
+		t.Run(c.Name, func(t *testing.T) {
+			require.NoError(t, c.Initial.WithKeyword(t.Context(), c.Keyword))
+			assert.Equal(t, c.Want, c.Initial)
+		})
+	}
+
+	// Cross-repo path: GetLabelIDsByNames is unordered, so check the
+	// label slice with ElementsMatch and the rest field by field.
+	t.Run("cross-repo search uses IncludedAnyLabelIDs", func(t *testing.T) {
+		opts := &SearchOptions{RepoIDs: []int64{100, 101}}
+		require.NoError(t, opts.WithKeyword(t.Context(), "label:bug"))
+		assert.Equal(t, []int64{100, 101}, opts.RepoIDs)
+		assert.ElementsMatch(t, []int64{200, 210}, opts.IncludedAnyLabelIDs)
+		assert.Empty(t, opts.IncludedLabelIDs)
+		assert.Empty(t, opts.ExcludedLabelIDs)
+	})
 }
 
 func TestToken_ParseIssueReference(t *testing.T) {

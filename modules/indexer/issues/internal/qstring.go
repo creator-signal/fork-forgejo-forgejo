@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
@@ -132,13 +133,27 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 	it := Tokenizer{in: in}
 
 	var (
-		tokens     []Token
-		userNames  []string
-		userFilter []userFilter
+		tokens             []Token
+		userNames          []string
+		userFilter         []userFilter
+		includedLabelNames []string
+		excludedLabelNames []string
 	)
 
 	for token, err := it.next(); err == nil; token, err = it.next() {
 		if token.Term == "" {
+			continue
+		}
+
+		// Checked before the fuzzy-skip so that quoted names like
+		// label:"good first issue" still parse as a filter.
+		if token.IsOf("label:") {
+			name := token.Term[len("label:"):]
+			if token.Kind == BoolOptNot {
+				excludedLabelNames = append(excludedLabelNames, name)
+			} else {
+				includedLabelNames = append(includedLabelNames, name)
+			}
 			continue
 		}
 
@@ -158,6 +173,10 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		// Similarly, is:closed & -is:closed
 		case token.Term == "is:closed":
 			o.IsClosed = optional.Some(token.Kind != BoolOptNot)
+
+		// Mirrors ?labels=0. Do not consider -no:label.
+		case token.Term == "no:label":
+			o.NoLabelOnly = true
 
 		// The rest of the presets MUST NOT be a negation.
 		case token.Kind == BoolOptNot:
@@ -234,6 +253,56 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		}
 	}
 
+	return o.resolveLabelNames(ctx, includedLabelNames, excludedLabelNames)
+}
+
+// resolveLabelNames appends label IDs from `label:` / `-label:` tokens
+// to o, so the query composes with any IDs already set from `?labels=`.
+func (o *SearchOptions) resolveLabelNames(ctx context.Context, included, excluded []string) error {
+	if len(included) == 0 && len(excluded) == 0 {
+		return nil
+	}
+
+	// Single repo: names map 1:1 to IDs, so the per-repo lookup keeps
+	// AND semantics via IncludedLabelIDs.
+	if len(o.RepoIDs) == 1 {
+		if len(included) > 0 {
+			ids, err := issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], included)
+			if err != nil {
+				return err
+			}
+			o.IncludedLabelIDs = append(o.IncludedLabelIDs, ids...)
+		}
+		if len(excluded) > 0 {
+			ids, err := issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], excluded)
+			if err != nil {
+				return err
+			}
+			o.ExcludedLabelIDs = append(o.ExcludedLabelIDs, ids...)
+		}
+		return nil
+	}
+
+	// Cross-repo: a name can resolve to many IDs (one per repo), so
+	// use IncludedAnyLabelIDs (at-least-one). Two or more positive
+	// names degrade to a union; a proper AND across name groups would
+	// need a new indexer schema field.
+	if len(included) > 0 {
+		ids, err := issues_model.GetLabelIDsByNames(ctx, included)
+		if err != nil {
+			return err
+		}
+		if len(o.IncludedLabelIDs) == 0 {
+			o.IncludedAnyLabelIDs = append(o.IncludedAnyLabelIDs, ids...)
+		}
+	}
+	if len(excluded) > 0 {
+		ids, err := issues_model.GetLabelIDsByNames(ctx, excluded)
+		if err != nil {
+			return err
+		}
+		o.ExcludedLabelIDs = append(o.ExcludedLabelIDs, ids...)
+	}
 	return nil
 }
 
