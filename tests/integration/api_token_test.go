@@ -57,6 +57,7 @@ func TestAPIGetTokens(t *testing.T) {
 		assert.Equal(t, []string{""}, at.Scopes)
 		assert.Empty(t, at.Token)
 		assert.Equal(t, "69d28c91", at.TokenLastEight)
+		assert.False(t, at.Created.IsZero(), "created_at should not be zero")
 		assert.Nil(t, at.Repositories) // not repo-specific access token - nil expected, not an empty array
 	})
 
@@ -753,6 +754,7 @@ func TestAPITokenCreation(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusCreated)
 		var token api.AccessToken
 		DecodeJSON(t, resp, &token)
+		assert.False(t, token.Created.IsZero(), "created_at should not be zero")
 	})
 
 	t.Run("repo-specific", func(t *testing.T) {
