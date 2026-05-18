@@ -75,7 +75,7 @@ require (
 	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/markbates/goth v1.82.0
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/meilisearch/meilisearch-go v0.36.2
 	github.com/mholt/archives v0.1.5
@@ -270,3 +270,5 @@ replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-2024121
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
 
 replace xorm.io/xorm v1.3.9 => code.forgejo.org/xorm/xorm v1.3.9-forgejo.12
+
+replace code.forgejo.org/forgejo/runner/v12 => code.forgejo.org/forgejo/runner/v12 v12.10.2-0.20260518015713-6955d1218106
