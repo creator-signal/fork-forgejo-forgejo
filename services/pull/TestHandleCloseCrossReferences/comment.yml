@@ -1,0 +1,12 @@
+- id: 1000
+  type: 21
+  poster_id: 2
+  issue_id: 101
+  content: ""
+  ref_repo_id: 1
+  ref_issue_id: 100
+  ref_comment_id: 0
+  ref_action: 1
+  ref_is_pull: true
+  created_unix: 946684800
+  updated_unix: 946684800

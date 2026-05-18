@@ -211,3 +211,24 @@ func TestMergeMergedPR(t *testing.T) {
 		assert.Equal(t, pr.BaseBranch, mergeErr.BaseBranch)
 	}
 }
+
+func TestHandleCloseCrossReferences(t *testing.T) {
+	defer unittest.OverrideFixtures("services/pull/TestHandleCloseCrossReferences")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 100})
+	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	require.NoError(t, pr.LoadIssue(t.Context()))
+	require.NoError(t, pr.Issue.LoadPoster(t.Context()))
+
+	require.NoError(t, handleCloseCrossReferences(t.Context(), pr, doer))
+
+	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 101})
+	require.True(t, issue.IsClosed)
+	require.NoError(t, issue.LoadComments(t.Context()))
+	require.NotEmpty(t, issue.Comments)
+	for _, comment := range issue.Comments {
+		if comment.Type == issues_model.CommentTypeClose {
+			assert.Equal(t, pr.Issue.PosterID, comment.PosterID)
+		}
+	}
+}

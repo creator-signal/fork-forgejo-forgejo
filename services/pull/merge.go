@@ -30,6 +30,7 @@ import (
 	"forgejo.org/modules/setting"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var mergeMessageTemplates = make(map[repo_model.MergeStyle]string, len(repo_model.MergeStyles))
@@ -287,6 +288,9 @@ func Merge(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.U
 }
 
 func handleCloseCrossReferences(ctx context.Context, pr *issues_model.PullRequest, doer *user_model.User) error {
+	if err := pr.Issue.LoadComments(ctx); err != nil {
+		return err
+	}
 	// Resolve cross references
 	refs, err := pr.ResolveCrossReferences(ctx)
 	if err != nil {
@@ -303,7 +307,7 @@ func handleCloseCrossReferences(ctx context.Context, pr *issues_model.PullReques
 		}
 		isClosed := ref.RefAction == references.XRefActionCloses
 		if isClosed != ref.Issue.IsClosed {
-			if err = issue_service.ChangeStatus(ctx, ref.Issue, doer, pr.MergedCommitID, isClosed); err != nil {
+			if err = issue_service.ChangeStatus(ctx, ref.Issue, pr.Issue.Poster, pr.MergedCommitID, isClosed); err != nil {
 				// Allow ErrDependenciesLeft
 				if !issues_model.IsErrDependenciesLeft(err) {
 					return err

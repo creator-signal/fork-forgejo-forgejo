@@ -556,7 +556,11 @@ func (pr *PullRequest) SetMerged(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if _, err := changeIssueStatus(ctx, pr.Issue, pr.Merger, true, true); err != nil {
+	if err := pr.Issue.LoadPoster(ctx); err != nil {
+		return false, err
+	}
+
+	if _, err := changeIssueStatus(ctx, pr.Issue, pr.Issue.Poster, true, true); err != nil {
 		return false, fmt.Errorf("Issue.changeStatus: %w", err)
 	}
 

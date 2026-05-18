@@ -1,0 +1,31 @@
+- id: 100
+  repo_id: 1
+  index: 100
+  poster_id: 2
+  original_author_id: 0
+  name: test PR for cross reference
+  content: "Closes #101"
+  milestone_id: 0
+  priority: 0
+  is_closed: false
+  is_pull: true
+  num_comments: 0
+  created_unix: 946684800
+  updated_unix: 946684800
+  is_locked: false
+
+- id: 101
+  repo_id: 1
+  index: 101
+  poster_id: 1
+  original_author_id: 0
+  name: target issue to be closed
+  content: some open issue
+  milestone_id: 0
+  priority: 0
+  is_closed: false
+  is_pull: false
+  num_comments: 0
+  created_unix: 946684800
+  updated_unix: 946684800
+  is_locked: false
