@@ -15,6 +15,7 @@ import (
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
 	"forgejo.org/models/unit"
+	"forgejo.org/modules/avatar"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/metrics"
 	"forgejo.org/modules/public"
@@ -276,8 +277,8 @@ func Routes() *web.Route {
 
 	routes.Head("/", misc.DummyOK) // for health check - doesn't need to be passed through gzip handler
 	routes.Methods("GET, HEAD, OPTIONS", "/assets/*", optionsCorsHandler(), public.FileHandlerFunc())
-	routes.Methods("GET, HEAD", "/avatars/*", storageHandler(setting.Avatar.Storage, "avatars", storage.Avatars))
-	routes.Methods("GET, HEAD", "/repo-avatars/*", storageHandler(setting.RepoAvatar.Storage, "repo-avatars", storage.RepoAvatars))
+	routes.Methods("GET, HEAD", "/avatars/*", resizingHandler("avatars", storage.Avatars, avatar.AllowedResizedAvatarSizes))
+	routes.Methods("GET, HEAD", "/repo-avatars/*", resizingHandler("repo-avatars", storage.RepoAvatars, avatar.AllowedResizedAvatarSizes))
 	routes.Methods("GET, HEAD", "/apple-touch-icon.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/apple-touch-icon-precomposed.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/favicon.ico", misc.StaticRedirect("/assets/img/favicon.png"))
@@ -671,7 +672,14 @@ func registerRoutes(m *web.Route) {
 		})
 
 		m.Group("/authorized-integrations", func() {
-			m.Get("/{ui}/{id}", user_setting.ViewAuthorizedIntegration)
+			m.Group("/{ui}", func() {
+				m.Combo("/new").
+					Get(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.NewAuthorizedIntegration).
+					Post(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.NewAuthorizedIntegrationPost)
+				m.Combo("/{id}").
+					Get(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegration).
+					Post(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegrationPost)
+			})
 			m.Get("", user_setting.ListAuthorizedIntegrations)
 		})
 
