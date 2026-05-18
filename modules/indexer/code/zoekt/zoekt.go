@@ -28,7 +28,6 @@ import (
 	"forgejo.org/modules/indexer/code/internal"
 	indexer_internal "forgejo.org/modules/indexer/internal"
 	inner_zoekt "forgejo.org/modules/indexer/internal/zoekt"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/typesniffer"
 
@@ -199,32 +198,31 @@ func (b *Indexer) Index(ctx context.Context, repo *repo_model.Repository, sha st
 	return builder.Finish()
 }
 
-// Delete entries by repoId
 func (b *Indexer) Delete(ctx context.Context, repoID int64) error {
-	repoPathPrefix := strconv.FormatInt(repoID, 10)
+	prefix := strconv.FormatInt(repoID, 10) + "_v"
 
-	// remove all {repoId}_v{N}.{X}.zoekt or {repoId}_v{N}.{X}.zoekt.meta where X is %05d formatted int in b.indexDir
-	pattern := repoPathPrefix + "_v*.[0-9]{5}.zoekt*"
-	matches, err := filepath.Glob(filepath.Join(b.indexDir, pattern))
+	dir, err := os.Open(b.indexDir)
 	if err != nil {
-		return fmt.Errorf("finding files to delete: %w", err)
+		return fmt.Errorf("open index dir: %w", err)
+	}
+	defer dir.Close()
+
+	names, err := dir.Readdirnames(-1)
+	if err != nil {
+		return fmt.Errorf("read dir: %w", err)
 	}
 
-	for _, filePath := range matches {
-		if err := os.Remove(filePath); err != nil {
-			log.Error("failed to delete %s: %v", filePath, err)
+	prefixLen := len(prefix)
+
+	for _, name := range names {
+		if len(name) < prefixLen {
+			continue
 		}
-	}
-
-	tmpPattern := repoPathPrefix + "_v*.tmp"
-	tmpMatches, err := filepath.Glob(filepath.Join(b.indexDir, tmpPattern))
-	if err != nil {
-		return fmt.Errorf("finding temp files to delete: %w", err)
-	}
-
-	for _, filePath := range tmpMatches {
-		if err := os.Remove(filePath); err != nil {
-			log.Error("failed to delete temp file %s: %v", filePath, err)
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if strings.HasSuffix(name, ".tmp") || strings.Contains(name, ".zoekt") {
+			_ = os.Remove(filepath.Join(b.indexDir, name))
 		}
 	}
 
@@ -251,14 +249,14 @@ func (b *Indexer) generateZoektQuery(opts *internal.SearchOptions) (query.Q, err
 			return nil, errors.New("empty keyword")
 		}
 		contentQuery, err = query.Parse(
-			TransToZoektContentQueryString(QuoteMeta(fields[0])),
+			TransToZoektContentQueryString(regexp.QuoteMeta(fields[0])),
 		)
 		if err != nil {
 			return nil, err
 		}
 		for _, f := range fields[1:] {
 			q, err := query.Parse(
-				TransToZoektContentQueryString(QuoteMeta(f)),
+				TransToZoektContentQueryString(regexp.QuoteMeta(f)),
 			)
 			if err != nil {
 				return nil, err
@@ -268,7 +266,7 @@ func (b *Indexer) generateZoektQuery(opts *internal.SearchOptions) (query.Q, err
 	default:
 		// Exact match
 		contentQuery, err = query.Parse(
-			TransToZoektContentQueryString(QuoteMeta(keyword)),
+			TransToZoektContentQueryString(regexp.QuoteMeta(keyword)),
 		)
 		if err != nil {
 			return nil, err
