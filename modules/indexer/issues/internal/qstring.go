@@ -136,7 +136,8 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		tokens             []Token
 		userNames          []string
 		userFilter         []userFilter
-		includedLabelNames []string
+		mustLabelNames     []string
+		shouldLabelNames   []string
 		excludedLabelNames []string
 	)
 
@@ -149,10 +150,13 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		// label:"good first issue" still parse as a filter.
 		if token.IsOf("label:") {
 			name := token.Term[len("label:"):]
-			if token.Kind == BoolOptNot {
+			switch token.Kind {
+			case BoolOptNot:
 				excludedLabelNames = append(excludedLabelNames, name)
-			} else {
-				includedLabelNames = append(includedLabelNames, name)
+			case BoolOptMust:
+				mustLabelNames = append(mustLabelNames, name)
+			default:
+				shouldLabelNames = append(shouldLabelNames, name)
 			}
 			continue
 		}
@@ -253,51 +257,61 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		}
 	}
 
-	return o.resolveLabelNames(ctx, includedLabelNames, excludedLabelNames)
+	return o.resolveLabelNames(ctx, mustLabelNames, shouldLabelNames, excludedLabelNames)
 }
 
-// resolveLabelNames appends label IDs from `label:` / `-label:` tokens
-// to o, so the query composes with any IDs already set from `?labels=`.
-func (o *SearchOptions) resolveLabelNames(ctx context.Context, included, excluded []string) error {
-	if len(included) == 0 && len(excluded) == 0 {
+// resolveLabelNames maps label names collected from the query into the
+// SearchOptions ID slices, following the convention used elsewhere in
+// the query language: bare `label:foo` is SHOULD (OR among names),
+// `+label:foo` is MUST (AND), `-label:foo` is NOT.
+func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, excluded []string) error {
+	if len(must) == 0 && len(should) == 0 && len(excluded) == 0 {
 		return nil
 	}
 
-	// Single repo: names map 1:1 to IDs, so the per-repo lookup keeps
-	// AND semantics via IncludedLabelIDs.
-	if len(o.RepoIDs) == 1 {
-		if len(included) > 0 {
-			ids, err := issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], included)
-			if err != nil {
-				return err
-			}
-			o.IncludedLabelIDs = append(o.IncludedLabelIDs, ids...)
+	singleRepo := len(o.RepoIDs) == 1
+	lookup := func(names []string) ([]int64, error) {
+		// Single repo: names map 1:1 to IDs.
+		// Cross-repo: a name can resolve to many IDs (one per repo).
+		if singleRepo {
+			return issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], names)
 		}
-		if len(excluded) > 0 {
-			ids, err := issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], excluded)
-			if err != nil {
-				return err
-			}
-			o.ExcludedLabelIDs = append(o.ExcludedLabelIDs, ids...)
-		}
-		return nil
+		return issues_model.GetLabelIDsByNames(ctx, names)
 	}
 
-	// Cross-repo: a name can resolve to many IDs (one per repo), so
-	// use IncludedAnyLabelIDs (at-least-one). Two or more positive
-	// names degrade to a union; a proper AND across name groups would
-	// need a new indexer schema field.
-	if len(included) > 0 {
-		ids, err := issues_model.GetLabelIDsByNames(ctx, included)
+	// Cross-repo: an issue cannot have all IDs of one name across
+	// repos, so MUST collapses into SHOULD. AND across name groups
+	// would need a new indexer schema field.
+	if !singleRepo && len(must) > 0 {
+		should = append(should, must...)
+		must = nil
+	}
+
+	if len(must) > 0 {
+		ids, err := lookup(must)
 		if err != nil {
 			return err
 		}
-		if len(o.IncludedLabelIDs) == 0 {
+		o.IncludedLabelIDs = append(o.IncludedLabelIDs, ids...)
+	}
+	if len(should) > 0 {
+		ids, err := lookup(should)
+		if err != nil {
+			return err
+		}
+		// IncludedAnyLabelIDs is ignored by every backend when
+		// IncludedLabelIDs is non-empty (whether set above or via the
+		// URL `?labels=` parameter). Promote SHOULDs to MUST in that
+		// case so the filter still applies — composing `?labels=X` or
+		// `+label:X` with bare `label:Y` matches issues with both.
+		if len(o.IncludedLabelIDs) > 0 {
+			o.IncludedLabelIDs = append(o.IncludedLabelIDs, ids...)
+		} else {
 			o.IncludedAnyLabelIDs = append(o.IncludedAnyLabelIDs, ids...)
 		}
 	}
 	if len(excluded) > 0 {
-		ids, err := issues_model.GetLabelIDsByNames(ctx, excluded)
+		ids, err := lookup(excluded)
 		if err != nil {
 			return err
 		}

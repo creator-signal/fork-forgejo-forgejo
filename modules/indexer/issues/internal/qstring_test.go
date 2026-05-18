@@ -454,9 +454,18 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		Want    *SearchOptions
 	}{
 		{
-			Name:    "single positive label",
+			Name:    "single SHOULD label",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
 			Keyword: "label:bug",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{200},
+			},
+		},
+		{
+			Name:    "single MUST label",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "+label:bug",
 			Want: &SearchOptions{
 				RepoIDs:          []int64{100},
 				IncludedLabelIDs: []int64{200},
@@ -474,9 +483,29 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		{
 			// GetLabelIDsInRepoByNames orders by name asc, so "bug"
 			// (200) comes before "critical" (201).
-			Name:    "two positive labels are AND-ed",
+			Name:    "bare label: matches either (SHOULD/OR)",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
 			Keyword: "label:bug label:critical",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{200, 201},
+			},
+		},
+		{
+			Name:    "+label: requires all (MUST/AND)",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "+label:bug +label:critical",
+			Want: &SearchOptions{
+				RepoIDs:          []int64{100},
+				IncludedLabelIDs: []int64{200, 201},
+			},
+		},
+		{
+			// SHOULD gets promoted to MUST because IncludedAnyLabelIDs
+			// is ignored once IncludedLabelIDs is populated.
+			Name:    "mixing + and bare label: degrades SHOULD to MUST",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "+label:bug label:critical",
 			Want: &SearchOptions{
 				RepoIDs:          []int64{100},
 				IncludedLabelIDs: []int64{200, 201},
@@ -487,8 +516,8 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
 			Keyword: `label:"good first issue"`,
 			Want: &SearchOptions{
-				RepoIDs:          []int64{100},
-				IncludedLabelIDs: []int64{203},
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{203},
 			},
 		},
 		{
@@ -507,7 +536,10 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			Want:    &SearchOptions{RepoIDs: []int64{100}},
 		},
 		{
-			Name:    "appends to existing IncludedLabelIDs from URL ?labels=",
+			// Sidebar `?labels=42` pre-populates IncludedLabelIDs;
+			// bare `label:bug` promotes to MUST so the filter still
+			// applies (otherwise IncludedAnyLabelIDs would be dropped).
+			Name:    "bare label: composes with ?labels= as AND",
 			Initial: &SearchOptions{RepoIDs: []int64{100}, IncludedLabelIDs: []int64{42}},
 			Keyword: "label:bug",
 			Want: &SearchOptions{
@@ -516,9 +548,9 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			},
 		},
 		{
-			Name:    "mixing positive and negative labels in one query",
+			Name:    "mixing +label: and -label: in one query",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
-			Keyword: "label:bug -label:wontfix",
+			Keyword: "+label:bug -label:wontfix",
 			Want: &SearchOptions{
 				RepoIDs:          []int64{100},
 				IncludedLabelIDs: []int64{200},
