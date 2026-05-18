@@ -986,6 +986,8 @@ fomantic:
 	cd $(FOMANTIC_WORK_DIR) && npx gulp -f node_modules/fomantic-ui/gulpfile.js build
 	# fomantic uses "touchstart" as click event for some browsers, it's not ideal, so we force fomantic to always use "click" as click event
 	$(SED_INPLACE) -e 's/clickEvent[ \t]*=/clickEvent = "click", unstableClickEvent =/g' $(FOMANTIC_WORK_DIR)/build/semantic.js
+	# fomantic dropdown with API settings only shows user suggestion after API response, add it immediately so comma key works when typing quickly
+	$(SED_INPLACE) -e 's/module\.queryRemote(searchTerm, function() {/if(settings.allowAdditions){module.add.userSuggestion(module.escape.htmlEntities(searchTerm));}module.queryRemote(searchTerm, function() {/g' $(FOMANTIC_WORK_DIR)/build/semantic.js
 	$(SED_INPLACE) -e 's/\r//g' $(FOMANTIC_WORK_DIR)/build/semantic.css $(FOMANTIC_WORK_DIR)/build/semantic.js
 	rm -f $(FOMANTIC_WORK_DIR)/build/*.min.*
 

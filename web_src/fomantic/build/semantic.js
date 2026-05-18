@@ -1947,7 +1947,7 @@ $.fn.dropdown = function(parameters) {
           }
           if(settings.apiSettings) {
             if( module.can.useAPI() ) {
-              module.queryRemote(searchTerm, function() {
+              if(settings.allowAdditions){module.add.userSuggestion(module.escape.htmlEntities(searchTerm));}module.queryRemote(searchTerm, function() {
                 if(settings.filterRemoteData) {
                   module.filterItems(searchTerm);
                 }
