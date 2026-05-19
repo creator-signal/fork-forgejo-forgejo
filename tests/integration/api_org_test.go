@@ -49,7 +49,7 @@ func TestAPIOrgCreate(t *testing.T) {
 	assert.Equal(t, org.Website, apiOrg.Website)
 	assert.Equal(t, org.Location, apiOrg.Location)
 	assert.Equal(t, org.Visibility, apiOrg.Visibility)
-	assert.NotNil(t, apiOrg.Created)
+	assert.False(t, apiOrg.Created.IsZero())
 
 	unittest.AssertExistsAndLoadBean(t, &user_model.User{
 		Name:      org.UserName,
