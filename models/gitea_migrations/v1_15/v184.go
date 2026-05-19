@@ -10,7 +10,7 @@ import (
 	"forgejo.org/models/gitea_migrations/base"
 	"forgejo.org/modules/setting"
 
-	"xorm.io/xorm"
+	"code.forgejo.org/xorm/xorm"
 )
 
 func RenameTaskErrorsToMessage(x *xorm.Engine) error {

@@ -11,7 +11,7 @@ import (
 	"forgejo.org/models/gitea_migrations/base"
 	"forgejo.org/modules/timeutil"
 
-	"xorm.io/xorm"
+	"code.forgejo.org/xorm/xorm"
 )
 
 func DropOldCredentialIDColumn(x *xorm.Engine) error {

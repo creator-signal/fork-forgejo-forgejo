@@ -34,8 +34,8 @@ import (
 	"forgejo.org/modules/setting"
 	forgejo_service "forgejo.org/services/forgejo"
 
-	"xorm.io/xorm"
-	"xorm.io/xorm/names"
+	"code.forgejo.org/xorm/xorm"
+	"code.forgejo.org/xorm/xorm/names"
 )
 
 const minDBVersion = 70 // Gitea 1.5.3

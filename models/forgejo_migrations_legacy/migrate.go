@@ -17,8 +17,8 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 
-	"xorm.io/xorm"
-	"xorm.io/xorm/names"
+	"code.forgejo.org/xorm/xorm"
+	"code.forgejo.org/xorm/xorm/names"
 )
 
 // ForgejoVersion describes the Forgejo version table. Should have only one row with id = 1.
