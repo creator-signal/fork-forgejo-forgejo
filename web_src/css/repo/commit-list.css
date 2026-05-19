@@ -22,6 +22,14 @@
     gap: 0.5rem;
     grid-template-columns: minmax(8ch, 15%) 1fr auto minmax(12ch, 10%) auto;
     align-items: center;
+
+    .date {
+      justify-self: end;
+      max-width: 16ch;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   .commits .commit .sha.label {
