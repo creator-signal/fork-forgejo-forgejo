@@ -24,7 +24,6 @@
     align-items: center;
 
     .date {
-      justify-self: end;
       max-width: 16ch;
       white-space: nowrap;
       text-align: right;
