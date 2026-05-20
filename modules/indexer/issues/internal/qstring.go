@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
+	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -270,13 +272,41 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 	}
 
 	singleRepo := len(o.RepoIDs) == 1
-	lookup := func(names []string) ([]int64, error) {
-		// Single repo: names map 1:1 to IDs.
-		// Cross-repo: a name can resolve to many IDs (one per repo).
-		if singleRepo {
-			return issues_model.GetLabelIDsInRepoByNames(ctx, o.RepoIDs[0], names)
+
+	var lookup func(names []string) ([]int64, error)
+	if singleRepo {
+		// Resolve against this repo's labels in Go so an exact (case- and
+		// space-sensitive) match is preferred, falling back to a lenient
+		// case-/space-insensitive match only when no exact label exists.
+		labels, err := issues_model.GetLabelsByRepoID(ctx, o.RepoIDs[0], "", db.ListOptions{})
+		if err != nil {
+			return err
 		}
-		return issues_model.GetLabelIDsByNames(ctx, names)
+		exact := make(map[string]int64, len(labels))
+		lenient := make(map[string][]int64)
+		for _, l := range labels {
+			exact[l.Name] = l.ID
+			key := normalizeLabelName(l.Name)
+			lenient[key] = append(lenient[key], l.ID)
+		}
+		lookup = func(names []string) ([]int64, error) {
+			ids := make([]int64, 0, len(names))
+			for _, name := range names {
+				if id, ok := exact[name]; ok {
+					ids = append(ids, id)
+					continue
+				}
+				ids = append(ids, lenient[normalizeLabelName(name)]...)
+			}
+			return ids, nil
+		}
+	} else {
+		// Cross-repo: a name can resolve to many IDs (one per repo) and
+		// enumerating every visible label is infeasible, so matching stays
+		// exact via the indexer-friendly query.
+		lookup = func(names []string) ([]int64, error) {
+			return issues_model.GetLabelIDsByNames(ctx, names)
+		}
 	}
 
 	// Cross-repo: an issue cannot have all IDs of one name across
@@ -318,6 +348,19 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 		o.ExcludedLabelIDs = append(o.ExcludedLabelIDs, ids...)
 	}
 	return nil
+}
+
+// normalizeLabelName lowercases the name and strips whitespace and scope
+// separators so that label:goodfirstissue matches "Good First Issue" and
+// label:testpresent matches the scoped label "test/present" (whose slash
+// doesn't appear in the UI, for exclusive labels).
+func normalizeLabelName(name string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '/' || unicode.IsSpace(r) {
+			return -1
+		}
+		return unicode.ToLower(r)
+	}, name)
 }
 
 func toUnix(value string) optional.Option[int64] {

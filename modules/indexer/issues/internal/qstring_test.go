@@ -442,6 +442,7 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		{ID: 201, RepoID: 100, Name: "critical", Color: "#ffaa00"},
 		{ID: 202, RepoID: 100, Name: "wontfix", Color: "#888888"},
 		{ID: 203, RepoID: 100, Name: "good first issue", Color: "#00ff00"},
+		{ID: 204, RepoID: 100, Name: "test/present", Color: "#0000ff"},
 		{ID: 210, RepoID: 101, Name: "bug", Color: "#ff0000"},
 	} {
 		require.NoError(t, issues_model.NewLabel(t.Context(), l))
@@ -481,8 +482,7 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			},
 		},
 		{
-			// GetLabelIDsInRepoByNames orders by name asc, so "bug"
-			// (200) comes before "critical" (201).
+			// IDs follow the order the names appear in the query.
 			Name:    "bare label: matches either (SHOULD/OR)",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
 			Keyword: "label:bug label:critical",
@@ -555,6 +555,44 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 				RepoIDs:          []int64{100},
 				IncludedLabelIDs: []int64{200},
 				ExcludedLabelIDs: []int64{202},
+			},
+		},
+		{
+			Name:    "case-insensitive fallback when no exact match",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:WONTFIX",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{202},
+			},
+		},
+		{
+			Name:    "space-insensitive fallback when no exact match",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:goodfirstissue",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{203},
+			},
+		},
+		{
+			Name:    "case- and space-insensitive fallback combined",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:GoodFirstIssue",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{203},
+			},
+		},
+		{
+			// The scope separator of "test/present" is only a visual cue,
+			// so the tolerant match ignores it too.
+			Name:    "scope separator ignored in fallback",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: "label:testpresent",
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{204},
 			},
 		},
 	} {
