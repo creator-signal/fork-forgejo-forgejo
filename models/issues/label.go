@@ -433,6 +433,16 @@ func CountLabelsByRepoID(ctx context.Context, repoID int64) (int64, error) {
 	return db.GetEngine(ctx).Where("repo_id = ?", repoID).Count(&Label{})
 }
 
+// GetLabelsByRepoIDs returns the id and name of all labels in the given repositories.
+func GetLabelsByRepoIDs(ctx context.Context, repoIDs []int64) ([]*Label, error) {
+	labels := make([]*Label, 0, 10)
+	return labels, db.GetEngine(ctx).Table("label").
+		In("repo_id", repoIDs).
+		Cols("id", "name").
+		Asc("name").
+		Find(&labels)
+}
+
 // GetLabelInOrgByName returns a label by name in given organization.
 func GetLabelInOrgByName(ctx context.Context, orgID int64, labelName string) (*Label, error) {
 	if len(labelName) == 0 || orgID <= 0 {

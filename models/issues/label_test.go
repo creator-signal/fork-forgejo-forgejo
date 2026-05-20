@@ -174,6 +174,21 @@ func TestGetLabelsByRepoID(t *testing.T) {
 	testSuccess(1, "default", []int64{1, 2})
 }
 
+func TestGetLabelsByRepoIDs(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	// Unions labels across repos, sorted by name; unknown repo IDs are ignored.
+	labels, err := issues_model.GetLabelsByRepoIDs(db.DefaultContext, []int64{1, 10, unittest.NonexistentID})
+	require.NoError(t, err)
+	if assert.Len(t, labels, 3) {
+		assert.Equal(t, int64(1), labels[0].ID)
+		assert.Equal(t, "label1", labels[0].Name)
+		assert.Equal(t, int64(2), labels[1].ID)
+		assert.Equal(t, "label2", labels[1].Name)
+		assert.Equal(t, int64(5), labels[2].ID)
+		assert.Equal(t, "pull-test-label", labels[2].Name)
+	}
+}
+
 // Org versions
 
 func TestGetLabelInOrgByName(t *testing.T) {

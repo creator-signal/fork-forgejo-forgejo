@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -279,18 +278,31 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 		return nil
 	}
 
-	singleRepo := len(o.RepoIDs) == 1
+	// A label name resolves to one ID only when the search is scoped to a
+	// single repository and not also matching all public repositories.
+	singleScope := !o.AllPublic && len(o.RepoIDs) == 1
 
 	var lookup func(filters []labelFilter) ([]int64, error)
-	if singleRepo {
-		labels, err := issues_model.GetLabelsByRepoID(ctx, o.RepoIDs[0], "", db.ListOptions{})
+	if o.AllPublic {
+		// Searching all public repositories: the label universe is unbounded,
+		// so resolve names with an exact, indexer-friendly query rather than
+		// loading every candidate label.
+		lookup = func(filters []labelFilter) ([]int64, error) {
+			names := make([]string, len(filters))
+			for i, f := range filters {
+				names[i] = f.name
+			}
+			return issues_model.GetLabelIDsByNames(ctx, names)
+		}
+	} else {
+		labels, err := issues_model.GetLabelsByRepoIDs(ctx, o.RepoIDs)
 		if err != nil {
 			return err
 		}
-		exact := make(map[string]int64, len(labels))
+		exact := make(map[string][]int64)
 		lenient := make(map[string][]int64)
 		for _, l := range labels {
-			exact[l.Name] = l.ID
+			exact[l.Name] = append(exact[l.Name], l.ID)
 			key := normalizeLabelName(l.Name)
 			lenient[key] = append(lenient[key], l.ID)
 		}
@@ -304,39 +316,29 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 				}
 			}
 			for _, f := range filters {
-				if id, ok := exact[f.name]; ok {
+				for _, id := range exact[f.name] {
 					add(id)
 				}
-				// An unquoted name also matches labels that only differ by
-				// case, spaces or the "/" scope separator (which the UI
-				// hides). The query keeps any slash it was given, so
-				// label:test/present stays exact while label:testpresent
-				// also finds a scoped "test/present".
-				if !f.exact {
-					for _, id := range lenient[normalizeLabelQuery(f.name)] {
+				// An unquoted name without a typed "/" also matches labels
+				// that differ only by case, spaces or the "/" scope separator
+				// (which the UI hides), so label:testpresent finds a scoped
+				// "test/present". A typed "/" is kept literal and matches only
+				// via the exact name above.
+				if !f.exact && !strings.ContainsRune(f.name, '/') {
+					for _, id := range lenient[normalizeLabelName(f.name)] {
 						add(id)
 					}
 				}
 			}
 			return ids, nil
 		}
-	} else {
-		// Cross-repo: a name can resolve to many IDs (one per repo) and
-		// enumerating every visible label is infeasible, so matching stays
-		// exact via the indexer-friendly query.
-		lookup = func(filters []labelFilter) ([]int64, error) {
-			names := make([]string, len(filters))
-			for i, f := range filters {
-				names[i] = f.name
-			}
-			return issues_model.GetLabelIDsByNames(ctx, names)
-		}
 	}
 
-	// Cross-repo: an issue cannot have all IDs of one name across
-	// repos, so MUST collapses into SHOULD. AND across name groups
-	// would need a new indexer schema field.
-	if !singleRepo && len(must) > 0 {
+	// A name can resolve to several IDs (one per repo), and an issue cannot
+	// have all of them, so MUST collapses into SHOULD unless the search is
+	// scoped to a single repository. AND across name groups would need a new
+	// indexer schema field.
+	if !singleScope && len(must) > 0 {
 		should = append(should, must...)
 		must = nil
 	}
@@ -374,25 +376,13 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 	return nil
 }
 
-// normalizeLabelName indexes a label name for lenient matching: lowercased,
+// normalizeLabelName is the key used for lenient label matching: lowercased,
 // with whitespace and the "/" scope separator stripped (for exclusive labels
 // the slash doesn't appear in the UI, so label:testpresent should still match
 // a scoped "test/present").
 func normalizeLabelName(name string) string {
 	return strings.Map(func(r rune) rune {
 		if r == '/' || unicode.IsSpace(r) {
-			return -1
-		}
-		return unicode.ToLower(r)
-	}, name)
-}
-
-// normalizeLabelQuery normalizes a typed name for lenient lookup: lowercased
-// with whitespace stripped, but it keeps any "/" so an explicit scope
-// separator only matches a label that actually has that scope.
-func normalizeLabelQuery(name string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) {
 			return -1
 		}
 		return unicode.ToLower(r)

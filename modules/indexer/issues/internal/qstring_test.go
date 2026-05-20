@@ -614,12 +614,22 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		})
 	}
 
-	// Cross-repo path: GetLabelIDsByNames is unordered, so check the
-	// label slice with ElementsMatch and the rest field by field.
-	t.Run("cross-repo search uses IncludedAnyLabelIDs", func(t *testing.T) {
+	// Multi-repo path: a name resolves to one ID per repo, in unspecified
+	// order, so check the label slice with ElementsMatch.
+	t.Run("multi-repo search uses IncludedAnyLabelIDs", func(t *testing.T) {
 		opts := &SearchOptions{RepoIDs: []int64{100, 101}}
 		require.NoError(t, opts.WithKeyword(t.Context(), "label:bug"))
 		assert.Equal(t, []int64{100, 101}, opts.RepoIDs)
+		assert.ElementsMatch(t, []int64{200, 210}, opts.IncludedAnyLabelIDs)
+		assert.Empty(t, opts.IncludedLabelIDs)
+		assert.Empty(t, opts.ExcludedLabelIDs)
+	})
+
+	// AllPublic search can't enumerate every label, so names are matched
+	// exactly across all repos via GetLabelIDsByNames.
+	t.Run("all-public search matches names exactly across repos", func(t *testing.T) {
+		opts := &SearchOptions{RepoIDs: []int64{100}, AllPublic: true}
+		require.NoError(t, opts.WithKeyword(t.Context(), "label:bug"))
 		assert.ElementsMatch(t, []int64{200, 210}, opts.IncludedAnyLabelIDs)
 		assert.Empty(t, opts.IncludedLabelIDs)
 		assert.Empty(t, opts.ExcludedLabelIDs)
