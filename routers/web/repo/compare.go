@@ -584,10 +584,34 @@ func PrepareCompareDiff(
 		beforeCommitID = ci.CompareInfo.BaseCommitID
 	}
 
-	maxLines, maxFiles := setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffFiles
-	files := ctx.FormStrings("files")
-	if len(files) == 2 || len(files) == 1 {
-		maxLines, maxFiles = -1, -1
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, ci.HeadGitRepo, beforeCommitID, headCommitID, setting.UI.DiffPagingNum)
+	if err != nil {
+		ctx.ServerError("GetDiffNameOnly", err)
+		return false
+	}
+	page := max(ctx.FormInt("diff-page"), 1)
+	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
+
+	listOpts := db.ListOptions{
+		Page:     page,
+		PageSize: setting.UI.DiffPagingNum,
+	}
+	start, limit := listOpts.GetSkipTake()
+	limit += start
+	if !pager.Paginater.HasNext() {
+		limit = len(diffFileMetadata)
+	}
+
+	diffFileMetadataStat := gitdiff.GetDiffFileMetadataStat(diffFileMetadata, pager.Paginater)
+
+	ctx.Data["DiffFileMetadata"] = diffFileMetadata
+	ctx.Data["DiffFileMetadataStat"] = diffFileMetadataStat
+
+	pagedFiles := gitdiff.GetFileNames(diffFileMetadata[start:limit])
+
+	maxLines := setting.Git.MaxGitDiffLines
+	if len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1 {
+		maxLines = -1
 	}
 
 	fileOnly := ctx.FormBool("file-only")
@@ -596,20 +620,18 @@ func PrepareCompareDiff(
 		&gitdiff.DiffOptions{
 			BeforeCommitID:     beforeCommitID,
 			AfterCommitID:      headCommitID,
-			SkipTo:             ctx.FormString("skip-to"),
 			MaxLines:           maxLines,
 			MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-			MaxFiles:           maxFiles,
 			WhitespaceBehavior: whitespaceBehavior,
 			DirectComparison:   ci.DirectComparison,
 			FileOnly:           fileOnly,
-		}, ctx.FormStrings("files")...)
+		}, pagedFiles...)
 	if err != nil {
 		ctx.ServerError("GetDiffRangeWithWhitespaceBehavior", err)
 		return false
 	}
 	ctx.Data["Diff"] = diff
-	ctx.Data["DiffNotAvailable"] = diff.NumFiles == 0
+	ctx.Data["DiffNotAvailable"] = len(diff.Files) == 0
 
 	headCommit, err := ci.HeadGitRepo.GetCommit(headCommitID)
 	if err != nil {

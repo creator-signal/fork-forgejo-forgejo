@@ -29,6 +29,7 @@ import (
 	"forgejo.org/modules/highlight"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/paginator"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
 
@@ -479,11 +480,8 @@ func getCommitFileLineCount(commit *git.Commit, filePath string) int {
 // Diff represents a difference between two git trees.
 type Diff struct {
 	Start, End                   string
-	NumFiles                     int
 	TotalAddition, TotalDeletion int
 	Files                        []*DiffFile
-	IsIncomplete                 bool
-	NumViewedFiles               int // user-specific
 }
 
 // LoadComments loads comments into each line
@@ -512,11 +510,9 @@ func (diff *Diff) LoadComments(ctx context.Context, issue *issues_model.Issue, c
 const cmdDiffHead = "diff --git "
 
 // ParsePatch builds a Diff object from a io.Reader and some parameters.
-func ParsePatch(ctx context.Context, maxLines, maxLineCharacters, maxFiles int, reader io.Reader, skipToFile string) (*Diff, error) {
-	log.Debug("ParsePatch(%d, %d, %d, ..., %s)", maxLines, maxLineCharacters, maxFiles, skipToFile)
+func ParsePatch(ctx context.Context, maxLines, maxLineCharacters int, reader io.Reader) (*Diff, error) {
+	log.Debug("ParsePatch(%d, %d, %d, ..., %s)", maxLines, maxLineCharacters)
 	var curFile *DiffFile
-
-	skipping := skipToFile != ""
 
 	diff := &Diff{Files: make([]*DiffFile, 0)}
 
@@ -547,27 +543,7 @@ parsingLoop:
 			return diff, fmt.Errorf("invalid first file line: %s", line)
 		}
 
-		if maxFiles > -1 && len(diff.Files) >= maxFiles {
-			lastFile := createDiffFile(diff, line)
-			diff.End = lastFile.Name
-			diff.IsIncomplete = true
-			break parsingLoop
-		}
-
 		curFile = createDiffFile(diff, line)
-		if skipping {
-			if curFile.Name != skipToFile {
-				line, err = skipToNextDiffHead(input)
-				if err != nil {
-					if err == io.EOF {
-						return diff, nil
-					}
-					return diff, err
-				}
-				continue
-			}
-			skipping = false
-		}
 
 		diff.Files = append(diff.Files, curFile)
 
@@ -794,7 +770,6 @@ parsingLoop:
 		}
 	}
 
-	diff.NumFiles = len(diff.Files)
 	return diff, nil
 }
 
@@ -1105,13 +1080,156 @@ func readFileName(rd *strings.Reader) (string, bool) {
 type DiffOptions struct {
 	BeforeCommitID     string
 	AfterCommitID      string
-	SkipTo             string
 	MaxLines           int
 	MaxLineCharacters  int
-	MaxFiles           int
 	WhitespaceBehavior git.TrustedCmdArgs
 	DirectComparison   bool
 	FileOnly           bool
+}
+
+type DiffFileMetadata struct {
+	Name     string
+	NameHash string
+	Type     DiffFileType
+	IsViewed bool
+	OnPage   int
+}
+
+func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, limit int) ([]DiffFileMetadata, error) {
+	afterCommit, err := gitRepo.GetCommit(afterCommitID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the after commit %q: %w", afterCommitID, err)
+	}
+
+	cmdCtx, cmdCancel := context.WithCancel(ctx)
+	defer cmdCancel()
+
+	cmdDiff := git.NewCommand(cmdCtx).AddArguments("diff", "--name-status")
+
+	objectFormat, err := gitRepo.GetObjectFormat()
+	if err != nil {
+		return nil, fmt.Errorf("not able to determine the object format: %w", err)
+	}
+
+	// If before commit is empty or the empty object and the after commit has no
+	// parents, then use the empty tree as before commit.
+	//
+	// This is the case for a 'initial commit' of a Git tree, which obviously has
+	// no parents.
+	if (len(beforeCommitID) == 0 || beforeCommitID == objectFormat.EmptyObjectID().String()) && afterCommit.ParentCount() == 0 {
+		// Reset before commit ID to indicate empty tree was used.
+		beforeCommitID = ""
+		// Add enpty tree as before commit.
+		cmdDiff.AddDynamicArguments(objectFormat.EmptyTree().String())
+	} else {
+		// If before commit ID is empty, use the first parent of the after commit.
+		if len(beforeCommitID) == 0 {
+			parentCommit, err := afterCommit.Parent(0)
+			if err != nil {
+				return nil, fmt.Errorf("not able to get first parent of %q: %w", afterCommit.ID.String(), err)
+			}
+			beforeCommitID = parentCommit.ID.String()
+		}
+
+		cmdDiff.AddDynamicArguments(beforeCommitID)
+	}
+
+	// Add the after commit to the diff command.
+	cmdDiff.AddDynamicArguments(afterCommitID)
+
+	stdout, stderr, err := cmdDiff.RunStdString(&git.RunOpts{Dir: gitRepo.Path})
+	if err != nil {
+		if stderr != "" {
+			return nil, errors.New(stderr)
+		}
+		return nil, err
+	}
+
+	return parseNameStatusFileListSplit(stdout, limit)
+}
+
+func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.PullRequest, diffFiles ...DiffFileMetadata) ([]DiffFileMetadata, error) {
+	review, err := pull_model.GetNewestReviewState(ctx, userID, pull.ID)
+	if err != nil || review == nil || review.UpdatedFiles == nil {
+		return diffFiles, err
+	}
+	for i := range diffFiles {
+		diffFiles[i].IsViewed = review.UpdatedFiles[diffFiles[i].Name] == pull_model.Viewed
+	}
+
+	return diffFiles, nil
+}
+
+func parseNameStatusFileListSplit(output string, limit int) ([]DiffFileMetadata, error) {
+	if limit == 0 {
+		return nil, errors.New("limit cannot be 0")
+	}
+
+	var files []DiffFileMetadata
+
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	cur := 0
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		cur++
+
+		status := fields[0]
+		file := DiffFileMetadata{}
+		file.Name = fields[1]
+		file.NameHash = git.HashFilePathForWebUI(fields[1])
+		file.OnPage = (cur + limit - 1) / limit
+
+		switch status {
+		case "A":
+			file.Type = DiffFileAdd
+		case "M":
+			file.Type = DiffFileChange
+		case "D":
+			file.Type = DiffFileDel
+		case "R":
+			file.Type = DiffFileRename
+		case "C":
+			file.Type = DiffFileCopy
+		}
+		files = append(files, file)
+	}
+
+	return files, nil
+}
+
+func GetFileNames(files []DiffFileMetadata) []string {
+	fileNames := make([]string, len(files))
+	for i, v := range files {
+		fileNames[i] = v.Name
+	}
+	return fileNames
+}
+
+type DiffFileMetadataStat struct {
+	HasNext             bool
+	CurrentPage         int
+	TotalNumberOfFiles  int
+	NumberOfViewedFiles int
+}
+
+func GetDiffFileMetadataStat(files []DiffFileMetadata, paginator *paginator.Paginator) (stat DiffFileMetadataStat) {
+	stat.TotalNumberOfFiles = len(files)
+	for _, v := range files {
+		if v.IsViewed {
+			stat.NumberOfViewedFiles++
+		}
+	}
+	stat.CurrentPage = paginator.Current()
+	stat.HasNext = paginator.HasNext()
+	return stat
 }
 
 // GetDiffSimple builds a Diff between two commits of a repository.
@@ -1161,15 +1279,6 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 	// Add the after commit to the diff command.
 	cmdDiff.AddDynamicArguments(opts.AfterCommitID)
 
-	// In git 2.31, git diff learned --skip-to which we can use to shortcut skip to file
-	// so if we are using at least this version of git we don't have to tell ParsePatch to do
-	// the skipping for us
-	parsePatchSkipToFile := opts.SkipTo
-	if opts.SkipTo != "" {
-		cmdDiff.AddOptionFormat("--skip-to=%s", opts.SkipTo)
-		parsePatchSkipToFile = ""
-	}
-
 	// If we only want to diff for some files, add that as well.
 	cmdDiff.AddDashesAndList(files...)
 
@@ -1195,13 +1304,12 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 		_ = writer.Close()
 	}()
 
-	diff, err = ParsePatch(cmdCtx, opts.MaxLines, opts.MaxLineCharacters, opts.MaxFiles, reader, parsePatchSkipToFile)
+	diff, err = ParsePatch(cmdCtx, opts.MaxLines, opts.MaxLineCharacters, reader)
 	// Ensure the git process is killed if it didn't exit already
 	cmdCancel()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to parse a git diff: %w", err)
 	}
-	diff.Start = opts.SkipTo
 
 	return diff, afterCommit, nil
 }
@@ -1272,7 +1380,7 @@ func GetDiffFull(ctx context.Context, gitRepo *git.Repository, opts *DiffOptions
 		return nil, err
 	}
 
-	diff.NumFiles, diff.TotalAddition, diff.TotalDeletion = stats.NumFiles, stats.TotalAddition, stats.TotalDeletion
+	diff.TotalAddition, diff.TotalDeletion = stats.TotalAddition, stats.TotalDeletion
 
 	return diff, nil
 }
@@ -1357,7 +1465,6 @@ outer:
 		// Check whether the file has already been viewed
 		if fileViewedState == pull_model.Viewed {
 			diffFile.IsViewed = true
-			diff.NumViewedFiles++
 		}
 	}
 
@@ -1377,8 +1484,7 @@ outer:
 
 // CommentAsDiff returns c.Patch as *Diff
 func CommentAsDiff(ctx context.Context, c *issues_model.Comment) (*Diff, error) {
-	diff, err := ParsePatch(ctx, setting.Git.MaxGitDiffLines,
-		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles, strings.NewReader(c.Patch), "")
+	diff, err := ParsePatch(ctx, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, strings.NewReader(c.Patch))
 	if err != nil {
 		log.Error("Unable to parse patch: %v", err)
 		return nil, err

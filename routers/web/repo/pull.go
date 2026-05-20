@@ -429,7 +429,6 @@ func GetPullDiffStats(ctx *context.Context) {
 		AfterCommitID:      headCommitID,
 		MaxLines:           setting.Git.MaxGitDiffLines,
 		MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-		MaxFiles:           setting.Git.MaxGitDiffFiles,
 		WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.Data["WhitespaceBehavior"].(string)),
 	}
 
@@ -1063,18 +1062,41 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 
 	fileOnly := ctx.FormBool("file-only")
 
-	maxLines, maxFiles := setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffFiles
-	files := ctx.FormStrings("files")
-	if fileOnly && (len(files) == 2 || len(files) == 1) {
-		maxLines, maxFiles = -1, -1
+	maxLines := setting.Git.MaxGitDiffLines
+
+	var methodWithError string
+	var diff *gitdiff.Diff
+
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum)
+	if err != nil {
+		methodWithError = "GetDiffNameStatus"
+		ctx.ServerError(methodWithError, err)
+		return
+	}
+
+	page := max(ctx.FormInt("diff-page"), 1)
+	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
+
+	listOpts := db.ListOptions{
+		Page:     page,
+		PageSize: setting.UI.DiffPagingNum,
+	}
+
+	start, limit := listOpts.GetSkipTake()
+	limit += start
+	if !pager.Paginater.HasNext() {
+		limit = len(diffFileMetadata)
+	}
+	pagedFiles := gitdiff.GetFileNames(diffFileMetadata[start:limit])
+
+	if fileOnly && (len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1) {
+		maxLines = -1
 	}
 
 	diffOptions := &gitdiff.DiffOptions{
 		AfterCommitID:      endCommitID,
-		SkipTo:             ctx.FormString("skip-to"),
 		MaxLines:           maxLines,
 		MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-		MaxFiles:           maxFiles,
 		WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.Data["WhitespaceBehavior"].(string)),
 		FileOnly:           fileOnly,
 	}
@@ -1083,18 +1105,15 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		diffOptions.BeforeCommitID = startCommitID
 	}
 
-	var methodWithError string
-	var diff *gitdiff.Diff
-
 	// if we're not logged in or only a single commit (or commit range) is shown we
 	// have to load only the diff and not get the viewed information
 	// as the viewed information is designed to be loaded only on latest PR
 	// diff and if you're signed in.
 	if !ctx.IsSigned || willShowSpecifiedCommit || willShowSpecifiedCommitRange {
-		diff, err = gitdiff.GetDiffFull(ctx, gitRepo, diffOptions, files...)
+		diff, err = gitdiff.GetDiffFull(ctx, gitRepo, diffOptions, pagedFiles...)
 		methodWithError = "GetDiff"
 	} else {
-		diff, err = gitdiff.SyncAndGetUserSpecificDiff(ctx, ctx.Doer.ID, pull, gitRepo, diffOptions, files...)
+		diff, err = gitdiff.SyncAndGetUserSpecificDiff(ctx, ctx.Doer.ID, pull, gitRepo, diffOptions, pagedFiles...)
 		methodWithError = "SyncAndGetUserSpecificDiff"
 	}
 	if err != nil {
@@ -1102,9 +1121,22 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 
+	if ctx.IsSigned && !willShowSpecifiedCommit && !willShowSpecifiedCommitRange {
+		diffFileMetadata, err = gitdiff.EnrichWithReview(ctx, ctx.Doer.ID, pull, diffFileMetadata...)
+		if err != nil {
+			ctx.ServerError("EnrichWithReview", err)
+			return
+		}
+
+	}
+	diffFileMetadataStat := gitdiff.GetDiffFileMetadataStat(diffFileMetadata, pager.Paginater)
+
+	ctx.Data["DiffFileMetadata"] = diffFileMetadata
+	ctx.Data["DiffFileMetadataStat"] = diffFileMetadataStat
+
 	ctx.PageData["prReview"] = map[string]any{
-		"numberOfFiles":       diff.NumFiles,
-		"numberOfViewedFiles": diff.NumViewedFiles,
+		"numberOfFiles":       diffFileMetadataStat.TotalNumberOfFiles,
+		"numberOfViewedFiles": diffFileMetadataStat.NumberOfViewedFiles,
 	}
 
 	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool), endCommitID); err != nil {
@@ -1128,7 +1160,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 	}
 
 	ctx.Data["Diff"] = diff
-	ctx.Data["DiffNotAvailable"] = diff.NumFiles == 0
+	ctx.Data["DiffNotAvailable"] = len(diff.Files) == 0
 
 	baseCommit, err := ctx.Repo.GitRepo.GetCommit(startCommitID)
 	if err != nil {

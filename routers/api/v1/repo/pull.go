@@ -1547,10 +1547,6 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	//   type: integer
 	//   format: int64
 	//   required: true
-	// - name: skip-to
-	//   in: query
-	//   description: skip to given file
-	//   type: string
 	// - name: whitespace
 	//   in: query
 	//   description: whitespace behavior
@@ -1610,38 +1606,42 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	maxLines := setting.Git.MaxGitDiffLines
 
+	listOptions := utils.GetListOptions(ctx)
+	start, limit := listOptions.GetSkipTake()
+	limit += start
+
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, baseGitRepo, startCommitID, endCommitID, listOptions.PageSize)
+	if err != nil {
+		ctx.ServerError("GetDiffNameStatus", err)
+		return
+	}
+
+	if len(diffFileMetadata) <= listOptions.Page*listOptions.PageSize {
+		limit = len(diffFileMetadata)
+	}
+
 	// FIXME: If there are too many files in the repo, may cause some unpredictable issues.
 	diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
 		&gitdiff.DiffOptions{
 			BeforeCommitID:     startCommitID,
 			AfterCommitID:      endCommitID,
-			SkipTo:             ctx.FormString("skip-to"),
 			MaxLines:           maxLines,
 			MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-			MaxFiles:           -1, // GetDiff() will return all files
 			WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
-		})
+		}, gitdiff.GetFileNames(diffFileMetadata[start:limit])...)
 	if err != nil {
 		ctx.ServerError("GetDiff", err)
 		return
 	}
 
-	listOptions := utils.GetListOptions(ctx)
-
-	totalNumberOfFiles := diff.NumFiles
+	totalNumberOfFiles := len(diffFileMetadata)
 	totalNumberOfPages := int(math.Ceil(float64(totalNumberOfFiles) / float64(listOptions.PageSize)))
 
-	start, limit := listOptions.GetSkipTake()
-
-	limit = min(limit, totalNumberOfFiles-start)
-
-	limit = max(limit, 0)
-
-	apiFiles := make([]*api.ChangedFile, 0, limit)
-	for i := start; i < start+limit; i++ {
+	numberOffDiffFiles := len(diff.Files)
+	apiFiles := make([]*api.ChangedFile, 0, numberOffDiffFiles)
+	for i := 0; i < numberOffDiffFiles; i++ {
 		apiFiles = append(apiFiles, convert.ToChangedFile(diff.Files[i], pr.HeadRepo, endCommitID))
 	}
-
 	ctx.SetLinkHeader(totalNumberOfFiles, listOptions.PageSize)
 	ctx.SetTotalCountHeader(int64(totalNumberOfFiles))
 
