@@ -442,7 +442,7 @@ test('User: Add authorized integration', async ({browser}, workerInfo) => {
   await page.goto('/user/settings/authorized-integrations');
 
   await page.getByRole('menu').filter({hasText: 'Add authorized integration'}).click();
-  await page.getByRole('menuitem', {name: 'Generic JWT Source'}).click();
+  await page.getByRole('menuitem', {name: 'Generic JWT'}).click();
 
   await expect(page.getByRole('textbox', {name: 'Name'})).toHaveValue('');
   await expect(page.getByRole('textbox', {name: 'Description'})).toHaveValue('');
@@ -482,7 +482,7 @@ test('User: Add authorized integration validation error', async ({browser}, work
   await page.goto('/user/settings/authorized-integrations');
 
   await page.getByRole('menu').filter({hasText: 'Add authorized integration'}).click();
-  await page.getByRole('menuitem', {name: 'Generic JWT Source'}).click();
+  await page.getByRole('menuitem', {name: 'Generic JWT'}).click();
 
   await page.getByRole('textbox', {name: 'Name'}).fill('\t\t');
   await page.getByRole('textbox', {name: 'Issuer (iss Claim)'}).fill('urn:forgejo:authorized-integrations:actions');
