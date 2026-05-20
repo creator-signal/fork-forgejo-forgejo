@@ -389,6 +389,7 @@ func (issue *Issue) APIURL(ctx context.Context) string {
 	if issue.IsPull {
 		err := issue.LoadPullRequest(ctx)
 		if err != nil {
+			log.Error("Issue[%d].APIURL(): %v", issue.ID, err)
 			return ""
 		}
 		return fmt.Sprintf("%s/pulls/%d", issue.Repo.APIURL(), issue.PullRequest.Index)
