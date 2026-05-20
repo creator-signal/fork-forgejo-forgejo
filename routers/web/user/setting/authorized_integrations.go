@@ -331,6 +331,9 @@ func EditAuthorizedIntegrationRenderCommon(ctx *context.Context) {
 	ctx.Data["Categories"] = categories
 
 	repoMultiSelect(ctx)
+	if ctx.Written() {
+		return
+	}
 
 	ctx.HTML(http.StatusOK, authorizedIntegrationUI(ctx).editTemplate())
 }
