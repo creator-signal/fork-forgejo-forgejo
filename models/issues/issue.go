@@ -386,15 +386,14 @@ func (issue *Issue) APIURL(ctx context.Context) string {
 			return ""
 		}
 	}
+
+	var path string
 	if issue.IsPull {
-		err := issue.LoadPullRequest(ctx)
-		if err != nil {
-			log.Error("Issue[%d].APIURL(): %v", issue.ID, err)
-			return ""
-		}
-		return fmt.Sprintf("%s/pulls/%d", issue.Repo.APIURL(), issue.PullRequest.Index)
+		path = "pulls"
+	} else {
+		path = "issues"
 	}
-	return fmt.Sprintf("%s/issues/%d", issue.Repo.APIURL(), issue.Index)
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.APIURL(), path, issue.Index)
 }
 
 // HTMLURL returns the absolute URL to this issue.
