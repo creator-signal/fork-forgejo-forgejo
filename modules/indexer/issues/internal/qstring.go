@@ -125,6 +125,13 @@ const (
 	userFilterReview
 )
 
+// labelFilter is a label name collected from the query plus whether it was
+// quoted, which forces an exact match instead of the lenient one.
+type labelFilter struct {
+	name  string
+	exact bool
+}
+
 // Parses the keyword and sets the
 func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err error) {
 	if keyword == "" {
@@ -135,12 +142,12 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 	it := Tokenizer{in: in}
 
 	var (
-		tokens             []Token
-		userNames          []string
-		userFilter         []userFilter
-		mustLabelNames     []string
-		shouldLabelNames   []string
-		excludedLabelNames []string
+		tokens         []Token
+		userNames      []string
+		userFilter     []userFilter
+		mustLabels     []labelFilter
+		shouldLabels   []labelFilter
+		excludedLabels []labelFilter
 	)
 
 	for token, err := it.next(); err == nil; token, err = it.next() {
@@ -149,16 +156,17 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		}
 
 		// Checked before the fuzzy-skip so that quoted names like
-		// label:"good first issue" still parse as a filter.
+		// label:"good first issue" still parse as a filter. A quoted value
+		// (Fuzzy == false) forces an exact match.
 		if token.IsOf("label:") {
-			name := token.Term[len("label:"):]
+			lf := labelFilter{name: token.Term[len("label:"):], exact: !token.Fuzzy}
 			switch token.Kind {
 			case BoolOptNot:
-				excludedLabelNames = append(excludedLabelNames, name)
+				excludedLabels = append(excludedLabels, lf)
 			case BoolOptMust:
-				mustLabelNames = append(mustLabelNames, name)
+				mustLabels = append(mustLabels, lf)
 			default:
-				shouldLabelNames = append(shouldLabelNames, name)
+				shouldLabels = append(shouldLabels, lf)
 			}
 			continue
 		}
@@ -259,25 +267,22 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 		}
 	}
 
-	return o.resolveLabelNames(ctx, mustLabelNames, shouldLabelNames, excludedLabelNames)
+	return o.resolveLabelNames(ctx, mustLabels, shouldLabels, excludedLabels)
 }
 
-// resolveLabelNames maps label names collected from the query into the
+// resolveLabelNames maps label filters collected from the query into the
 // SearchOptions ID slices, following the convention used elsewhere in
 // the query language: bare `label:foo` is SHOULD (OR among names),
 // `+label:foo` is MUST (AND), `-label:foo` is NOT.
-func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, excluded []string) error {
+func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, excluded []labelFilter) error {
 	if len(must) == 0 && len(should) == 0 && len(excluded) == 0 {
 		return nil
 	}
 
 	singleRepo := len(o.RepoIDs) == 1
 
-	var lookup func(names []string) ([]int64, error)
+	var lookup func(filters []labelFilter) ([]int64, error)
 	if singleRepo {
-		// Resolve against this repo's labels in Go so an exact (case- and
-		// space-sensitive) match is preferred, falling back to a lenient
-		// case-/space-insensitive match only when no exact label exists.
 		labels, err := issues_model.GetLabelsByRepoID(ctx, o.RepoIDs[0], "", db.ListOptions{})
 		if err != nil {
 			return err
@@ -289,14 +294,29 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 			key := normalizeLabelName(l.Name)
 			lenient[key] = append(lenient[key], l.ID)
 		}
-		lookup = func(names []string) ([]int64, error) {
-			ids := make([]int64, 0, len(names))
-			for _, name := range names {
-				if id, ok := exact[name]; ok {
+		lookup = func(filters []labelFilter) ([]int64, error) {
+			var ids []int64
+			seen := make(map[int64]bool)
+			add := func(id int64) {
+				if !seen[id] {
+					seen[id] = true
 					ids = append(ids, id)
-					continue
 				}
-				ids = append(ids, lenient[normalizeLabelName(name)]...)
+			}
+			for _, f := range filters {
+				if id, ok := exact[f.name]; ok {
+					add(id)
+				}
+				// An unquoted name also matches labels that only differ by
+				// case, spaces or the "/" scope separator (which the UI
+				// hides). The query keeps any slash it was given, so
+				// label:test/present stays exact while label:testpresent
+				// also finds a scoped "test/present".
+				if !f.exact {
+					for _, id := range lenient[normalizeLabelQuery(f.name)] {
+						add(id)
+					}
+				}
 			}
 			return ids, nil
 		}
@@ -304,7 +324,11 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 		// Cross-repo: a name can resolve to many IDs (one per repo) and
 		// enumerating every visible label is infeasible, so matching stays
 		// exact via the indexer-friendly query.
-		lookup = func(names []string) ([]int64, error) {
+		lookup = func(filters []labelFilter) ([]int64, error) {
+			names := make([]string, len(filters))
+			for i, f := range filters {
+				names[i] = f.name
+			}
 			return issues_model.GetLabelIDsByNames(ctx, names)
 		}
 	}
@@ -350,13 +374,25 @@ func (o *SearchOptions) resolveLabelNames(ctx context.Context, must, should, exc
 	return nil
 }
 
-// normalizeLabelName lowercases the name and strips whitespace and scope
-// separators so that label:goodfirstissue matches "Good First Issue" and
-// label:testpresent matches the scoped label "test/present" (whose slash
-// doesn't appear in the UI, for exclusive labels).
+// normalizeLabelName indexes a label name for lenient matching: lowercased,
+// with whitespace and the "/" scope separator stripped (for exclusive labels
+// the slash doesn't appear in the UI, so label:testpresent should still match
+// a scoped "test/present").
 func normalizeLabelName(name string) string {
 	return strings.Map(func(r rune) rune {
 		if r == '/' || unicode.IsSpace(r) {
+			return -1
+		}
+		return unicode.ToLower(r)
+	}, name)
+}
+
+// normalizeLabelQuery normalizes a typed name for lenient lookup: lowercased
+// with whitespace stripped, but it keeps any "/" so an explicit scope
+// separator only matches a label that actually has that scope.
+func normalizeLabelQuery(name string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
 			return -1
 		}
 		return unicode.ToLower(r)

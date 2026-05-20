@@ -443,6 +443,7 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		{ID: 202, RepoID: 100, Name: "wontfix", Color: "#888888"},
 		{ID: 203, RepoID: 100, Name: "good first issue", Color: "#00ff00"},
 		{ID: 204, RepoID: 100, Name: "test/present", Color: "#0000ff"},
+		{ID: 205, RepoID: 100, Name: "testpresent", Color: "#0000ff"},
 		{ID: 210, RepoID: 101, Name: "bug", Color: "#ff0000"},
 	} {
 		require.NoError(t, issues_model.NewLabel(t.Context(), l))
@@ -585,14 +586,25 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			},
 		},
 		{
-			// The scope separator of "test/present" is only a visual cue,
-			// so the tolerant match ignores it too.
-			Name:    "scope separator ignored in fallback",
+			// A typed "/" is kept literal, so it only matches the scoped
+			// label "test/present" (204), not the plain "testpresent" (205).
+			Name:    "typed scope separator matches only the scoped label",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
-			Keyword: "label:testpresent",
+			Keyword: "label:test/present",
 			Want: &SearchOptions{
 				RepoIDs:             []int64{100},
 				IncludedAnyLabelIDs: []int64{204},
+			},
+		},
+		{
+			// Quoting forces an exact match, so it picks only the plain
+			// label "testpresent" (205), not the scoped "test/present".
+			Name:    "quoted name forces exact match",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: `label:"testpresent"`,
+			Want: &SearchOptions{
+				RepoIDs:             []int64{100},
+				IncludedAnyLabelIDs: []int64{205},
 			},
 		},
 	} {
@@ -611,6 +623,15 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 		assert.ElementsMatch(t, []int64{200, 210}, opts.IncludedAnyLabelIDs)
 		assert.Empty(t, opts.IncludedLabelIDs)
 		assert.Empty(t, opts.ExcludedLabelIDs)
+	})
+
+	// An unquoted, slashless name matches both the plain label "testpresent"
+	// (205) and the scoped "test/present" (204), whose slash is hidden in the
+	// UI. Order is unspecified, so match the set.
+	t.Run("slashless name matches plain and scoped labels", func(t *testing.T) {
+		opts := &SearchOptions{RepoIDs: []int64{100}}
+		require.NoError(t, opts.WithKeyword(t.Context(), "label:testpresent"))
+		assert.ElementsMatch(t, []int64{204, 205}, opts.IncludedAnyLabelIDs)
 	})
 }
 
