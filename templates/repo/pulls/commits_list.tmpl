@@ -36,12 +36,14 @@
 			<div class="message-wrapper">
 				{{RenderCommitMessageLinkSubject $.Context .Message $commitLink ($.Repository.ComposeMetas ctx)}}
 				{{if IsMultilineCommitMessage .Message}}
-				<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
-				<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
+					<button class="ui button js-toggle-commit-body ellipsis-button" aria-expanded="false">...</button>
 				{{end}}
 				<span class="ci-status">
 					{{template "repo/commit_statuses" dict "Status" .Status "Statuses" .Statuses}}
 				</span>
+				{{if IsMultilineCommitMessage .Message}}
+					<pre class="commit-body tw-hidden">{{RenderCommitBody $.Context .Message ($.Repository.ComposeMetas ctx)}}</pre>
+				{{end}}
 			</div>
 		</div>
 
