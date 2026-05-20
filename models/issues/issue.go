@@ -386,6 +386,13 @@ func (issue *Issue) APIURL(ctx context.Context) string {
 			return ""
 		}
 	}
+	if issue.IsPull {
+		err := issue.LoadPullRequest(ctx)
+		if err != nil {
+			return ""
+		}
+		return fmt.Sprintf("%s/pulls/%d", issue.Repo.APIURL(), issue.PullRequest.Index)
+	}
 	return fmt.Sprintf("%s/issues/%d", issue.Repo.APIURL(), issue.Index)
 }
 

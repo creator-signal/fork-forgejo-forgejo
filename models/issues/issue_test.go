@@ -18,6 +18,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/builder"
@@ -67,6 +68,10 @@ func TestIssueAPIURL(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "https://try.gitea.io/api/v1/repos/user2/repo1/issues/1", issue.APIURL(db.DefaultContext))
+
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
+	assert.NoError(t, pr.LoadIssue(db.DefaultContext))
+	assert.Equal(t, "https://try.gitea.io/api/v1/repos/user2/repo1/pulls/2", pr.Issue.APIURL(db.DefaultContext))
 }
 
 func TestGetIssuesByIDs(t *testing.T) {

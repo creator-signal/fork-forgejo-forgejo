@@ -67,7 +67,7 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 
 	apiPullRequest := &api.PullRequest{
 		ID:                      pr.ID,
-		URL:                     fmt.Sprintf("%s/pulls/%d", pr.Issue.Repo.APIURL(), pr.Index),
+		URL:                     pr.Issue.APIURL(ctx),
 		Index:                   pr.Index,
 		Poster:                  apiIssue.Poster,
 		Title:                   apiIssue.Title,
