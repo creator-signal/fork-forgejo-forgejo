@@ -34,6 +34,7 @@ const (
 )
 
 var authorizedIntegrationUIs = []authorizedIntegrationUIImpl{
+	actionsLocalUI{},
 	genericUI{},
 }
 
