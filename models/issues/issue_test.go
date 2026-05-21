@@ -18,7 +18,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/builder"
