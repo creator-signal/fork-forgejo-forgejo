@@ -69,7 +69,7 @@ func TestIssueAPIURL(t *testing.T) {
 	assert.Equal(t, "https://try.gitea.io/api/v1/repos/user2/repo1/issues/1", issue.APIURL(db.DefaultContext))
 
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
-	assert.NoError(t, pr.LoadIssue(db.DefaultContext))
+	require.NoError(t, pr.LoadIssue(db.DefaultContext))
 	assert.Equal(t, "https://try.gitea.io/api/v1/repos/user2/repo1/pulls/2", pr.Issue.APIURL(db.DefaultContext))
 }
 
