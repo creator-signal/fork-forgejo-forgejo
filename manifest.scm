@@ -24,6 +24,7 @@ make watch                   # run an instance/rebuild on changes
 (specifications->manifest
  (list "bash-minimal"
        "coreutils"
+       "diffutils"
        "findutils"
        "gcc-toolchain"
        "git"                            ;libpcre support is required
