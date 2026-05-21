@@ -1249,11 +1249,15 @@ func Routes() *web.Route {
 						m.Delete("/{artifact_id}", reqToken(), reqRepoWriter(unit.TypeActions), repo.DeleteActionArtifact)
 						m.Get("/{artifact_id}/zip", repo.DownloadActionArtifact)
 					})
+					m.Group("/jobs", func() {
+						m.Get("/{job_id}/logs", reqToken(), repo.GetActionJobLogs)
+					})
 					m.Group("/runs", func() {
 						m.Get("", repo.ListActionRuns)
 						m.Get("/{run_id}", repo.GetActionRun)
 						m.Delete("/{run_id}", reqToken(), reqAdmin(unit.TypeActions), repo.DeleteActionRun)
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
+						m.Get("/{run_id}/logs", reqToken(), repo.GetActionRunLogs)
 						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
 					})
 

@@ -5,13 +5,18 @@
 package repo
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
+	"forgejo.org/modules/actions"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -1471,4 +1476,289 @@ func DeleteActionArtifact(ctx *context.APIContext) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+// GetActionJobLogs serves plaintext logs for a single action job.
+func GetActionJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository repoGetActionJobLogs
+	// ---
+	// summary: Download the plaintext logs of an action job
+	// produces:
+	// - text/plain
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: job_id
+	//   in: path
+	//   description: id of the action job
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: step
+	//   in: query
+	//   description: 0-indexed step to filter to (returns only that step's portion of the log)
+	//   type: integer
+	//   required: false
+	// responses:
+	//   "200":
+	//     description: Plaintext log content
+	//     schema:
+	//       type: string
+	//   "206":
+	//     description: Partial log content (Range request)
+	//     schema:
+	//       type: string
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	jobID := ctx.ParamsInt64(":job_id")
+
+	job, err := actions_model.GetRunJobByID(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunJobByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunJobByID", err)
+		}
+		return
+	}
+
+	// Action run-jobs live in their own table, therefore we check that the
+	// job with the requested ID is owned by the repository
+	if job.RepoID != ctx.Repo.Repository.ID {
+		ctx.Error(http.StatusNotFound, "GetRunJobByID", util.ErrNotExist)
+		return
+	}
+
+	if job.TaskID == 0 {
+		ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("job has not been executed yet"))
+		return
+	}
+
+	task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetTaskByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetTaskByID", err)
+		}
+		return
+	}
+
+	if task.LogExpired {
+		ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("logs have been cleaned up"))
+		return
+	}
+
+	stepParamRaw := ctx.FormString("step")
+	stepFilter := stepParamRaw != ""
+	stepParam := ctx.FormInt("step")
+
+	var (
+		startByte int64
+		length    int64
+		filename  = fmt.Sprintf("job-%d.log", job.ID)
+	)
+
+	if stepFilter {
+		steps, err := actions_model.GetTaskStepsByTaskID(ctx, task.ID)
+		if err != nil {
+			ctx.Error(http.StatusInternalServerError, "GetTaskStepsByTaskID", err)
+			return
+		}
+
+		var matchedStep *actions_model.ActionTaskStep
+		for _, s := range steps {
+			if s.Index == int64(stepParam) {
+				matchedStep = s
+				break
+			}
+		}
+		if matchedStep == nil {
+			ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("step out of range"))
+			return
+		}
+
+		// LogIndexes maps line number -> byte offset; guard against a task
+		// whose log indexes haven't been populated (or whose step references
+		// a line beyond what's been recorded).
+		if matchedStep.LogIndex < 0 || matchedStep.LogIndex >= int64(len(task.LogIndexes)) {
+			ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("step has no recorded log range"))
+			return
+		}
+
+		startByte = task.LogIndexes[matchedStep.LogIndex]
+		endIdx := matchedStep.LogIndex + matchedStep.LogLength
+		var endByte int64
+		if endIdx < int64(len(task.LogIndexes)) {
+			endByte = task.LogIndexes[endIdx]
+		} else {
+			endByte = task.LogSize
+		}
+		length = endByte - startByte
+
+		filename = fmt.Sprintf("job-%d-step-%d.log", job.ID, stepParam)
+	}
+
+	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "OpenLogs", err)
+		return
+	}
+	defer reader.Close()
+
+	ctx.Resp.Header().Set("Accept-Ranges", "bytes")
+
+	modtime := task.Stopped.AsTime()
+	if task.Stopped == 0 {
+		modtime = task.Updated.AsTime()
+	}
+
+	var contentReader io.ReadSeeker = reader
+	if stepFilter {
+		if _, err := reader.Seek(startByte, io.SeekStart); err != nil {
+			ctx.Error(http.StatusInternalServerError, "SeekLogs", err)
+			return
+		}
+		buf := make([]byte, length)
+		if _, err := io.ReadFull(reader, buf); err != nil {
+			ctx.Error(http.StatusInternalServerError, "ReadLogs", err)
+			return
+		}
+		contentReader = bytes.NewReader(buf)
+	}
+
+	http.ServeContent(ctx.Resp, ctx.Req, filename, modtime, contentReader)
+}
+
+// GetActionRunLogs streams a ZIP of plaintext logs for every job in the run.
+func GetActionRunLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs repository repoGetActionRunLogs
+	// ---
+	// summary: Download a ZIP of plaintext logs for every job in an action run
+	// produces:
+	// - application/zip
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run_id
+	//   in: path
+	//   description: id of the action run
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     description: ZIP archive of per-job log files
+	//     schema:
+	//       type: string
+	//       format: binary
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runID := ctx.ParamsInt64(":run_id")
+
+	run, err := actions_model.GetRunByID(ctx, runID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunByID", err)
+		}
+		return
+	}
+
+	if run.RepoID != ctx.Repo.Repository.ID {
+		ctx.Error(http.StatusNotFound, "GetRunByID", util.ErrNotExist)
+		return
+	}
+
+	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
+		return
+	}
+
+	ctx.Resp.Header().Set("Content-Type", "application/zip")
+	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"run-%d-logs.zip\"", run.ID))
+
+	zw := zip.NewWriter(ctx.Resp)
+	defer zw.Close()
+
+	sanitize := func(name string) string {
+		cleaned := strings.Map(func(r rune) rune {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' {
+				return r
+			}
+			return '_'
+		}, name)
+		if cleaned == "" {
+			cleaned = "job"
+		}
+		return cleaned
+	}
+
+	writePlaceholder := func(jobName, msg string) {
+		w, werr := zw.Create(sanitize(jobName) + ".MISSING")
+		if werr == nil {
+			_, _ = w.Write([]byte(msg))
+		}
+	}
+
+	for _, job := range jobs {
+		if job.TaskID == 0 {
+			writePlaceholder(job.Name, "job has not been executed yet\n")
+			continue
+		}
+
+		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+		if err != nil {
+			writePlaceholder(job.Name, fmt.Sprintf("task lookup failed: %v\n", err))
+			continue
+		}
+
+		if task.LogExpired {
+			writePlaceholder(job.Name, "logs have been cleaned up\n")
+			continue
+		}
+
+		reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+		if err != nil {
+			writePlaceholder(job.Name, fmt.Sprintf("log open failed: %v\n", err))
+			continue
+		}
+
+		w, err := zw.Create(fmt.Sprintf("%s.log", sanitize(job.Name)))
+		if err != nil {
+			reader.Close()
+			break
+		}
+
+		_, _ = io.Copy(w, reader)
+		reader.Close()
+	}
 }
