@@ -42,6 +42,9 @@ func (genericUI) editTemplate() base.TplName {
 	return "user/settings/authorized_integrations/generic/view"
 }
 
+func (genericUI) populateTemplateContext(ctx *context.Context) {
+}
+
 func (genericUI) form() authorizedIntegrationUIForm {
 	return &genericAuthorizedIntegrationForm{}
 }

@@ -47,6 +47,9 @@ type authorizedIntegrationUIImpl interface {
 	Label(ctx *templates.Context) template.HTML
 	// HTML template used when rendering this UI.
 	editTemplate() base.TplName
+	// When rendering editTemplate, populateTemplateContext will be invoked to allow the UI to perform backend data
+	// fetches as needed to populate `ctx.Data`.  The current form will be available as `ctx.Data["Form"]`.
+	populateTemplateContext(ctx *context.Context)
 	// Form object used when rendering and processing this UI.
 	form() authorizedIntegrationUIForm
 	// If an error occurs, typically in [convertForm] when evaluating if the inputs provided by the user are sufficient
@@ -331,6 +334,10 @@ func EditAuthorizedIntegrationRenderCommon(ctx *context.Context) {
 	ctx.Data["Categories"] = categories
 
 	repoMultiSelect(ctx)
+	if ctx.Written() {
+		return
+	}
+	authorizedIntegrationUI(ctx).populateTemplateContext(ctx)
 	if ctx.Written() {
 		return
 	}
