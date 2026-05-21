@@ -120,7 +120,7 @@ com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb mit
 <a href="/mention-user" class="mention">@mention-user</a> test
 <a href="/user13/repo11/issues/123" class="ref-issue">#123</a>
   space
-` + "`code <span class=\"emoji\" aria-label=\"thumbs up\" data-alias=\"+1\">👍</span> <a href=\"/user13/repo11/issues/123\" class=\"ref-issue\">#123</a> code`"
+` + "<code class=\"inline-code-block\">code :+1: #123 code</code>"
 	assert.EqualValues(t, expected, RenderCommitBody(t.Context(), testInput, testMetas))
 }
 

@@ -179,6 +179,7 @@ func PostProcess(
 }
 
 var commitMessageProcessors = []processor{
+	inlineCodeBlockProcessor,
 	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
@@ -212,6 +213,7 @@ func RenderCommitMessage(
 }
 
 var commitMessageSubjectProcessors = []processor{
+	inlineCodeBlockProcessor,
 	pullReviewCommitPatternProcessor,
 	fullIssuePatternProcessor,
 	comparePatternProcessor,
