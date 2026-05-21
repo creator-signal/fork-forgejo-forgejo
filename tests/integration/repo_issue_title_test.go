@@ -33,14 +33,14 @@ func TestIssueTitles(t *testing.T) {
 
 		session := loginUser(t, user.LoginName)
 
-		title := "Title :+1: `code`"
+		title := "Title :+1: `code :+1:`"
 		issue1 := createIssue(t, user, repo, title, "Test issue")
 		issue2 := createIssue(t, user, repo, title, "Ref #1")
 
 		titleHTML := []string{
 			"Title",
 			`<span class="emoji" aria-label="thumbs up" data-alias="+1">👍</span>`,
-			`<code class="inline-code-block">code</code>`,
+			`<code class="inline-code-block">code :+1:</code>`,
 		}
 
 		t.Run("Main issue title", func(t *testing.T) {
