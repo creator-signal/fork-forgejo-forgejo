@@ -196,6 +196,7 @@ test('User: Add specific repo access token', async ({browser}, workerInfo) => {
   await expect(page.getByRole('textbox', {name: /^Token name/})).toHaveValue(tokenName);
   await expect(page.getByRole('radio', {name: 'Specific repositories'})).toBeChecked();
   await expect(page.getByRole('combobox', {name: 'repository'})).toHaveValue('read:repository');
+  await expect(page.getByPlaceholder('Search repos…')).toHaveValue('big_test_private_4'); // search box still populated after reload
 
   // Add the big_test_private_4 repo.
   await page.getByRole('button', {name: 'Add org17/big_test_private_4'}).click();
@@ -409,6 +410,7 @@ test('User: Edit authorized integration specific repo', async ({browser}, worker
   await expect(page.getByRole('textbox', {name: 'Name'})).toHaveValue(/^Example AI/);
   await expect(page.getByRole('radio', {name: 'Specific repositories'})).toBeChecked();
   await expect(page.getByRole('combobox', {name: 'repository'})).toHaveValue('write:repository');
+  await expect(page.getByPlaceholder('Search repos…')).toHaveValue('big_test_private_4'); // search box still populated after reload
 
   // Add the big_test_private_4 repo.
   await page.getByRole('button', {name: 'Add org17/big_test_private_4'}).click();
