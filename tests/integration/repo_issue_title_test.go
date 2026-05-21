@@ -163,7 +163,7 @@ func extractIssueHTML(t *testing.T, session *TestSession, issue *issues_model.Is
 }
 
 func extractIssueListHTML(t *testing.T, session *TestSession, repo *repo_model.Repository, query string) string {
-	req := NewRequest(t, "GET", repo.HTMLURL() + "/issues")
+	req := NewRequest(t, "GET", repo.HTMLURL()+"/issues")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	doc := NewHTMLParser(t, resp.Body)
 	res, err := doc.doc.Find(query).Html()
