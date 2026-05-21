@@ -128,9 +128,10 @@ var testOpts = []testIssueQueryStringOpt{
 		Keyword: "\"Hello World\"",
 		Results: []Token{
 			{
-				Term:  "Hello World",
-				Fuzzy: false,
-				Kind:  BoolOptShould,
+				Term:    "Hello World",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptShould,
 			},
 		},
 	},
@@ -138,9 +139,10 @@ var testOpts = []testIssueQueryStringOpt{
 		Keyword: "+\"Hello World\"",
 		Results: []Token{
 			{
-				Term:  "Hello World",
-				Fuzzy: false,
-				Kind:  BoolOptMust,
+				Term:    "Hello World",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptMust,
 			},
 		},
 	},
@@ -148,9 +150,10 @@ var testOpts = []testIssueQueryStringOpt{
 		Keyword: "-\"Hello World\"",
 		Results: []Token{
 			{
-				Term:  "Hello World",
-				Fuzzy: false,
-				Kind:  BoolOptNot,
+				Term:    "Hello World",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptNot,
 			},
 		},
 	},
@@ -158,9 +161,10 @@ var testOpts = []testIssueQueryStringOpt{
 		Keyword: "\"+Hello -World\"",
 		Results: []Token{
 			{
-				Term:  "+Hello -World",
-				Fuzzy: false,
-				Kind:  BoolOptShould,
+				Term:    "+Hello -World",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptShould,
 			},
 		},
 	},
@@ -220,9 +224,10 @@ var testOpts = []testIssueQueryStringOpt{
 		Keyword: "\" World \"",
 		Results: []Token{
 			{
-				Term:  " World ",
-				Fuzzy: false,
-				Kind:  BoolOptShould,
+				Term:    " World ",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptShould,
 			},
 		},
 	},
@@ -245,9 +250,10 @@ var testOpts = []testIssueQueryStringOpt{
 				Kind:  BoolOptShould,
 			},
 			{
-				Term:  "Hello World",
-				Fuzzy: false,
-				Kind:  BoolOptShould,
+				Term:    "Hello World",
+				Fuzzy:   false,
+				Wrapped: true,
+				Kind:    BoolOptShould,
 			},
 			{
 				Term:  "Ever",
@@ -597,14 +603,27 @@ func TestIssueQueryStringWithLabelFilters(t *testing.T) {
 			},
 		},
 		{
-			// Quoting forces an exact match, so it picks only the plain
-			// label "testpresent" (205), not the scoped "test/present".
-			Name:    "quoted name forces exact match",
+			// Quoting the value forces an exact match, so it picks only the
+			// plain label "testpresent" (205), not the scoped "test/present".
+			Name:    "quoted value forces exact match",
 			Initial: &SearchOptions{RepoIDs: []int64{100}},
 			Keyword: `label:"testpresent"`,
 			Want: &SearchOptions{
 				RepoIDs:             []int64{100},
 				IncludedAnyLabelIDs: []int64{205},
+			},
+		},
+		{
+			// A fully quoted "label:bug" is a literal search term, not a
+			// filter (like "is:open"), so it lands in Tokens.
+			Name:    "fully quoted label: is a literal search term",
+			Initial: &SearchOptions{RepoIDs: []int64{100}},
+			Keyword: `"label:bug"`,
+			Want: &SearchOptions{
+				RepoIDs: []int64{100},
+				Tokens: []Token{
+					{Term: "label:bug", Kind: BoolOptShould, Fuzzy: false, Wrapped: true},
+				},
 			},
 		},
 	} {

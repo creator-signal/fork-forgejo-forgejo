@@ -29,6 +29,10 @@ type Token struct {
 	Term  string
 	Kind  BoolOpt
 	Fuzzy bool
+	// Wrapped is true when the whole token was enclosed in quotes
+	// (e.g. "label:foo"), which escapes any filter prefix into a literal
+	// search term, as opposed to a quoted value like label:"foo".
+	Wrapped bool
 }
 
 // Helper function to check if the term starts with a prefix.
@@ -96,6 +100,9 @@ func (t *Tokenizer) next() (tk Token, err error) {
 			if !tk.Fuzzy {
 				goto nextEnd
 			}
+			if sb.Len() == 0 {
+				tk.Wrapped = true
+			}
 			tk.Fuzzy = false
 		case ' ', '\t':
 			if tk.Fuzzy {
@@ -154,10 +161,11 @@ func (o *SearchOptions) WithKeyword(ctx context.Context, keyword string) (err er
 			continue
 		}
 
-		// Checked before the fuzzy-skip so that quoted names like
-		// label:"good first issue" still parse as a filter. A quoted value
-		// (Fuzzy == false) forces an exact match.
-		if token.IsOf("label:") {
+		// Checked before the fuzzy-skip so that a quoted value like
+		// label:"good first issue" still parses as a filter, while a fully
+		// quoted "label:foo" falls through to a literal search term (like
+		// "is:open"). A quoted value forces an exact match.
+		if !token.Wrapped && token.IsOf("label:") {
 			lf := labelFilter{name: token.Term[len("label:"):], exact: !token.Fuzzy}
 			switch token.Kind {
 			case BoolOptNot:
