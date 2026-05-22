@@ -36,6 +36,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1008,6 +1009,64 @@ func TestActionsWorkflowDispatchDynamicMatrix(t *testing.T) {
 	})
 }
 
+// Early in the job parsing, dynamic matrices may need to access workflow inputs.  Boolean inputs need special handling
+// which is what this test case covers.
+func TestActionsWorkflowDispatchDynamicMatrixBooleanInput(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
+			[]unit_model.Type{unit_model.TypeActions}, nil,
+			[]*files_service.ChangeRepoFile{
+				{
+					Operation: "create",
+					TreePath:  ".forgejo/workflows/dispatch.yml",
+					ContentReader: strings.NewReader(
+						"name: test\n" +
+							"on:\n" +
+							"  workflow_dispatch:\n" +
+							"    inputs:\n" +
+							"      win32:\n" +
+							"        description: 'Boolean'\n" +
+							"        required: false\n" +
+							"        type: boolean\n" +
+							"jobs:\n" +
+							"  test:\n" +
+							"    runs-on: ubuntu-latest\n" +
+							"    strategy:\n" +
+							"      matrix:\n" +
+							"        runner: ${{ fromJSON(inputs.win32 && '[\"win32\", \"win64\"]' || '[\"win64\"]') }}\n" +
+							"    steps:\n" +
+							"      - run: echo helloworld\n",
+					),
+				},
+			},
+		)
+		defer f()
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+		assert.Equal(t, "refs/heads/main", workflow.Ref)
+		assert.Equal(t, sha, workflow.Commit.ID.String())
+
+		inputGetter := func(key string) string {
+			return "false"
+		}
+
+		run, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+
+		jobs, err := actions_model.GetRunJobsByRunID(t.Context(), run.ID)
+		require.NoError(t, err)
+		assert.Len(t, jobs, 1)
+	})
+}
+
 func TestActionsWorkflowDispatchReusableWorkflow(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -1212,17 +1271,13 @@ jobs:
 				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 				// create the repo
-				repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
-					[]unit_model.Type{unit_model.TypeActions}, nil,
-					[]*files_service.ChangeRepoFile{
-						{
-							Operation:     "create",
-							TreePath:      fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID),
-							ContentReader: strings.NewReader(testCase.workflowContent),
-						},
+				var sha string
+				repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+					Files: forgery.MapFS{
+						fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID): forgery.MapFile(testCase.workflowContent),
 					},
-				)
-				defer f()
+					LatestSha: &sha,
+				})
 
 				schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 				require.NoError(t, err)

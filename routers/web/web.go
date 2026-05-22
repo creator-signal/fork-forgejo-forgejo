@@ -15,6 +15,7 @@ import (
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
 	"forgejo.org/models/unit"
+	"forgejo.org/modules/avatar"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/metrics"
 	"forgejo.org/modules/public"
@@ -276,8 +277,8 @@ func Routes() *web.Route {
 
 	routes.Head("/", misc.DummyOK) // for health check - doesn't need to be passed through gzip handler
 	routes.Methods("GET, HEAD, OPTIONS", "/assets/*", optionsCorsHandler(), public.FileHandlerFunc())
-	routes.Methods("GET, HEAD", "/avatars/*", storageHandler(setting.Avatar.Storage, "avatars", storage.Avatars))
-	routes.Methods("GET, HEAD", "/repo-avatars/*", storageHandler(setting.RepoAvatar.Storage, "repo-avatars", storage.RepoAvatars))
+	routes.Methods("GET, HEAD", "/avatars/*", resizingHandler("avatars", storage.Avatars, avatar.AllowedResizedAvatarSizes))
+	routes.Methods("GET, HEAD", "/repo-avatars/*", resizingHandler("repo-avatars", storage.RepoAvatars, avatar.AllowedResizedAvatarSizes))
 	routes.Methods("GET, HEAD", "/apple-touch-icon.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/apple-touch-icon-precomposed.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/favicon.ico", misc.StaticRedirect("/assets/img/favicon.png"))
@@ -668,6 +669,19 @@ func registerRoutes(m *web.Route) {
 			})
 
 			m.Get("", user_setting.Applications)
+		})
+
+		m.Group("/authorized-integrations", func() {
+			m.Group("/{ui}", func() {
+				m.Combo("/new").
+					Get(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.NewAuthorizedIntegration).
+					Post(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.NewAuthorizedIntegrationPost)
+				m.Combo("/{id}").
+					Get(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegration).
+					Post(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegrationPost)
+			})
+			m.Post("/delete", user_setting.DeleteAuthorizedIntegration)
+			m.Get("", user_setting.ListAuthorizedIntegrations)
 		})
 
 		m.Combo("/keys").Get(user_setting.Keys).
@@ -1729,7 +1743,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
-	m.Post("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
+	m.Get("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
 
 	m.Group("/{username}/{reponame}", func() {
 		if !setting.Repository.DisableStars {

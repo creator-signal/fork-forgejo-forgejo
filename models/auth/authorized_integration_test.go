@@ -10,6 +10,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -39,6 +40,28 @@ func TestGetAuthorizedIntegration(t *testing.T) {
 	assert.Nil(t, get)
 
 	get, err = auth_model.GetAuthorizedIntegration(t.Context(), ai.Issuer, ai.Audience)
+	require.NoError(t, err)
+	require.NotNil(t, get)
+	assert.Equal(t, ai.ID, get.ID)
+}
+
+func TestGetAuthorizedIntegrationByUI(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	ai := makeAuthorizedIntegration(t)
+
+	get, err := auth_model.GetAuthorizedIntegrationByUI(t.Context(), 3, ai.UI, ai.ID)
+	require.ErrorIs(t, err, util.ErrNotExist)
+	assert.Nil(t, get)
+
+	get, err = auth_model.GetAuthorizedIntegrationByUI(t.Context(), ai.UserID, auth_model.AuthorizedIntegrationUI("incorrect"), ai.ID)
+	require.ErrorIs(t, err, util.ErrNotExist)
+	assert.Nil(t, get)
+
+	get, err = auth_model.GetAuthorizedIntegrationByUI(t.Context(), ai.UserID, ai.UI, -1)
+	require.ErrorIs(t, err, util.ErrNotExist)
+	assert.Nil(t, get)
+
+	get, err = auth_model.GetAuthorizedIntegrationByUI(t.Context(), ai.UserID, ai.UI, ai.ID)
 	require.NoError(t, err)
 	require.NotNil(t, get)
 	assert.Equal(t, ai.ID, get.ID)
@@ -103,4 +126,104 @@ func TestNewAuthorizedIntegration(t *testing.T) {
 		ClaimRules:       &auth_model.ClaimRules{},
 	}
 	require.ErrorContains(t, auth_model.InsertAuthorizedIntegration(t.Context(), ai), "UserID must be initialized")
+}
+
+func TestAuthorizedIntegrationCalculatedValues(t *testing.T) {
+	t.Run("HasRecentActivity", func(t *testing.T) {
+		timeutil.MockSet(time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))
+		ai := &auth_model.AuthorizedIntegration{
+			UpdatedUnix: 1609459200,
+			CreatedUnix: 1609459200,
+		}
+		assert.False(t, ai.HasRecentActivity())
+		ai.UpdatedUnix = 1609459201
+		assert.True(t, ai.HasRecentActivity())
+		ai.CreatedUnix = 1577836800
+		ai.UpdatedUnix = 1577836801
+		assert.False(t, ai.HasRecentActivity())
+	})
+
+	t.Run("HasBeenUsed", func(t *testing.T) {
+		ai := &auth_model.AuthorizedIntegration{
+			UpdatedUnix: 1,
+			CreatedUnix: 1,
+		}
+		assert.False(t, ai.HasBeenUsed())
+		ai.UpdatedUnix = 2
+		assert.True(t, ai.HasBeenUsed())
+	})
+}
+
+func TestListAuthorizedIntegrationOptions(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	makeAuthorizedIntegration(t)
+	makeAuthorizedIntegration(t)
+
+	ais, err := db.Find[auth_model.AuthorizedIntegration](t.Context(),
+		auth_model.ListAuthorizedIntegrationOptions{UserID: optional.None[int64]()})
+	require.NoError(t, err)
+	assert.Len(t, ais, 2)
+
+	ais, err = db.Find[auth_model.AuthorizedIntegration](t.Context(),
+		auth_model.ListAuthorizedIntegrationOptions{UserID: optional.Some(int64(2))})
+	require.NoError(t, err)
+	assert.Len(t, ais, 2)
+
+	ais, err = db.Find[auth_model.AuthorizedIntegration](t.Context(),
+		auth_model.ListAuthorizedIntegrationOptions{UserID: optional.Some(int64(22))})
+	require.NoError(t, err)
+	assert.Empty(t, ais)
+}
+
+func TestUpdateAuthorizedIntegration(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	ai := makeAuthorizedIntegration(t)
+	ai.Name = "Hello, world!"
+	ai.ResourceAllRepos = false
+	createdUnix := ai.CreatedUnix
+	updatedUnix := ai.UpdatedUnix
+
+	require.NoError(t, auth_model.UpdateAuthorizedIntegration(t.Context(), ai))
+
+	fromDB := unittest.AssertExistsAndLoadBean(t, &auth_model.AuthorizedIntegration{ID: ai.ID})
+	assert.Equal(t, "Hello, world!", fromDB.Name)
+	assert.False(t, fromDB.ResourceAllRepos)
+	assert.Equal(t, createdUnix, fromDB.CreatedUnix)
+	assert.Equal(t, updatedUnix, fromDB.UpdatedUnix) // not changed -- used to track usage for authentication
+}
+
+func TestDeleteAuthorizedIntegrationByID(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	t.Run("simple delete", func(t *testing.T) {
+		ai := makeAuthorizedIntegration(t)
+		err := auth_model.DeleteAuthorizedIntegrationByID(t.Context(), ai.ID, ai.UserID)
+		require.NoError(t, err)
+		unittest.AssertNotExistsBean(t, &auth_model.AuthorizedIntegration{ID: ai.ID})
+	})
+
+	t.Run("delete repo-specific", func(t *testing.T) {
+		ai := makeAuthorizedIntegration(t)
+		resRepo1 := &auth_model.AuthorizedIntegResourceRepo{
+			IntegID: ai.ID,
+			RepoID:  1,
+		}
+		err := auth_model.InsertAuthorizedIntegrationResourceRepos(t.Context(), ai.ID,
+			[]*auth_model.AuthorizedIntegResourceRepo{resRepo1})
+		require.NoError(t, err)
+		unittest.AssertCount(t, &auth_model.AuthorizedIntegResourceRepo{IntegID: ai.ID}, 1)
+
+		err = auth_model.DeleteAuthorizedIntegrationByID(t.Context(), ai.ID, ai.UserID)
+		require.NoError(t, err)
+
+		unittest.AssertNotExistsBean(t, &auth_model.AuthorizedIntegration{ID: ai.ID})
+		unittest.AssertCount(t, &auth_model.AuthorizedIntegResourceRepo{IntegID: ai.ID}, 0)
+	})
+
+	t.Run("delete fails on wrong user", func(t *testing.T) {
+		ai := makeAuthorizedIntegration(t)
+		err := auth_model.DeleteAuthorizedIntegrationByID(t.Context(), ai.ID, 300)
+		require.ErrorIs(t, err, util.ErrNotExist)
+	})
 }

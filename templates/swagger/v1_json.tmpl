@@ -22793,6 +22793,11 @@
       "type": "object",
       "title": "AccessToken represents an API access token.",
       "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
         "id": {
           "type": "integer",
           "format": "int64",
@@ -24115,7 +24120,7 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitStatusState": {
-      "description": "CommitStatusState holds the state of a CommitStatus\nIt can be \"pending\", \"success\", \"error\", \"failure\" and \"warning\"",
+      "description": "CommitStatusState holds the state of a CommitStatus\nIt can be \"pending\", \"success\", \"error\", \"failure\", \"warning\", or \"skipped\"",
       "type": "string",
       "x-go-package": "forgejo.org/modules/structs"
     },
@@ -28499,12 +28504,21 @@
           "type": "string",
           "x-go-name": "Title"
         },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        },
         "url": {
           "type": "string",
           "x-go-name": "URL"
         },
         "user": {
           "$ref": "#/definitions/User"
+        },
+        "verified": {
+          "type": "boolean",
+          "x-go-name": "Verified"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
