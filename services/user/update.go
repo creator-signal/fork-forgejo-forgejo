@@ -9,12 +9,18 @@ import (
 
 	"forgejo.org/models"
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	password_module "forgejo.org/modules/auth/password"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/services/mailer"
+
+	"xorm.io/builder"
 )
 
 type UpdateOptions struct {
@@ -117,10 +123,12 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 		u.IsAdmin = value
 		cols = append(cols, "is_admin")
 	}
+	var visibilityChanged bool
 	if has, value := opts.Visibility.Get(); has {
 		if !u.IsOrganization() && !setting.Service.AllowedUserVisibilityModesSlice.IsAllowedVisibility(value) {
 			return fmt.Errorf("visibility mode not allowed: %s", value.String())
 		}
+		visibilityChanged = u.Visibility != value
 		u.Visibility = value
 		cols = append(cols, "visibility")
 	}
@@ -145,7 +153,28 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 		cols = append(cols, "last_login_unix")
 	}
 
-	return user_model.UpdateUserCols(ctx, u, cols...)
+	if err := user_model.UpdateUserCols(ctx, u, cols...); err != nil {
+		return err
+	}
+
+	if visibilityChanged {
+		if err := propagateDaemonExportForOwner(ctx, u); err != nil {
+			log.Error("Failed to propagate daemon export for user %s: %v", u.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func propagateDaemonExportForOwner(ctx context.Context, u *user_model.User) error {
+	return db.Iterate(
+		ctx,
+		builder.Eq{"owner_id": u.ID},
+		func(ctx context.Context, repo *repo_model.Repository) error {
+			repo.Owner = u
+			return repo_module.CheckDaemonExportOK(ctx, repo)
+		},
+	)
 }
 
 type UpdateAuthOptions struct {

@@ -162,6 +162,10 @@ func CreateRepositoryByExample(ctx context.Context, doer, u *user_model.User, re
 		return fmt.Errorf("CopyDefaultWebhooksToRepo: %w", err)
 	}
 
+	if err = CheckDaemonExportOK(ctx, repo); err != nil {
+		return fmt.Errorf("CheckDaemonExportOK: %w", err)
+	}
+
 	return nil
 }
 
