@@ -1371,6 +1371,28 @@ func doFsckConsistencyChecks(dstPath string) func(t *testing.T) {
 			assert.Contains(t, stdErr, "badName: invalid author/committer line - bad name")
 		})
 
+		t.Run("missingSpaceBeforeEmail", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			var buf bytes.Buffer
+			buf.WriteString("tree ")
+			buf.WriteString(tree)
+			buf.WriteString("parent ")
+			buf.WriteString(head)
+			buf.WriteString(`author Gusted<script class="evil">alert('Oh no!');</script> <valid@example.org> 1706659200 +0000`)
+			buf.WriteRune('\n')
+			buf.WriteString(`committer Gusted<script class="evil">alert('Oh no!');</script> <valid@example.org> 1706659200 +0000`)
+			buf.WriteString("\n\n")
+
+			commitID, _, err := git.NewCommand(git.DefaultContext, "hash-object", "-t", "commit", "--literally", "--stdin", "-w").RunStdString(&git.RunOpts{Dir: dstPath, Stdin: &buf})
+			require.NoError(t, err)
+			commitID = strings.TrimSpace(commitID)
+
+			_, stdErr, gitErr := git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(commitID + ":refs/heads/consistency-check").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.Error(t, gitErr)
+			assert.Contains(t, stdErr, "missingSpaceBeforeEmail: invalid author/committer line - missing space before email")
+		})
+
 		// Is set to be ignored.
 		t.Run("badTimezone", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
