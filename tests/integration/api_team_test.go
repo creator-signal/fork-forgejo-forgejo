@@ -43,7 +43,6 @@ func TestAPITeam(t *testing.T) {
 	DecodeJSON(t, resp, &apiTeam)
 	assert.Equal(t, team.ID, apiTeam.ID)
 	assert.Equal(t, team.Name, apiTeam.Name)
-	//assert.Equal(t, convert.ToOrganization(t.Context(), org), apiTeam.Organization)
 
 	toOrg := convert.ToOrganization(db.DefaultContext, org)
 	assert.Equal(t, toOrg.ID, apiTeam.Organization.ID)
