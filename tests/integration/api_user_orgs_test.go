@@ -42,6 +42,7 @@ func TestUserOrgs(t *testing.T) {
 			Website:     "",
 			Location:    "",
 			Visibility:  "public",
+			Created:     org17.CreatedUnix.AsTime(),
 		},
 		{
 			ID:          3,
@@ -54,6 +55,7 @@ func TestUserOrgs(t *testing.T) {
 			Website:     "",
 			Location:    "",
 			Visibility:  "public",
+			Created:     org3.CreatedUnix.AsTime(),
 		},
 	}, orgs)
 
@@ -115,6 +117,7 @@ func TestMyOrgs(t *testing.T) {
 			Website:     "",
 			Location:    "",
 			Visibility:  "public",
+			Created:     org17.CreatedUnix.AsTime(),
 		},
 		{
 			ID:          3,
@@ -127,6 +130,7 @@ func TestMyOrgs(t *testing.T) {
 			Website:     "",
 			Location:    "",
 			Visibility:  "public",
+			Created:     org3.CreatedUnix.AsTime(),
 		},
 	}, orgs)
 }
