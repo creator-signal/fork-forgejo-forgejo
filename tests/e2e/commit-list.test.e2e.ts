@@ -4,6 +4,7 @@
 // @watch start
 // templates/repo/pulls/commits_list.tmpl
 // web_src/css/repo.css
+// web_src/css/repo/commit-list.css
 // @watch end
 
 import {expect} from '@playwright/test';
