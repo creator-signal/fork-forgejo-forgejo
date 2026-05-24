@@ -134,6 +134,11 @@ func buildGitLfsAuthGroup() *auth_method.Group {
 	group.Add(&auth_method.Basic{})
 	group.Add(&auth_method.AccessToken{})
 	group.Add(&auth_method.ActionTaskToken{})
+	group.Add(&auth_method.AuthorizedIntegration{
+		// "Authorization: Basic ..." is easier to use for git operations, and already supported for other tokens, so it
+		// is enabled for Authorized Integrations as well:
+		PermitBasic: true,
+	})
 	return group
 }
 

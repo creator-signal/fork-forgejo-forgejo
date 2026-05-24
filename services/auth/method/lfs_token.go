@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/auth"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 

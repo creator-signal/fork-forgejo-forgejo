@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"forgejo.org/modules/util"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
