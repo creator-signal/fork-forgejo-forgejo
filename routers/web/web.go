@@ -363,6 +363,19 @@ func Routes() *web.Route {
 			registerGitRoutes(routes)
 		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
 
+	routes.NotFound(
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
+		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
+		user.GetNotificationCount, repo.GetActiveStopwatch,
+		goGet,
+		func(w http.ResponseWriter, req *http.Request) {
+			ctx := context.GetWebContext(req)
+			if ctx == nil {
+				panic("missing middleware context.Contexter()")
+			}
+			ctx.NotFound("", nil)
+		})
+
 	return routes
 }
 
@@ -1817,11 +1830,6 @@ func registerRoutes(m *web.Route) {
 			m.Get("/demo/error/{errcode}", demo.ErrorPage)
 		}, ignSignIn)
 	}
-
-	m.NotFound(func(w http.ResponseWriter, req *http.Request) {
-		ctx := context.GetWebContext(req)
-		ctx.NotFound("", nil)
-	})
 }
 
 // Registers HTTP Git related routes, which have different top-level middleware than [registerRoutes].
