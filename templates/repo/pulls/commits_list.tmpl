@@ -22,9 +22,9 @@
 				{{if and .User.FullName DefaultShowFullName}}
 					{{$userName = .User.FullName}}
 				{{end}}
-				{{ctx.AvatarUtils.Avatar .User 28 "tw-mr-2"}}<a class="muted author-name" href="{{.User.HomeLink}}">{{$userName}}</a>
+				{{ctx.AvatarUtils.Avatar .User 28}}<a class="muted author-name" href="{{.User.HomeLink}}">{{$userName}}</a>
 			{{else}}
-				{{ctx.AvatarUtils.AvatarByEmail .Author.Email .Author.Name 28 "tw-mr-2"}}
+				{{ctx.AvatarUtils.AvatarByEmail .Author.Email .Author.Name 28}}
 				<span class="author-name">{{$userName}}</span>
 			{{end}}
 		</div>

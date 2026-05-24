@@ -34,6 +34,7 @@
 
   .commits .commit .author {
     display: flex;
+    column-gap: 0.5rem;
   }
 
   .commits .commit .author .author-name {
