@@ -53,7 +53,7 @@ func TestPullCommitLinks(t *testing.T) {
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
 
-	commitSha := htmlDoc.Find(".commit .shabox a").First()
+	commitSha := htmlDoc.Find(".commits .commit a").First()
 	commitShaHref, _ := commitSha.Attr("href")
 	assert.Equal(t, "/user2/repo1/pulls/3/commits/5f22f7d0d95d614d25a5b68592adb345a4b5c7fd", commitShaHref)
 
@@ -75,7 +75,7 @@ func TestPullCommitLinksSHA256(t *testing.T) {
 
 	htmlDoc := NewHTMLParser(t, resp.Body)
 
-	commitSha := htmlDoc.Find(".commit .shabox a").First()
+	commitSha := htmlDoc.Find(".commits .commit a").First()
 	commitShaHref, commitShaOk := commitSha.Attr("href")
 	assert.True(t, commitShaOk)
 	assert.Equal(t, "/user2/repo256/pulls/1/commits/004581b3bb63754502364664021404490ee747ce58e98d27c046f2e46f5f2f55", commitShaHref)
