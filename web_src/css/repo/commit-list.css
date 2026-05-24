@@ -91,7 +91,7 @@
       grid-column: 1 / span 2;
     }
 
-    .mobile-actions {
+    .actions {
       grid-column: 1 / -1;
       display: flex;
       justify-content: space-between;
