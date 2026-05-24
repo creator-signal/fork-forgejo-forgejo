@@ -36,6 +36,14 @@
     display: flex;
   }
 
+  .commits .commit .author .author-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    align-self: center;
+    white-space: nowrap;
+  }
+
   .commits .commit .sha.label {
     /* Unwanted property of .sha.label, needs fix upstream in hashbox.css */
     margin-inline: 0 !important;
