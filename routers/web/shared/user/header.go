@@ -127,7 +127,6 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 							}
 						}
 					}
-					profileReadmeBlob, _ = commit.GetBlobByFoldedPath("README.md")
 					funding, _ = funding_service.GetFundingFromCommit(profileDbRepo, commit)
 				}
 			}
