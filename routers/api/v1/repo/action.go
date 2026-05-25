@@ -6,7 +6,6 @@ package repo
 
 import (
 	"archive/zip"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -1483,6 +1482,12 @@ func GetActionJobLogs(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository repoGetActionJobLogs
 	// ---
 	// summary: Download the plaintext logs of an action job
+	// description: |
+	//   Returns the plaintext log for the job. By default the log for the
+	//   most recent attempt is returned (ActionRunJob.TaskID tracks the latest
+	//   task). Pass `?attempt=N` to fetch the log for a specific historical
+	//   attempt; the value matches the `attempt` field returned by the job
+	//   listing endpoints.
 	// produces:
 	// - text/plain
 	// parameters:
@@ -1498,10 +1503,16 @@ func GetActionJobLogs(ctx *context.APIContext) {
 	//   required: true
 	// - name: job_id
 	//   in: path
-	//   description: id of the action job
+	//   description: ID of the workflow job
 	//   type: integer
 	//   format: int64
 	//   required: true
+	// - name: attempt
+	//   in: query
+	//   description: 1-based attempt number matching the value of `attempt` in the job listing; omit to fetch the latest attempt of the job
+	//   type: integer
+	//   format: int64
+	//   required: false
 	// - name: step
 	//   in: query
 	//   description: 0-indexed step to filter to (returns only that step's portion of the log)
@@ -1525,122 +1536,39 @@ func GetActionJobLogs(ctx *context.APIContext) {
 
 	jobID := ctx.ParamsInt64(":job_id")
 
-	job, err := actions_model.GetRunJobByID(ctx, jobID)
+	var attempt *int64
+	if ctx.FormString("attempt") != "" {
+		v := ctx.FormInt64("attempt")
+		attempt = &v
+	}
+
+	var stepFilter *int
+	if ctx.FormString("step") != "" {
+		v := ctx.FormInt("step")
+		stepFilter = &v
+	}
+
+	reader, filename, modtime, err := actions_service.OpenJobLogReader(ctx, ctx.Repo.Repository, jobID, attempt, stepFilter)
 	if err != nil {
-		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetRunJobByID", err)
-		} else {
-			ctx.Error(http.StatusInternalServerError, "GetRunJobByID", err)
+		switch {
+		case errors.Is(err, util.ErrNotExist),
+			errors.Is(err, actions_service.ErrJobNotExecuted),
+			errors.Is(err, actions_service.ErrLogsExpired),
+			errors.Is(err, actions_service.ErrStepOutOfRange),
+			errors.Is(err, actions_service.ErrStepNoLogRange):
+			ctx.Error(http.StatusNotFound, "GetActionJobLogs", err)
+		default:
+			ctx.Error(http.StatusInternalServerError, "GetActionJobLogs", err)
 		}
-		return
-	}
-
-	// Action run-jobs live in their own table, therefore we check that the
-	// job with the requested ID is owned by the repository
-	if job.RepoID != ctx.Repo.Repository.ID {
-		ctx.Error(http.StatusNotFound, "GetRunJobByID", util.ErrNotExist)
-		return
-	}
-
-	if job.TaskID == 0 {
-		ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("job has not been executed yet"))
-		return
-	}
-
-	task, err := actions_model.GetTaskByID(ctx, job.TaskID)
-	if err != nil {
-		if errors.Is(err, util.ErrNotExist) {
-			ctx.Error(http.StatusNotFound, "GetTaskByID", err)
-		} else {
-			ctx.Error(http.StatusInternalServerError, "GetTaskByID", err)
-		}
-		return
-	}
-
-	if task.LogExpired {
-		ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("logs have been cleaned up"))
-		return
-	}
-
-	stepParamRaw := ctx.FormString("step")
-	stepFilter := stepParamRaw != ""
-	stepParam := ctx.FormInt("step")
-
-	var (
-		startByte int64
-		length    int64
-		filename  = fmt.Sprintf("job-%d.log", job.ID)
-	)
-
-	if stepFilter {
-		steps, err := actions_model.GetTaskStepsByTaskID(ctx, task.ID)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "GetTaskStepsByTaskID", err)
-			return
-		}
-
-		var matchedStep *actions_model.ActionTaskStep
-		for _, s := range steps {
-			if s.Index == int64(stepParam) {
-				matchedStep = s
-				break
-			}
-		}
-		if matchedStep == nil {
-			ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("step out of range"))
-			return
-		}
-
-		// LogIndexes maps line number -> byte offset; guard against a task
-		// whose log indexes haven't been populated (or whose step references
-		// a line beyond what's been recorded).
-		if matchedStep.LogIndex < 0 || matchedStep.LogIndex >= int64(len(task.LogIndexes)) {
-			ctx.Error(http.StatusNotFound, "GetActionJobLogs", errors.New("step has no recorded log range"))
-			return
-		}
-
-		startByte = task.LogIndexes[matchedStep.LogIndex]
-		endIdx := matchedStep.LogIndex + matchedStep.LogLength
-		var endByte int64
-		if endIdx < int64(len(task.LogIndexes)) {
-			endByte = task.LogIndexes[endIdx]
-		} else {
-			endByte = task.LogSize
-		}
-		length = endByte - startByte
-
-		filename = fmt.Sprintf("job-%d-step-%d.log", job.ID, stepParam)
-	}
-
-	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "OpenLogs", err)
 		return
 	}
 	defer reader.Close()
 
 	ctx.Resp.Header().Set("Accept-Ranges", "bytes")
-
-	modtime := task.Stopped.AsTime()
-	if task.Stopped == 0 {
-		modtime = task.Updated.AsTime()
-	}
-
-	var contentReader io.ReadSeeker = reader
-	if stepFilter {
-		if _, err := reader.Seek(startByte, io.SeekStart); err != nil {
-			ctx.Error(http.StatusInternalServerError, "SeekLogs", err)
-			return
-		}
-		buf := make([]byte, length)
-		if _, err := io.ReadFull(reader, buf); err != nil {
-			ctx.Error(http.StatusInternalServerError, "ReadLogs", err)
-			return
-		}
-		contentReader = bytes.NewReader(buf)
-	}
-
-	http.ServeContent(ctx.Resp, ctx.Req, filename, modtime, contentReader)
+	// Set Content-Type explicitly so http.ServeContent doesn't sniff the
+	// ".log" extension into the wrong MIME type (text/x-log on most systems).
+	ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeContent(ctx.Resp, ctx.Req, filename, modtime, reader)
 }
 
 // GetActionRunLogs streams a ZIP of plaintext logs for every job in the run.
@@ -1663,7 +1591,10 @@ func GetActionRunLogs(ctx *context.APIContext) {
 	//   required: true
 	// - name: run_id
 	//   in: path
-	//   description: id of the action run
+	//   description: |
+	//     ID of the workflow run. The ZIP contains logs for the latest attempt
+	//     of each job in the run, with each entry named `{job-name}-{job-id}.log`
+	//     (the job ID prevents collisions when two jobs share a name).
 	//   type: integer
 	//   format: int64
 	//   required: true
@@ -1709,21 +1640,27 @@ func GetActionRunLogs(ctx *context.APIContext) {
 	zw := zip.NewWriter(ctx.Resp)
 	defer zw.Close()
 
+	// sanitize strips only what's unsafe inside a ZIP entry name: ASCII
+	// control bytes and path separators. UTF-8 is preserved — APPNOTE 6.3.0
+	// has supported it since 2006 and archive/zip sets general-purpose bit
+	// 11 automatically when needed. Disambiguation is the caller's job (we
+	// suffix with the unique job ID below).
 	sanitize := func(name string) string {
 		cleaned := strings.Map(func(r rune) rune {
-			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' {
-				return r
+			if r < 0x20 || r == 0x7f || r == '/' || r == '\\' {
+				return -1
 			}
-			return '_'
+			return r
 		}, name)
+		cleaned = strings.TrimSpace(cleaned)
 		if cleaned == "" {
 			cleaned = "job"
 		}
 		return cleaned
 	}
 
-	writePlaceholder := func(jobName, msg string) {
-		w, werr := zw.Create(sanitize(jobName) + ".MISSING")
+	writePlaceholder := func(job *actions_model.ActionRunJob, msg string) {
+		w, werr := zw.Create(fmt.Sprintf("%s-%d.MISSING", sanitize(job.Name), job.ID))
 		if werr == nil {
 			_, _ = w.Write([]byte(msg))
 		}
@@ -1731,28 +1668,28 @@ func GetActionRunLogs(ctx *context.APIContext) {
 
 	for _, job := range jobs {
 		if job.TaskID == 0 {
-			writePlaceholder(job.Name, "job has not been executed yet\n")
+			writePlaceholder(job, "job has not been executed yet\n")
 			continue
 		}
 
 		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
 		if err != nil {
-			writePlaceholder(job.Name, fmt.Sprintf("task lookup failed: %v\n", err))
+			writePlaceholder(job, fmt.Sprintf("task lookup failed: %v\n", err))
 			continue
 		}
 
 		if task.LogExpired {
-			writePlaceholder(job.Name, "logs have been cleaned up\n")
+			writePlaceholder(job, "logs have been cleaned up\n")
 			continue
 		}
 
 		reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
 		if err != nil {
-			writePlaceholder(job.Name, fmt.Sprintf("log open failed: %v\n", err))
+			writePlaceholder(job, fmt.Sprintf("log open failed: %v\n", err))
 			continue
 		}
 
-		w, err := zw.Create(fmt.Sprintf("%s.log", sanitize(job.Name)))
+		w, err := zw.Create(fmt.Sprintf("%s-%d.log", sanitize(job.Name), job.ID))
 		if err != nil {
 			reader.Close()
 			break

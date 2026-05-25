@@ -26,7 +26,7 @@ const (
 	MaxLineSize = 64 * 1024
 	DBFSPrefix  = "actions_log/"
 
-	timeFormat     = "2006-01-02T15:04:05.0000000Z07:00"
+	TimeFormat     = "2006-01-02T15:04:05.0000000Z07:00"
 	defaultBufSize = MaxLineSize
 )
 
@@ -102,7 +102,7 @@ func ReadLogs(ctx context.Context, inStorage bool, filename string, offset, limi
 	}
 
 	scanner := bufio.NewScanner(f)
-	maxLineSize := len(timeFormat) + MaxLineSize + 1
+	maxLineSize := len(TimeFormat) + MaxLineSize + 1
 	scanner.Buffer(make([]byte, maxLineSize), maxLineSize)
 
 	var rows []*runnerv1.LogRow
@@ -225,7 +225,7 @@ func FormatLog(timestamp time.Time, content string) string {
 	if len(content) > MaxLineSize {
 		content = content[:MaxLineSize]
 	}
-	return fmt.Sprintf("%s %s", timestamp.UTC().Format(timeFormat), content)
+	return fmt.Sprintf("%s %s", timestamp.UTC().Format(TimeFormat), content)
 }
 
 func ParseLog(in string) (time.Time, string, error) {
@@ -233,7 +233,7 @@ func ParseLog(in string) (time.Time, string, error) {
 	if index < 0 {
 		return time.Time{}, "", fmt.Errorf("invalid log: %q", in)
 	}
-	timestamp, err := time.Parse(timeFormat, in[:index])
+	timestamp, err := time.Parse(TimeFormat, in[:index])
 	if err != nil {
 		return time.Time{}, "", err
 	}

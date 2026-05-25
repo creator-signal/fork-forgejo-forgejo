@@ -1,5 +1,5 @@
 // Copyright 2026 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package integration
 
@@ -16,6 +16,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/actions"
 	"forgejo.org/modules/setting"
 
 	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
@@ -42,19 +43,29 @@ func TestAPIGetActionJobLogs(t *testing.T) {
 			{Time: timestamppb.New(now.Add(2 * time.Second)), Content: "second line"},
 			{Time: timestamppb.New(now.Add(3 * time.Second)), Content: "third line"},
 		},
+		// One workflow step ("echo hello") at Id 0, covering all three log
+		// rows. The runner protocol keys steps by Id; the service layer maps
+		// Id -> ActionTaskStep.Index when persisting LogIndex/LogLength.
+		stepStates: []*runnerv1.StepState{
+			{
+				Id:        0,
+				Result:    runnerv1.Result_RESULT_SUCCESS,
+				LogIndex:  0,
+				LogLength: 3,
+				StartedAt: timestamppb.New(now),
+				StoppedAt: timestamppb.New(now.Add(3 * time.Second)),
+			},
+		},
 	}
 	workflow := `name: api-job-logs
-on:
-  push:
-    paths:
-      - '.gitea/workflows/api-job-logs.yml'
+on: push
 jobs:
   job1:
     runs-on: ubuntu-latest
     steps:
       - run: echo hello
 `
-	treePath := ".gitea/workflows/api-job-logs.yml"
+	treePath := ".forgejo/workflows/api-job-logs.yml"
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -70,6 +81,7 @@ jobs:
 
 		// Repo B is the cross-repo target — used to verify the guard.
 		apiRepoB := createActionsTestRepo(t, token, "actions-job-logs-other", false)
+		repoB := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: apiRepoB.ID})
 
 		runner := newMockRunner()
 		runner.registerAsRepoRunner(t, user2.Name, repoA.Name, "mock-runner", []string{"ubuntu-latest"})
@@ -82,13 +94,12 @@ jobs:
 		runner.execTask(t, task, outcome)
 
 		actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
-		actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: actionTask.JobID})
-		jobID := actionRunJob.ID
+		jobID := actionTask.JobID
 
 		t.Run("happy path: 200 plaintext", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)
 			resp := MakeRequest(t, req, http.StatusOK)
@@ -101,7 +112,7 @@ jobs:
 			for i, lr := range outcome.logRows {
 				assert.Equal(t,
 					fmt.Sprintf("%s %s",
-						lr.Time.AsTime().Format("2006-01-02T15:04:05.0000000Z07:00"),
+						lr.Time.AsTime().UTC().Format(actions.TimeFormat),
 						lr.Content),
 					lines[i],
 				)
@@ -110,8 +121,8 @@ jobs:
 
 		t.Run("cross-repo: 404 when job_id belongs to a different repo", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, apiRepoB.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoB.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)
@@ -119,8 +130,8 @@ jobs:
 
 		t.Run("not found: 404 for unknown job_id", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, repoA.Name, jobID+999999,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID+999999,
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)
@@ -128,8 +139,8 @@ jobs:
 
 		t.Run("no token: 401", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
 			)
 			MakeRequest(t, req, http.StatusUnauthorized)
 		})
@@ -140,8 +151,8 @@ jobs:
 				auth_model.AccessTokenScopeReadUser,
 			)
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(weakToken)
 			MakeRequest(t, req, http.StatusForbidden)
@@ -149,8 +160,8 @@ jobs:
 
 		t.Run("range: 206 partial content", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)
 			req.Header.Set("Range", "bytes=0-15")
@@ -161,8 +172,8 @@ jobs:
 
 		t.Run("step filter: 200 returns step's slice", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs?step=0",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs?step=0",
+				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)
 			resp := MakeRequest(t, req, http.StatusOK)
@@ -170,10 +181,46 @@ jobs:
 			require.NotEmpty(t, resp.Body.String())
 		})
 
+		t.Run("attempt=1: 200 matches no-param (only attempt)", func(t *testing.T) {
+			defaultReq := NewRequestf(t, "GET",
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
+			)
+			defaultReq.AddTokenAuth(token)
+			defaultResp := MakeRequest(t, defaultReq, http.StatusOK)
+
+			attemptReq := NewRequestf(t, "GET",
+				"/api/v1/repos/%s/actions/jobs/%d/logs?attempt=1",
+				repoA.FullName(), jobID,
+			)
+			attemptReq.AddTokenAuth(token)
+			attemptResp := MakeRequest(t, attemptReq, http.StatusOK)
+
+			assert.Equal(t, defaultResp.Body.String(), attemptResp.Body.String())
+		})
+
+		t.Run("attempt=0: 404 (no row in DB)", func(t *testing.T) {
+			req := NewRequestf(t, "GET",
+				"/api/v1/repos/%s/actions/jobs/%d/logs?attempt=0",
+				repoA.FullName(), jobID,
+			)
+			req.AddTokenAuth(token)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+
+		t.Run("attempt=999: 404 unknown attempt", func(t *testing.T) {
+			req := NewRequestf(t, "GET",
+				"/api/v1/repos/%s/actions/jobs/%d/logs?attempt=999",
+				repoA.FullName(), jobID,
+			)
+			req.AddTokenAuth(token)
+			MakeRequest(t, req, http.StatusNotFound)
+		})
+
 		t.Run("step out of range: 404", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/%s/actions/jobs/%d/logs?step=99",
-				user2.Name, repoA.Name, jobID,
+				"/api/v1/repos/%s/actions/jobs/%d/logs?step=99",
+				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)

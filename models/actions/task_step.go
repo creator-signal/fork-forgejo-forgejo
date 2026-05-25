@@ -5,10 +5,12 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
 
 // ActionTaskStep represents a step of ActionTask
@@ -38,4 +40,15 @@ func init() {
 func GetTaskStepsByTaskID(ctx context.Context, taskID int64) ([]*ActionTaskStep, error) {
 	var steps []*ActionTaskStep
 	return steps, db.GetEngine(ctx).Where("task_id=?", taskID).OrderBy("`index` ASC").Find(&steps)
+}
+
+func GetTaskStepByTaskIDAndIndex(ctx context.Context, taskID, index int64) (*ActionTaskStep, error) {
+	var step ActionTaskStep
+	has, err := db.GetEngine(ctx).Where("task_id=? AND `index`=?", taskID, index).Get(&step)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("task step with task_id %d and index %d: %w", taskID, index, util.ErrNotExist)
+	}
+	return &step, nil
 }
