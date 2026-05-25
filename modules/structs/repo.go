@@ -453,7 +453,7 @@ type RepoTargetOption struct {
 
 // RepoFundingEntry is a funding option for a repo
 type RepoFundingEntry struct {
-	// Identifies the funding provider
+	// Identifies the account on the funding provider
 	Text string `json:"text"`
 	// URL to a profile on the funding provider
 	URL  string `json:"url"`
