@@ -75,7 +75,7 @@
   background: transparent;
   outline: none;
   padding: 0;
-  line-height: 1.8em;
+  line-height: 1.8;
 }
 
 .ts-wrapper .ts-dropdown {
