@@ -521,6 +521,9 @@ func (g *GitlabDownloader) GetComments(commentable base.Commentable) ([]*base.Co
 		}
 		for _, comment := range comments {
 			for _, note := range comment.Notes {
+				if note.Internal {
+					continue
+				}
 				allComments = append(allComments, g.convertNoteToComment(commentable.GetLocalIndex(), note))
 			}
 		}
