@@ -452,6 +452,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	} else if ctx.Repo.TreePath == ".gitmodules" {
 		if fInfo.fileSize > git.MaxGitmodulesFileSize {
 			ctx.Data["FileWarning"] = ctx.Locale.Tr("repo.view.gitmodules_too_large")
+		}
 	} else if funding_service.IsFundingConfig(ctx.Repo.TreePath) {
 		_, fundingErr := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
 		if fundingErr != nil {

@@ -18,7 +18,6 @@ import (
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
-	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"

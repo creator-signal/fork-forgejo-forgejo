@@ -101,7 +101,7 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 	if err == nil {
 		// Don't show profile content if .profile repository is a fork or private
 		if profileDbRepo.IsFork || profileDbRepo.IsPrivate {
-			return nil, nil, nil, func() {}
+			return nil, nil, nil, nil, func() {}
 		}
 		perm, err := access_model.GetUserRepoPermission(ctx, profileDbRepo, doer)
 		if err == nil && !profileDbRepo.IsEmpty && perm.CanRead(unit.TypeCode) {
