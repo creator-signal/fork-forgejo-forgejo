@@ -24,6 +24,10 @@ func ToRepo(ctx stdCtx.Context, repo *repo_model.Repository, permissionInRepo ac
 }
 
 func innerToRepo(ctx stdCtx.Context, repo *repo_model.Repository, permissionInRepo access_model.Permission, isParent bool) *api.Repository {
+	if err := repo.LoadAttributes(ctx); err != nil {
+		log.Error("Unable to load attributes for repo[id=%d]: %w", repo.ID, err)
+	}
+
 	var parent *api.Repository
 
 	if permissionInRepo.Units == nil && permissionInRepo.UnitsMode == nil {
