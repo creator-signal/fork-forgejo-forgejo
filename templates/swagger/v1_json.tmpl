@@ -9263,8 +9263,6 @@
       }
     },
     "/repos/{owner}/{repo}/funding": {
-      "summary": "Returns the funding for a repo",
-      "operationId": "repoGetFunding",
       "get": {
         "produces": [
           "application/json"
@@ -9272,6 +9270,8 @@
         "tags": [
           "repository"
         ],
+        "summary": "Returns the funding for a repo",
+        "operationId": "repoGetFunding",
         "parameters": [
           {
             "type": "string",
