@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/git"
@@ -19,8 +20,12 @@ import (
 )
 
 var fundingCandidates = []string{
-	".forgejo/FUNDING",
-	".github/FUNDING",
+	".forgejo/FUNDING.yaml",
+	".forgejo/FUNDING.yml",
+	".github/FUNDING.yaml",
+	".github/FUNDING.yml",
+	"FUNDING.yaml",
+	"FUNDING.yml",
 }
 
 // ErrInvalidFundingProvider represents a "InvalidFundingProvider" kind of error.
@@ -70,7 +75,7 @@ func getFundingEntry(provider *api.FundingProvider, text string) *api.RepoFundin
 func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) ([]*api.RepoFundingEntry, error) {
 	var err error
 
-	treeEntry, err := commit.GetTreeEntryByPath(path)
+	treeEntry, err := commit.GetTreeEntryByFoldedPath(path)
 	if err != nil {
 		return nil, err
 	}
@@ -123,12 +128,8 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 
 func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) ([]*api.RepoFundingEntry, error) {
 	for _, configName := range fundingCandidates {
-		if _, err := commit.GetTreeEntryByPath(configName + ".yaml"); err == nil {
-			return GetFundingFromPath(r, configName+".yaml", commit)
-		}
-
-		if _, err := commit.GetTreeEntryByPath(configName + ".yml"); err == nil {
-			return GetFundingFromPath(r, configName+".yml", commit)
+		if _, err := commit.GetTreeEntryByFoldedPath(configName); err == nil {
+			return GetFundingFromPath(r, configName, commit)
 		}
 	}
 
@@ -158,7 +159,7 @@ func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) 
 // IsFundingConfig returns if the given path is a funding config.
 func IsFundingConfig(path string) bool {
 	for _, name := range fundingCandidates {
-		if path == name+".yaml" || path == name+".yml" {
+		if strings.EqualFold(path, name) {
 			return true
 		}
 	}

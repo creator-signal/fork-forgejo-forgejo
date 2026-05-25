@@ -10,8 +10,7 @@ import (
 	"strings"
 )
 
-// GetTreeEntryByPath get the tree entries according the sub dir
-func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
+func (t *Tree) getTreeEntryByMaybeFoldedPath(relpath string, fold bool) (*TreeEntry, error) {
 	if len(relpath) == 0 {
 		return &TreeEntry{
 			ptree:     t,
@@ -32,9 +31,17 @@ func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 			if err != nil {
 				return nil, err
 			}
-			for _, v := range entries {
-				if v.Name() == name {
-					return v, nil
+			if fold {
+				for _, v := range entries {
+					if strings.EqualFold(v.Name(), name) {
+						return v, nil
+					}
+				}
+			} else {
+				for _, v := range entries {
+					if v.Name() == name {
+						return v, nil
+					}
 				}
 			}
 		} else {
@@ -45,6 +52,18 @@ func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 		}
 	}
 	return nil, ErrNotExist{"", relpath}
+}
+
+// GetTreeEntryByPath get the tree entries according the sub dir
+func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
+	return t.getTreeEntryByMaybeFoldedPath(relpath, false)
+}
+
+// GetTreeEntryByFoldedPath get the tree entries according the sub dir,
+// regardless of the case of relpath. If there are multiple files with the same
+// case-insensitive name, the first one found will be returned.
+func (t *Tree) GetTreeEntryByFoldedPath(relpath string) (*TreeEntry, error) {
+	return t.getTreeEntryByMaybeFoldedPath(relpath, true)
 }
 
 // GetBlobByPath get the blob object according the path
