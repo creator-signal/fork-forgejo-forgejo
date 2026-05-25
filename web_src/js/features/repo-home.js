@@ -54,9 +54,6 @@ export async function initRepoTopicBar() {
           return {topic_name: input.toLowerCase().trim()};
         },
       });
-
-      // Add custom class for styling
-      tomSelect.wrapper.classList.add('topic-select');
     }
 
     tomSelect.focus();
