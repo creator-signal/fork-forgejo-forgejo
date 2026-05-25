@@ -11,9 +11,9 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/cache"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
@@ -713,17 +713,9 @@ func TestGetRunByID(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, run)
 
-	runOption, err := GetRunByIDOptional(t.Context(), existingRunID)
-	require.NoError(t, err)
-	assert.True(t, runOption.Has())
-
 	// ActionRun does not exist
 
 	run, err = GetRunByID(t.Context(), nonexistingRunID)
-	require.ErrorContains(t, err, "resource does not exist")
+	require.ErrorIs(t, err, util.ErrNotExist)
 	assert.Nil(t, run)
-
-	runOption, err = GetRunByIDOptional(t.Context(), nonexistingRunID)
-	require.NoError(t, err)
-	assert.Equal(t, optional.None[*ActionRun](), runOption)
 }

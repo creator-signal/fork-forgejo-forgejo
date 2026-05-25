@@ -18,7 +18,6 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -500,30 +499,16 @@ func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch,
 }
 
 func GetRunByID(ctx context.Context, id int64) (*ActionRun, error) {
-	runOption, err := GetRunByIDOptional(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	has, run := runOption.Get()
-	if !has {
-		return nil, fmt.Errorf("run with id %d: %w", id, util.ErrNotExist)
-	}
-
-	return run, nil
-}
-
-func GetRunByIDOptional(ctx context.Context, id int64) (optional.Option[*ActionRun], error) {
 	var run ActionRun
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&run)
 	if err != nil {
 		return nil, err
 	}
 	if !has {
-		return optional.None[*ActionRun](), nil
+		return nil, fmt.Errorf("run with id %d: %w", id, util.ErrNotExist)
 	}
 
-	return optional.Some(&run), nil
+	return &run, nil
 }
 
 func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error) {
