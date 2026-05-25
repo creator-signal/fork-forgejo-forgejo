@@ -85,7 +85,7 @@ func GetGeneralAttachmentSettings(ctx *context.APIContext) {
 	})
 }
 
-// GetFundingSettingss returns funding settings
+// GetFundingSettings returns funding settings
 func GetFundingSettings(ctx *context.APIContext) {
 	// swagger:operation GET /settings/funding settings getFundingSetting
 	// ---
