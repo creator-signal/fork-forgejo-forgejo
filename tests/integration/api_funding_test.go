@@ -22,13 +22,14 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, fundingConfig map[string]any) {
+func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, treePath string, fundingConfig map[string]any) {
 	t.Helper()
 
 	config, err := yaml.Marshal(fundingConfig)
 	require.NoError(t, err)
 
-	require.NoError(t, createOrReplaceFileInBranch(user, repo, ".forgejo/FUNDING.yaml", repo.DefaultBranch, string(config)))
+	err = createOrReplaceFileInBranch(user, repo, treePath, repo.DefaultBranch, string(config))
+	require.NoError(t, err)
 }
 
 func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token string) []*api.RepoFundingEntry {
@@ -46,124 +47,152 @@ func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token strin
 	return funding
 }
 
+var cases = []string {
+	".forgejo/FUNDING.yaml",
+	".gitea/FUNDING.yaml",
+	".github/FUNDING.yaml",
+	"FUNDING.yaml",
+
+	".forgejo/FUNDING.yml",
+	".gitea/FUNDING.yml",
+	".github/FUNDING.yml",
+	"FUNDING.yml",
+
+	".forgejo/funding.yaml",
+	".gitea/funding.yaml",
+	".github/funding.yaml",
+	"funding.yaml",
+
+	".forgejo/Funding.yaml",
+	".gitea/Funding.yaml",
+	".github/Funding.yaml",
+	"Funding.yaml",
+}
+
 func TestAPIRepoFunding(t *testing.T) {
-	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
-		owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
-		session := loginUser(t, owner.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+	for _, treePath := range cases {
+		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
+			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+			session := loginUser(t, owner.Name)
+			token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
 
-		assert.Empty(t, getRepoFundingConfig(t, repo, token))
+			assert.Empty(t, getRepoFundingConfig(t, repo, token))
 
-		t.Run("Empty", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
+			t.Run("Empty", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
 
-			funding := getRepoFundingConfig(t, repo, token)
+				funding := getRepoFundingConfig(t, repo, token)
 
-			assert.Empty(t, funding)
+				assert.Empty(t, funding)
+			})
+
+			t.Run("SimpleConfig", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = "https://example.com"
+				config["ko_fi"] = "test"
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.NotEmpty(t, funding)
+
+				assert.Equal(t, "https://example.com", funding[0].Text)
+				assert.Equal(t, "https://example.com", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "Ko-Fi/test", funding[1].Text)
+				assert.Equal(t, "https://ko-fi.com/test", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
+			})
+
+			t.Run("StringArray", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				testSlice := make([]string, 2)
+				testSlice[0] = "https://a.com"
+				testSlice[1] = "https://b.com"
+
+				config := make(map[string]any)
+				config["custom"] = testSlice
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.NotEmpty(t, funding)
+
+				assert.Equal(t, "https://a.com", funding[0].Text)
+				assert.Equal(t, "https://a.com", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "https://b.com", funding[1].Text)
+				assert.Equal(t, "https://b.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
 		})
-
-		t.Run("SimpleConfig", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-
-			config := make(map[string]any)
-			config["custom"] = "https://example.com"
-			config["ko_fi"] = "test"
-
-			createFundingConfig(t, owner, repo, config)
-
-			funding := getRepoFundingConfig(t, repo, token)
-
-			assert.Equal(t, "https://example.com", funding[0].Text)
-			assert.Equal(t, "https://example.com", funding[0].URL)
-			assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-
-			assert.Equal(t, "Ko-Fi/test", funding[1].Text)
-			assert.Equal(t, "https://ko-fi.com/test", funding[1].URL)
-			assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
-		})
-
-		t.Run("StringArray", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-
-			testSlice := make([]string, 2)
-			testSlice[0] = "https://a.com"
-			testSlice[1] = "https://b.com"
-
-			config := make(map[string]any)
-			config["custom"] = testSlice
-
-			createFundingConfig(t, owner, repo, config)
-
-			funding := getRepoFundingConfig(t, repo, token)
-
-			assert.Equal(t, "https://a.com", funding[0].Text)
-			assert.Equal(t, "https://a.com", funding[0].URL)
-			assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-
-			assert.Equal(t, "https://b.com", funding[1].Text)
-			assert.Equal(t, "https://b.com", funding[1].URL)
-			assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-		})
-	})
+	}
 }
 
 func TestAPIRepoValidateFunding(t *testing.T) {
-	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
-		owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
-		session := loginUser(t, owner.Name)
-		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+	for _, treePath := range cases {
+		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
+			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+			session := loginUser(t, owner.Name)
+			token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
 
-		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", owner.Name, repo.Name)
+			urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", owner.Name, repo.Name)
 
-		t.Run("Empty", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
+			t.Run("Empty", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
 
-			resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
 
-			var fundingValidation api.ConfigValidation
-			DecodeJSON(t, resp, &fundingValidation)
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
 
-			assert.True(t, fundingValidation.Valid)
-			assert.Empty(t, fundingValidation.Message)
+				assert.True(t, fundingValidation.Valid)
+				assert.Empty(t, fundingValidation.Message)
+			})
+
+			t.Run("Valid", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = "https://example.com"
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.True(t, fundingValidation.Valid)
+				assert.Empty(t, fundingValidation.Message)
+			})
+
+			t.Run("Invalid", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				testSlice := make([][]string, 1)
+				testSlice[0] = []string{"test"}
+
+				config := make(map[string]any)
+				config["custom"] = testSlice
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.NotEmpty(t, fundingValidation.Message)
+			})
 		})
-
-		t.Run("Valid", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-
-			config := make(map[string]any)
-			config["custom"] = "https://example.com"
-
-			createFundingConfig(t, owner, repo, config)
-
-			resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
-
-			var fundingValidation api.ConfigValidation
-			DecodeJSON(t, resp, &fundingValidation)
-
-			assert.True(t, fundingValidation.Valid)
-			assert.Empty(t, fundingValidation.Message)
-		})
-
-		t.Run("Invalid", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-
-			testSlice := make([][]string, 1)
-			testSlice[0] = []string{"test"}
-
-			config := make(map[string]any)
-			config["custom"] = testSlice
-
-			createFundingConfig(t, owner, repo, config)
-
-			resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
-
-			var fundingValidation api.ConfigValidation
-			DecodeJSON(t, resp, &fundingValidation)
-
-			assert.False(t, fundingValidation.Valid)
-			assert.NotEmpty(t, fundingValidation.Message)
-		})
-	})
+	}
 }
