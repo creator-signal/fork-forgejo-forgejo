@@ -333,6 +333,7 @@ func TestMSTeamsPayload(t *testing.T) {
 
 		// Verify content for create
 		assert.True(t, findTextInBody(pl, "New wiki page \"index\""))
+		assert.True(t, findTextInBody(pl, "Wiki change comment"))
 		require.Len(t, pl.Actions, 1)
 		assert.Equal(t, "View in Forgejo", pl.Actions[0].Title)
 		assert.Equal(t, "http://localhost:3000/test/repo/wiki/index", pl.Actions[0].URL)
@@ -342,6 +343,7 @@ func TestMSTeamsPayload(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, pl)
 		assert.True(t, findTextInBody(pl, "Wiki page \"index\" edited"))
+		assert.True(t, findTextInBody(pl, "Wiki change comment"))
 		require.Len(t, pl.Actions, 1)
 		assert.Equal(t, "http://localhost:3000/test/repo/wiki/index", pl.Actions[0].URL)
 

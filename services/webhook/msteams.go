@@ -887,11 +887,31 @@ func (m msteamsConvertor) Wiki(p *api.WikiPayload) (MSTeamsPayload, error) {
 		style = attentionStyle
 	}
 
+	var bodySections []MSTeamsContainer
+	if p.Action != api.HookWikiDeleted {
+		bodySections = append(bodySections, MSTeamsContainer{
+			Type:       "Container",
+			Style:      defaultStyle,
+			ShowBorder: new(true),
+			Items: []any{
+				MSTeamsFactSet{
+					Type: "FactSet",
+					Facts: []MSTeamsFact{
+						{
+							Title: "Comment",
+							Value: p.Comment,
+						},
+					},
+				},
+			},
+		})
+	}
+
 	return createMSTeamsPayload(
 		p.Repository,
 		p.Sender,
 		actionTitle,
-		nil,
+		bodySections,
 		p.Repository.HTMLURL+"/wiki/"+url.PathEscape(p.Page),
 		style,
 	), nil
