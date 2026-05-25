@@ -65,7 +65,7 @@
 			const diffData = {
 				tooManyFilesMessage: "{{ctx.Locale.Tr "repo.diff.too_many_files"}}",
 				binaryFileMessage: "{{ctx.Locale.Tr "repo.diff.bin"}}",
-				showMoreMessage: "{{ctx.Locale.Tr "repo.diff.show_more"}}", 
+				showMoreMessage: "{{ctx.Locale.Tr "repo.diff.show_more"}}",
 				statisticsMessage: "{{ctx.Locale.Tr "repo.diff.stats_desc_file"}}",
 				currentPage: {{.DiffFileMetadataStat.CurrentPage}},
 			};
@@ -81,7 +81,7 @@
 				selectedItem: '',
 			};
 			diffFileInfo = Object.assign(diffFileInfo, diffData);
-			diffFileInfo.files.push(...diffDataFiles); 
+			diffFileInfo.files.push(...diffDataFiles);
 			window.config.pageData.diffFileInfo = diffFileInfo;
 		</script>
 	{{end}}

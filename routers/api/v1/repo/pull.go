@@ -1639,8 +1639,8 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	numberOffDiffFiles := len(diff.Files)
 	apiFiles := make([]*api.ChangedFile, 0, numberOffDiffFiles)
-	for i := 0; i < numberOffDiffFiles; i++ {
-		apiFiles = append(apiFiles, convert.ToChangedFile(diff.Files[i], pr.HeadRepo, endCommitID))
+	for _, diffFile := range diff.Files {
+		apiFiles = append(apiFiles, convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID))
 	}
 	ctx.SetLinkHeader(totalNumberOfFiles, listOptions.PageSize)
 	ctx.SetTotalCountHeader(int64(totalNumberOfFiles))

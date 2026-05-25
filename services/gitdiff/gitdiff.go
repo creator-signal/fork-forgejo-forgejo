@@ -773,36 +773,6 @@ parsingLoop:
 	return diff, nil
 }
 
-func skipToNextDiffHead(input *bufio.Reader) (line string, err error) {
-	// need to skip until the next cmdDiffHead
-	var isFragment, wasFragment bool
-	var lineBytes []byte
-	for {
-		lineBytes, isFragment, err = input.ReadLine()
-		if err != nil {
-			return "", err
-		}
-		if wasFragment {
-			wasFragment = isFragment
-			continue
-		}
-		if bytes.HasPrefix(lineBytes, []byte(cmdDiffHead)) {
-			break
-		}
-		wasFragment = isFragment
-	}
-	line = string(lineBytes)
-	if isFragment {
-		var tail string
-		tail, err = input.ReadString('\n')
-		if err != nil {
-			return "", err
-		}
-		line += tail
-	}
-	return line, err
-}
-
 func parseHunks(ctx context.Context, curFile *DiffFile, maxLines, maxLineCharacters int, input *bufio.Reader) (lineBytes []byte, isFragment bool, err error) {
 	sb := strings.Builder{}
 
@@ -1117,8 +1087,6 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 	// This is the case for a 'initial commit' of a Git tree, which obviously has
 	// no parents.
 	if (len(beforeCommitID) == 0 || beforeCommitID == objectFormat.EmptyObjectID().String()) && afterCommit.ParentCount() == 0 {
-		// Reset before commit ID to indicate empty tree was used.
-		beforeCommitID = ""
 		// Add enpty tree as before commit.
 		cmdDiff.AddDynamicArguments(objectFormat.EmptyTree().String())
 	} else {
