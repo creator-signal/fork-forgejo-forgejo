@@ -82,7 +82,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 
 	reader, err := treeEntry.Blob().DataAsync()
 	if err != nil {
-		log.Debug("DataAsync: %v", err)
+		log.Error("DataAsync: failed to read blob for funding config due to error: %v", err)
 		return nil, nil
 	}
 
@@ -147,6 +147,7 @@ func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) 
 	if err != nil {
 		return nil, err
 	}
+	defer gitRepo.Close()
 
 	commit, err := gitRepo.GetBranchCommit(r.DefaultBranch)
 	if err != nil {
