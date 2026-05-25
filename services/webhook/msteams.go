@@ -227,6 +227,13 @@ func markdownLinkFormatter(url, text string) string {
 	return fmt.Sprintf(`[%s](%s)`, text, url)
 }
 
+var msTeamsPayloadFormatter = webhookPayloadFormatter{
+	nameFormatter: noneNameFormatter,
+	linkFormatter: noneLinkFormatter,
+	withSender:    false,
+	withRepoName:  false,
+}
+
 func makeBadgeRow(badgeText, badgeIcon, badgeSyle string, refInfo ...string) MSTeamsContainer {
 	extraRefInfoText := []any{}
 	for _, info := range refInfo {
@@ -519,7 +526,7 @@ func (m msteamsConvertor) Push(p *api.PushPayload) (MSTeamsPayload, error) {
 
 // Issue implements PayloadConvertor Issue method
 func (m msteamsConvertor) Issue(p *api.IssuePayload) (MSTeamsPayload, error) {
-	actionTitle, _, attachmentText, _ := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, false)
+	actionTitle, _, attachmentText, _ := msTeamsPayloadFormatter.getIssuesPayloadInfo(p)
 
 	badgeSyle := attentionStyle
 	if p.Action == api.HookIssueReOpened {
@@ -617,7 +624,7 @@ func (m msteamsConvertor) Issue(p *api.IssuePayload) (MSTeamsPayload, error) {
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (m msteamsConvertor) IssueComment(p *api.IssueCommentPayload) (MSTeamsPayload, error) {
-	actionTitle, _, _ := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, false)
+	actionTitle, _, _ := msTeamsPayloadFormatter.getIssueCommentPayloadInfo(p)
 
 	var style string
 	switch p.Action {
@@ -662,7 +669,7 @@ func (m msteamsConvertor) IssueComment(p *api.IssueCommentPayload) (MSTeamsPaylo
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (m msteamsConvertor) PullRequest(p *api.PullRequestPayload) (MSTeamsPayload, error) {
-	actionTitle, _, attachmentText, _ := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, false)
+	actionTitle, _, attachmentText, _ := msTeamsPayloadFormatter.getPullRequestPayloadInfo(p)
 
 	badgeStyle := attentionStyle
 	badgeState := "Closed"
@@ -874,7 +881,7 @@ func (m msteamsConvertor) Repository(p *api.RepositoryPayload) (MSTeamsPayload, 
 
 // Wiki implements PayloadConvertor Wiki method
 func (m msteamsConvertor) Wiki(p *api.WikiPayload) (MSTeamsPayload, error) {
-	actionTitle, _, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, false, false)
+	actionTitle, _, _ := msTeamsPayloadFormatter.getWikiPayloadInfo(p, false)
 
 	var style string
 
@@ -919,7 +926,7 @@ func (m msteamsConvertor) Wiki(p *api.WikiPayload) (MSTeamsPayload, error) {
 
 // Release implements PayloadConvertor Release method
 func (m msteamsConvertor) Release(p *api.ReleasePayload) (MSTeamsPayload, error) {
-	actionTitle, color := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false, false)
+	actionTitle, color := msTeamsPayloadFormatter.getReleasePayloadInfo(p)
 	var style string
 
 	switch color {
@@ -942,7 +949,7 @@ func (m msteamsConvertor) Release(p *api.ReleasePayload) (MSTeamsPayload, error)
 }
 
 func (m msteamsConvertor) Package(p *api.PackagePayload) (MSTeamsPayload, error) {
-	actionTitle, color := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, false)
+	actionTitle, color := msTeamsPayloadFormatter.getPackagePayloadInfo(p)
 	var style string
 
 	switch color {
