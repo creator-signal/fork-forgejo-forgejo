@@ -125,7 +125,7 @@ com 88fc37a3c0a4dda553bdcfc80c178a58247f42fb mit
 }
 
 func TestRenderCommitMessage(t *testing.T) {
-	expected := `space <a href="/mention-user" class="mention">@mention-user</a>  `
+	expected := `space <a href="/mention-user" class="mention">@mention-user</a>`
 
 	assert.EqualValues(t, expected, RenderCommitMessage(t.Context(), testInput, testMetas))
 }
@@ -189,7 +189,7 @@ mail@domain.com
 }
 
 func TestRenderMarkdownToHtml(t *testing.T) {
-	expected := `<p>space <a href="/mention-user" class="mention" rel="nofollow">@mention-user</a><br/>
+	expected := `<p>space <a href="/mention-user" class="mention" rel="nofollow">@mention-user</a>
 /just/a/path.bin
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a>
 <a href="/file.bin" rel="nofollow">local link</a>
