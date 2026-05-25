@@ -11,108 +11,120 @@
 			<button type="button" class="item" data-tab="repo">{{ctx.Locale.Tr "shortcuts.button.repo"}}</button>
 			<button type="button" class="item" data-tab="code">{{ctx.Locale.Tr "shortcuts.button.code"}}</button>
 		</div>
-		<div class="tw-my-4 tw-flex tw-justify-center">
+		<div class="tw-mt-4 tw-flex tw-justify-center">
 			<kbd>{{svg "octicon-arrow-left" 16}}</kbd>
 			&nbsp;{{ctx.Locale.Tr "shortcuts.hint"}}&nbsp;
 			<kbd>{{svg "octicon-arrow-right" 16}}</kbd>
 		</div>
 		<div class="tw-items-start tw-grid tw-grid-cols-1">
-			<table data-tab="site">
-				<tbody>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.down"}}</td>
-						<td><kbd>j</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.up"}}</td>
-						<td><kbd>k</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.home"}}</td>
-						<td><kbd>g</kbd> <kbd>d</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.notifications"}}</td>
-						<td><kbd>g</kbd> <kbd>n</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.toggle"}}</td>
-						<td><kbd>x</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.search"}}</td>
-						<td><kbd>/</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.popup"}}</td>
-						<td><kbd>?</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.site.close"}}</td>
-						<td><kbd>Escape</kbd></td>
-					</tr>
-				</tbody>
-			</table>
-			<table data-tab="repo" style="visibility: hidden" aria-hidden="true">
-				<tbody>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.create"}}</td>
-						<td><kbd>c</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.action"}}</td>
-						<td><kbd>g</kbd> <kbd>a</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.code"}}</td>
-						<td><kbd>g</kbd> <kbd>c</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.issue"}}</td>
-						<td><kbd>g</kbd> <kbd>i</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.project"}}</td>
-						<td><kbd>g</kbd> <kbd>o</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.pr"}}</td>
-						<td><kbd>g</kbd> <kbd>p</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.release"}}</td>
-						<td><kbd>g</kbd> <kbd>r</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.wiki"}}</td>
-						<td><kbd>g</kbd> <kbd>w</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.repo.switch"}}</td>
-						<td><kbd>w</kbd></td>
-					</tr>
-				</tbody>
-			</table>
-			<table data-tab="code" style="visibility: hidden" aria-hidden="true">
-				<tbody>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.code.blame"}}</td>
-						<td><kbd>b</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.code.history"}}</td>
-						<td><kbd>h</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.code.raw"}}</td>
-						<td><kbd>r</kbd></td>
-					</tr>
-					<tr>
-						<td>{{ctx.Locale.Tr "shortcuts.code.permalink"}}</td>
-						<td><kbd>y</kbd></td>
-					</tr>
-				</tbody>
-			</table>
+			<ul data-tab="site">
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.down"}}</div>
+					<kbd>j</kbd>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.up"}}</div>
+					<kbd>k</kbd>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.home"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>d</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.notifications"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>n</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.toggle"}}</div>
+					<div><kbd>x</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.search"}}</div>
+					<div><kbd>/</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.popup"}}</div>
+					<div><kbd>?</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.site.close"}}</div>
+					<div><kbd>Escape</kbd></div>
+				</li>
+			</ul>
+			<ul data-tab="repo" style="visibility: hidden" aria-hidden="true">
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.create"}}</div>
+					<div><kbd>c</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.action"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>a</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.code"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>c</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.issue"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>i</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.project"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>o</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.pr"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>p</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.release"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>r</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.wiki"}}</div>
+					<div>
+						<kbd>g</kbd> <kbd>w</kbd>
+					</div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.repo.switch"}}</div>
+					<div><kbd>w</kbd></div>
+				</li>
+			</ul>
+				<ul data-tab="code" style="visibility: hidden" aria-hidden="true">
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.code.blame"}}</div>
+					<div><kbd>b</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.code.history"}}</div>
+					<div><kbd>h</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.code.raw"}}</div>
+					<div><kbd>r</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.code.permalink"}}</div>
+					<div><kbd>y</kbd></div>
+				</li>
+			</ul>
 		</div>
 	</article>
 </dialog>

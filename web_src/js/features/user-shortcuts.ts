@@ -47,24 +47,24 @@ function keyboardSelector(up: boolean) {
 function initPopupTabs() {
   const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
   const btns = dialog.querySelectorAll<HTMLButtonElement>('[data-tab]');
-  const tables = dialog.querySelectorAll('table');
-  const selectTable = (name: string) => {
+  const lists = dialog.querySelectorAll('ul');
+  const selectList = (name: string) => {
     for (const btn of btns) {
       btn.classList.toggle('active', btn.dataset.tab === name);
     }
-    for (const tbl of tables) {
-      const active = tbl.dataset.tab !== name;
-      tbl.style.visibility = active ? 'hidden' : 'visible';
-      tbl.toggleAttribute('aria-hidden', active);
+    for (const ls of lists) {
+      const active = ls.dataset.tab !== name;
+      ls.style.visibility = active ? 'hidden' : 'visible';
+      ls.toggleAttribute('aria-hidden', active);
     }
   };
   for (const btn of btns) {
     btn.addEventListener('click', () => {
-      selectTable(btn.dataset.tab);
+      selectList(btn.dataset.tab);
     });
   }
   dialog.addEventListener('close', () => {
-    selectTable('site');
+    selectList('site');
   });
 }
 
