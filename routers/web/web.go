@@ -672,9 +672,15 @@ func registerRoutes(m *web.Route) {
 		})
 
 		m.Group("/authorized-integrations", func() {
-			m.Combo("/{ui}/{id}").
-				Get(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegration).
-				Post(web.Bind(user_setting.AuthorizedIntegrationForm{}), user_setting.EditAuthorizedIntegrationPost)
+			m.Group("/{ui}", func() {
+				m.Combo("/new").
+					Get(user_setting.NewAuthorizedIntegration).
+					Post(user_setting.NewAuthorizedIntegrationPost)
+				m.Combo("/{id}").
+					Get(user_setting.EditAuthorizedIntegration).
+					Post(user_setting.EditAuthorizedIntegrationPost)
+			}, user_setting.BindAuthorizedIntegrationUI, user_setting.DynamicBindAuthorizedIntegrationForm)
+			m.Post("/delete", user_setting.DeleteAuthorizedIntegration)
 			m.Get("", user_setting.ListAuthorizedIntegrations)
 		})
 
@@ -1737,7 +1743,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
-	m.Post("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
+	m.Get("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
 
 	m.Group("/{username}/{reponame}", func() {
 		if !setting.Repository.DisableStars {

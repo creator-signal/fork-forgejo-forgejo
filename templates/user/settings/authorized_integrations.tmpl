@@ -3,6 +3,12 @@
 <div class="user-setting-content">
 	<h4 class="ui top attached header">
 		{{ctx.Locale.Tr "settings.manage_authorized_integrations"}}
+		<div class="ui right">
+			<div class="ui jump dropdown">
+				<div class="ui primary tiny button">{{ctx.Locale.Tr "settings.authorized_integration.add"}}</div>
+				{{template "user/settings/authorized_integrations/link_menu" .}}
+			</div>
+		</div>
 	</h4>
 	<div class="ui attached segment">
 		<div class="flex-list">
@@ -33,6 +39,10 @@
 							{{svg "octicon-pencil" 16 "tw-mr-1"}}
 							{{ctx.Locale.Tr "settings.authorized_integration.edit"}}
 						</a>
+						<button class="ui red tiny button delete-button" data-modal-id="delete-authorized-integration" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+							{{svg "octicon-trash" 16 "tw-mr-1"}}
+							{{ctx.Locale.Tr "settings.delete_token"}}
+						</button>
 					</div>
 				</div>
 			{{else}}
@@ -46,6 +56,17 @@
 			{{end}}
 		</div>
 	</div>
+</div>
+
+<div class="ui g-modal-confirm delete modal" id="delete-authorized-integration">
+	<div class="header">
+		{{svg "octicon-trash"}}
+		{{ctx.Locale.Tr "settings.authorized_integration.delete.header"}}
+	</div>
+	<div class="content">
+		<p>{{ctx.Locale.Tr "settings.authorized_integration.delete.body"}}</p>
+	</div>
+	{{template "base/modal_actions_confirm"}}
 </div>
 
 {{template "user/settings/layout_footer" .}}
