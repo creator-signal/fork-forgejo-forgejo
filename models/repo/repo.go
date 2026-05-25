@@ -300,20 +300,19 @@ func (repo *Repository) LoadAttributes(ctx context.Context) error {
 		return fmt.Errorf("load owner: %w", err)
 	}
 
-	// Load primary language
-	stats := make(LanguageStatList, 0, 1)
-	if err := db.GetEngine(ctx).
+	// Load the primary language.
+	var stat LanguageStat
+	has, err := db.GetEngine(ctx).
 		Where("`repo_id` = ? AND `is_primary` = ? AND `language` != ?", repo.ID, true, "other").
-		Find(&stats); err != nil {
-		return fmt.Errorf("find primary languages: %w", err)
+		Get(&stat)
+	if err != nil {
+		return fmt.Errorf("unable to find the primary languages: %w", repo.ID, err)
 	}
-	stats.LoadAttributes()
-	for _, st := range stats {
-		if st.RepoID == repo.ID {
-			repo.PrimaryLanguage = st
-			break
-		}
+	if has {
+		stat.LoadAttributes()
+		repo.PrimaryLanguage = &stat
 	}
+
 	return nil
 }
 
