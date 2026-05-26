@@ -11,19 +11,16 @@
 		<div class="content">
 			<ul class="tw-list-none tw-p-0">
 				{{range .Funding}}
-				<li>
-					<div class="tw-flex tw-gap-2">
-						{{/* FIXME: prefer instead to check the "type" of this entry */}}
-						{{if eq .Icon "/assets/img/svg/octicon-link.svg"}}
-							{{svg "octicon-link" 24}}
-						{{else if .Icon}}
-							<img class="tw-h-full" src="{{.Icon}}" alt="" width="24" height="24">
-						{{else}}
-							{{svg "octicon-heart" 24}}
-						{{end}}
-
-						<a target="_blank" rel="noopener noreferrer" href="{{.URL}}">{{.Text}}</a>
-					</div>
+				<li class="tw-flex tw-gap-2 tw-mb-4">
+					{{/* FIXME: prefer instead to check the "type" of this entry */}}
+					{{if eq .Icon "/assets/img/svg/octicon-link.svg"}}
+						{{svg "octicon-link" 24}}
+					{{else if .Icon}}
+						<img class="tw-h-full" src="{{.Icon}}" alt="" width="24" height="24">
+					{{else}}
+						{{svg "octicon-heart" 24}}
+					{{end}}
+					<a target="_blank" rel="noopener noreferrer" href="{{.URL}}">{{.Text}}</a>
 				</li>
 				{{end}}
 			</ul>
