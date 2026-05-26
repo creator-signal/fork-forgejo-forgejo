@@ -130,6 +130,7 @@ func buildMixedAuthGroup() *auth_method.Group {
 		PermitBasic:  true,
 		PermitBearer: true,
 	})
+	group.Add(&auth_method.AuthorizedIntegration{})
 	if setting.Service.EnableReverseProxyAuth {
 		group.Add(&auth_method.ReverseProxy{}) // reverseproxy should before Session, otherwise the header will be ignored if user has login
 	}
