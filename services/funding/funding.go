@@ -29,7 +29,11 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
-// ErrInvalidFundingProvider represents a "InvalidFundingProvider" kind of error.
+func IsErrFundingValidationError(err error) bool {
+	return IsErrInvalidFundingProvider(err) || IsErrInvalidYamlType(err)
+}
+
+// ErrInvalidFundingProvider represents an "UnknownFundingProvider" kind of error.
 type ErrInvalidFundingProvider struct {
 	Name string
 }

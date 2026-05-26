@@ -1447,8 +1447,9 @@ func GetFunding(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	funding, errs := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
-	if len(errs) > 0 {
-		log.Error("GetFundingFromDefaultBranch: ", fmt.Errorf("%w", errs))
+	if errs = slices.DeleteFunc(errs, funding_service.IsErrFundingValidationError); len(errs) > 0 {
+		err := errors.Join(errs...)
+		log.Error("GetFundingFromDefaultBranch: ", fmt.Errorf("%w", err))
 	}
 
 	if funding != nil {
