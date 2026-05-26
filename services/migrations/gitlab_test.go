@@ -840,7 +840,7 @@ func TestCommentBodyParser(t *testing.T) {
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody7)
 }
 
-func TestMigrationGitlabConfidential(t *testing.T) {
+func TestGitlabConfidential(t *testing.T) {
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -880,7 +880,7 @@ func TestMigrationGitlabConfidential(t *testing.T) {
 	// but we offset it by the maximum issue number so it becomes
 	// pull request 2 in Forgejo
 	assert.Len(t, prs, 1)
-	assert.EqualValues(t, 2, prs[0].Number)
+	assert.EqualValues(t, 3, prs[0].Number)
 
 	// Issue with number 1 has two comments, but one of them is an internal note and is skipped
 	comments, _, err := downloader.GetComments(&base.Issue{
@@ -902,7 +902,7 @@ func TestMigrationGitlabConfidential(t *testing.T) {
 
 	// Pull request with number 1 has only one comment, but it is an internal note and is skipped
 	comments, _, err = downloader.GetComments(&base.Issue{
-		Number:       2,
+		Number:       3,
 		ForeignIndex: 1,
 		Context:      gitlabIssueContext{IsMergeRequest: true},
 	})
