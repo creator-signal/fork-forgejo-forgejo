@@ -189,6 +189,21 @@ body:
 				return sb.String()
 			}())
 	})
+	newRepo(t, 2, "funding_basic_complete", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: example
+custom: "https://example.com"
+`},
+	}}, nil)
+	newRepo(t, 2, "funding_basic_extras", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: example
+custom: "https://example.com"
+whatever: example
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 

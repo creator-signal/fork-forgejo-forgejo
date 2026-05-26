@@ -21,7 +21,6 @@ import (
 // TODO:  the correct icon and text display for all modal parts (built-in and instance-custom entries)
 // TODO:  unknown payment providers are omitted from the UI
 // TODO:  the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml
-// TODO:  (e2e?) selecting the sponsor button opens a dialog that shows the info
 // TODO:  figure out when profile_big_avatar is shown, and test sponsor-button there too
 
 func TestSponsorButton(t *testing.T) {

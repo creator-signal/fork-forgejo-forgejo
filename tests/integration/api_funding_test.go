@@ -88,6 +88,8 @@ var fundingCandidates = []string {
 // TODO: Test API responses when the config contains entries for unknown providers
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter!
 // TODO: Test API 404 for unknown repo
+// TODO: Test that funding entries are in the same order as they were defined in the config
+// TODO: Allow only up to 4 Custom entries in a config
 
 func TestAPIRepoFunding(t *testing.T) {
 	for _, treePath := range fundingCandidates {
