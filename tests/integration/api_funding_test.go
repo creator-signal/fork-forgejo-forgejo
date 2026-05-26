@@ -108,7 +108,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, "https://example.com", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
-				assert.Equal(t, "Ko-Fi/test", funding[1].Text)
+				assert.Equal(t, "ko-fi.com/test", funding[1].Text)
 				assert.Equal(t, "https://ko-fi.com/test", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
 			})
