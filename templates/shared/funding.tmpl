@@ -1,21 +1,22 @@
+<dialog id="sponsor-modal">
+	<article>
+		<header>{{ctx.Locale.Tr "funding.sponsor_header" .FundingName}}</header>
+		<div class="content">
+			<ul class="tw-list-none tw-p-0">
+				{{range .Funding}}
+				<li>
+					<div class="tw-flex tw-gap-2">
+						{{if .Icon}}
+							<img class="tw-h-full" src="{{.Icon}}" width="24" height="24">
+						{{else}}
+							{{svg "octicon-heart" 24}}
+						{{end}}
 
-<div class="header">
-	{{ctx.Locale.Tr "funding.sponsor_header" .FundingName}}
-</div>
-<div class="content">
-	<ul class="tw-list-none tw-p-0">
-		{{range .Funding}}
-			<li>
-				<div class="tw-flex tw-gap-2">
-					{{if .Whatever}}
-						<img class="tw-h-full" src="{{.Icon}}" width="24" height="24">
-					{{else}}
-						{{svg "octicon-heart" 24}}
-					{{end}}
-
-					<a target="_blank" rel="noopener noreferrer" href="{{.URL}}">{{.Text}}</a>
-				</div>
-			</li>
-		{{end}}
-	</ul>
-</div>
+						<a target="_blank" rel="noopener noreferrer" href="{{.URL}}">{{.Text}}</a>
+					</div>
+				</li>
+				{{end}}
+			</ul>
+		</div>
+	</article>
+</dialog>
