@@ -1874,6 +1874,80 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 				})
 			tester.session.MakeRequest(tester.t, req, http.StatusBadRequest)
 		})
+
+		t.Run("multi-line comment invalidated when line inserted in range by second commit", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify lines 48-50 in the first commit
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 48\n", "Line 48--modified\n", 1)
+			content = strings.Replace(content, "Line 49\n", "Line 49--modified\n", 1)
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Create a multi-line comment on lines 48-50 (line=48, extraLinesCount=2)
+			comment := tester.multiLineCommentFromFilesChanged("file1.md", 48, 2)
+			assert.EqualValues(t, 48, comment.Line)
+			assert.EqualValues(t, 2, comment.ExtraLinesCount)
+			assert.False(t, comment.Invalidated)
+
+			// Push a second commit that inserts a new line between 48 and 49,
+			// breaking the contiguity of the range.
+			content = strings.Replace(content, "Line 48--modified\n", "Line 48--modified\nInserted line\n", 1)
+			tester.changeFile("file1.md", content)
+
+			// The invalidation is triggered asynchronously when the branch is pushed.
+			// The comment should eventually be invalidated because the range [48, 49, 50]
+			// resolves to non-contiguous lines at HEAD (48, 50, 51 — with a gap at 49).
+			assert.EventuallyWithT(t, func(t *assert.CollectT) {
+				commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
+				assert.True(t, commentReloaded.Invalidated)
+			}, 5*time.Second, 50*time.Millisecond)
+		})
+
+		t.Run("multi-line comment not invalidated when range stays contiguous", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			tester := newPullRequestCommentPlacementTester(t)
+
+			// Modify lines 48-50 in the first commit
+			content := tester.fileContent
+			content = strings.Replace(content, "Line 48\n", "Line 48--modified\n", 1)
+			content = strings.Replace(content, "Line 49\n", "Line 49--modified\n", 1)
+			content = strings.Replace(content, "Line 50\n", "Line 50--modified\n", 1)
+			tester.changeFile("file1.md", content)
+			tester.createPR()
+
+			// Create a multi-line comment on lines 48-50 (line=48, extraLinesCount=2)
+			comment := tester.multiLineCommentFromFilesChanged("file1.md", 48, 2)
+			assert.EqualValues(t, 48, comment.Line)
+			assert.EqualValues(t, 2, comment.ExtraLinesCount)
+			assert.False(t, comment.Invalidated)
+
+			// Push a second commit that changes lines BEFORE the range (removing lines 1-10),
+			// which shifts the range but keeps it contiguous.
+			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
+			tester.changeFile("file1.md", content)
+
+			// Wait a bit for async invalidation to run, then check the comment is still valid.
+			// We use EventuallyWithT with a short timeout — the comment should stay non-invalidated.
+			time.Sleep(2 * time.Second)
+			commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
+			assert.False(t, commentReloaded.Invalidated)
+
+			// Verify the comment is visible in the files changed diff (not skipped)
+			diff := []diffTableRow{
+				{rowType: RowHasCode, code: "Line 47"},
+				{rowType: RowDelCode, code: "Line 48"},
+				{rowType: RowAddCode, code: "Line 48--modified"},
+				{rowType: RowHasCode, code: "Line 49--modified"},
+				{rowType: RowHasCode, code: "Line 50--modified"},
+				{rowType: RowComment, commentID: comment.ID},
+				{rowType: RowHasCode, code: "Line 51"},
+			}
+			tester.assertFilesChangedDiff(diff)
+		})
 	})
 }
 

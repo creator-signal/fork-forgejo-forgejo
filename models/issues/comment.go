@@ -860,7 +860,9 @@ func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repos
 
 // CheckLineRangeValid checks if all additional lines in a multi-line comment range
 // are still valid at the given head commit. Uses the same caching pattern as ResolveCurrentLine.
-// Returns true if the range is valid, false if any line has been invalidated.
+// In addition it also verifies that the resolved lines form a contiguous range (each resolved line is exactly previous+1),
+// in order to detect cases where lines were inserted or reordered within the commented range.
+// Returns true if the range is valid, false if any line has been invalidated or the range is no longer contiguous.
 func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repository, currentHead string) (bool, error) {
 	if c.ExtraLinesCount <= 0 {
 		return true, nil
@@ -884,6 +886,17 @@ func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repo
 			cachedDiff = &diff
 		}
 
+		// Resolve the first line position at HEAD, so we can check the next ones follow consecutively
+		anchorBlame, err := c.resolveLineAtHead(gitRepo, c.UnsignedLine(), currentHead, cachedDiff)
+		if err != nil {
+			return "", err
+		}
+		if anchorBlame.CommitID != currentHead {
+			return "invalid", nil
+		}
+		previousResolvedLine := anchorBlame.LineNumber
+
+		// Check each additional line: must exist at HEAD and be contiguous with the previous one
 		startLine := c.UnsignedLine()
 		for i := int64(1); i <= c.ExtraLinesCount; i++ {
 			blame, err := c.resolveLineAtHead(gitRepo, startLine+uint64(i), currentHead, cachedDiff)
@@ -893,6 +906,11 @@ func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repo
 			if blame.CommitID != currentHead {
 				return "invalid", nil
 			}
+			// Verify contiguity: Each resolved line must follow the previous one (no gap allowed)
+			if blame.LineNumber != previousResolvedLine+1 {
+				return "invalid", nil
+			}
+			previousResolvedLine = blame.LineNumber
 		}
 
 		return "valid", nil
