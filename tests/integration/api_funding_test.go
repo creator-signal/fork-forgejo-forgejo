@@ -62,12 +62,7 @@ var testFundingCandidates = []string {
 }
 
 // TODO: Test API responses when funding config is invalid
-// TODO: Is a config invalid if it contains additional keys? (yes, but we still get the rest so it's fine)
-// TODO: Is a config invalid if it contains additional keys with invalid values? (yes, but we still get the rest so it's fine) (also, we don't care about the type of an invalid key, it's already invalid)
 // TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
-// TODO: Test API responses when one repo has a funding config but the target does not
-// TODO: Test API responses when one repo (the target) has a funding config, but another does not
-// TODO: Test API responses when the config contains entries for unknown providers (unknown entries are omitted, and /validate complains)
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
 // TODO: Test that funding entries are in alphabetical order by key (later: the same order as they were defined in the config)
 // TODO: Allow only one entry for each key except Custom
@@ -100,7 +95,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Empty(t, funding)
 			})
 
-			t.Run("SimpleConfig", func(t *testing.T) {
+			t.Run("Simple config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
@@ -121,7 +116,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
 			})
 
-			t.Run("StringArray", func(t *testing.T) {
+			t.Run("Custom string array", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				testSlice := make([]string, 2)
@@ -142,6 +137,111 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				assert.Equal(t, "https://b.com", funding[1].Text)
 				assert.Equal(t, "https://b.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
+
+			t.Run("Invalid config", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				testSlice := make([][]string, 1)
+				testSlice[0] = []string{"test"}
+
+				config := make(map[string]any)
+				config["custom"] = testSlice
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Empty(t, funding)
+			})
+
+			t.Run("Partially invalid (bad key omitted)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 2)
+
+				// no ko_fi, it's not a string value
+				assert.Equal(t, "test", funding[0].Text)
+				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
+
+			t.Run("Partially invalid (unknown key omitted)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = "test"
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 2)
+
+				// no whatever, it's not a known value
+				assert.Equal(t, "test", funding[0].Text)
+				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
+
+			t.Run("Partially invalid (bad and unknown key omitted)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 2)
+
+				// no whatever, it's not a known value
+				assert.Equal(t, "test", funding[0].Text)
+				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
+
+			t.Run("Partially invalid (bad and unknown keys omitted)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = "test"
+				config["ko_fi"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 2)
+
+				// no whatever, it's not a known value
+				// no ko_fi, it's not a string
+				assert.Equal(t, "test", funding[0].Text)
+				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 			})
 		})
@@ -179,7 +279,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				assert.Empty(t, fundingValidation.Message)
 			})
 
-			t.Run("Valid", func(t *testing.T) {
+			t.Run("Valid (single key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
@@ -196,7 +296,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				assert.Empty(t, fundingValidation.Message)
 			})
 
-			t.Run("Invalid", func(t *testing.T) {
+			t.Run("Invalid (single key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				testSlice := make([][]string, 1)
@@ -213,7 +313,80 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.NotEmpty(t, fundingValidation.Message)
+				assert.Equal(t, fundingValidation.Message, "custom has a invalid type. Expected string or string array") // FIXME: i hate sending API response data in only english.. send a list of code strings instead, and document them enough for an API consumer to explain them to their users in their users' language.
+			})
+
+			t.Run("Partially invalid (single bad key)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "ko_fi has a invalid type. Expected string or string array")
+			})
+
+			t.Run("Partially invalid (single unknown key)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = "test"
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "funding provider whatever is unknown")
+			})
+
+			t.Run("Partially invalid (single bad unknown key)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "funding provider whatever is unknown")
+			})
+
+			t.Run("Partially invalid (one bad and one unknown key)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["whatever"] = "test"
+				config["ko_fi"] = 42
+				config["custom"] = []string{"test", "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "ko_fi has a invalid type. Expected string or string array\nfunding provider whatever is unknown")
 			})
 		})
 	}

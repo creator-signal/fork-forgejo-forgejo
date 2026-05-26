@@ -41,6 +41,7 @@ func IsErrInvalidFundingProvider(err error) bool {
 }
 
 func (err ErrInvalidFundingProvider) Error() string {
+	// TODO: make this better
 	return fmt.Sprintf("funding provider %s is unknown", err.Name)
 }
 
@@ -56,6 +57,7 @@ func IsErrInvalidYamlType(err error) bool {
 }
 
 func (err ErrInvalidYamlType) Error() string {
+	// TODO: make this better
 	return fmt.Sprintf("%s has a invalid type. Expected string or string array", err.Name)
 }
 

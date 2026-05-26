@@ -9271,6 +9271,7 @@
           "repository"
         ],
         "summary": "Returns the funding for a repo",
+        "description": "Only the first funding config file is the considered. The file may contain validation errors, in which case, invalid entries are omitted from the returned data. Query /repos/{owner}/{repo}/funding/validate for a description of each error.",
         "operationId": "repoGetFunding",
         "parameters": [
           {
@@ -9307,6 +9308,7 @@
           "repository"
         ],
         "summary": "Returns the validation information for a funding config",
+        "description": "Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.",
         "operationId": "repoValidateFunding",
         "parameters": [
           {

@@ -1422,11 +1422,12 @@ func ListRepoActivityFeeds(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToActivities(ctx, feeds, ctx.Doer()))
 }
 
-// GetFunding returns the funding for a repo
+// GetFunding returns the funding options for a repo
 func GetFunding(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/funding repository repoGetFunding
 	// ---
-	// summary: Returns the funding for a repo
+	// summary: Returns the funding options for a repo
+	// description: Only the first funding config file is the considered. The file may contain validation errors, in which case, invalid entries are omitted from the returned data. Query /repos/{owner}/{repo}/funding/validate for a description of each error.
 	// produces:
 	// - application/json
 	// parameters:
@@ -1457,11 +1458,12 @@ func GetFunding(ctx *context.APIContext) {
 	}
 }
 
-// ValidateFunding returns the validation information for a funding config
+// ValidateFunding returns the validation information for the funding config of the repo
 func ValidateFunding(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/funding/validate repository repoValidateFunding
 	// ---
-	// summary: Returns the validation information for a funding config
+	// summary: Returns the validation information for the funding config of the repo
+	// description: Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.
 	// produces:
 	// - application/json
 	// parameters:
