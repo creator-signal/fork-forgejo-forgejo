@@ -47,7 +47,7 @@ func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token strin
 	return funding
 }
 
-var fundingCandidates = []string {
+var testFundingCandidates = []string {
 	".forgejo/FUNDING.yaml",
 	".github/FUNDING.yaml",
 	"FUNDING.yaml",
@@ -75,7 +75,7 @@ var fundingCandidates = []string {
 // TODO: Allow only one entry for all keys except Custom
 
 func TestAPIRepoFunding(t *testing.T) {
-	for _, treePath := range fundingCandidates {
+	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
@@ -141,7 +141,7 @@ func TestAPIRepoFunding(t *testing.T) {
 }
 
 func TestAPIRepoValidateFunding(t *testing.T) {
-	for _, treePath := range fundingCandidates {
+	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})

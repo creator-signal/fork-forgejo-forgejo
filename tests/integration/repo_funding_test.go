@@ -82,7 +82,7 @@ func TestSponsorButton(t *testing.T) {
 		})
 	})
 
-	for _, treePath := range fundingCandidates {
+	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			t.Run("sponsor button hidden with invalid funding config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
