@@ -95,7 +95,9 @@ test('Sponsor modal: closes on Close button', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
 });
 
-// TODO: check the Close button floats to the end (right or left depending on text RTL-ness? not sure what's standard here...)
-// TODO: check the modal text is a reasonable size
+// TODO: check the Close button floats to the end (right or left depending on text RTL-ness)
+// TODO: check the modal text is a reasonable size and spacing, even on mobile
 // TODO: check the various error layouts
+// TODO: check with ridiculously long repo names
+// TODO: check with attempted XSS cases
 // TODO: link to the page from the modal when there are errors; test how that looks, accessibility-wise

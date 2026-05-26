@@ -38,7 +38,7 @@ func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token strin
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding", repo.OwnerName, repo.Name)
 
 	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK) // FIXME: Status is NOT always 200!
+	resp := MakeRequest(t, req, http.StatusOK)
 
 	var funding []*api.RepoFundingEntry
 
@@ -64,15 +64,14 @@ var testFundingCandidates = []string {
 // TODO: Test API responses when funding config is invalid
 // TODO: Is a config invalid if it contains additional keys? (yes, but we still get the rest so it's fine)
 // TODO: Is a config invalid if it contains additional keys with invalid values? (yes, but we still get the rest so it's fine) (also, we don't care about the type of an invalid key, it's already invalid)
-// TODO: Test API responses when there's both a valid and invalid funding config
+// TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
 // TODO: Test API responses when one repo has a funding config but the target does not
 // TODO: Test API responses when one repo (the target) has a funding config, but another does not
-// TODO: Test API responses when the config contains entries for unknown providers
-// TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter!
-// TODO: Test API 404 for unknown repo
-// TODO: Test that funding entries are in the same order as they were defined in the config
-// TODO: Allow only up to 4 Custom entries in a config
-// TODO: Allow only one entry for all keys except Custom
+// TODO: Test API responses when the config contains entries for unknown providers (unknown entries are omitted, and /validate complains)
+// TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
+// TODO: Test that funding entries are in alphabetical order by key (later: the same order as they were defined in the config)
+// TODO: Allow only one entry for each key except Custom
+// TODO: Allow only up to 4 Custom entries in a config (additional entries are skipped thereafter, and /validate complains; same in the UI)
 
 func TestAPIRepoFunding(t *testing.T) {
 	for _, treePath := range testFundingCandidates {
@@ -83,6 +82,15 @@ func TestAPIRepoFunding(t *testing.T) {
 			token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
 
 			assert.Empty(t, getRepoFundingConfig(t, repo, token))
+
+			t.Run("Unknown repo", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				req := NewRequest(t, "GET", "/api/v1/repos/not/here/funding").AddTokenAuth(token)
+				_ = MakeRequest(t, req, http.StatusNotFound)
+			})
+
+			// TODO: Private repo should also return 404
 
 			t.Run("Empty", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -147,6 +155,15 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 			session := loginUser(t, owner.Name)
 			token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+			t.Run("Unknown repo", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				req := NewRequest(t, "GET", "/api/v1/repos/not/here/funding/validate").AddTokenAuth(token)
+				_ = MakeRequest(t, req, http.StatusNotFound)
+			})
+
+			// TODO: Private repo should also return 404
 
 			urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", owner.Name, repo.Name)
 

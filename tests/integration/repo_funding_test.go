@@ -17,8 +17,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: the correct icon and text display for all modal parts (built-in and instance-custom entries)
-// TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml
+// TODO: link to the page from the modal when there are errors
+// TODO: handle instance-custom entries (app.ini)
+// TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
 // TODO: figure out when profile_big_avatar is shown, and test sponsor-button there too
 // TODO: link to the page from the modal when there are errors
 
