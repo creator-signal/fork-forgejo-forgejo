@@ -957,6 +957,8 @@
 		"other": "Errors parsing funding config:"
 	},
 	"funding.invalid_provider_error": "Unknown funding platform: %s",
+	"funding.too_many_of_provider_error_expected_none": "Expected exactly 0 of funding provider %s",
+	"funding.too_many_of_provider_error_expected_n": "Expected up to %d of funding provider %s",
 	"funding.invalid_yaml_type_error": "%s has an invalid type. Expected string or string array",
 	"funding.unknown_error": "Unknown error: %s",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."

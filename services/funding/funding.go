@@ -6,9 +6,9 @@ package funding
 import (
 	"context"
 	"fmt"
-	"sort"
 	"io"
 	"reflect"
+	"sort"
 	"strings"
 
 	repo_model "forgejo.org/models/repo"
@@ -30,7 +30,7 @@ var fundingCandidates = []string{
 }
 
 func IsErrFundingValidationError(err error) bool {
-	return IsErrInvalidFundingProvider(err) || IsErrInvalidYamlType(err)
+	return IsErrInvalidFundingProvider(err) || IsErrTooManyOfFundingProvider(err) || IsErrInvalidYamlType(err)
 }
 
 // ErrInvalidFundingProvider represents an "UnknownFundingProvider" kind of error.
@@ -47,6 +47,25 @@ func IsErrInvalidFundingProvider(err error) bool {
 func (err ErrInvalidFundingProvider) Error() string {
 	// TODO: make this better
 	return fmt.Sprintf("funding provider %s is unknown", err.Name)
+}
+
+// ErrTooManyOfFundingProvider represents a "TooManyOfFundingProvider" kind of error.
+type ErrTooManyOfFundingProvider struct {
+	Name string
+	Limit uint
+}
+
+func IsErrTooManyOfFundingProvider(err error) bool {
+	_, ok := err.(ErrTooManyOfFundingProvider)
+	return ok
+}
+
+func (err ErrTooManyOfFundingProvider) Error() string {
+	if err.Limit == 0 {
+		return fmt.Sprintf("Expected exactly 0 of funding provider %s", err.Name)
+	} else {
+		return fmt.Sprintf("Expected up to %d of funding provider %s", err.Limit, err.Name)
+	}
 }
 
 // ErrInvalidYamlType represents a "InvalidYamlType" kind of error.
@@ -67,6 +86,7 @@ func (err ErrInvalidYamlType) Error() string {
 
 func getFundingEntry(provider *api.FundingProvider, text string) *api.RepoFundingEntry {
 	entry := new(api.RepoFundingEntry)
+	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, text)
 	entry.URL = fmt.Sprintf(provider.URL, text)
 
@@ -124,16 +144,24 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		dataType := reflect.TypeOf(fundingData)
 		switch dataType.Kind() {
 		case reflect.String:
+			if provider.Limit == 0 {
+				// 1 is too many!
+				errs = append(errs, ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
+				continue
+			}
 			entryList = append(entryList, getFundingEntry(provider, fundingData.(string)))
 		case reflect.Slice:
 			// no need to sort these, they'll come in the same order as they were given
-			// FIXME: only custom should support a list, and then only up to 4
 			stringSlice := reflect.ValueOf(fundingData)
 			for i := 0; i < stringSlice.Len(); i++ {
+				if uint(i) >= provider.Limit {
+					errs = append(errs, ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
+					break // stop here for this provider, we've got enough
+				}
 				str, ok := stringSlice.Index(i).Interface().(string)
 				if !ok {
 					errs = append(errs, ErrInvalidYamlType{Name: providerName})
-					continue
+					continue // keep searching this provider, there may be more we want
 				}
 				entryList = append(entryList, getFundingEntry(provider, str))
 			}

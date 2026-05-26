@@ -37,13 +37,16 @@ type GeneralAttachmentSettings struct {
 	MaxFiles     int    `json:"max_files"`
 }
 
+// FundingProvider contains a funding provider exposed by API
 type FundingProvider struct {
-	Name string `json:"name"`
-	Text string `json:"text"`
-	URL  string `json:"url"`
-	Icon string `json:"icon"`
+	Name  string `json:"name"`
+	Limit uint   `json:"limit"`
+	Text  string `json:"text"`
+	URL   string `json:"url"`
+	Icon  string `json:"icon"`
 }
 
+// FundingProvider contains global funding provider settings exposed by API
 type FundingSettings struct {
 	Providers []*FundingProvider `json:"providers"`
 }

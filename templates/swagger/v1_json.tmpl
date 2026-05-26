@@ -27005,6 +27005,10 @@
           "type": "string",
           "x-go-name": "Name"
         },
+        "limit": {
+          "type": "integer",
+          "x-go-name": "Limit"
+        },
         "text": {
           "type": "string",
           "x-go-name": "Text"
@@ -29876,6 +29880,11 @@
       "description": "RepoFundingEntry is a funding option for a repo",
       "type": "object",
       "properties": {
+        "provider_name": {
+          "description": "Identifies the funding provider",
+          "type": "string",
+          "x-go-name": "ProviderName"
+        },
         "icon": {
           "description": "URL to the logo of the funding provider",
           "type": "string",

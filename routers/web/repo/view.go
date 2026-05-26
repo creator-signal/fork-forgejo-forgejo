@@ -459,8 +459,15 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(errs), "funding.config_parsing_error")
 			details := make([]template.HTML, 0, len(errs))
 			for _, err := range errs {
+				// TODO: what is errors.As?
 				if funding_service.IsErrInvalidFundingProvider(err) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", err.(funding_service.ErrInvalidFundingProvider).Name))
+				} else if funding_service.IsErrTooManyOfFundingProvider(err) {
+					if err.(funding_service.ErrTooManyOfFundingProvider).Limit == 0 {
+						details = append(details, ctx.Locale.Tr("funding.too_many_of_provider_error_expected_none", err.(funding_service.ErrTooManyOfFundingProvider).Name))
+					} else {
+						details = append(details, ctx.Locale.Tr("funding.too_many_of_provider_error_expected_n", err.(funding_service.ErrTooManyOfFundingProvider).Limit, err.(funding_service.ErrTooManyOfFundingProvider).Name))
+					}
 				} else if funding_service.IsErrInvalidYamlType(err) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", err.(funding_service.ErrInvalidYamlType).Name))
 				} else {

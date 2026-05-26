@@ -12,10 +12,12 @@
 			<ul class="tw-list-none tw-p-0">
 				{{range .Funding}}
 				<li class="tw-flex tw-gap-2 tw-mb-4">
-					{{/* FIXME: prefer instead to check the "type" of this entry */}}
-					{{if eq .Icon "/assets/img/svg/octicon-link.svg"}}
+					{{if eq .ProviderName "custom"}}
+						{{/* we render this svg directly, rather than relying on the configured img src, for better color theming */}}
+						{{/* TODO: alt-text */}}
 						{{svg "octicon-link" 24}}
 					{{else if .Icon}}
+						{{/* TODO: proper alt-text */}}
 						<img class="tw-h-full" src="{{.Icon}}" alt="" width="24" height="24">
 					{{else}}
 						{{svg "octicon-heart" 24}}

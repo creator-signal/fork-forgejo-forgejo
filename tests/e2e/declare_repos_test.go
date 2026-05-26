@@ -232,6 +232,22 @@ whatever: example
 custom: "https://example.com"
 `},
 	}}, nil)
+	newRepo(t, 2, "funding_too_many_ko_fi", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: ["test", "test2"]
+custom: "https://example.com"
+`},
+	}}, nil)
+	newRepo(t, 2, "funding_evil", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: '"><script>alert(1);</script><a class="'
+custom:
+  - '." style="background: url(localhost)'
+  - 'https://example.com" class="rogue injection'
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 

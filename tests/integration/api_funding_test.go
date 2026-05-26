@@ -65,8 +65,9 @@ var testFundingCandidates = []string {
 // TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
 // TODO: Test that funding entries are in alphabetical order by key (later: the same order as they were defined in the config)
-// TODO: Allow only one entry for each key except Custom
-// TODO: Allow only up to 4 Custom entries in a config (additional entries are skipped thereafter, and /validate complains; same in the UI)
+// TODO: Ensure providers are unique
+// TODO: Test admin config with a provider with limit of 0
+// TODO: Test admin config overriding a provider limit
 
 func TestAPIRepoFunding(t *testing.T) {
 	for _, treePath := range testFundingCandidates {
@@ -107,10 +108,12 @@ func TestAPIRepoFunding(t *testing.T) {
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 2)
 
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://example.com", funding[0].Text)
 				assert.Equal(t, "https://example.com", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "ko_fi", funding[1].ProviderName)
 				assert.Equal(t, "ko-fi.com/test", funding[1].Text)
 				assert.Equal(t, "https://ko-fi.com/test", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
@@ -131,10 +134,12 @@ func TestAPIRepoFunding(t *testing.T) {
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 2)
 
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://a.com", funding[0].Text)
 				assert.Equal(t, "https://a.com", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://b.com", funding[1].Text)
 				assert.Equal(t, "https://b.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
@@ -168,10 +173,12 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Len(t, funding, 2)
 
 				// no ko_fi, it's not a string value
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
@@ -190,10 +197,12 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Len(t, funding, 2)
 
 				// no whatever, it's not a known value
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
@@ -212,10 +221,12 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Len(t, funding, 2)
 
 				// no whatever, it's not a known value
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
@@ -236,10 +247,12 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no whatever, it's not a known value
 				// no ko_fi, it's not a string
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
+				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
@@ -257,9 +270,160 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Len(t, funding, 1)
 
 				// no 42, it's not a string
+				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://example.com", funding[0].Text)
 				assert.Equal(t, "https://example.com", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+			})
+
+			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 4)
+
+				// no too_many, we have enough
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "test1", funding[0].Text)
+				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "custom", funding[1].ProviderName)
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "custom", funding[2].ProviderName)
+				assert.Equal(t, "test3", funding[2].Text)
+				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
+
+				assert.Equal(t, "custom", funding[3].ProviderName)
+				assert.Equal(t, "test4", funding[3].Text)
+				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
+			})
+
+			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = "test"
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 5)
+
+				// no too_many, we have enough
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "test1", funding[0].Text)
+				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "custom", funding[1].ProviderName)
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "custom", funding[2].ProviderName)
+				assert.Equal(t, "test3", funding[2].Text)
+				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
+
+				assert.Equal(t, "custom", funding[3].ProviderName)
+				assert.Equal(t, "test4", funding[3].Text)
+				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
+
+				assert.Equal(t, "ko_fi", funding[4].ProviderName)
+				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
+				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
+			})
+
+			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = []string{"test"}
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 5)
+
+				// no too_many, we have enough
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "test1", funding[0].Text)
+				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "custom", funding[1].ProviderName)
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "custom", funding[2].ProviderName)
+				assert.Equal(t, "test3", funding[2].Text)
+				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
+
+				assert.Equal(t, "custom", funding[3].ProviderName)
+				assert.Equal(t, "test4", funding[3].Text)
+				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
+
+				assert.Equal(t, "ko_fi", funding[4].ProviderName)
+				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
+				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
+			})
+
+			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = []string{"test", "test2"}
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 5)
+
+				// no custom/too_many or ko_fi/test2, we have enough
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "test1", funding[0].Text)
+				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "custom", funding[1].ProviderName)
+				assert.Equal(t, "https://example.com", funding[1].Text)
+				assert.Equal(t, "https://example.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "custom", funding[2].ProviderName)
+				assert.Equal(t, "test3", funding[2].Text)
+				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
+
+				assert.Equal(t, "custom", funding[3].ProviderName)
+				assert.Equal(t, "test4", funding[3].Text)
+				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
+
+				assert.Equal(t, "ko_fi", funding[4].ProviderName)
+				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
+				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
 			})
 		})
 	}
@@ -421,6 +585,77 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				assert.False(t, fundingValidation.Valid)
 				assert.Equal(t, fundingValidation.Message, "custom has a invalid type. Expected string or string array")
+			})
+
+			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+			})
+
+			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = "test"
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+			})
+
+			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = []string{"test"}
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+			})
+
+			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = []string{"test", "test2"}
+				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom\nExpected up to 1 of funding provider ko_fi")
 			})
 		})
 	}
