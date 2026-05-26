@@ -1,5 +1,5 @@
 // Copyright 2026 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPLv3-or-later
 
 package setting
 

@@ -1,5 +1,5 @@
 // Copyright 2026 The Forgejo Authors. All rights reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPLv3-or-later
 
 package integration
 
@@ -132,7 +132,7 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
 				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-				// TODO: check for corresponding dialog
+				// TODO: check for corresponding dialog, and that the funding renderer contains relevant error info
 			})
 
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
