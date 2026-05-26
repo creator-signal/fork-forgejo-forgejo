@@ -514,7 +514,7 @@ func TestUserHints(t *testing.T) {
 			resp = session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc = NewHTMLParser(t, resp.Body)
 
-			htmlDoc.AssertElement(t, "div.flash-message.info", present)
+			htmlDoc.AssertElement(t, ".user-main-content a[href='/user/settings/appearance']", present)
 		}
 
 		t.Run("hints enabled", func(t *testing.T) {
