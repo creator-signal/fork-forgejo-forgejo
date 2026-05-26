@@ -17,7 +17,7 @@ func loadBuiltinFundingProviders() {
 		Name: "custom",
 		Text: "%s",
 		URL:  "%s",
-		Icon: "img/svg/octicon-link.svg",
+		Icon: "img/svg/octicon-link.svg", // we don't actually render this for custom, preferring inline for color scheming
 	})
 
 	FundingProviders = append(FundingProviders, &api.FundingProvider{

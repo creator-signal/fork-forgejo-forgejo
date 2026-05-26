@@ -13,7 +13,10 @@
 				{{range .Funding}}
 				<li>
 					<div class="tw-flex tw-gap-2">
-						{{if .Icon}}
+						{{/* FIXME: prefer instead to check the "type" of this entry */}}
+						{{if eq .Icon "/assets/img/svg/octicon-link.svg"}}
+							{{svg "octicon-link" 24}}
+						{{else if .Icon}}
 							<img class="tw-h-full" src="{{.Icon}}" alt="" width="24" height="24">
 						{{else}}
 							{{svg "octicon-heart" 24}}

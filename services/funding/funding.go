@@ -107,11 +107,14 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on config later on
 
 	entryList := make([]*api.RepoFundingEntry, 0)
+	unknownProviders := make([]string, 0)
 	for _, providerName := range fundingKeys {
 		fundingData := fundingMap[providerName]
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
-			return nil, ErrInvalidFundingProvider{Name: providerName}
+			// TODO: somehow show these in the render
+			unknownProviders = append(unknownProviders, providerName)
+			continue
 		}
 
 		dataType := reflect.TypeOf(fundingData)

@@ -74,10 +74,12 @@ func TestSponsorButton(t *testing.T) {
 			assert.Equal(t, 2, sponsorEntries.Length())
 
 			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
-			// TODO: smarter business about inline svg
+			htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+			htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
 
 			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/test")
 			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+			htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
 		})
 	})
 
@@ -101,6 +103,8 @@ func TestSponsorButton(t *testing.T) {
 
 				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
 				assert.Equal(t, 0, sponsorModal.Length())
+
+				// TODO: Instead, skip invalid entries, and show the errors on the config's file render
 			})
 
 			t.Run("sponsor button shown with valid funding config", func(t *testing.T) {
@@ -121,7 +125,20 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
 				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-				// TODO: check for corresponding dialog
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 2, sponsorEntries.Length())
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
 			})
 
 			t.Run("sponsor button shown with valid funding config with unknown keys", func(t *testing.T) {
@@ -143,7 +160,22 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
 				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-				// TODO: check for corresponding dialog, and that the funding renderer contains relevant error info
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 2, sponsorEntries.Length())
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
+
+				// TODO: check that the funding renderer contains relevant error info
 			})
 
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
@@ -165,7 +197,22 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
 				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-				// TODO: check for corresponding dialog, and that the funding renderer contains relevant error info
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 2, sponsorEntries.Length())
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
+
+				// TODO: check that the funding renderer contains relevant error info
 			})
 		})
 	}
