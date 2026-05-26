@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
 	"forgejo.org/modules/actions"
+	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -1536,16 +1537,14 @@ func GetActionJobLogs(ctx *context.APIContext) {
 
 	jobID := ctx.ParamsInt64(":job_id")
 
-	var attempt *int64
+	var attempt optional.Option[int64]
 	if ctx.FormString("attempt") != "" {
-		v := ctx.FormInt64("attempt")
-		attempt = &v
+		attempt = optional.Some(ctx.FormInt64("attempt"))
 	}
 
-	var stepFilter *int
+	var stepFilter optional.Option[int]
 	if ctx.FormString("step") != "" {
-		v := ctx.FormInt("step")
-		stepFilter = &v
+		stepFilter = optional.Some(ctx.FormInt("step"))
 	}
 
 	reader, filename, modtime, err := actions_service.OpenJobLogReader(ctx, ctx.Repo.Repository, jobID, attempt, stepFilter)
@@ -1565,8 +1564,13 @@ func GetActionJobLogs(ctx *context.APIContext) {
 	defer reader.Close()
 
 	ctx.Resp.Header().Set("Accept-Ranges", "bytes")
-	// Set Content-Type explicitly so http.ServeContent doesn't sniff the
-	// ".log" extension into the wrong MIME type (text/x-log on most systems).
+	// Pin Content-Type explicitly so http.ServeContent doesn't extension-sniff.
+	// On Linux with shared-mime-info installed, mime.TypeByExtension(".log")
+	// returns "text/x-log; charset=utf-8" — a non-IANA type whose `x-` prefix
+	// is deprecated by RFC 6648 and which varies by host (macOS or minimal
+	// containers return empty or application/octet-stream). Our swagger
+	// documents `produces: text/plain`, and a client sending
+	// `Accept: text/plain` would 406-mismatch on the unpinned response.
 	ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	http.ServeContent(ctx.Resp, ctx.Req, filename, modtime, reader)
 }
