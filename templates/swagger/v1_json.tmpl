@@ -23047,8 +23047,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "AccessToken": {
+      "description": "AccessToken represents an API access token",
       "type": "object",
-      "title": "AccessToken represents an API access token.",
       "properties": {
         "created_at": {
           "type": "string",
@@ -23811,8 +23811,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "BlockedUser": {
+      "description": "BlockedUser represents a blocked user",
       "type": "object",
-      "title": "BlockedUser represents a blocked user.",
       "properties": {
         "block_id": {
           "type": "integer",
@@ -24257,8 +24257,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Commit": {
+      "description": "Commit contains information generated from a Git commit",
       "type": "object",
-      "title": "Commit contains information generated from a Git commit.",
       "properties": {
         "author": {
           "$ref": "#/definitions/User"
@@ -24339,8 +24339,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitMeta": {
+      "description": "CommitMeta contains meta information of a commit in terms of API",
       "type": "object",
-      "title": "CommitMeta contains meta information of a commit in terms of API.",
       "properties": {
         "created": {
           "type": "string",
@@ -24430,8 +24430,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitUser": {
+      "description": "CommitUser contains information of a user in the context of a commit",
       "type": "object",
-      "title": "CommitUser contains information of a user in the context of a commit.",
       "properties": {
         "date": {
           "type": "string",
@@ -24450,8 +24450,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Compare": {
+      "description": "Compare represents a comparison between two commits",
       "type": "object",
-      "title": "Compare represents a comparison between two commits.",
       "properties": {
         "commits": {
           "type": "array",
@@ -25102,8 +25102,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateOrUpdateSecretOption": {
+      "description": "CreateOrUpdateSecretOption defines the properties of the secret to create or update",
       "type": "object",
-      "title": "CreateOrUpdateSecretOption defines the properties of the secret to create or update.",
       "required": [
         "data"
       ],
@@ -25279,8 +25279,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreatePushMirrorOption": {
+      "description": "CreatePushMirrorOption represents need information to create a push mirror of a repository",
       "type": "object",
-      "title": "CreatePushMirrorOption represents need information to create a push mirror of a repository.",
       "properties": {
         "branch_filter": {
           "type": "string",
@@ -25680,8 +25680,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateVariableOption": {
+      "description": "CreateVariableOption defines the properties of the variable to create",
       "type": "object",
-      "title": "CreateVariableOption defines the properties of the variable to create.",
       "required": [
         "value"
       ],
@@ -26864,8 +26864,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "FileCommitResponse": {
+      "description": "FileCommitResponse contains information generated from a Git commit for a repo's file",
       "type": "object",
-      "title": "FileCommitResponse contains information generated from a Git commit for a repo's file.",
       "properties": {
         "author": {
           "$ref": "#/definitions/CommitUser"
@@ -27335,8 +27335,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "GitObject": {
+      "description": "GitObject represents a Git object",
       "type": "object",
-      "title": "GitObject represents a Git object.",
       "properties": {
         "sha": {
           "type": "string",
@@ -27718,8 +27718,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "IssueFormFieldType": {
+      "description": "IssueFormFieldType defines issue form field type, can be `markdown`, `textarea`, `input`, `dropdown` or `checkboxes`",
       "type": "string",
-      "title": "IssueFormFieldType defines issue form field type, can be \"markdown\", \"textarea\", \"input\", \"dropdown\" or \"checkboxes\"",
       "x-go-package": "forgejo.org/modules/structs"
     },
     "IssueFormFieldVisible": {
@@ -28448,8 +28448,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "OAuth2Application": {
+      "description": "OAuth2Application represents an OAuth2 application",
       "type": "object",
-      "title": "OAuth2Application represents an OAuth2 application.",
       "properties": {
         "client_id": {
           "type": "string",
@@ -29580,8 +29580,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Reference": {
+      "description": "Reference represents a Git reference",
       "type": "object",
-      "title": "Reference represents a Git reference.",
       "properties": {
         "object": {
           "$ref": "#/definitions/GitObject"
@@ -29598,8 +29598,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RegisterRunnerOptions": {
+      "description": "RegisterRunnerOptions declares the accepted options for registering runners",
       "type": "object",
-      "title": "RegisterRunnerOptions declares the accepted options for registering runners.",
       "required": [
         "name"
       ],
@@ -29623,8 +29623,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RegisterRunnerResponse": {
+      "description": "RegisterRunnerResponse contains the details of the just registered runner",
       "type": "object",
-      "title": "RegisterRunnerResponse contains the details of the just registered runner.",
       "properties": {
         "id": {
           "type": "integer",
@@ -29801,8 +29801,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RepoCommit": {
+      "description": "RepoCommit contains information of a commit in the context of a repository",
       "type": "object",
-      "title": "RepoCommit contains information of a commit in the context of a repository.",
       "properties": {
         "author": {
           "$ref": "#/definitions/CommitUser"
@@ -30847,8 +30847,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "UpdateVariableOption": {
+      "description": "UpdateVariableOption defines the properties of the variable to update",
       "type": "object",
-      "title": "UpdateVariableOption defines the properties of the variable to update.",
       "required": [
         "value"
       ],
