@@ -56,18 +56,14 @@ var fundingCandidates = []string {
 	".github/FUNDING.yml",
 	"FUNDING.yml",
 
-	".forgejo/funding.yaml",
-	".github/funding.yaml",
-	"funding.yaml",
-
-	".forgejo/Funding.yaml",
-	".github/Funding.yaml",
-	"Funding.yaml",
+	".forgejo/fUnDiNg.yaml",
+	".github/fUnDiNg.yaml",
+	"fUnDiNg.yaml",
 }
 
 // TODO: Test API responses when funding config is invalid
-// TODO: Is a config invalid if it contains additional keys?
-// TODO: Is a config invalid if it contains additional keys with invalid values?
+// TODO: Is a config invalid if it contains additional keys? (yes, but we still get the rest so it's fine)
+// TODO: Is a config invalid if it contains additional keys with invalid values? (yes, but we still get the rest so it's fine) (also, we don't care about the type of an invalid key, it's already invalid)
 // TODO: Test API responses when there's both a valid and invalid funding config
 // TODO: Test API responses when one repo has a funding config but the target does not
 // TODO: Test API responses when one repo (the target) has a funding config, but another does not

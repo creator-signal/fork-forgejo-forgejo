@@ -98,3 +98,4 @@ test('Sponsor modal: closes on Close button', async ({browser}) => {
 // TODO: check the Close button floats to the end (right or left depending on text RTL-ness? not sure what's standard here...)
 // TODO: check the modal text is a reasonable size
 // TODO: check the various error layouts
+// TODO: link to the page from the modal when there are errors; test how that looks, accessibility-wise
