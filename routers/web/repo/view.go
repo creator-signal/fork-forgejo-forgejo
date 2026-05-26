@@ -454,15 +454,20 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileWarning"] = ctx.Locale.Tr("repo.view.gitmodules_too_large")
 		}
 	} else if funding_service.IsFundingConfig(ctx.Repo.TreePath) {
-		_, fundingErr := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
-		if fundingErr != nil {
-			if funding_service.IsErrInvalidFundingProvider(fundingErr) {
-				ctx.Data["FileError"] = ctx.Locale.Tr("funding.invalid_provider_error", fundingErr.(funding_service.ErrInvalidFundingProvider).Name)
-			} else if funding_service.IsErrInvalidYamlType(fundingErr) {
-				ctx.Data["FileError"] = ctx.Locale.Tr("funding.invalid_yaml_type_error", fundingErr.(funding_service.ErrInvalidYamlType).Name)
-			} else {
-				ctx.Data["FileError"] = strings.TrimSpace(fundingErr.Error())
+		_, errs := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
+		if len(errs) > 0 {
+			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(errs), "funding.config_parsing_error")
+			details := make([]template.HTML, 0, len(errs))
+			for _, err := range errs {
+				if funding_service.IsErrInvalidFundingProvider(err) {
+					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", err.(funding_service.ErrInvalidFundingProvider).Name))
+				} else if funding_service.IsErrInvalidYamlType(err) {
+					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", err.(funding_service.ErrInvalidYamlType).Name))
+				} else {
+					details = append(details, ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error())))
+				}
 			}
+			ctx.Data["FileErrorDetails"] = details
 		}
 	}
 

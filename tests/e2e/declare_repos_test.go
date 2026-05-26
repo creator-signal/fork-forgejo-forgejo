@@ -204,6 +204,34 @@ custom: "https://example.com"
 whatever: example
 `},
 	}}, nil)
+	newRepo(t, 2, "funding_invalid", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: 1337
+`},
+	}}, nil)
+	newRepo(t, 2, "funding_some_valid", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: 1337
+custom: "https://example.com"
+`},
+	}}, nil)
+	newRepo(t, 2, "funding_invalid_twice", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: 1337
+whatever: example
+`},
+	}}, nil)
+	newRepo(t, 2, "funding_invalid_twice_valid_once", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+ko_fi: 1337
+whatever: example
+custom: "https://example.com"
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 

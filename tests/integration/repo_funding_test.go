@@ -17,11 +17,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: Based on other UI integration tests, ensure the following:
-// TODO:  the correct icon and text display for all modal parts (built-in and instance-custom entries)
-// TODO:  unknown payment providers are omitted from the UI
-// TODO:  the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml
-// TODO:  figure out when profile_big_avatar is shown, and test sponsor-button there too
+// TODO: the correct icon and text display for all modal parts (built-in and instance-custom entries)
+// TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml
+// TODO: figure out when profile_big_avatar is shown, and test sponsor-button there too
 
 func TestSponsorButton(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -90,7 +88,6 @@ func TestSponsorButton(t *testing.T) {
 
 				config := make(map[string]any)
 				config["custom"] = 42
-				config["ko_fi"] = "test"
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -103,8 +100,94 @@ func TestSponsorButton(t *testing.T) {
 
 				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
 				assert.Equal(t, 0, sponsorModal.Length())
+			})
 
-				// TODO: Instead, skip invalid entries, and show the errors on the config's file render
+			t.Run("sponsor modal skips invalid funding entries", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = 42
+				config["ko_fi"] = "test"
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				assert.Equal(t, 1, sponsorButton.Length())
+				assert.Contains(t, sponsorButton.Text(), "Sponsor")
+				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 1, sponsorEntries.Length())
+
+				// invalid entries are skipped
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://ko-fi.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", false)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 1, fileErrorDetails.Length())
+				assert.Contains(t, fileErrorDetails.Text(), "custom has an invalid type. Expected string or string array")
+			})
+
+			t.Run("funding config describes multiple issues", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = 42
+				config["ko_fi"] = "test"
+				config["whatever"] = "test"
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				assert.Equal(t, 1, sponsorButton.Length())
+				assert.Contains(t, sponsorButton.Text(), "Sponsor")
+				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 1, sponsorEntries.Length())
+
+				// invalid entries are skipped
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://ko-fi.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", false)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Errors parsing funding config:") // plural! multiple independent errors in this file!
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 2, fileErrorDetails.Length())
+				assert.Contains(t, fileErrorDetails.Text(), "custom has an invalid type. Expected string or string array")
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config", func(t *testing.T) {
@@ -175,7 +258,17 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
 
-				// TODO: check that the funding renderer contains relevant error info
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 1, fileErrorDetails.Length())
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
@@ -212,7 +305,17 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
 
-				// TODO: check that the funding renderer contains relevant error info
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 1, fileErrorDetails.Length())
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
 			})
 		})
 	}

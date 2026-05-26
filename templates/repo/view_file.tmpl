@@ -2,6 +2,13 @@
 	{{- if .FileError}}
 		<div class="ui error message">
 			<div class="text left tw-whitespace-pre">{{.FileError}}</div>
+			{{if .FileErrorDetails}}
+			<ul class="tw-ml-0 tw-mb-0">
+				{{range .FileErrorDetails}}
+				<li>{{.}}</li>
+				{{end}}
+			</ul>
+			{{end}}
 		</div>
 	{{end}}
 	{{- if .FileWarning}}

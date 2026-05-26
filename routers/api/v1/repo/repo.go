@@ -1445,9 +1445,9 @@ func GetFunding(ctx *context.APIContext) {
 	//     "$ref": "#/responses/RepoFunding"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
-	if err != nil {
-		log.Error("GetFundingFromDefaultBranch: ", err)
+	funding, errs := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	if len(errs) > 0 {
+		log.Error("GetFundingFromDefaultBranch: ", fmt.Errorf("%w", errs))
 	}
 
 	if funding != nil {
@@ -1480,11 +1480,12 @@ func ValidateFunding(ctx *context.APIContext) {
 	//     "$ref": "#/responses/ConfigValidation"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	_, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	_, errs := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
 
-	if err == nil {
+	if len(errs) > 0 {
 		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
 	} else {
+		err := errors.Join(errs...)
 		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: false, Message: err.Error()})
 	}
 }

@@ -128,6 +128,7 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 						}
 					}
 					funding, _ = funding_service.GetFundingFromCommit(profileDbRepo, commit)
+					// TODO: should we log these errors?
 				}
 			}
 		}
