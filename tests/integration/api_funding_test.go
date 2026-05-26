@@ -39,7 +39,7 @@ func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token strin
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding", repo.OwnerName, repo.Name)
 
 	req := NewRequest(t, "GET", urlStr).AddTokenAuth(token)
-	resp := MakeRequest(t, req, http.StatusOK)
+	resp := MakeRequest(t, req, http.StatusOK) // FIXME: Status is NOT always 200!
 
 	var funding []*api.RepoFundingEntry
 
@@ -61,7 +61,7 @@ func sortEntries(t *testing.T, funding []*api.RepoFundingEntry) {
 	})
 }
 
-var cases = []string {
+var fundingCandidates = []string {
 	".forgejo/FUNDING.yaml",
 	".github/FUNDING.yaml",
 	"FUNDING.yaml",
@@ -79,8 +79,18 @@ var cases = []string {
 	"Funding.yaml",
 }
 
+// TODO: Test API responses when funding config is invalid
+// TODO: Is a config invalid if it contains additional keys?
+// TODO: Is a config invalid if it contains additional keys with invalid values?
+// TODO: Test API responses when there's both a valid and invalid funding config
+// TODO: Test API responses when one repo has a funding config but the target does not
+// TODO: Test API responses when one repo (the target) has a funding config, but another does not
+// TODO: Test API responses when the config contains entries for unknown providers
+// TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter!
+// TODO: Test API 404 for unknown repo
+
 func TestAPIRepoFunding(t *testing.T) {
-	for _, treePath := range cases {
+	for _, treePath := range fundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
@@ -148,7 +158,7 @@ func TestAPIRepoFunding(t *testing.T) {
 }
 
 func TestAPIRepoValidateFunding(t *testing.T) {
-	for _, treePath := range cases {
+	for _, treePath := range fundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 			owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
