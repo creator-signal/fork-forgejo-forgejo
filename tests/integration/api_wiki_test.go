@@ -16,10 +16,10 @@ import (
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -223,29 +223,6 @@ func TestAPIListWikiPages(t *testing.T) {
 				Message: "add unescaped file\n",
 			},
 		},
-		{
-			Title:   "XSS",
-			HTMLURL: meta[5].HTMLURL,
-			SubURL:  "XSS",
-			LastCommit: &api.WikiCommit{
-				ID: "f54f5a6b7c4f83b606600e43186165854f189530",
-				Author: &api.CommitUser{
-					Identity: api.Identity{
-						Name:  "Gusted<script class=\"evil\">alert('Oh no!');</script>",
-						Email: "valid@example.org",
-					},
-					Date: "2024-01-31T00:00:00Z",
-				},
-				Committer: &api.CommitUser{
-					Identity: api.Identity{
-						Name:  "Gusted<script class=\"evil\">alert('Oh no!');</script>",
-						Email: "valid@example.org",
-					},
-					Date: "2024-01-31T00:00:00Z",
-				},
-				Message: "Yay XSS",
-			},
-		},
 	}
 
 	assert.Equal(t, dummymeta, meta)
@@ -342,11 +319,7 @@ func TestAPISetWikiGlobalEditability(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
 	// Create a new repository for testing purposes
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
-		unit_model.TypeCode,
-		unit_model.TypeWiki,
-	}, nil, nil)
-	defer f()
+	repo := forgery.CreateRepository(t, user, nil)
 	urlStr := fmt.Sprintf("/api/v1/repos/%s", repo.FullName())
 
 	assertGlobalEditability := func(t *testing.T, editability bool) {
@@ -433,11 +406,8 @@ func TestAPIListPageRevisions(t *testing.T) {
 
 func TestAPIWikiNonMasterBranch(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			WikiBranch: optional.Some("main"),
-		})
-		defer f()
+		repo := forgery.CreateRepository(t, nil, nil)
+		forgery.InitWiki(t, repo, "main")
 
 		uris := []string{
 			"revisions/Home",

@@ -113,7 +113,7 @@ func actionsTrustTestCreateBaseRepo(t *testing.T, owner *user_model.User) (*repo
 				ContentReader: strings.NewReader(`
 on:
   pull_request:
-
+    types: [edited, opened, synchronize, reopened]
 jobs:
   test:
     runs-on: docker
@@ -269,6 +269,19 @@ func actionsTrustTestSetPullRequestWIP(t *testing.T, pullRequest *issues_model.P
 
 	pullRequest.Issue = nil
 	require.NoError(t, pullRequest.LoadIssue(t.Context()))
+}
+
+func actionsTrustTestModifyTitlePullRequest(t *testing.T, token string, pullRequest *issues_model.PullRequest, sha string) {
+	t.Helper()
+
+	prAPILink := pullRequest.Issue.APIURL(t.Context())
+	req := NewRequestWithJSON(t, "PATCH", prAPILink, map[string]string{"title": "modified title"}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: pullRequest.BaseRepoID, CommitSHA: sha}, "need_approval = true")
+	assert.True(t, actionRun.NeedApproval)
+	actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: actionRun.ID, RepoID: pullRequest.BaseRepoID})
+	assert.Equal(t, actions_model.StatusBlocked, actionRunJob.Status)
 }
 
 func TestActionsPullRequestTrustPanel(t *testing.T) {
@@ -438,13 +451,90 @@ func TestActionsPullRequestTrustPanelWIPConflicts(t *testing.T) {
 	})
 }
 
+func actionsTrustTestMergePullRequest(t *testing.T, token string, pullRequest *issues_model.PullRequest) {
+	t.Helper()
+
+	mergeURL := fmt.Sprintf("%s/pulls/%d/merge", pullRequest.Issue.Repo.APIURL(), pullRequest.Issue.Index)
+	req := NewRequestWithJSON(t, "POST", mergeURL, map[string]string{"do": "merge"}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusOK)
+
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pullRequest.ID})
+	assert.True(t, pr.HasMerged)
+}
+
+func TestActionsPullRequestTrustPanelMergedOrClosed(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ownerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the repo
+
+		regularUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // a regular user with no specific permission
+		regularSession := loginUser(t, regularUser.Name)
+		regularToken := getTokenForLoggedInUser(t, regularSession, auth_model.AccessTokenScopeAll)
+
+		userAdmin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}) // the instance admin
+		adminSession := loginUser(t, userAdmin.Name)
+		adminToken := getTokenForLoggedInUser(t, adminSession, auth_model.AccessTokenScopeAll)
+
+		baseRepo, f := actionsTrustTestCreateBaseRepo(t, ownerUser)
+		defer f()
+
+		_, pullRequest, addFileToForkedResp := actionsTrustTestCreatePullRequestFromForkedRepo(t, ownerUser, baseRepo, regularUser)
+		pullRequestLink := pullRequest.Issue.Link()
+
+		actionsTrustTestMergePullRequest(t, adminToken, pullRequest)
+		actionsTrustTestModifyTitlePullRequest(t, regularToken, pullRequest, addFileToForkedResp.Commit.SHA)
+
+		t.Run("Regular user sees pending approval even though PR is a merged PR", func(t *testing.T) {
+			actionsTrustTestAssertTrustPanel(t, regularSession, pullRequestLink)
+		})
+	})
+}
+
+func actionsTrustTestClosePullRequest(t *testing.T, token string, pullRequest *issues_model.PullRequest) {
+	t.Helper()
+
+	prAPILink := pullRequest.Issue.APIURL(t.Context())
+	req := NewRequestWithJSON(t, "PATCH", prAPILink, map[string]string{"state": "closed"}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusCreated)
+
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pullRequest.ID})
+	require.NoError(t, pr.LoadIssue(t.Context()))
+	assert.True(t, pr.Issue.IsClosed)
+}
+
+func TestActionsPullRequestTrustPanelClosed(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ownerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // owner of the repo
+
+		regularUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5}) // a regular user with no specific permission
+		regularSession := loginUser(t, regularUser.Name)
+		regularToken := getTokenForLoggedInUser(t, regularSession, auth_model.AccessTokenScopeAll)
+
+		userAdmin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1}) // the instance admin
+		adminSession := loginUser(t, userAdmin.Name)
+		adminToken := getTokenForLoggedInUser(t, adminSession, auth_model.AccessTokenScopeAll)
+
+		baseRepo, f := actionsTrustTestCreateBaseRepo(t, ownerUser)
+		defer f()
+
+		_, pullRequest, addFileToForkedResp := actionsTrustTestCreatePullRequestFromForkedRepo(t, ownerUser, baseRepo, regularUser)
+		pullRequestLink := pullRequest.Issue.Link()
+
+		actionsTrustTestClosePullRequest(t, adminToken, pullRequest)
+		actionsTrustTestModifyTitlePullRequest(t, regularToken, pullRequest, addFileToForkedResp.Commit.SHA)
+
+		t.Run("Regular user sees pending approval even though PR is a closed PR", func(t *testing.T) {
+			actionsTrustTestAssertTrustPanel(t, regularSession, pullRequestLink)
+		})
+	})
+}
+
 func TestActionsPullRequestTrustCancelOnClose(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		ownerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		regularUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
 		regularSession := loginUser(t, regularUser.Name)
-		token := getTokenForLoggedInUser(t, regularSession, auth_model.AccessTokenScopeWriteIssue)
+		token := getTokenForLoggedInUser(t, regularSession, auth_model.AccessTokenScopeWriteRepository)
 
 		baseRepo, f := actionsTrustTestCreateBaseRepo(t, ownerUser)
 		defer f()
@@ -468,6 +558,68 @@ func TestActionsPullRequestTrustCancelOnClose(t *testing.T) {
 			assert.Equal(t, actions_model.StatusCancelled, actionRun.Status)
 			actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: actionRun.ID, RepoID: baseRepo.ID})
 			assert.Equal(t, actions_model.StatusCancelled, actionRunJob.Status)
+		}
+	})
+}
+
+func TestActionsPullRequestTrustPushCancel(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ownerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		ownerSession := loginUser(t, ownerUser.Name)
+
+		regularUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+		baseRepo, f := actionsTrustTestCreateBaseRepo(t, ownerUser)
+		defer f()
+
+		forkedRepo, pullRequest, addFileToForkedResp := actionsTrustTestCreatePullRequestFromForkedRepo(t, ownerUser, baseRepo, regularUser)
+		pullRequestLink := pullRequest.Issue.Link()
+
+		// there is one commit in the pull request and it is blocked from running actions pending approval
+		{
+			actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID, CommitSHA: addFileToForkedResp.Commit.SHA})
+			assert.True(t, actionRun.NeedApproval)
+			assert.Equal(t, actions_model.StatusWaiting, actionRun.Status)
+			actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: actionRun.ID, RepoID: baseRepo.ID})
+			assert.Equal(t, actions_model.StatusBlocked, actionRunJob.Status)
+		}
+
+		// another commit is pushed to the head branch of the pull request
+		otherFileInForkResp := actionsTrustTestRepoModify(t, regularUser, baseRepo, forkedRepo, "add_file_one.txt")
+
+		// there are two commits
+		// - the oldest one switched from Blocked to Cancelled and no longer needs approval
+		// - the newest one is Blocked and pending approval
+		{
+			actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID, CommitSHA: addFileToForkedResp.Commit.SHA})
+			assert.False(t, actionRun.NeedApproval)
+			assert.Equal(t, actions_model.StatusCancelled, actionRun.Status)
+			actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: actionRun.ID, RepoID: baseRepo.ID})
+			assert.Equal(t, actions_model.StatusCancelled, actionRunJob.Status)
+
+			otherActionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID, CommitSHA: otherFileInForkResp.Commit.SHA})
+			assert.True(t, otherActionRun.NeedApproval)
+			assert.Equal(t, actions_model.StatusWaiting, otherActionRun.Status)
+			otherActionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: otherActionRun.ID, RepoID: baseRepo.ID})
+			assert.Equal(t, actions_model.StatusBlocked, otherActionRunJob.Status)
+		}
+
+		actionsTrustTestAssertTrustPanel(t, ownerSession, pullRequestLink)
+		actionsTrustTestClickTrustPanel(t, ownerSession, pullRequestLink, string(actions_service.UserTrustDenied))
+
+		// there are two commits, both are Cancelled and not pending approval
+		{
+			actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID, CommitSHA: addFileToForkedResp.Commit.SHA})
+			assert.False(t, actionRun.NeedApproval)
+			assert.Equal(t, actions_model.StatusCancelled, actionRun.Status)
+			actionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: actionRun.ID, RepoID: baseRepo.ID})
+			assert.Equal(t, actions_model.StatusCancelled, actionRunJob.Status)
+
+			otherActionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID, CommitSHA: otherFileInForkResp.Commit.SHA})
+			assert.False(t, otherActionRun.NeedApproval)
+			assert.Equal(t, actions_model.StatusCancelled, otherActionRun.Status)
+			otherActionRunJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: otherActionRun.ID, RepoID: baseRepo.ID})
+			assert.Equal(t, actions_model.StatusCancelled, otherActionRunJob.Status)
 		}
 	})
 }

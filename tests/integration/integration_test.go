@@ -42,7 +42,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers"
-	auth_method "forgejo.org/services/auth/method"
+	auth_service "forgejo.org/services/auth"
 	"forgejo.org/services/auth/source/remote"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
@@ -831,7 +831,7 @@ func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *Au
 
 	// trust TLS cert of our NewTLSServer  by inserting the test client for our test server in as the HTTP client to use
 	ait.resetHTTPClient = test.MockVariableValue(
-		&auth_method.GetAuthorizedIntegrationHTTPClient,
+		&auth_service.GetAuthorizedIntegrationHTTPClient,
 		func() *http.Client {
 			return ait.testServer.Client()
 		})
@@ -851,6 +851,9 @@ func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *Au
 			},
 		},
 		ResourceAllRepos: true,
+		Name:             fmt.Sprintf("AI %s", t.Name()),
+		Description:      fmt.Sprintf("An Authorized Integration created for the test case %s.\nIt's pretty neat.", t.Name()),
+		UI:               auth.AuthorizedIntegrationUIGeneric,
 	}
 	for _, setup := range setupAI {
 		setup(ait.authorizedIntegration)

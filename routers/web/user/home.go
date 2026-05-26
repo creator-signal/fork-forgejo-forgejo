@@ -18,6 +18,7 @@ import (
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
+	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
@@ -538,15 +539,53 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 		PageSize: setting.UI.IssuePagingNum,
 	}
 
+	// Projects
+	//
+	// We do not consider listing projects for the individual repos.
+	// Instead, we only support listing the projects under the scope of an individual/organisation.
+	// However, this limitation does not affect filtering with a project ID.
+	{
+		projOpts := project_model.SearchOptions{
+			ListOptions: db.ListOptionsAll,
+			OwnerID:     ctxUser.ID,
+			IsClosed:    optional.None[bool](),
+			Type:        project_model.TypeIndividual,
+		}
+		if org != nil {
+			projOpts.OwnerID = org.ID
+			projOpts.Type = project_model.TypeOrganization
+		}
+
+		projects, err := db.Find[project_model.Project](ctx, projOpts)
+		if err != nil {
+			ctx.ServerError("GetProjects", err)
+			return
+		}
+
+		if projectID := ctx.FormInt64("project"); projectID != 0 {
+			opts.ProjectID = projectID
+			ctx.Data["ProjectID"] = projectID
+		}
+
+		ctx.Data["Projects"] = projects
+	}
+
 	// Get IDs for labels (a filter option for issues/pulls).
 	// Required for IssuesOptions.
 	selectedLabels := ctx.FormString("labels")
-	if len(selectedLabels) > 0 && selectedLabels != "0" {
+	if len(selectedLabels) > 0 {
 		var err error
 		opts.LabelIDs, err = base.StringsToInt64s(strings.Split(selectedLabels, ","))
 		if err != nil {
 			ctx.Flash.Error(ctx.Tr("invalid_data", selectedLabels), true)
 		}
+		if slices.Contains(opts.LabelIDs, 0) {
+			opts.LabelIDs = []int64{0}
+			ctx.Data["NoLabel"] = true
+		}
+	}
+	if len(opts.LabelIDs) == 0 {
+		ctx.Data["AllLabels"] = true
 	}
 
 	if org != nil {
@@ -688,6 +727,7 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	pager.AddParam(ctx, "labels", "SelectLabels")
 	pager.AddParam(ctx, "milestone", "MilestoneID")
 	pager.AddParam(ctx, "assignee", "AssigneeID")
+	pager.AddParam(ctx, "project", "ProjectID")
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplIssues)

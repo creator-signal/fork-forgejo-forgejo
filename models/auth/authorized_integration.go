@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
@@ -32,6 +33,18 @@ type AuthorizedIntegration struct {
 
 	Name        string // short name for lists of authorized integrations
 	Description string `xorm:"LONGTEXT"` // long description, optional to document relevant details of the integration
+
+	// Which UI to use for view/edit of this Authorized Integration.  Authorized Integrations' functional behaviour is
+	// defined by other fields, such as the Issuer, Audience, ClaimRules.  The UI field only defines how this record can
+	// be interacted with by the user in order to provide user-friendly access for specific systems -- like Forgejo
+	// Actions.  Within the potential scope of the UI is any user interaction with the Authorized Integration -- web
+	// create, read, update, API, CLI.
+	//
+	// The UI field must never be used to make functional decisions about evaluating JWTs.  It must always be possible
+	// to convert an Authorized Integration to a "generic" UI (for customization that the UI doesn't support).  The
+	// intent of this design is that, the Authorized Integration system is complicated in its claim rules, but they
+	// always fully define the behaviour in a transparent manner.
+	UI AuthorizedIntegrationUI `xorm:"NOT NULL default('generic')"`
 
 	// Exact-match `iss` claim of the JWT
 	Issuer string `xorm:"NOT NULL UNIQUE(s)"`
@@ -70,7 +83,7 @@ func init() {
 //	{
 //	  "rules": [{
 //	     "claim": "sub",
-//	     "comparison": "eq",
+//	     "compare": "eq",
 //	     "value": "repo:forgejo/website:pull_request"
 //	  }]
 //	}
@@ -111,6 +124,9 @@ type ClaimRule struct {
 	// For Comparison of ClaimEqual or ClaimGlob, the specific value or glob to match against
 	Value string `json:"value,omitempty"`
 
+	// For Comparison of ClaimIn or ClaimGlobIn, an array of values to match against
+	Values []string `json:"values,omitempty"`
+
 	// For ClaimNested, the rules to apply to the nested object
 	Nested *ClaimRules `json:"nested,omitempty"`
 }
@@ -118,14 +134,38 @@ type ClaimRule struct {
 type ClaimComparison string
 
 const (
-	ClaimEqual  ClaimComparison = "eq"   // exactly equal claim
-	ClaimGlob   ClaimComparison = "glob" // glob match complete claim string
-	ClaimNested ClaimComparison = "nest" // recurse into a claim that is an map[string]any with it's own data fields
+	ClaimEqual  ClaimComparison = "eq"      // exactly equal claim
+	ClaimIn     ClaimComparison = "in"      // exactly equal any of the options in a list
+	ClaimGlob   ClaimComparison = "glob"    // glob match complete claim string
+	ClaimGlobIn ClaimComparison = "glob-in" // glob match any of the options in a list
+	ClaimNested ClaimComparison = "nest"    // recurse into a claim that is an map[string]any with it's own data fields
+)
+
+type AuthorizedIntegrationUI string
+
+const (
+	// Generic UI which allows the user to view and edit claim rules directly to support integrations that Forgejo
+	// doesn't have a user-friendly UI to support.
+	AuthorizedIntegrationUIGeneric AuthorizedIntegrationUI = "generic"
+
+	// UI specific to Actions that are running on this local Forgejo instance accessing itself.
+	AuthorizedIntegrationUIForgejoActionsLocal AuthorizedIntegrationUI = "forgejo-actions-local"
 )
 
 func GetAuthorizedIntegration(ctx context.Context, issuer, audience string) (*AuthorizedIntegration, error) {
 	var ai AuthorizedIntegration
 	found, err := db.GetEngine(ctx).Where("issuer = ? AND audience = ?", issuer, audience).Get(&ai)
+	if err != nil {
+		return nil, err
+	} else if !found {
+		return nil, util.ErrNotExist
+	}
+	return &ai, nil
+}
+
+func GetAuthorizedIntegrationByUI(ctx context.Context, ownerID int64, aiUI AuthorizedIntegrationUI, aiID int64) (*AuthorizedIntegration, error) {
+	var ai AuthorizedIntegration
+	found, err := db.GetEngine(ctx).Where("id = ? AND user_id = ? AND ui = ?", aiID, ownerID, aiUI).Get(&ai)
 	if err != nil {
 		return nil, err
 	} else if !found {
@@ -141,6 +181,18 @@ func InsertAuthorizedIntegration(ctx context.Context, ai *AuthorizedIntegration)
 		return err
 	}
 	_, err := db.GetEngine(ctx).Insert(ai)
+	return err
+}
+
+func UpdateAuthorizedIntegration(ctx context.Context, ai *AuthorizedIntegration) error {
+	// NoAutoTime -- UpdatedUnix is used to track the last used time, don't update it when editing
+	// AllCols -- ensure ResourceAllRepo can be set to false
+	rowsImpacted, err := db.GetEngine(ctx).ID(ai.ID).NoAutoTime().AllCols().Update(ai)
+	if rowsImpacted == 0 {
+		return fmt.Errorf("authorized integration update affected 0 records: %w", util.ErrNotExist)
+	} else if rowsImpacted != 1 {
+		return fmt.Errorf("authorized integration update affected %d records", rowsImpacted)
+	}
 	return err
 }
 
@@ -181,4 +233,65 @@ func (ai *AuthorizedIntegration) generateAudience() error {
 	}
 	ai.Audience = fmt.Sprintf("u:%d:%s", ai.UserID, gouuid.New().String())
 	return nil
+}
+
+func (ai *AuthorizedIntegration) HasRecentActivity() bool {
+	return ai.HasBeenUsed() && ai.UpdatedUnix.AddDuration(7*24*time.Hour) > timeutil.TimeStampNow()
+}
+
+func (ai *AuthorizedIntegration) HasBeenUsed() bool {
+	return ai.UpdatedUnix > ai.CreatedUnix
+}
+
+type ListAuthorizedIntegrationOptions struct {
+	db.ListOptions
+	UserID optional.Option[int64]
+}
+
+func (opts ListAuthorizedIntegrationOptions) ToConds() builder.Cond {
+	cond := builder.NewCond()
+	if has, userID := opts.UserID.Get(); has {
+		cond = cond.And(builder.Eq{"user_id": userID})
+	}
+	return cond
+}
+
+func (opts ListAuthorizedIntegrationOptions) ToOrders() string {
+	return "created_unix DESC"
+}
+
+func ParseAuthorizedIntegrationUI(ui string) (AuthorizedIntegrationUI, error) {
+	switch ui {
+	case string(AuthorizedIntegrationUIGeneric):
+		return AuthorizedIntegrationUIGeneric, nil
+	case string(AuthorizedIntegrationUIForgejoActionsLocal):
+		return AuthorizedIntegrationUIForgejoActionsLocal, nil
+	}
+	return AuthorizedIntegrationUI(""), fmt.Errorf("invalid authorized integration UI: %q", ui)
+}
+
+// Delete an authorized integration by ID.  Must only succeed if the authorized integration identified is owned by the
+// user provided.
+func DeleteAuthorizedIntegrationByID(ctx context.Context, id, userID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		// Delete doesn't take into account userID, but will be rolled back by the transaction if the user ID isn't
+		// correct.  Needs to occur first due to foreign key.
+		if err := db.DeleteBeans(ctx,
+			&AuthorizedIntegResourceRepo{IntegID: id},
+		); err != nil {
+			return fmt.Errorf("DeleteBeans: %w", err)
+		}
+
+		cnt, err := db.GetEngine(ctx).
+			ID(id).
+			Delete(&AuthorizedIntegration{
+				UserID: userID,
+			})
+		if err != nil {
+			return err
+		} else if cnt != 1 {
+			return fmt.Errorf("authorized integration %d does not exist: %w", id, util.ErrNotExist)
+		}
+		return nil
+	})
 }
