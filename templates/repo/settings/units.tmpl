@@ -1,5 +1,11 @@
 {{template "repo/settings/layout_head" (dict "ctxData" . "pageClass" "repository settings options")}}
 <div class="user-main-content twelve wide column">
+	{{if $.SignedUser.EnableRepoUnitHints}}
+		{{$settingsURL := print AppSubUrl "/user/settings/appearance"}}
+		<div class="ui info message flash-message">
+			<p>{{ctx.Locale.Tr "repo.settings.units.more_units_disable_hint" $settingsURL}}</p>
+		</div>
+	{{end}}
 	<form class="ui form" method="post" action="{{.RepoLink}}/settings/units">
 		{{template "repo/settings/units/overview" .}}
 		{{template "repo/settings/units/issues" .}}
