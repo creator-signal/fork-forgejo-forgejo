@@ -1138,12 +1138,14 @@ func parseNameStatusFileListSplit(output string, limit int) ([]DiffFileMetadata,
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	cur := 0
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := scanner.Text()
 		if line == "" {
 			continue
 		}
 
-		fields := strings.Fields(line)
+		// Split only on the first tab, not all whitespace
+		// Format: "<status>\t<filename>" or "<status>\t<oldname>\t<newname>" for renames
+		fields := strings.SplitN(line, "\t", 3)
 		if len(fields) < 2 {
 			continue
 		}
@@ -1164,13 +1166,23 @@ func parseNameStatusFileListSplit(output string, limit int) ([]DiffFileMetadata,
 			file.Type = DiffFileDel
 		case "R":
 			file.Type = DiffFileRename
+			// Renames have format: "R<score>\t<oldname>\t<newname>"
+			if len(fields) == 3 {
+				file.Name = fields[2] // new name
+				file.NameHash = git.HashFilePathForWebUI(fields[2])
+			}
 		case "C":
 			file.Type = DiffFileCopy
+			// Copies have format: "C<score>\t<oldname>\t<newname>"
+			if len(fields) == 3 {
+				file.Name = fields[2]
+				file.NameHash = git.HashFilePathForWebUI(fields[2])
+			}
 		}
 		files = append(files, file)
 	}
 
-	return files, nil
+	return files, scanner.Err()
 }
 
 func GetFileNames(files []DiffFileMetadata) []string {
@@ -1248,7 +1260,7 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 	cmdDiff.AddDynamicArguments(opts.AfterCommitID)
 
 	// If we only want to diff for some files, add that as well.
-	cmdDiff.AddDashesAndList(git.EscapePathspecs(files)...)
+	cmdDiff.AddDashesAndList(files...)
 
 	reader, writer := io.Pipe()
 	defer func() {
