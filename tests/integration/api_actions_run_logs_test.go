@@ -26,13 +26,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// TestAPIGetActionRunLogs covers the REST endpoint:
-//
-//	GET /api/v1/repos/{owner}/{repo}/actions/runs/{run_id}/logs
-//
-// It verifies the happy path returns a valid ZIP with per-job entries,
-// cross-repo 404, unknown-run 404, missing-token 401, and the
-// read:repository scope gate.
 func TestAPIGetActionRunLogs(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip()

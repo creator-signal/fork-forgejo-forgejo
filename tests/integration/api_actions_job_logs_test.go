@@ -25,12 +25,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// TestAPIGetActionJobLogs covers the REST endpoint:
-//
-//	GET /api/v1/repos/{owner}/{repo}/actions/jobs/{job_id}/logs
-//
-// It verifies happy-path content, cross-repo 404, missing-token 401, the
-// read:repository scope gate, Range support, and the step-filter query param.
 func TestAPIGetActionJobLogs(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip()
