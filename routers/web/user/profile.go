@@ -97,7 +97,7 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	ctx.Data["TabName"] = tab
 	ctx.Data["HasProfileReadme"] = profileReadme != nil
 	ctx.Data["Funding"] = funding
-	ctx.Data["FundingName"] = ctx.ContextUser.Name
+	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
 
 	page := ctx.FormInt("page")
 	if page <= 0 {

@@ -1,7 +1,11 @@
 <dialog closedby="any" id="sponsor-modal">
 	<article>
 		<header>
-			{{ctx.Locale.Tr "funding.sponsor_header" .FundingName}}
+		{{if .FundingRepo}}
+			{{ctx.Locale.Tr "funding.sponsor_repo_header" .FundingOwner .FundingRepo}}
+		{{else}}
+			{{ctx.Locale.Tr "funding.sponsor_user_header" .FundingOwner}}
+		{{end}}
 			<button type="button" commandfor="sponsor-modal" command="close" aria-label="Close" class="ui button mini compact basic icon close-dialog">{{svg "octicon-x" 24}}</button>
 		</header>
 		<div class="content">

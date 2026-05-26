@@ -148,8 +148,8 @@ func RenderUserHeader(ctx *context.Context) {
 	defer profileClose()
 	ctx.Data["HasProfileReadme"] = profileReadmeBlob != nil
 
-	ctx.Data["Funding"] = funding
-	ctx.Data["FundingName"] = ctx.ContextUser.Name
+	ctx.Data["Funding"] = funding // TODO: in what case(s) is funding nil for a user?
+	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
 }
 
 func LoadHeaderCount(ctx *context.Context) error {

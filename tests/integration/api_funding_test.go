@@ -90,6 +90,7 @@ var fundingCandidates = []string {
 // TODO: Test API 404 for unknown repo
 // TODO: Test that funding entries are in the same order as they were defined in the config
 // TODO: Allow only up to 4 Custom entries in a config
+// TODO: Allow only one entry for all keys except Custom
 
 func TestAPIRepoFunding(t *testing.T) {
 	for _, treePath := range fundingCandidates {

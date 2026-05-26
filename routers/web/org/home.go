@@ -172,7 +172,7 @@ func Home(ctx *context.Context) {
 	prepareOrgProfileReadme(ctx, profileGitRepo, profileDbRepo, profileReadmeBlob)
 
 	ctx.Data["Funding"] = funding
-	ctx.Data["FundingName"] = ctx.ContextUser.Name
+	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
 
 	ctx.HTML(http.StatusOK, tplOrgHome)
 }
