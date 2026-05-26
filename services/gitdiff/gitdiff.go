@@ -1248,7 +1248,7 @@ func GetDiffSimple(ctx context.Context, gitRepo *git.Repository, opts *DiffOptio
 	cmdDiff.AddDynamicArguments(opts.AfterCommitID)
 
 	// If we only want to diff for some files, add that as well.
-	cmdDiff.AddDashesAndList(files...)
+	cmdDiff.AddDashesAndList(git.EscapePathspecs(files)...)
 
 	reader, writer := io.Pipe()
 	defer func() {
