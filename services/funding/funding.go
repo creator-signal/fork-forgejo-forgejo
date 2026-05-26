@@ -6,6 +6,7 @@ package funding
 import (
 	"context"
 	"fmt"
+	"sort"
 	"io"
 	"reflect"
 	"strings"
@@ -98,8 +99,16 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		return nil, err
 	}
 
+	// Sort keys so we return a consistent order
+	fundingKeys := make([]string, 0, len(fundingMap))
+	for key := range fundingMap {
+		fundingKeys = append(fundingKeys, key)
+	}
+	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on config later on
+
 	entryList := make([]*api.RepoFundingEntry, 0)
-	for providerName, fundingData := range fundingMap {
+	for _, providerName := range fundingKeys {
+		fundingData := fundingMap[providerName]
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
 			return nil, ErrInvalidFundingProvider{Name: providerName}
@@ -110,6 +119,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		case reflect.String:
 			entryList = append(entryList, getFundingEntry(provider, fundingData.(string)))
 		case reflect.Slice:
+			// no need to sort these, they'll come in the same order as they were given
 			stringSlice := reflect.ValueOf(fundingData)
 			for i := 0; i < stringSlice.Len(); i++ {
 				str, ok := stringSlice.Index(i).Interface().(string)

@@ -65,7 +65,19 @@ func TestSponsorButton(t *testing.T) {
 			assert.Contains(t, sponsorButton.Text(), "Sponsor")
 			htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-			// TODO: check for corresponding dialog
+			// e2e tests check open/close behavior and accessibility, here we check data
+			sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+			assert.Equal(t, 1, sponsorModalHeader.Length())
+			assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+			sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+			assert.Equal(t, 2, sponsorEntries.Length())
+
+			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
+			// TODO: smarter business about inline svg
+
+			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/test")
+			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
 		})
 	})
 
