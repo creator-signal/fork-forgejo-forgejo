@@ -5,17 +5,13 @@
 package repo
 
 import (
-	"archive/zip"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
-	"forgejo.org/modules/actions"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -1602,6 +1598,12 @@ func GetActionRunLogs(ctx *context.APIContext) {
 	//   type: integer
 	//   format: int64
 	//   required: true
+	// - name: attempt
+	//   in: query
+	//   description: 1-based attempt number; omit to fetch the latest attempt of each job. Jobs that don't have that attempt recorded contribute a `.MISSING` placeholder entry instead of a `.log`.
+	//   type: integer
+	//   format: int64
+	//   required: false
 	// responses:
 	//   "200":
 	//     description: ZIP archive of per-job log files
@@ -1632,74 +1634,21 @@ func GetActionRunLogs(ctx *context.APIContext) {
 		return
 	}
 
-	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetRunJobsByRunID", err)
-		return
+	var attempt optional.Option[int64]
+	if ctx.FormString("attempt") != "" {
+		attempt = optional.Some(ctx.FormInt64("attempt"))
+	}
+
+	zipFilename := fmt.Sprintf("run-%d-logs.zip", run.ID)
+	if has, v := attempt.Get(); has {
+		zipFilename = fmt.Sprintf("run-%d-attempt-%d-logs.zip", run.ID, v)
 	}
 
 	ctx.Resp.Header().Set("Content-Type", "application/zip")
-	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"run-%d-logs.zip\"", run.ID))
+	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", zipFilename))
 
-	zw := zip.NewWriter(ctx.Resp)
-	defer zw.Close()
-
-	// sanitize strips only what's unsafe inside a ZIP entry name: ASCII
-	// control bytes and path separators. UTF-8 is preserved — APPNOTE 6.3.0
-	// has supported it since 2006 and archive/zip sets general-purpose bit
-	// 11 automatically when needed. Disambiguation is the caller's job (we
-	// suffix with the unique job ID below).
-	sanitize := func(name string) string {
-		cleaned := strings.Map(func(r rune) rune {
-			if r < 0x20 || r == 0x7f || r == '/' || r == '\\' {
-				return -1
-			}
-			return r
-		}, name)
-		cleaned = strings.TrimSpace(cleaned)
-		if cleaned == "" {
-			cleaned = "job"
-		}
-		return cleaned
-	}
-
-	writePlaceholder := func(job *actions_model.ActionRunJob, msg string) {
-		w, werr := zw.Create(fmt.Sprintf("%s-%d.MISSING", sanitize(job.Name), job.ID))
-		if werr == nil {
-			_, _ = w.Write([]byte(msg))
-		}
-	}
-
-	for _, job := range jobs {
-		if job.TaskID == 0 {
-			writePlaceholder(job, "job has not been executed yet\n")
-			continue
-		}
-
-		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
-		if err != nil {
-			writePlaceholder(job, fmt.Sprintf("task lookup failed: %v\n", err))
-			continue
-		}
-
-		if task.LogExpired {
-			writePlaceholder(job, "logs have been cleaned up\n")
-			continue
-		}
-
-		reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
-		if err != nil {
-			writePlaceholder(job, fmt.Sprintf("log open failed: %v\n", err))
-			continue
-		}
-
-		w, err := zw.Create(fmt.Sprintf("%s-%d.log", sanitize(job.Name), job.ID))
-		if err != nil {
-			reader.Close()
-			break
-		}
-
-		_, _ = io.Copy(w, reader)
-		reader.Close()
+	if err := actions_service.WriteRunLogsZip(ctx, ctx.Resp, run, attempt); err != nil {
+		ctx.Error(http.StatusInternalServerError, "WriteRunLogsZip", err)
+		return
 	}
 }
