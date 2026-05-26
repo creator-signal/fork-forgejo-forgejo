@@ -244,6 +244,23 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 			})
+
+			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []any{42, "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 1)
+
+				// no 42, it's not a string
+				assert.Equal(t, "https://example.com", funding[0].Text)
+				assert.Equal(t, "https://example.com", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+			})
 		})
 	}
 }
@@ -387,6 +404,23 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				assert.False(t, fundingValidation.Valid)
 				assert.Equal(t, fundingValidation.Message, "ko_fi has a invalid type. Expected string or string array\nfunding provider whatever is unknown")
+			})
+
+			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []any{42, "https://example.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, fundingValidation.Message, "custom has a invalid type. Expected string or string array")
 			})
 		})
 	}
