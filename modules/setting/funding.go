@@ -22,7 +22,7 @@ func loadBuiltinFundingProviders() {
 
 	FundingProviders = append(FundingProviders, &api.FundingProvider{
 		Name: "ko_fi",
-		Text: "Ko-Fi/%s",
+		Text: "ko-fi.com/%s",
 		URL:  "https://ko-fi.com/%s",
 		Icon: "img/funding/ko_fi.svg",
 	})
