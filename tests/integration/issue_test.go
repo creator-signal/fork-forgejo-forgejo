@@ -1800,8 +1800,6 @@ func TestIssueProjectSidebarMissing(t *testing.T) {
 	org = team.GetOrg(ctx)
 	session = loginUser(t, user.Name)
 
-	require.NoError(t, project_model.DeleteProjectByID(db.DefaultContext, 1004))
-
 	issueURL = testNewIssue(t, session, org.Name, repo.Name, "Hello", "World")
 	t.Run("Sidebar showing - org off & repo on", func(tt *testing.T) {
 		defer tests.PrintCurrentTest(tt)()
@@ -1819,5 +1817,107 @@ func TestIssueProjectSidebarMissing(t *testing.T) {
 		resp := session.MakeRequest(t, req, http.StatusOK)
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		htmlDoc.AssertElement(t, ".select-project.dropdown", false)
+	})
+}
+
+func TestNewIssueWithProject(t *testing.T) {
+	const (
+		repoID = 4
+		userID = 5
+	)
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAssignProject/")()
+	defer tests.PrepareTestEnv(t)()
+
+	testNewIssueWithProject := func(t *testing.T, session *TestSession, user, repo, title, content string, projectID, status int) {
+		req := NewRequest(t, "GET", path.Join(user, repo, "issues", "new"))
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		link, exists := htmlDoc.doc.Find("form.ui.form").Attr("action")
+		assert.True(t, exists, "The template has changed")
+		req = NewRequestWithValues(t, "POST", link, map[string]string{
+			"title":      title,
+			"content":    content,
+			"project_id": strconv.Itoa(projectID),
+		})
+		session.MakeRequest(t, req, status)
+	}
+
+	ctx := t.Context()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
+	projectID := 1003
+	session := loginUser(t, user.Name)
+
+	t.Run("user project available", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, user.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Enable repository's project unit
+	projectUnit := repo_model.RepoUnit{
+		RepoID: repo.ID,
+		Type:   unit_model.TypeProjects,
+	}
+	require.NoError(t, repo_service.UpdateRepositoryUnits(db.DefaultContext, repo, []repo_model.RepoUnit{projectUnit}, nil))
+
+	t.Run("repository project unit on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, user.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Disable repository's project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(db.DefaultContext, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("repository project unit off - user project deleted", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		// Still a StatusOK since user's project units cannot be disabled
+		testNewIssueWithProject(t, session, user.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Team with project available
+	team := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1001})
+	require.NoError(t, team.LoadMembers(ctx))
+	require.NoError(t, team.LoadRepositories(ctx))
+
+	user = team.Members[0]
+	repo = team.Repos[0]
+	projectID = 1001
+	org := team.GetOrg(ctx)
+	session = loginUser(t, user.Name)
+
+	t.Run("org on & repo on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, org.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Disable repository project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(ctx, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("org on & repo off", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, org.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Team with project disabled
+	team = unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1002})
+	require.NoError(t, team.LoadMembers(ctx))
+	require.NoError(t, team.LoadRepositories(ctx))
+
+	user = team.Members[0]
+	repo = team.Repos[0]
+	projectID = 1004
+	org = team.GetOrg(ctx)
+	session = loginUser(t, user.Name)
+
+	t.Run("org off & repo on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, org.Name, repo.Name, "Hello", "World", projectID, http.StatusOK)
+	})
+
+	// Disable repository project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(ctx, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("org off & repo off", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		testNewIssueWithProject(t, session, org.Name, repo.Name, "Hello", "World", projectID, http.StatusForbidden)
 	})
 }

@@ -1288,7 +1288,13 @@ func NewIssuePost(ctx *context.Context) {
 	}
 
 	if projectID > 0 {
-		if !ctx.Repo.CanRead(unit.TypeProjects) || (ctx.ContextUser.IsOrganization() && !ctx.Org.CanReadUnit(ctx, unit.TypeProjects)) {
+		isProjectEnabled := ctx.Repo.CanRead(unit.TypeProjects)
+		isOwnerProjectsEnabled := true
+		if ctx.Repo.Owner.IsOrganization() {
+			isOwnerProjectsEnabled = ctx.Org.CanReadUnit(ctx, unit.TypeProjects)
+		}
+
+		if !isProjectEnabled && !isOwnerProjectsEnabled {
 			// User must also be able to see the project.
 			ctx.Error(http.StatusForbidden, "user doesn't have permissions to read projects")
 			return
@@ -1301,15 +1307,13 @@ func NewIssuePost(ctx *context.Context) {
 
 	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
 	if ctx.FormString("redirect_after_creation") == "project" && projectID > 0 {
-		project, err := project_model.GetProjectByID(ctx, projectID)
-		if err == nil {
-			if project.Type == project_model.TypeOrganization {
-				ctx.JSONRedirect(project_model.ProjectLinkForOrg(ctx.Repo.Owner, project.ID))
-			} else {
-				ctx.JSONRedirect(project_model.ProjectLinkForRepo(repo, project.ID))
-			}
-			return
+		project := ctx.Data["Project"].(*project_model.Project)
+		if project.Type == project_model.TypeOrganization {
+			ctx.JSONRedirect(project_model.ProjectLinkForOrg(ctx.Repo.Owner, project.ID))
+		} else {
+			ctx.JSONRedirect(project_model.ProjectLinkForRepo(repo, project.ID))
 		}
+		return
 	}
 	ctx.JSONRedirect(issue.Link())
 }

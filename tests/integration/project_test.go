@@ -276,9 +276,8 @@ func TestAssignProject(t *testing.T) {
 		defer tests.PrintCurrentTest(tt)()
 		issue, _, issueID := newTestIssue(tt, session, org.AsUser(), repo)
 
-		updateIssueProject(tt, session, "1002", issueID, org.Name, repo.Name, http.StatusOK)
+		updateIssueProject(tt, session, "1002", issueID, org.Name, repo.Name, http.StatusNotFound)
 		require.NoError(tt, issue.LoadProject(db.DefaultContext))
-		require.NotNil(tt, issue.Project)
-		require.Equal(tt, int64(1002), issue.Project.ID)
+		require.Nil(tt, issue.Project)
 	})
 }
