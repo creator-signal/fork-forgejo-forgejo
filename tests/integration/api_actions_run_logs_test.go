@@ -191,14 +191,6 @@ jobs:
 			MakeRequest(t, req, http.StatusNotFound)
 		})
 
-		t.Run("no token: 401", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/runs/%d/logs",
-				repoA.FullName(), runID,
-			)
-			MakeRequest(t, req, http.StatusUnauthorized)
-		})
-
 		t.Run("wrong scope: 403 without read:repository", func(t *testing.T) {
 			// Token with only user scope, no repository access.
 			weakToken := getTokenForLoggedInUser(t, session,

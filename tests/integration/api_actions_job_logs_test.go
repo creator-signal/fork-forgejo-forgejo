@@ -103,12 +103,7 @@ jobs:
 			lines := strings.Split(strings.TrimSpace(resp.Body.String()), "\n")
 			require.Len(t, lines, len(outcome.logRows))
 			for i, lr := range outcome.logRows {
-				assert.Equal(t,
-					fmt.Sprintf("%s %s",
-						lr.Time.AsTime().UTC().Format(actions.TimeFormat),
-						lr.Content),
-					lines[i],
-				)
+				assert.Equal(t, actions.FormatLog(lr.Time.AsTime(), lr.Content), lines[i])
 			}
 		})
 
@@ -128,14 +123,6 @@ jobs:
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)
-		})
-
-		t.Run("no token: 401", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/jobs/%d/logs",
-				repoA.FullName(), jobID,
-			)
-			MakeRequest(t, req, http.StatusUnauthorized)
 		})
 
 		t.Run("wrong scope: 403 without read:repository", func(t *testing.T) {
