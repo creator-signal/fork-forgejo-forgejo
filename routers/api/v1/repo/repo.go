@@ -1483,9 +1483,9 @@ func ValidateFunding(ctx *context.APIContext) {
 	_, errs := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
 
 	if len(errs) > 0 {
-		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
-	} else {
 		err := errors.Join(errs...)
 		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: false, Message: err.Error()})
+		} else {
+		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
 	}
 }
