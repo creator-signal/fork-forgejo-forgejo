@@ -81,7 +81,6 @@ jobs:
 
 		// Repo B is the cross-repo target — used to verify the guard.
 		apiRepoB := createActionsTestRepo(t, token, "actions-job-logs-other", false)
-		repoB := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: apiRepoB.ID})
 
 		runner := newMockRunner()
 		runner.registerAsRepoRunner(t, user2.Name, repoA.Name, "mock-runner", []string{"ubuntu-latest"})
@@ -122,7 +121,7 @@ jobs:
 		t.Run("cross-repo: 404 when job_id belongs to a different repo", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
 				"/api/v1/repos/%s/actions/jobs/%d/logs",
-				repoB.FullName(), jobID,
+				apiRepoB.FullName, jobID,
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)
@@ -171,14 +170,28 @@ jobs:
 		})
 
 		t.Run("step filter: 200 returns step's slice", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
+			// Step 0 is configured (via outcome.stepStates above) to cover
+			// the full log range, so its body must equal the no-param body
+			// byte-for-byte. The no-param body is already verified
+			// line-by-line in the happy-path subtest, so transitive equality
+			// confirms the correct bytes are emitted here too.
+			defaultReq := NewRequestf(t, "GET",
+				"/api/v1/repos/%s/actions/jobs/%d/logs",
+				repoA.FullName(), jobID,
+			)
+			defaultReq.AddTokenAuth(token)
+			defaultResp := MakeRequest(t, defaultReq, http.StatusOK)
+
+			stepReq := NewRequestf(t, "GET",
 				"/api/v1/repos/%s/actions/jobs/%d/logs?step=0",
 				repoA.FullName(), jobID,
 			)
-			req.AddTokenAuth(token)
-			resp := MakeRequest(t, req, http.StatusOK)
-			// Step 0's slice should be non-empty.
-			require.NotEmpty(t, resp.Body.String())
+			stepReq.AddTokenAuth(token)
+			stepResp := MakeRequest(t, stepReq, http.StatusOK)
+
+			require.NotEmpty(t, stepResp.Body.String(), "step 0 covers the whole log; body must be non-empty")
+			assert.Equal(t, defaultResp.Body.String(), stepResp.Body.String(),
+				"?step=0 (covering full log) should return the same bytes as no-param")
 		})
 
 		t.Run("attempt=1: 200 matches no-param (only attempt)", func(t *testing.T) {
