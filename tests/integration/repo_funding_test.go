@@ -154,7 +154,7 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
 				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
 
-				// TODO: check for corresponding dialog, and that the dialog contains relevant error info
+				// TODO: check for corresponding dialog, and that the funding renderer contains relevant error info
 			})
 		})
 	}

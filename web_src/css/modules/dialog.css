@@ -136,3 +136,7 @@ dialog .actions .ui.button .svg {
     }
   }
 }
+
+dialog .ui.button.close-dialog {
+  margin-left: auto;
+}
