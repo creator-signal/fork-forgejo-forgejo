@@ -1931,18 +1931,20 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			tester.changeFile("file1.md", content)
 
 			// Wait a bit for async invalidation to run, then check the comment is still valid.
-			// We use EventuallyWithT with a short timeout — the comment should stay non-invalidated.
 			time.Sleep(2 * time.Second)
 			commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
 			assert.False(t, commentReloaded.Invalidated)
 
-			// Verify the comment is visible in the files changed diff (not skipped)
+			// Verify the comment is visible in the files changed diff (not skipped).
+			// The full PR diff (mergebase→HEAD) groups deletions then additions for modified lines.
 			diff := []diffTableRow{
 				{rowType: RowHasCode, code: "Line 47"},
 				{rowType: RowDelCode, code: "Line 48"},
+				{rowType: RowDelCode, code: "Line 49"},
+				{rowType: RowDelCode, code: "Line 50"},
 				{rowType: RowAddCode, code: "Line 48--modified"},
-				{rowType: RowHasCode, code: "Line 49--modified"},
-				{rowType: RowHasCode, code: "Line 50--modified"},
+				{rowType: RowAddCode, code: "Line 49--modified"},
+				{rowType: RowAddCode, code: "Line 50--modified"},
 				{rowType: RowComment, commentID: comment.ID},
 				{rowType: RowHasCode, code: "Line 51"},
 			}
