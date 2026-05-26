@@ -3,7 +3,7 @@
 
 package forgejo_migrations
 
-import "xorm.io/xorm"
+import "code.forgejo.org/xorm/xorm"
 
 func init() {
 	registerMigration(&Migration{
