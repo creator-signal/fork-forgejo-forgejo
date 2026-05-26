@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unittest"
-	user_model "code.gitea.io/gitea/models/user"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,11 +45,11 @@ func TestGetLFSLockByIDAndRepo(t *testing.T) {
 	assert.Equal(t, repo1.ID, fetched.RepoID)
 
 	_, err = GetLFSLockByIDAndRepo(t.Context(), lockRepo1.ID, repo3.ID)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, IsErrLFSLockNotExist(err))
 
 	_, err = GetLFSLockByIDAndRepo(t.Context(), lockRepo3.ID, repo1.ID)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, IsErrLFSLockNotExist(err))
 }
 
@@ -65,7 +65,7 @@ func TestDeleteLFSLockByIDRequiresRepoMatch(t *testing.T) {
 	lockRepo3 := createTestLock(t, repo3, user4)
 
 	_, err := DeleteLFSLockByID(t.Context(), lockRepo3.ID, repo1, user2, true)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, IsErrLFSLockNotExist(err))
 
 	existing, err := GetLFSLockByIDAndRepo(t.Context(), lockRepo3.ID, repo3.ID)
