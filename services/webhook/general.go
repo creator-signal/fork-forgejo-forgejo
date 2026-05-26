@@ -17,8 +17,8 @@ import (
 )
 
 type (
-	linkFormatter = func(string, string) string
-	nameFormatter = func(string) string
+	linkFormatter = func(url, text string) string
+	nameFormatter = func(name string) string
 )
 
 // noneLinkFormatter does not create a link but just returns the text

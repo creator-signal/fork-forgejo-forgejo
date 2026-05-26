@@ -90,7 +90,7 @@ type (
 	// MSTeamsRickTextBlock defines the Adaptive Card RichTextBlock element, along with its contents (TextRun, IconRun, ImageRun)
 	MSTeamsRichTextBlock struct {
 		Type       string `json:"type"`                          // Must be "RichTextBlock"
-		Inlines    []any  `json:"inlines"`                       // Content, should be array fo either TextRun, IconRun, ImageRun
+		Inlines    []any  `json:"inlines"`                       // Content, should be array of either TextRun, IconRun, ImageRun
 		LabelFor   string `json:"labelFor,omitempty"`            // Optional: label for the RichTextBlock
 		HorizAlign string `json:"horizontalAlignment,omitempty"` // e.g., "Left", "Center", "Right"
 		Spacing    string `json:"spacing,omitempty"`             // e.g., "None", "Small", "Default", "Medium", "Large", "ExtraLarge", "Padding"
@@ -234,7 +234,7 @@ var msTeamsPayloadFormatter = webhookPayloadFormatter{
 	withRepoName:  false,
 }
 
-func makeBadgeRow(badgeText, badgeIcon, badgeSyle string, refInfo ...string) MSTeamsContainer {
+func makeBadgeRow(badgeText, badgeIcon, badgeStyle string, refInfo ...string) MSTeamsContainer {
 	extraRefInfoText := []any{}
 	for _, info := range refInfo {
 		extraRefInfoText = append(extraRefInfoText, MSTeamsTextBlock{
@@ -262,7 +262,7 @@ func makeBadgeRow(badgeText, badgeIcon, badgeSyle string, refInfo ...string) MST
 								Size:  "Large",
 								Icon:  badgeIcon,
 								Text:  badgeText,
-								Style: badgeSyle,
+								Style: badgeStyle,
 							},
 						},
 					},
@@ -528,15 +528,15 @@ func (m msteamsConvertor) Push(p *api.PushPayload) (MSTeamsPayload, error) {
 func (m msteamsConvertor) Issue(p *api.IssuePayload) (MSTeamsPayload, error) {
 	actionTitle, _, attachmentText, _ := msTeamsPayloadFormatter.getIssuesPayloadInfo(p)
 
-	badgeSyle := attentionStyle
+	badgeStyle := attentionStyle
 	if p.Action == api.HookIssueReOpened {
-		badgeSyle = warningStyle
+		badgeStyle = warningStyle
 	} else if p.Issue.State == api.StateOpen {
-		badgeSyle = goodStyle
+		badgeStyle = goodStyle
 	}
 
 	bodySections := []MSTeamsContainer{
-		makeBadgeRow(capitalise(string(p.Issue.State)), "Target", badgeSyle, fmt.Sprintf("%s#%d", p.Repository.FullName, p.Issue.Index)),
+		makeBadgeRow(capitalise(string(p.Issue.State)), "Target", badgeStyle, fmt.Sprintf("%s#%d", p.Repository.FullName, p.Issue.Index)),
 	}
 
 	if attachmentText != "" {
@@ -986,7 +986,7 @@ func (m msteamsConvertor) Action(p *api.ActionPayload) (MSTeamsPayload, error) {
 		badgeStyle = goodStyle
 		badgeState = "Success"
 	case api.HookActionSuccess:
-		actionTitle = fmt.Sprintf("Action run #%d succeded: %s", p.Run.ID, p.Run.Title)
+		actionTitle = fmt.Sprintf("Action run #%d succeeded: %s", p.Run.ID, p.Run.Title)
 		badgeStyle = goodStyle
 		badgeState = "Success"
 	}
