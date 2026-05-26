@@ -1445,7 +1445,10 @@ func GetFunding(ctx *context.APIContext) {
 	//     "$ref": "#/responses/RepoFunding"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	funding, _ := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	if err != nil {
+		log.Error("GetFundingFromDefaultBranch: ", err)
+	}
 
 	if funding != nil {
 		ctx.JSON(http.StatusOK, funding)
