@@ -155,9 +155,9 @@ jobs:
 				entries[f.Name] = string(data)
 			}
 
-			job1Name := fmt.Sprintf("%s-%d.log", actionRunJob1.Name, actionRunJob1.ID)
-			job2Name := fmt.Sprintf("%s-%d.log", actionRunJob2.Name, actionRunJob2.ID)
-			utf8Name := fmt.Sprintf("%s-%d.log", actionRunJob3.Name, actionRunJob3.ID)
+			job1Name := fmt.Sprintf("%s-%d-attempt-%d.log", actionRunJob1.Name, actionRunJob1.ID, actionRunJob1.Attempt)
+			job2Name := fmt.Sprintf("%s-%d-attempt-%d.log", actionRunJob2.Name, actionRunJob2.ID, actionRunJob2.Attempt)
+			utf8Name := fmt.Sprintf("%s-%d-attempt-%d.log", actionRunJob3.Name, actionRunJob3.ID, actionRunJob3.Attempt)
 
 			require.Len(t, entries, 3, "zip should contain exactly one entry per job")
 			require.Contains(t, entries, job1Name, "expected job1 entry %q", job1Name)

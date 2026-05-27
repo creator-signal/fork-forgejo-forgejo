@@ -134,10 +134,7 @@ func OpenJobLogReader(
 	}
 
 	if !hasStep {
-		filename := fmt.Sprintf("job-%d.log", job.ID)
-		if hasAttempt {
-			filename = fmt.Sprintf("job-%d-attempt-%d.log", job.ID, attemptVal)
-		}
+		filename := fmt.Sprintf("job-%d-attempt-%d.log", job.ID, task.Attempt)
 		return reader, filename, modtime, nil
 	}
 
@@ -152,13 +149,7 @@ func OpenJobLogReader(
 	}
 	reader.Close()
 
-	// Step-filtered filename keeps step and attempt distinct so multiple
-	// step-filtered entries can coexist inside a ZIP of run logs.
-	stepFilename := fmt.Sprintf("job-%d-step-%d.log", job.ID, stepIdx)
-	if hasAttempt {
-		stepFilename = fmt.Sprintf("job-%d-attempt-%d-step-%d.log", job.ID, attemptVal, stepIdx)
-	}
-
+	stepFilename := fmt.Sprintf("job-%d-attempt-%d-step-%d.log", job.ID, task.Attempt, stepIdx)
 	return nopReadSeekCloser{bytes.NewReader(buf)}, stepFilename, modtime, nil
 }
 
@@ -194,11 +185,15 @@ func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.Action
 		return cleaned
 	}
 
-	entryName := func(job *actions_model.ActionRunJob, suffix string) string {
+	attemptFor := func(job *actions_model.ActionRunJob) int64 {
 		if hasAttempt {
-			return fmt.Sprintf("%s-%d-attempt-%d.%s", sanitize(job.Name), job.ID, attemptVal, suffix)
+			return attemptVal
 		}
-		return fmt.Sprintf("%s-%d.%s", sanitize(job.Name), job.ID, suffix)
+		return job.Attempt
+	}
+
+	entryName := func(job *actions_model.ActionRunJob, suffix string) string {
+		return fmt.Sprintf("%s-%d-attempt-%d.%s", sanitize(job.Name), job.ID, attemptFor(job), suffix)
 	}
 
 	writeMarker := func(job *actions_model.ActionRunJob, suffix, msg string) {
