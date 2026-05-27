@@ -240,6 +240,7 @@
   --color-overlay-backdrop: #080808c0;
   --color-selection-bg: var(--color-primary-light-1);
   --color-selection-fg: var(--color-white);
+  --color-icon-sponsor: #bf3989;
   /* pattern colors for gradient */
   --checkerboard-color-1: #ffffff;
   --checkerboard-color-2: #e5e5e5;

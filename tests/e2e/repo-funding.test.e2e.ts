@@ -30,7 +30,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   // const custom = sponsorModal.getByRole("listitem").filter({hasText: 'https://example.com'});
-  const ko_fi = sponsorModal.getByRole("listitem").filter({hasText: 'ko-fi.com/example'});
+  const ko_fi = sponsorModal.getByRole('listitem').filter({hasText: 'ko-fi.com/example'});
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
   await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
 
@@ -43,7 +43,7 @@ test('Sponsor button: accessibility', async ({page}) => {
 
   const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
   await expect(sponsorButton).toBeVisible();
-  await expect(sponsorButton).toHaveAccessibleName("Sponsor user2/funding_basic_complete");
+  await expect(sponsorButton).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
   await expect(page.locator('#sponsor-modal')).toBeHidden();
 
   await accessibilityCheck({page}, ['button.sponsor'], [], []);
@@ -70,7 +70,7 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
   await expect(sponsorModal).toBeHidden();
   await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
   await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole("heading")).toHaveText('Sponsor user2/funding_some_valid');
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
@@ -143,10 +143,10 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
 
   const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toHaveAccessibleName("Sponsor user2/funding_some_valid");
+  await expect(sponsorButton).toHaveAccessibleName('Sponsor user2/funding_some_valid');
   await sponsorButton.click();
   await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole("heading")).toHaveText('Sponsor user2/funding_some_valid');
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
 
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
   await page.getByText('funding config').click();

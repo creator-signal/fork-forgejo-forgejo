@@ -273,6 +273,7 @@
   --color-overlay-backdrop: #080808c0;
   --color-selection-bg: var(--steel-100);
   --color-selection-fg: var(--color-pure-black);
+  --color-icon-sponsor: #db61a2;
   /* pattern colors for image diff */
   --checkerboard-color-1: #474747;
   --checkerboard-color-2: #313131;
@@ -282,7 +283,6 @@
   --color-indicator-idle-20: #16a34a1a;
   --color-indicator-active: #2185d0;
   --color-indicator-active-20: #2185d033;
-  --color-icon-sponsor: #db61a2;
   accent-color: var(--color-accent);
   color-scheme: dark;
 }
