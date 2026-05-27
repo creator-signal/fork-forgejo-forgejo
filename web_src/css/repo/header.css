@@ -66,3 +66,7 @@
 .repo-buttons .ui.labeled.button.disabled > .button {
   pointer-events: none !important;
 }
+
+.repo-buttons .ui.button.sponsor .icon-sponsor.svg {
+  color: var(--color-icon-sponsor);
+}

@@ -5,6 +5,7 @@
 // templates/shared/funding.tmpl
 // templates/shared/sponsor_button.tmpl
 // web_src/css/modules/dialog.css
+// web_src/css/repo/header.css
 // @watch end
 
 import {expect} from '@playwright/test';
@@ -22,13 +23,23 @@ test('Sponsor modal', async ({browser}) => {
 
   const sponsorModal = page.locator('#sponsor-modal');
   await expect(sponsorModal).toBeHidden();
-  await page.locator('button[data-test="sponsor-button"]').click();
+  await page.getByText('Sponsor').click();
   await expect(sponsorModal).toBeVisible();
 
   await screenshot(page);
 });
 
-test('Sponsor modal: accessibility', async ({page}) => {
+test('Sponsor button: accessibility', async ({page}) => {
+  const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  await expect(page.getByText('Sponsor')).toBeVisible();
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+
+  await accessibilityCheck({page}, ['button.sponsor'], [], []);
+});
+
+test('Sponsor modal: accessibility (valid config)', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -50,7 +61,7 @@ test('Sponsor modal: closes on Esc', async ({browser}) => {
 
   const sponsorModal = page.locator('#sponsor-modal');
   await expect(sponsorModal).toBeHidden();
-  await page.locator('button[data-test="sponsor-button"]').click();
+  await page.getByText('Sponsor').click();
   await expect(sponsorModal).toBeVisible();
 
   await page.keyboard.press('Escape');
@@ -67,7 +78,7 @@ test('Sponsor modal: closes on outside click', async ({browser}) => {
 
   const sponsorModal = page.locator('#sponsor-modal');
   await expect(sponsorModal).toBeHidden();
-  await page.locator('button[data-test="sponsor-button"]').click();
+  await page.getByText('Sponsor').click();
   await expect(sponsorModal).toBeVisible();
 
   // not sure if it's possible to select ::backdrop here, so we manually click just outside of the bounding box for the same effect
@@ -88,7 +99,7 @@ test('Sponsor modal: closes on Close button', async ({browser}) => {
 
   const sponsorModal = page.locator('#sponsor-modal');
   await expect(sponsorModal).toBeHidden();
-  await page.locator('button[data-test="sponsor-button"]').click();
+  await page.getByText('Sponsor').click();
   await expect(sponsorModal).toBeVisible();
 
   await page.getByLabel('Close').click();

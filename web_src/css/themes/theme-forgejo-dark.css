@@ -282,6 +282,7 @@
   --color-indicator-idle-20: #16a34a1a;
   --color-indicator-active: #2185d0;
   --color-indicator-active-20: #2185d033;
+  --color-icon-sponsor: #db61a2;
   accent-color: var(--color-accent);
   color-scheme: dark;
 }

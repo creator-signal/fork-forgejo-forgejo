@@ -37,7 +37,7 @@ func TestSponsorButton(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+			sponsorButton := htmlDoc.Find("button.sponsor")
 			assert.Equal(t, 0, sponsorButton.Length())
 
 			sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
@@ -62,10 +62,10 @@ func TestSponsorButton(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+			sponsorButton := htmlDoc.Find("button.sponsor")
 			assert.Equal(t, 1, sponsorButton.Length())
 			assert.Contains(t, sponsorButton.Text(), "Sponsor")
-			htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+			htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 			// e2e tests check open/close behavior and accessibility, here we check data
 			sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
@@ -99,7 +99,7 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 0, sponsorButton.Length())
 
 				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
@@ -119,10 +119,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -164,10 +164,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -209,10 +209,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -251,10 +251,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -299,10 +299,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -345,10 +345,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -387,10 +387,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -442,10 +442,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
@@ -501,10 +501,10 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button[data-test='sponsor-button']")
+				sponsorButton := htmlDoc.Find("button.sponsor")
 				assert.Equal(t, 1, sponsorButton.Length())
 				assert.Contains(t, sponsorButton.Text(), "Sponsor")
-				htmlDoc.AssertElement(t, "button[data-test='sponsor-button'] > svg.octicon-heart", true)
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
 
 				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
 				assert.Equal(t, 1, sponsorModalHeader.Length())
