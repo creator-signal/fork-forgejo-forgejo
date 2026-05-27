@@ -169,7 +169,6 @@ require (
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/gdgvda/cron v0.7.0 // indirect
 	github.com/go-ap/errors v0.0.0-20231003111023-183eef4b31b7 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-enry/go-oniguruma v1.2.1 // indirect
