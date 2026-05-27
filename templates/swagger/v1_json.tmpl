@@ -5812,7 +5812,7 @@
     },
     "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs": {
       "get": {
-        "description": "Returns the plaintext log for the job. By default the log for the\nmost recent attempt is returned (ActionRunJob.TaskID tracks the latest\ntask). Pass `?attempt=N` to fetch the log for a specific historical\nattempt; the value matches the `attempt` field returned by the job\nlisting endpoints.\n",
+        "description": "Returns the plaintext log for the job. By default the log for the most recent attempt is returned (ActionRunJob.TaskID tracks the latest task). Pass `?attempt=N` to fetch the log for a specific historical attempt; the value matches the `attempt` field returned by the job listing endpoints.\n",
         "produces": [
           "text/plain"
         ],
@@ -6506,7 +6506,7 @@
           {
             "type": "integer",
             "format": "int64",
-            "description": "ID of the workflow run. The ZIP contains logs for the latest attempt\nof each job in the run, with each entry named `{job-name}-{job-id}.log`\n(the job ID prevents collisions when two jobs share a name).\n",
+            "description": "ID of the workflow run. The ZIP contains logs for the latest attempt of each job in the run, with each entry named `{job-name}-{job-id}.log` (the job ID prevents collisions when two jobs share a name).\n",
             "name": "run_id",
             "in": "path",
             "required": true

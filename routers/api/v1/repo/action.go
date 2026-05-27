@@ -1479,7 +1479,7 @@ func GetActionJobLogs(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository repoGetActionJobLogs
 	// ---
 	// summary: Download the plaintext logs of an action job
-	// description: |
+	// description: >
 	//   Returns the plaintext log for the job. By default the log for the
 	//   most recent attempt is returned (ActionRunJob.TaskID tracks the latest
 	//   task). Pass `?attempt=N` to fetch the log for a specific historical
@@ -1591,7 +1591,7 @@ func GetActionRunLogs(ctx *context.APIContext) {
 	//   required: true
 	// - name: run_id
 	//   in: path
-	//   description: |
+	//   description: >
 	//     ID of the workflow run. The ZIP contains logs for the latest attempt
 	//     of each job in the run, with each entry named `{job-name}-{job-id}.log`
 	//     (the job ID prevents collisions when two jobs share a name).
