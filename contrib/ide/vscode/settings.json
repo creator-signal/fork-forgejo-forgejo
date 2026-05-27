@@ -7,4 +7,5 @@
     "GITEA_ROOT": "${workspaceRoot}",
     "GITEA_CONF": "tests/sqlite.ini",
   },
+  "chat.disableAIFeatures": true,
 }
