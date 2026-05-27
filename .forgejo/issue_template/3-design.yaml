@@ -7,8 +7,8 @@ body:
     value: |
       - Please write in English.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - If you are using AI for communication, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
-        tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
+      - Please take a look at [Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
+        in short: **Do not use AI to write issues** (except for help with translation or language checking)
 - type: markdown
   attributes:
     value: |

@@ -11,9 +11,9 @@ body:
     value: |
       - Please write in English.
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
-      - If you are using AI for communication, please take a look at Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
-        tl;dr: **Do not use AI to write issues** (excluded for help with translation or language checking)
-      - Please [check for similar described problems](https://codeberg.org/forgejo/forgejo/issues?q=&type=all&labels=78137). Feel free to **add a comment with your own experience** there.
+      - Please take a look at [Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
+        in short: **Do not use AI to write issues** (except for help with translation or language checking)
+      - Please [check for similar described problems]https://codeberg.org/forgejo/forgejo/issues?labels=841206&state=all). Feel free to **add a comment with your own experience** there.
 - type: markdown
   attributes:
     value: |
@@ -29,7 +29,7 @@ body:
         * We want to remain open-minded. There are usually multiple ways to address an issue. We aim to consider carefully, avoiding too early bias.
         * You are **not required** to follow-up with a solution. You can just drop your problem report and leave the rest to us.
         * However, if you want to share your idea, it is fine to follow up with it in a common in the conversation, outside of this template.
-      * Want to learn more? [→ Workflow documentation](), [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
+      * Want to learn more? [→ Workflow documentation](https://forgejo.org/docs/next/contributor/issue_workflow/), [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
       
       </details>
 - type: dropdown
@@ -75,17 +75,24 @@ body:
       * Which steps did you take? ("I opened the issue tracker, clicked on …, then …")
       * Did you get confused at any step? Please explain. ("There was a button saying … and I was not sure if it would do what I expect")
       * What is your goal? ("I would like to know if there are issues that meet the following criteria …")
-      * Feel free to include a few screenshots or short video demonstrations.
+      * Feel free to include screenshots or a video demonstrations.
       
       </details>
   validations:
     required: true
+- type: textarea
+  id: logs
+  attributes:
+    label: Technical logs
+    description: |
+      Please attach error messages or logfiles here.
 - type: textarea
   id: workarounds
   attributes:
     label: Workarounds
     description: |
       Found a (temporary / bad) solution for your problem? Please share your experiences with it.
+      Only explain what you already do, do not request changes here.
       
       <details><summary>Details</summary>
       
@@ -98,6 +105,8 @@ body:
   attributes:
     label: Forgejo Version
     description: Forgejo version (or commit reference) your instance is running, or that you used to reproduce the bug on Forgejo Next.
+  validations:
+    required: true
 - type: textarea
   id: versions
   attributes:
