@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -190,67 +189,6 @@ jobs:
 			)
 			req.AddTokenAuth(token)
 			MakeRequest(t, req, http.StatusNotFound)
-		})
-
-		t.Run("attempt=1: 200 same content, attempt-suffixed entry names", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/runs/%d/logs?attempt=1",
-				repoA.FullName(), runID,
-			)
-			req.AddTokenAuth(token)
-			resp := MakeRequest(t, req, http.StatusOK)
-
-			assert.Contains(t, resp.Header().Get("Content-Disposition"),
-				fmt.Sprintf("run-%d-attempt-1-logs.zip", runID))
-
-			r, err := zip.NewReader(bytes.NewReader(resp.Body.Bytes()), int64(resp.Body.Len()))
-			require.NoError(t, err)
-
-			entries := map[string]string{}
-			for _, f := range r.File {
-				fr, err := f.Open()
-				require.NoError(t, err)
-				data, err := io.ReadAll(fr)
-				require.NoError(t, err)
-				require.NoError(t, fr.Close())
-				entries[f.Name] = string(data)
-			}
-
-			job1Name := fmt.Sprintf("%s-%d-attempt-1.log", actionRunJob1.Name, actionRunJob1.ID)
-			job2Name := fmt.Sprintf("%s-%d-attempt-1.log", actionRunJob2.Name, actionRunJob2.ID)
-			utf8Name := fmt.Sprintf("%s-%d-attempt-1.log", actionRunJob3.Name, actionRunJob3.ID)
-
-			require.Len(t, entries, 3)
-			require.Contains(t, entries, job1Name)
-			require.Contains(t, entries, job2Name)
-			require.Contains(t, entries, utf8Name)
-			assert.Contains(t, entries[job1Name], "job1-output line one")
-			assert.Contains(t, entries[job2Name], "job2-output line one")
-			assert.Contains(t, entries[utf8Name], "utf8-output line one")
-		})
-
-		t.Run("attempt=999: 200 with all .MISSING entries", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/runs/%d/logs?attempt=999",
-				repoA.FullName(), runID,
-			)
-			req.AddTokenAuth(token)
-			resp := MakeRequest(t, req, http.StatusOK)
-
-			r, err := zip.NewReader(bytes.NewReader(resp.Body.Bytes()), int64(resp.Body.Len()))
-			require.NoError(t, err)
-
-			require.Len(t, r.File, 3, "every job should contribute one .MISSING marker")
-			for _, f := range r.File {
-				assert.True(t, strings.HasSuffix(f.Name, "-attempt-999.MISSING"),
-					"every entry should be an attempt-999 marker; got %q", f.Name)
-				fr, err := f.Open()
-				require.NoError(t, err)
-				data, err := io.ReadAll(fr)
-				require.NoError(t, err)
-				require.NoError(t, fr.Close())
-				assert.Contains(t, string(data), "no attempt 999 recorded")
-			}
 		})
 
 		t.Run("wrong scope: 403 without read:repository", func(t *testing.T) {

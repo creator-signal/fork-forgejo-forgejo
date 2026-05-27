@@ -1592,18 +1592,16 @@ func GetActionRunLogs(ctx *context.APIContext) {
 	// - name: run_id
 	//   in: path
 	//   description: >
-	//     ID of the workflow run. The ZIP contains logs for the latest attempt
-	//     of each job in the run, with each entry named `{job-name}-{job-id}.log`
-	//     (the job ID prevents collisions when two jobs share a name).
+	//     ID of the workflow run. The ZIP contains the latest attempt of each
+	//     job in the run, with each entry named
+	//     `{job-name}-{job-id}-attempt-{N}.log` (the job ID prevents collisions
+	//     when two jobs share a name; the attempt number records which run the
+	//     log came from). The run itself has no attempt number — jobs are
+	//     re-run independently, so use the per-job logs endpoint with `?attempt`
+	//     to fetch a specific historical attempt of one job.
 	//   type: integer
 	//   format: int64
 	//   required: true
-	// - name: attempt
-	//   in: query
-	//   description: 1-based attempt number; omit to fetch the latest attempt of each job. Jobs that don't have that attempt recorded contribute a `.MISSING` placeholder entry instead of a `.log`.
-	//   type: integer
-	//   format: int64
-	//   required: false
 	// responses:
 	//   "200":
 	//     description: ZIP archive of per-job log files
@@ -1634,20 +1632,12 @@ func GetActionRunLogs(ctx *context.APIContext) {
 		return
 	}
 
-	var attempt optional.Option[int64]
-	if ctx.FormString("attempt") != "" {
-		attempt = optional.Some(ctx.FormInt64("attempt"))
-	}
-
 	zipFilename := fmt.Sprintf("run-%d-logs.zip", run.ID)
-	if has, v := attempt.Get(); has {
-		zipFilename = fmt.Sprintf("run-%d-attempt-%d-logs.zip", run.ID, v)
-	}
 
 	ctx.Resp.Header().Set("Content-Type", "application/zip")
 	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", zipFilename))
 
-	if err := actions_service.WriteRunLogsZip(ctx, ctx.Resp, run, attempt); err != nil {
+	if err := actions_service.WriteRunLogsZip(ctx, ctx.Resp, run); err != nil {
 		ctx.Error(http.StatusInternalServerError, "WriteRunLogsZip", err)
 		return
 	}

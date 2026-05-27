@@ -153,19 +153,18 @@ func OpenJobLogReader(
 	return nopReadSeekCloser{bytes.NewReader(buf)}, stepFilename, modtime, nil
 }
 
-// WriteRunLogsZip writes a ZIP of per-job logs for the run to w. When attempt
-// is set, each job's log is taken from that historical attempt (jobs without
-// that attempt get a .MISSING placeholder); when unset, the latest attempt is
-// used. Jobs that haven't run, can't be looked up, or have expired logs get
-// .MISSING; a mid-stream read failure gets a sibling .PARTIAL marker. Caller
-// sets Content-Type / Content-Disposition before calling.
-func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.ActionRun, attempt optional.Option[int64]) error {
+// WriteRunLogsZip writes a ZIP of the latest per-job logs for the run to w.
+// Each entry is named {job-name}-{job-id}-attempt-{N}.log, where N is that
+// job's current attempt — the run itself has no attempt number, so jobs that
+// were re-run independently show different attempts here. Jobs that haven't
+// run, can't be looked up, or have expired logs get a .MISSING marker; a
+// mid-stream read failure gets a sibling .PARTIAL marker. Caller sets
+// Content-Type / Content-Disposition before calling.
+func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.ActionRun) error {
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
 		return fmt.Errorf("get jobs for run %d: %w", run.ID, err)
 	}
-
-	hasAttempt, attemptVal := attempt.Get()
 
 	zw := zip.NewWriter(w)
 	defer zw.Close()
@@ -185,15 +184,8 @@ func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.Action
 		return cleaned
 	}
 
-	attemptFor := func(job *actions_model.ActionRunJob) int64 {
-		if hasAttempt {
-			return attemptVal
-		}
-		return job.Attempt
-	}
-
 	entryName := func(job *actions_model.ActionRunJob, suffix string) string {
-		return fmt.Sprintf("%s-%d-attempt-%d.%s", sanitize(job.Name), job.ID, attemptFor(job), suffix)
+		return fmt.Sprintf("%s-%d-attempt-%d.%s", sanitize(job.Name), job.ID, job.Attempt, suffix)
 	}
 
 	writeMarker := func(job *actions_model.ActionRunJob, suffix, msg string) {
@@ -204,27 +196,14 @@ func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.Action
 	}
 
 	for _, job := range jobs {
-		var task *actions_model.ActionTask
-		if hasAttempt {
-			task, err = actions_model.GetTaskByJobAttempt(ctx, job.ID, attemptVal)
-			if err != nil {
-				if errors.Is(err, util.ErrNotExist) {
-					writeMarker(job, "MISSING", fmt.Sprintf("no attempt %d recorded for this job\n", attemptVal))
-				} else {
-					writeMarker(job, "MISSING", fmt.Sprintf("task lookup failed: %v\n", err))
-				}
-				continue
-			}
-		} else {
-			if job.TaskID == 0 {
-				writeMarker(job, "MISSING", "job has not been executed yet\n")
-				continue
-			}
-			task, err = actions_model.GetTaskByID(ctx, job.TaskID)
-			if err != nil {
-				writeMarker(job, "MISSING", fmt.Sprintf("task lookup failed: %v\n", err))
-				continue
-			}
+		if job.TaskID == 0 {
+			writeMarker(job, "MISSING", "job has not been executed yet\n")
+			continue
+		}
+		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
+		if err != nil {
+			writeMarker(job, "MISSING", fmt.Sprintf("task lookup failed: %v\n", err))
+			continue
 		}
 
 		if task.LogExpired {

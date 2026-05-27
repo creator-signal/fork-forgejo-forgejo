@@ -6506,17 +6506,10 @@
           {
             "type": "integer",
             "format": "int64",
-            "description": "ID of the workflow run. The ZIP contains logs for the latest attempt of each job in the run, with each entry named `{job-name}-{job-id}.log` (the job ID prevents collisions when two jobs share a name).\n",
+            "description": "ID of the workflow run. The ZIP contains the latest attempt of each job in the run, with each entry named `{job-name}-{job-id}-attempt-{N}.log` (the job ID prevents collisions when two jobs share a name; the attempt number records which run the log came from). The run itself has no attempt number — jobs are re-run independently, so use the per-job logs endpoint with `?attempt` to fetch a specific historical attempt of one job.\n",
             "name": "run_id",
             "in": "path",
             "required": true
-          },
-          {
-            "type": "integer",
-            "format": "int64",
-            "description": "1-based attempt number; omit to fetch the latest attempt of each job. Jobs that don't have that attempt recorded contribute a `.MISSING` placeholder entry instead of a `.log`.",
-            "name": "attempt",
-            "in": "query"
           }
         ],
         "responses": {
