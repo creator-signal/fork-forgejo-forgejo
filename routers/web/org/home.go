@@ -171,8 +171,12 @@ func Home(ctx *context.Context) {
 	defer profileClose()
 	prepareOrgProfileReadme(ctx, profileGitRepo, profileDbRepo, profileReadmeBlob)
 
-	ctx.Data["Funding"] = funding
-	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
+	if funding != nil {
+		ctx.Data["Funding"] = funding.Entries
+		ctx.Data["FundingConfig"] = funding.ConfigPath
+		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
+		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
+	}
 
 	ctx.HTML(http.StatusOK, tplOrgHome)
 }

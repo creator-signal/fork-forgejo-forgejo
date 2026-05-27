@@ -950,9 +950,9 @@
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
 	"funding.sponsor_button": "Sponsor",
-	"funding.sponsor_repo_header": "Sponsor %s/%s",
-	"funding.sponsor_user_header": "Sponsor %s",
-	"funding.config_parsing_error": {
+	"funding.sponsor_header": "Sponsor %s",
+	"funding.sponsor_parsing_errors": "The <a href=\"%[1]s\">funding config</a> contains errors.",
+	"funding.config_parsing_errors": {
 		"one": "Error parsing funding config:",
 		"other": "Errors parsing funding config:"
 	},

@@ -454,11 +454,13 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileWarning"] = ctx.Locale.Tr("repo.view.gitmodules_too_large")
 		}
 	} else if funding_service.IsFundingConfig(ctx.Repo.TreePath) {
-		_, errs := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
-		if len(errs) > 0 {
-			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(errs), "funding.config_parsing_error")
-			details := make([]template.HTML, 0, len(errs))
-			for _, err := range errs {
+		funding, err := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
+		if err != nil {
+			ctx.Data["FileError"] = ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error()))
+		} else if funding != nil && len(funding.Errors) > 0 {
+			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.config_parsing_errors")
+			details := make([]template.HTML, 0, len(funding.Errors))
+			for _, err := range funding.Errors {
 				// TODO: what is errors.As?
 				if funding_service.IsErrInvalidFundingProvider(err) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", err.(funding_service.ErrInvalidFundingProvider).Name))

@@ -25,12 +25,12 @@ import (
 	"forgejo.org/modules/markup/markdown"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
-	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/routers/web/feed"
 	"forgejo.org/routers/web/org"
 	shared_user "forgejo.org/routers/web/shared/user"
 	"forgejo.org/services/context"
+	funding_service "forgejo.org/services/funding"
 	user_service "forgejo.org/services/user"
 )
 
@@ -83,7 +83,7 @@ func userProfile(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 
-func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadme *git.Blob, funding []*api.RepoFundingEntry) {
+func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadme *git.Blob, funding *funding_service.RepoFunding) {
 	// if there is a profile readme, default to "overview" page, otherwise, default to "repositories" page
 	// if there is not a profile readme, the overview tab should be treated as the repositories tab
 	tab := ctx.FormString("tab")
@@ -96,8 +96,12 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	}
 	ctx.Data["TabName"] = tab
 	ctx.Data["HasProfileReadme"] = profileReadme != nil
-	ctx.Data["Funding"] = funding
-	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
+	if funding != nil {
+		ctx.Data["Funding"] = funding.Entries
+		ctx.Data["FundingConfig"] = funding.ConfigPath
+		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
+		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
+	}
 
 	page := ctx.FormInt("page")
 	if page <= 0 {

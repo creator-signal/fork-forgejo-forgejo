@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -97,32 +98,46 @@ func getFundingEntry(provider *api.FundingProvider, text string) *api.RepoFundin
 	return entry
 }
 
+type RepoFunding struct {
+	// Funding options for the repository
+	Entries    []*api.RepoFundingEntry
+
+	// The navigable path to the repository's funding config file
+	ConfigPath string
+
+	// Parsing issues, if any, from parsing the repository's funding config
+	Errors     []error
+}
+
 // GetFundingFromPath the given funding file.
-// It never returns a nil config.
-func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) ([]*api.RepoFundingEntry, []error) {
-	var errs []error
+func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) (*RepoFunding, error) {
+	var err error
 
 	treeEntry, err := commit.GetTreeEntryByFoldedPath(path)
 	if err != nil {
-		return nil, []error{err}
+		return nil, err
+	}
+
+	configPath, err := treeEntry.Path()
+	if err != nil {
+		return nil, err
 	}
 
 	reader, err := treeEntry.Blob().DataAsync()
 	if err != nil {
 		log.Error("DataAsync: failed to read blob for funding config due to error: %v", err)
-		return nil, []error{}
+		return nil, nil
 	}
-
 	defer reader.Close()
 
 	configContent, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, []error{err}
+		return nil, err
 	}
 
 	fundingMap := make(map[string]any)
 	if err := yaml.Unmarshal(configContent, &fundingMap); err != nil {
-		return nil, []error{err}
+		return nil, err
 	}
 
 	// Sort keys so we return a consistent order
@@ -133,6 +148,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on config later on
 
 	entryList := make([]*api.RepoFundingEntry, 0)
+	var errs []error
 	for _, providerName := range fundingKeys {
 		fundingData := fundingMap[providerName]
 		provider := setting.GetFundingProviderByName(providerName)
@@ -171,35 +187,38 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		}
 	}
 
-	return entryList, errs
+	configPath = fmt.Sprintf("/%s/src/branch/%s/%s", util.PathEscapeSegments(r.FullName()), util.PathEscapeSegments(r.DefaultBranch), configPath)
+
+	funding := &RepoFunding{Entries: entryList, ConfigPath: configPath, Errors: errs}
+	return funding, nil
 }
 
-func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) ([]*api.RepoFundingEntry, []error) {
+func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) (*RepoFunding, error) {
 	for _, configName := range fundingCandidates {
 		if _, err := commit.GetTreeEntryByFoldedPath(configName); err == nil {
 			return GetFundingFromPath(r, configName, commit)
 		}
 	}
 
-	return nil, []error{}
+	return nil, nil
 }
 
 // GetFundingFromDefaultBranch returns the funding for this repo.
 // It never returns a nil config.
-func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) ([]*api.RepoFundingEntry, []error) {
+func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) (*RepoFunding, error) {
 	if r.IsEmpty {
-		return nil, []error{}
+		return nil, nil
 	}
 
 	gitRepo, err := git.OpenRepository(ctx, r.RepoPath())
 	if err != nil {
-		return nil, []error{err}
+		return nil, err
 	}
 	defer gitRepo.Close()
 
 	commit, err := gitRepo.GetBranchCommit(r.DefaultBranch)
 	if err != nil {
-		return nil, []error{err}
+		return nil, err
 	}
 
 	return GetFundingFromCommit(r, commit)

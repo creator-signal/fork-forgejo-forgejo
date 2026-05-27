@@ -36,8 +36,8 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 	asymkey_service "forgejo.org/services/asymkey"
-	redirect_service "forgejo.org/services/redirect"
 	funding_service "forgejo.org/services/funding"
+	redirect_service "forgejo.org/services/redirect"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
 )
@@ -721,9 +721,13 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		return cancel
 	}
 
-	ctx.Data["Funding"], _ = funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
-	ctx.Data["FundingOwner"] = ctx.Repo.Repository.OwnerName
-	ctx.Data["FundingRepo"] = ctx.Repo.Repository.Name
+	funding, _ := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	if funding != nil {
+		ctx.Data["Funding"] = funding.Entries
+		ctx.Data["FundingConfig"] = funding.ConfigPath
+		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
+		ctx.Data["FundingTarget"] = fmt.Sprintf("%s/%s", ctx.Repo.Repository.OwnerName, ctx.Repo.Repository.Name)
+	}
 
 	branchOpts := git_model.FindBranchOptions{
 		RepoID:          ctx.Repo.Repository.ID,

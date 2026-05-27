@@ -23,7 +23,6 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/routers/web/repo"
-	api "forgejo.org/modules/structs"
 	"forgejo.org/services/context"
 	funding_service "forgejo.org/services/funding"
 )
@@ -96,7 +95,7 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	}
 }
 
-func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, funding []*api.RepoFundingEntry, profileClose func()) {
+func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, funding *funding_service.RepoFunding, profileClose func()) {
 	profileDbRepo, err := repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
 	if err == nil {
 		// Don't show profile content if .profile repository is a fork or private
@@ -127,8 +126,8 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 							}
 						}
 					}
-					funding, _ = funding_service.GetFundingFromCommit(profileDbRepo, commit)
-					// TODO: should we log these errors?
+					funding, err = funding_service.GetFundingFromCommit(profileDbRepo, commit)
+					log.Error("FindUserProfileReadme failed to GetFundingFromCommit: %v", err)
 				}
 			}
 		}
@@ -149,8 +148,13 @@ func RenderUserHeader(ctx *context.Context) {
 	defer profileClose()
 	ctx.Data["HasProfileReadme"] = profileReadmeBlob != nil
 
-	ctx.Data["Funding"] = funding // TODO: in what case(s) is funding nil for a user?
-	ctx.Data["FundingOwner"] = ctx.ContextUser.Name
+	if funding != nil {
+		// TODO: in what case(s) is funding nil for a user?
+		ctx.Data["Funding"] = funding.Entries
+		ctx.Data["FundingConfig"] = funding.ConfigPath
+		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
+		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
+	}
 }
 
 func LoadHeaderCount(ctx *context.Context) error {

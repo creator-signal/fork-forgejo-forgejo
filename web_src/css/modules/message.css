@@ -86,6 +86,16 @@
   border-color: var(--color-error-border);
 }
 
+.ui.error.message a {
+  color: var(--color-error-text);
+  text-decoration-line: underline;
+}
+
+.ui.error.message a:hover {
+  color: var(--color-primary);
+  text-decoration-line: none;
+}
+
 .ui.warning.message .header,
 .ui.yellow.message .header {
   color: var(--color-yellow);
