@@ -18,8 +18,7 @@
 						{{/* TODO: alt-text */}}
 						{{svg "octicon-link" 24}}
 					{{else if .Icon}}
-						{{/* TODO: proper alt-text */}}
-						<img class="tw-h-full" src="{{.Icon}}" alt="" width="24" height="24">
+						<img class="tw-h-full" src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
 					{{else}}
 						{{svg "octicon-heart" 24}}
 					{{end}}

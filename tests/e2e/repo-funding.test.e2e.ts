@@ -27,7 +27,12 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
   await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
   await expect(sponsorModal).toBeVisible();
-  await expect(page.locator('.ui.error.message')).toBeHidden();
+  await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
+
+  // const custom = sponsorModal.getByRole("listitem").filter({hasText: 'https://example.com'});
+  const ko_fi = sponsorModal.getByRole("listitem").filter({hasText: 'ko-fi.com/example'});
+  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
 
   await screenshot(page);
 });
