@@ -167,16 +167,9 @@ func Home(ctx *context.Context) {
 
 	ctx.Data["ShowMemberAndTeamTab"] = ctx.Org.IsMember || len(members) > 0
 
-	profileDbRepo, profileGitRepo, profileReadmeBlob, funding, profileClose := shared_user.FindUserProfile(ctx, ctx.Doer)
+	profileDbRepo, profileGitRepo, profileReadmeBlob, profileClose := shared_user.FindUserProfile(ctx, ctx.Doer)
 	defer profileClose()
 	prepareOrgProfileReadme(ctx, profileGitRepo, profileDbRepo, profileReadmeBlob)
-
-	if funding != nil {
-		ctx.Data["Funding"] = funding.Entries
-		ctx.Data["FundingConfig"] = funding.ConfigPath
-		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
-		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
-	}
 
 	ctx.HTML(http.StatusOK, tplOrgHome)
 }

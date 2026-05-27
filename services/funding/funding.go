@@ -204,7 +204,6 @@ func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) (*RepoFu
 }
 
 // GetFundingFromDefaultBranch returns the funding for this repo.
-// It never returns a nil config.
 func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) (*RepoFunding, error) {
 	if r.IsEmpty {
 		return nil, nil

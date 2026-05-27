@@ -5,6 +5,7 @@
 package user
 
 import (
+	"fmt"
 	"net/url"
 
 	"forgejo.org/models/db"
@@ -79,6 +80,23 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	ctx.Data["Orgs"] = orgs
 	ctx.Data["HasOrgsVisible"] = organization.HasOrgsVisible(ctx, orgs, ctx.Doer)
 
+	profileDbRepo, err := GetProfileDbRepo(ctx)
+	if err != nil {
+		log.Error("PrepareContextForProfileBigAvatar failed to GetProfileDbRepo: %v", err)
+	}
+	if profileDbRepo != nil {
+		funding, err := funding_service.GetFundingFromDefaultBranch(ctx, profileDbRepo)
+		if err != nil {
+			log.Error("PrepareContextForProfileBigAvatar failed to GetFundingFromDefaultBranch: %v", err)
+		}
+		if funding != nil {
+			ctx.Data["Funding"] = funding.Entries
+			ctx.Data["FundingConfig"] = funding.ConfigPath
+			ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
+			ctx.Data["FundingTarget"] = fmt.Sprintf("%s", ctx.ContextUser.DisplayName())
+		}
+	}
+
 	badges, _, err := user_model.GetUserBadges(ctx, ctx.ContextUser)
 	if err != nil {
 		ctx.ServerError("GetUserBadges", err)
@@ -95,13 +113,30 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	}
 }
 
-func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, funding *funding_service.RepoFunding, profileClose func()) {
-	profileDbRepo, err := repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
-	if err == nil {
-		// Don't show profile content if .profile repository is a fork or private
-		if profileDbRepo.IsFork || profileDbRepo.IsPrivate {
-			return nil, nil, nil, nil, func() {}
+// Returns the user's special ".profile" repository, if it exists and it's not private or a fork
+func GetProfileDbRepo(ctx *context.Context) (profileDbRepo *repo_model.Repository, err error) {
+	profileDbRepo, err = repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
+	if err != nil {
+		if repo_model.IsErrRepoNotExist(err) {
+			return nil, nil
 		}
+		return nil, err
+	}
+
+	// Don't show profile content if .profile repository is a fork or private
+	if profileDbRepo.IsFork || profileDbRepo.IsPrivate {
+		return nil, nil
+	}
+
+	return profileDbRepo, nil
+}
+
+func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
+	profileDbRepo, err := GetProfileDbRepo(ctx)
+	if err != nil {
+		log.Error("FindUserProfile failed to GetProfileDbRepo: %v", err)
+	}
+	if profileDbRepo != nil {
 		perm, err := access_model.GetUserRepoPermission(ctx, profileDbRepo, doer)
 		if err == nil && !profileDbRepo.IsEmpty && perm.CanRead(unit.TypeCode) {
 			if profileGitRepo, err = gitrepo.OpenRepository(ctx, profileDbRepo); err != nil {
@@ -126,15 +161,11 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 							}
 						}
 					}
-					funding, err = funding_service.GetFundingFromCommit(profileDbRepo, commit)
-					log.Error("FindUserProfileReadme failed to GetFundingFromCommit: %v", err)
 				}
 			}
 		}
-	} else if !repo_model.IsErrRepoNotExist(err) {
-		log.Error("FindUserProfileReadme failed to GetRepositoryByName: %v", err)
 	}
-	return profileDbRepo, profileGitRepo, profileReadmeBlob, funding, func() {
+	return profileDbRepo, profileGitRepo, profileReadmeBlob, func() {
 		if profileGitRepo != nil {
 			_ = profileGitRepo.Close()
 		}
@@ -144,17 +175,9 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 func RenderUserHeader(ctx *context.Context) {
 	prepareContextForCommonProfile(ctx)
 
-	_, _, profileReadmeBlob, funding, profileClose := FindUserProfile(ctx, ctx.Doer)
+	_, _, profileReadmeBlob, profileClose := FindUserProfile(ctx, ctx.Doer)
 	defer profileClose()
 	ctx.Data["HasProfileReadme"] = profileReadmeBlob != nil
-
-	if funding != nil {
-		// TODO: in what case(s) is funding nil for a user?
-		ctx.Data["Funding"] = funding.Entries
-		ctx.Data["FundingConfig"] = funding.ConfigPath
-		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
-		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
-	}
 }
 
 func LoadHeaderCount(ctx *context.Context) error {

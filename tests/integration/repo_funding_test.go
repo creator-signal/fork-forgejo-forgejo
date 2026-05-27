@@ -20,20 +20,36 @@ import (
 // TODO: link to the page from the modal when there are errors
 // TODO: handle instance-custom entries (app.ini)
 // TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
-// TODO: figure out when profile_big_avatar is shown, and test sponsor-button there too
 // TODO: test uniqueness
 // TODO: Test admin config with a provider with limit of 0
 // TODO: Test admin config overriding a provider limit
 
 func TestSponsorButton(t *testing.T) {
+	// TODO: also test against a user profile
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
-	t.Run("sponsor button hidden without funding config", func(t *testing.T) {
+	t.Run("sponsor button hidden without funding config (repo)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			defer tests.PrintCurrentTest(t)()
 
 			req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			sponsorButton := htmlDoc.Find("button.sponsor")
+			assert.Equal(t, 0, sponsorButton.Length())
+
+			sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
+			assert.Equal(t, 0, sponsorModal.Length())
+		})
+	})
+
+	t.Run("sponsor button hidden without funding config (user)", func(t *testing.T) {
+		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s", repo.OwnerName))
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)

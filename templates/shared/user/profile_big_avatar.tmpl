@@ -94,12 +94,10 @@
 				{{svg "octicon-calendar"}}
 				<span>{{ctx.Locale.Tr "user.joined_on" (DateUtils.AbsoluteShort .ContextUser.CreatedUnix)}}</span>
 			</li>
-			{{if $.Funding}}
-				<li>
-					<div class="tw-flex tw-justify-center tw-w-full">
-						{{template "shared/sponsor_button" $}}
-					</div>
-				</li>
+			{{if .Funding}}
+			<li>
+				{{template "shared/sponsor_button" .}}
+			</li>
 			{{end}}
 			{{if and .Orgs .HasOrgsVisible}}
 			<li>

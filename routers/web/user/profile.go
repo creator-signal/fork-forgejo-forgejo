@@ -30,7 +30,6 @@ import (
 	"forgejo.org/routers/web/org"
 	shared_user "forgejo.org/routers/web/shared/user"
 	"forgejo.org/services/context"
-	funding_service "forgejo.org/services/funding"
 	user_service "forgejo.org/services/user"
 )
 
@@ -73,17 +72,17 @@ func userProfile(ctx *context.Context) {
 	ctx.Data["OpenGraphURL"] = ctx.ContextUser.HTMLURL()
 	ctx.Data["OpenGraphDescription"] = ctx.ContextUser.Description
 
-	profileDbRepo, profileGitRepo, profileReadmeBlob, funding, profileClose := shared_user.FindUserProfile(ctx, ctx.Doer)
+	profileDbRepo, profileGitRepo, profileReadmeBlob, profileClose := shared_user.FindUserProfile(ctx, ctx.Doer)
 	defer profileClose()
 
 	showPrivate := ctx.IsSigned && (ctx.Doer.IsAdmin || ctx.Doer.ID == ctx.ContextUser.ID)
-	prepareUserProfileTabData(ctx, showPrivate, profileDbRepo, profileGitRepo, profileReadmeBlob, funding)
+	prepareUserProfileTabData(ctx, showPrivate, profileDbRepo, profileGitRepo, profileReadmeBlob)
 	// call PrepareContextForProfileBigAvatar later to avoid re-querying the NumFollowers & NumFollowing
 	shared_user.PrepareContextForProfileBigAvatar(ctx)
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 
-func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadme *git.Blob, funding *funding_service.RepoFunding) {
+func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadme *git.Blob) {
 	// if there is a profile readme, default to "overview" page, otherwise, default to "repositories" page
 	// if there is not a profile readme, the overview tab should be treated as the repositories tab
 	tab := ctx.FormString("tab")
@@ -96,12 +95,6 @@ func prepareUserProfileTabData(ctx *context.Context, showPrivate bool, profileDb
 	}
 	ctx.Data["TabName"] = tab
 	ctx.Data["HasProfileReadme"] = profileReadme != nil
-	if funding != nil {
-		ctx.Data["Funding"] = funding.Entries
-		ctx.Data["FundingConfig"] = funding.ConfigPath
-		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
-		ctx.Data["FundingTarget"] = ctx.ContextUser.Name
-	}
 
 	page := ctx.FormInt("page")
 	if page <= 0 {

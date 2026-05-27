@@ -248,6 +248,13 @@ custom:
   - 'https://example.com" class="rogue injection'
 `},
 	}}, nil)
+	newRepo(t, 44, ".profile", nil, []FileChanges{{
+		Filename: "FUNDING.yml",
+		Versions: []string{`
+ko_fi: example
+custom: "http://localhost:3003/"
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 

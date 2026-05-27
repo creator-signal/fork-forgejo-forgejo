@@ -1639,3 +1639,44 @@
   theme: ""
   keep_activity_private: false
   created_unix: 1765818288
+
+-
+  id: 44
+  lower_name: funded_user
+  name: funded_user
+  full_name: 'Plz sponsor :3'
+  email: funded_user@localhost
+  keep_email_private: true
+  keep_pronouns_private: true
+  pronouns: she/her
+  email_notifications_preference: enabled
+  passwd: ZogKvWdyEx:password
+  passwd_hash_algo: dummy
+  must_change_password: false
+  login_source: 0
+  login_name: funded_user
+  type: 0
+  website: https://keyoxide.org/eb114f5e6c0dc2bcdd183550a4b61a2dc5923710
+  salt: ZogKvWdyEx
+  max_repo_creation: -1
+  is_active: true
+  is_admin: false
+  is_restricted: false
+  allow_git_hook: false
+  allow_import_local: false
+  allow_create_organization: true
+  prohibit_login: false
+  avatar: ""
+  avatar_email: funded_user@localhost
+  use_custom_avatar: true
+  num_followers: 0
+  num_following: 0
+  num_stars: 0
+  num_repos: 0
+  num_teams: 0
+  num_members: 0
+  visibility: 0
+  repo_admin_change_team_access: false
+  theme: ""
+  keep_activity_private: false
+  created_unix: 1765818588

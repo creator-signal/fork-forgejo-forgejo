@@ -8,6 +8,7 @@
 // web_src/css/modules/dialog.css
 // web_src/css/modules/message.css
 // web_src/css/repo/header.css
+// web_src/css/user.css
 // @watch end
 
 import {expect} from '@playwright/test';
@@ -37,13 +38,25 @@ test('Sponsor modal', async ({browser}) => {
   await screenshot(page);
 });
 
-test('Sponsor button: accessibility', async ({page}) => {
+test('Sponsor button (repo): accessibility', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
   const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
   await expect(sponsorButton).toBeVisible();
   await expect(sponsorButton).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+
+  await accessibilityCheck({page}, ['button.sponsor'], [], []);
+});
+
+test('Sponsor button (user): accessibility', async ({page}) => {
+  const response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await expect(sponsorButton).toHaveAccessibleName('Sponsor Plz sponsor :3');
   await expect(page.locator('#sponsor-modal')).toBeHidden();
 
   await accessibilityCheck({page}, ['button.sponsor'], [], []);
@@ -158,8 +171,31 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(errors).toContainText('ko_fi has an invalid type. Expected string or string array');
 });
 
+test('Sponsor button (user): appears when a user profile has a valid funding config', async ({ browser }) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  let response = await page.goto('/user2', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+  await expect(page.getByRole('button').filter({ hasText: 'Sponsor' })).toBeHidden();
+
+  response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorModal = page.locator('#sponsor-modal');
+  await expect(sponsorModal).toBeHidden();
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await sponsorButton.click();
+
+  await expect(sponsorModal).toBeVisible();
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
+})
+
 // TODO: check the Close button floats to the end (right or left depending on text RTL-ness)
 // TODO: check the modal text is a reasonable size and spacing, even on mobile
 // TODO: check the various error layouts
-// TODO: check with ridiculously long repo names
+// TODO: check with ridiculously long repo/user names
 // TODO: check with attempted XSS cases
