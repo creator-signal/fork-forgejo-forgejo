@@ -1452,7 +1452,7 @@ func GetFunding(ctx *context.APIContext) {
 	}
 
 	if funding != nil {
-		ctx.JSON(http.StatusOK, funding)
+		ctx.JSON(http.StatusOK, funding.Entries)
 	} else {
 		ctx.JSON(http.StatusOK, make([]*api.RepoFundingEntry, 0))
 	}
