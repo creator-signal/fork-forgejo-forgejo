@@ -193,6 +193,7 @@ body:
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 ko_fi: example
+liberapay: example
 custom: "https://example.com"
 `},
 	}}, nil)
@@ -207,7 +208,7 @@ whatever: example
 	newRepo(t, 2, "funding_invalid", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
-ko_fi: 1337
+liberapay: 1337
 `},
 	}}, nil)
 	newRepo(t, 2, "funding_some_valid", nil, []FileChanges{{
@@ -252,6 +253,7 @@ custom:
 		Filename: "FUNDING.yml",
 		Versions: []string{`
 ko_fi: example
+liberapay: example
 custom: "http://localhost:3003/"
 `},
 	}}, nil)

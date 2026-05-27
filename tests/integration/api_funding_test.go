@@ -164,15 +164,17 @@ func TestAPIRepoFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
+				config["liberapay"] = "test"
 				config["ko_fi"] = 42
 				config["custom"] = []string{"test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
-				assert.Len(t, funding, 2)
+				assert.Len(t, funding, 3)
 
 				// no ko_fi, it's not a string value
+
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "test", funding[0].URL)
@@ -182,6 +184,11 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "liberapay", funding[2].ProviderName)
+				assert.Equal(t, "liberapay.com/test", funding[2].Text)
+				assert.Equal(t, "https://liberapay.com/test", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", funding[2].Icon)
 			})
 
 			t.Run("Partially invalid (unknown key omitted)", func(t *testing.T) {

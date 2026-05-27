@@ -28,13 +28,21 @@ func loadBuiltinFundingProviders() {
 		URL:  "https://ko-fi.com/%s",
 		Icon: "img/funding/ko_fi.svg",
 	})
+
+	FundingProviders = append(FundingProviders, &api.FundingProvider{
+		Name: "liberapay",
+		Limit: 1,
+		Text: "liberapay.com/%s",
+		URL:  "https://liberapay.com/%s",
+		Icon: "img/funding/liberapay.svg",
+	})
 }
 
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	for _, sec := range rootCfg.Section("funding").ChildSections() {
 		name := strings.TrimPrefix(sec.Name(), "funding.")
 		if name == "" {
-			log.Warn("name is empty, funding " + sec.Name() + "ignored")
+			log.Warn("name is empty, funding %s ignored", sec.Name())
 			continue
 		}
 
@@ -42,7 +50,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		provider.Name = name
 		provider.Limit = sec.Key("Limit").MustUint(1)
 		provider.Text = sec.Key("Text").MustString("")
-		provider.URL = sec.Key("URL").MustString("")
+		provider.URL = sec.Key("URL").MustString("") // TODO: assert correct format
 		provider.Icon = sec.Key("Icon").MustString("")
 
 		FundingProviders = append(FundingProviders, provider)

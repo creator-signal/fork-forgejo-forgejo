@@ -32,8 +32,10 @@ test('Sponsor modal', async ({browser}) => {
 
   // const custom = sponsorModal.getByRole("listitem").filter({hasText: 'https://example.com'});
   const ko_fi = sponsorModal.getByRole('listitem').filter({hasText: 'ko-fi.com/example'});
+  const liberapay = sponsorModal.getByRole('listitem').filter({hasText: 'liberapay.com/example'});
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
   await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
+  await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
 
   await screenshot(page);
 });

@@ -128,6 +128,7 @@ func TestSponsorButton(t *testing.T) {
 				config := make(map[string]any)
 				config["custom"] = 42
 				config["ko_fi"] = "test"
+				config["liberapay"] = "test"
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -145,18 +146,22 @@ func TestSponsorButton(t *testing.T) {
 				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 
 				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 1, sponsorEntries.Length())
+				assert.Equal(t, 2, sponsorEntries.Length())
 
 				// invalid entries are skipped
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://ko-fi.com/test")
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) img", "src", "/assets/img/funding/ko_fi.svg")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", false)
 
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://liberapay.com/test")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/liberapay.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
+
 				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -201,7 +206,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Errors parsing funding config:") // plural! multiple independent errors in this file!
 
@@ -291,7 +296,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -339,7 +344,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -381,7 +386,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -435,7 +440,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -494,7 +499,7 @@ func TestSponsorButton(t *testing.T) {
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
 
@@ -546,14 +551,14 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) svg.octicon-link", true)
 
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) a", "href", "https://ko-fi.com/test")
-			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) img", "src", "/assets/img/funding/ko_fi.svg")
-			htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(5) svg.octicon-link", false)
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(5) svg.octicon-link", false)
 
 				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
 				resp = MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".ui.error.message")
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
 				assert.Equal(t, 1, fileError.Length())
 				assert.Contains(t, fileError.Text(), "Errors parsing funding config:")
 
