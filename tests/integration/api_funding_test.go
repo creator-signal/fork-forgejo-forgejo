@@ -65,9 +65,25 @@ var testFundingCandidates = []string {
 // TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
 // TODO: Test that funding entries are in alphabetical order by key (later: the same order as they were defined in the config)
+// TODO: test a provider limit of 0 (provider is disabled, never shows in API except in /settings/funding)
 // TODO: Ensure providers are unique
-// TODO: Test admin config with a provider with limit of 0
-// TODO: Test admin config overriding a provider limit
+
+func TestAPIFundingSettings(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+		t.Run("Global funding config", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", "/api/v1/settings/funding")
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			var providers []*api.RepoFundingEntry
+			DecodeJSON(t, resp, &providers)
+
+			assert.Len(t, providers, 3) // we have 3 default providers (smoke test to see that these decode correctly)
+			// TODO: assert order is consistent too
+		})
+	})
+}
 
 func TestAPIRepoFunding(t *testing.T) {
 	for _, treePath := range testFundingCandidates {

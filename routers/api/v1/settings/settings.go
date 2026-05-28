@@ -5,6 +5,7 @@ package settings
 
 import (
 	"net/http"
+	"slices"
 
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -95,7 +96,20 @@ func GetFundingSettings(ctx *context.APIContext) {
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/FundingSettings"
+
+	providers := make([]*api.FundingProvider, 0, len(setting.FundingProviders))
+	for k := range setting.FundingProviders {
+		providers = append(providers, setting.FundingProviders[k])
+	}
+	slices.SortFunc(providers, func(a *api.FundingProvider, b *api.FundingProvider) int {
+		if a.Name < b.Name {
+			return -1
+		} else {
+			return 1
+		}
+	})
+
 	ctx.JSON(http.StatusOK, api.FundingSettings{
-		Providers: setting.FundingProviders,
+		Providers: providers,
 	})
 }

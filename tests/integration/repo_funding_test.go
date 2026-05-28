@@ -21,8 +21,7 @@ import (
 // TODO: handle instance-custom entries (app.ini)
 // TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
 // TODO: test uniqueness
-// TODO: Test admin config with a provider with limit of 0
-// TODO: Test admin config overriding a provider limit
+// TODO: test a provider limit of 0 (provider is disabled, never shows in UI
 
 func TestSponsorButton(t *testing.T) {
 	// TODO: also test against a user profile

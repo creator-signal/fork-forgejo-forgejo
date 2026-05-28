@@ -161,7 +161,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		switch dataType.Kind() {
 		case reflect.String:
 			if provider.Limit == 0 {
-				// 1 is too many!
+				// 1 is too many! this provider is disabled.
 				errs = append(errs, ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
 				continue
 			}
