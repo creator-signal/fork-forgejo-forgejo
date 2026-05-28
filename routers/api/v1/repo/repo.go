@@ -1458,9 +1458,9 @@ func GetFunding(ctx *context.APIContext) {
 	}
 }
 
-// ValidateFunding returns the validation information for the funding config of the repo
-func ValidateFunding(ctx *context.APIContext) {
-	// swagger:operation GET /repos/{owner}/{repo}/funding/validate repository repoValidateFunding
+// ValidateFundingConfig returns the validation information for the funding config of the repo
+func ValidateFundingConfig(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/funding/validate repository repoValidateFundingConfig
 	// ---
 	// summary: Returns the validation information for the funding config of the repo
 	// description: Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.
