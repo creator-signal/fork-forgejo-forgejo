@@ -119,7 +119,15 @@
 	"migrate.in_progress.labels": "Migrating labels",
 	"migrate.in_progress.releases": "Migrating releases",
 	"migrate.in_progress.issues": "Migrating issues",
+	"migrate.in_progress.issues.progress": {
+		"one": "Migrated %[1]d issue",
+		"other": "Migrated %[1]d issues"
+	},
 	"migrate.in_progress.pulls": "Migrating pull requests",
+	"migrate.in_progress.pulls.progress": {
+		"one": "Migrated %[1]d pull request",
+		"other": "Migrated %[1]d pull requests"
+	},
 	"migrate.cancel.title": "Cancel migration",
 	"migrate.cancel.confirmation": "Do you want to cancel this migration?",
 	"repo.issue_indexer.title": "Issue Indexer",
@@ -849,6 +857,7 @@
 	"actions.runs.delete.button": "Delete run",
 	"actions.runs.delete.error": "Could not delete the workflow run.",
 	"actions.runs.delete.confirm_action": "Do you really want to delete this workflow run?",
+	"actions.jobs.not_started": "not started",
 	"actions.workflow.job_parsing_error": "Unable to parse jobs in workflow: %v",
 	"actions.workflow.event_detection_error": "Unable to parse supported events in workflow: %v",
 	"actions.workflow.persistent_incomplete_matrix": "Unable to evaluate `strategy.matrix` of job %[1]s due to a `needs` expression that was invalid. It may reference a job that is not in it's 'needs' list (%[2]s), or an output that doesn't exist on one of those jobs.",
