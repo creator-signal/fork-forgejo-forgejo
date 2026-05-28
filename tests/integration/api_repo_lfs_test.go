@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"path"
 	"strconv"
@@ -480,5 +481,110 @@ func TestAPILFSVerify(t *testing.T) {
 		req := newRequest(t, &lfs.Pointer{Oid: oid, Size: 6})
 
 		session.MakeRequest(t, req, http.StatusOK)
+	})
+}
+
+// Accessing git LFS resources uses CheckRepoScopedToken to validate a PAT; here we run that through all variations of
+// access token resource access to ensure it is accurately applied for LFS access.
+func TestAPILFSScopeAndResources(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	writeOperation := func(t *testing.T, repoFullName, token string, expectedStatus int) {
+		oid := "83de2e488b89a0aa1c97496b888120a28b0c1e15463a4adb8405578c540f36d4"
+		batch := &lfs.BatchRequest{
+			Operation: "upload",
+			Objects: []lfs.Pointer{
+				{Oid: oid, Size: 6},
+			},
+		}
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/objects/batch", repoFullName), batch).
+			SetHeader("Accept", lfs.AcceptHeader).
+			SetHeader("Content-Type", lfs.MediaType)
+		req.Request.SetBasicAuth("any", token)
+		MakeRequest(t, req, expectedStatus)
+	}
+	readOperation := func(t *testing.T, repoFullName, token string, expectedStatus int) {
+		oid := "83de2e488b89a0aa1c97496b888120a28b0c1e15463a4adb8405578c540f36d4"
+		batch := &lfs.BatchRequest{
+			Operation: "download",
+			Objects: []lfs.Pointer{
+				{Oid: oid, Size: 6},
+			},
+		}
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/objects/batch", repoFullName), batch).
+			SetHeader("Accept", lfs.AcceptHeader).
+			SetHeader("Content-Type", lfs.MediaType)
+		req.Request.SetBasicAuth("any", token)
+		MakeRequest(t, req, expectedStatus)
+	}
+
+	t.Run("read-write access token", func(t *testing.T) {
+		session := loginUser(t, "user2")
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			readOperation(t, "user2/repo1", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo1", allToken, http.StatusOK)
+		})
+		t.Run("allowed private repo2", func(t *testing.T) {
+			readOperation(t, "user2/repo2", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo2", allToken, http.StatusOK)
+		})
+		// repo16 is a second repo used in fine-grain testing below, so we include it in other tests as a baseline
+		t.Run("allowed private repo16", func(t *testing.T) {
+			readOperation(t, "user2/repo16", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo16", allToken, http.StatusOK)
+		})
+	})
+
+	t.Run("read-only access token", func(t *testing.T) {
+		session := loginUser(t, "user2")
+		allToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			readOperation(t, "user2/repo1", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo1", allToken, http.StatusForbidden)
+		})
+		t.Run("allowed private repo2", func(t *testing.T) {
+			readOperation(t, "user2/repo2", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo2", allToken, http.StatusForbidden)
+		})
+		// repo16 is a second repo used in fine-grain testing below, so we include it in other tests as a baseline
+		t.Run("allowed private repo16", func(t *testing.T) {
+			readOperation(t, "user2/repo16", allToken, http.StatusOK)
+			writeOperation(t, "user2/repo16", allToken, http.StatusForbidden)
+		})
+	})
+
+	t.Run("public-only access token", func(t *testing.T) {
+		session := loginUser(t, "user2")
+		publicOnlyToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopePublicOnly, auth_model.AccessTokenScopeReadRepository)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			readOperation(t, "user2/repo1", publicOnlyToken, http.StatusOK)
+		})
+		t.Run("denied private repo2", func(t *testing.T) {
+			readOperation(t, "user2/repo2", publicOnlyToken, http.StatusForbidden)
+		})
+		t.Run("denied private repo16", func(t *testing.T) {
+			readOperation(t, "user2/repo16", publicOnlyToken, http.StatusForbidden)
+		})
+	})
+
+	t.Run("specific repo access token", func(t *testing.T) {
+		repo2OnlyToken := createFineGrainedRepoAccessToken(t, "user2",
+			[]auth_model.AccessTokenScope{auth_model.AccessTokenScopeReadRepository},
+			[]int64{2},
+		)
+
+		t.Run("allowed public repo1", func(t *testing.T) {
+			readOperation(t, "user2/repo1", repo2OnlyToken, http.StatusOK)
+		})
+		t.Run("allowed inside fine-grain repo2", func(t *testing.T) {
+			readOperation(t, "user2/repo2", repo2OnlyToken, http.StatusOK)
+		})
+		t.Run("denied private outside fine-grain repo16", func(t *testing.T) {
+			readOperation(t, "user2/repo16", repo2OnlyToken, http.StatusForbidden)
+		})
 	})
 }
