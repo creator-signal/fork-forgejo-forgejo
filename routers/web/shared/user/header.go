@@ -131,10 +131,10 @@ func GetProfileDbRepo(ctx *context.Context) (profileDbRepo *repo_model.Repositor
 	return profileDbRepo, nil
 }
 
-func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
+func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
 	profileDbRepo, err := GetProfileDbRepo(ctx)
 	if err != nil {
-		log.Error("FindUserProfile failed to GetProfileDbRepo: %v", err)
+		log.Error("FindUserProfileReadme failed to GetProfileDbRepo: %v", err)
 	}
 	if profileDbRepo != nil {
 		perm, err := access_model.GetUserRepoPermission(ctx, profileDbRepo, doer)
@@ -175,7 +175,7 @@ func FindUserProfile(ctx *context.Context, doer *user_model.User) (profileDbRepo
 func RenderUserHeader(ctx *context.Context) {
 	prepareContextForCommonProfile(ctx)
 
-	_, _, profileReadmeBlob, profileClose := FindUserProfile(ctx, ctx.Doer)
+	_, _, profileReadmeBlob, profileClose := FindUserProfileReadme(ctx, ctx.Doer)
 	defer profileClose()
 	ctx.Data["HasProfileReadme"] = profileReadmeBlob != nil
 }
