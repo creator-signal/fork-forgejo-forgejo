@@ -118,7 +118,6 @@ func InitWiki(t testing.TB, repo *repo_model.Repository, branch string) {
 	require.NoError(t, err)
 }
 
-// config may be nil
 func EnableRepoUnit(t testing.TB, repo *repo_model.Repository, unit unit_model.Type, config convert.Conversion) {
 	t.Helper()
 
@@ -127,6 +126,36 @@ func EnableRepoUnit(t testing.TB, repo *repo_model.Repository, unit unit_model.T
 		Type:   unit,
 		Config: config,
 	}}, nil)
+	require.NoError(t, err)
+}
+
+// to specify a non-default config, call [EnableRepoUnit] instead
+func EnableRepoUnits(t testing.TB, repo *repo_model.Repository, units ...unit_model.Type) {
+	t.Helper()
+
+	ru := make([]repo_model.RepoUnit, 0, len(units))
+	for _, u := range units {
+		var config convert.Conversion
+		if u == unit_model.TypePullRequests { // pull request config is needed (otherwise no merge allowed by default)
+			config = &repo_model.PullRequestsConfig{
+				AllowMerge:           true,
+				AllowRebase:          true,
+				AllowRebaseMerge:     true,
+				AllowSquash:          true,
+				AllowFastForwardOnly: true,
+				AllowManualMerge:     true,
+				AllowRebaseUpdate:    true,
+				DefaultMergeStyle:    repo_model.MergeStyleMerge,
+				DefaultUpdateStyle:   repo_model.UpdateStyleMerge,
+			}
+		}
+		ru = append(ru, repo_model.RepoUnit{
+			RepoID: repo.ID,
+			Type:   u,
+			Config: config,
+		})
+	}
+	err := repo_service.UpdateRepositoryUnits(t.Context(), repo, ru, nil)
 	require.NoError(t, err)
 }
 
