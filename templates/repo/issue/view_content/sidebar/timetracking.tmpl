@@ -48,7 +48,9 @@
 	</div>
 {{end}}
 {{if .WorkingUsers}}
+	{{if or (not .CanUseTimetracker) (.Repository.IsArchived)}}
 	<div class="divider"></div>
+	{{end}}
 	<div class="ui comments">
 		<span class="text"><strong>{{ctx.Locale.Tr "repo.issues.time_spent_from_all_authors" ($.Issue.TotalTrackedTime | Sec2Time)}}</strong></span>
 		<p>
