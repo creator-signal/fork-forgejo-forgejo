@@ -1073,7 +1073,7 @@ func Routes() *web.Route {
 				m.Get("/issue_templates", context.ReferencesGitRepo(), repo.GetIssueTemplates)
 				m.Get("/issue_config", context.ReferencesGitRepo(), repo.GetIssueConfig)
 				m.Get("/issue_config/validate", context.ReferencesGitRepo(), repo.ValidateIssueConfig)
-				m.Get("/funding", context.ReferencesGitRepo(), repo.GetFunding)
+				m.Get("/funding", context.ReferencesGitRepo(), repo.GetFundingConfig)
 				m.Get("/funding/validate", context.ReferencesGitRepo(), repo.ValidateFundingConfig)
 				m.Get("/languages", reqRepoReader(unit.TypeCode), repo.GetLanguages)
 				m.Get("/activities/feeds", repo.ListRepoActivityFeeds)
