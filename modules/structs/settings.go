@@ -39,10 +39,15 @@ type GeneralAttachmentSettings struct {
 
 // FundingProvider contains a funding provider exposed by API
 type FundingProvider struct {
+	// Identifies the funding provider
 	Name  string `json:"name"`
+	// The max number of times a funding config may specify this provider
 	Limit uint   `json:"limit"`
+	// A format string for link text for an instance of this provider
 	Text  string `json:"text"`
+	// A format string for the URL to a profile on this provider
 	URL   string `json:"url"`
+	// Path to the logo of the funding provider
 	Icon  string `json:"icon"`
 }
 
