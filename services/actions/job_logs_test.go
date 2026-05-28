@@ -27,7 +27,7 @@ func TestOpenJobLogReader_RepoMismatch(t *testing.T) {
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9001, RepoID: 1, TaskID: 9001})
 
 	otherRepo := &repo_model.Repository{ID: 2}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, otherRepo, 9001, optional.None[int64](), optional.None[int]())
+	_, _, _, err := OpenJobLogReader(db.DefaultContext, otherRepo, 9001, optional.None[int64]())
 	assert.ErrorIs(t, err, util.ErrNotExist)
 }
 
@@ -37,7 +37,7 @@ func TestOpenJobLogReader_JobNotExecuted(t *testing.T) {
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9002, RepoID: 1, TaskID: 0})
 
 	repo := &repo_model.Repository{ID: 1}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9002, optional.None[int64](), optional.None[int]())
+	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9002, optional.None[int64]())
 	assert.ErrorIs(t, err, ErrJobNotExecuted)
 }
 
@@ -48,7 +48,7 @@ func TestOpenJobLogReader_LogsExpired(t *testing.T) {
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9003, RepoID: 1, TaskID: 9003})
 
 	repo := &repo_model.Repository{ID: 1}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9003, optional.None[int64](), optional.None[int]())
+	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9003, optional.None[int64]())
 	assert.ErrorIs(t, err, ErrLogsExpired)
 }
 
@@ -59,49 +59,6 @@ func TestOpenJobLogReader_UnknownAttempt(t *testing.T) {
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9004, RepoID: 1, TaskID: 9004})
 
 	repo := &repo_model.Repository{ID: 1}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9004, optional.Some(int64(999)), optional.None[int]())
+	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9004, optional.Some(int64(999)))
 	assert.ErrorIs(t, err, util.ErrNotExist)
-}
-
-func TestOpenJobLogReader_StepOutOfRange(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{
-		ID:          9005,
-		LogFilename: "does-not-exist",
-		LogIndexes:  []int64{0},
-		LogLength:   1,
-		LogSize:     100,
-	})
-	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9005, RepoID: 1, TaskID: 9005})
-	// No ActionTaskStep rows for this task — step 99 doesn't exist.
-
-	repo := &repo_model.Repository{ID: 1}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9005, optional.None[int64](), optional.Some(99))
-	assert.ErrorIs(t, err, ErrStepOutOfRange)
-}
-
-func TestOpenJobLogReader_StepNoLogRange(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	// Empty LogIndexes — any step.LogIndex >= 0 is out of bounds.
-	unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{
-		ID:          9006,
-		LogFilename: "does-not-exist",
-		LogIndexes:  nil,
-		LogLength:   0,
-		LogSize:     0,
-	})
-	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9006, RepoID: 1, TaskID: 9006})
-	unittest.AssertSuccessfulInsert(t, &actions_model.ActionTaskStep{
-		ID:        9006,
-		TaskID:    9006,
-		Index:     0,
-		LogIndex:  0,
-		LogLength: 0,
-	})
-
-	repo := &repo_model.Repository{ID: 1}
-	_, _, _, err := OpenJobLogReader(db.DefaultContext, repo, 9006, optional.None[int64](), optional.Some(0))
-	assert.ErrorIs(t, err, ErrStepNoLogRange)
 }

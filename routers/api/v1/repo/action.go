@@ -1510,11 +1510,6 @@ func GetActionJobLogs(ctx *context.APIContext) {
 	//   type: integer
 	//   format: int64
 	//   required: false
-	// - name: step
-	//   in: query
-	//   description: 0-indexed step to filter to (returns only that step's portion of the log)
-	//   type: integer
-	//   required: false
 	// responses:
 	//   "200":
 	//     description: Plaintext log content
@@ -1538,19 +1533,12 @@ func GetActionJobLogs(ctx *context.APIContext) {
 		attempt = optional.Some(ctx.FormInt64("attempt"))
 	}
 
-	var stepFilter optional.Option[int]
-	if ctx.FormString("step") != "" {
-		stepFilter = optional.Some(ctx.FormInt("step"))
-	}
-
-	reader, filename, modtime, err := actions_service.OpenJobLogReader(ctx, ctx.Repo.Repository, jobID, attempt, stepFilter)
+	reader, filename, modtime, err := actions_service.OpenJobLogReader(ctx, ctx.Repo.Repository, jobID, attempt)
 	if err != nil {
 		switch {
 		case errors.Is(err, util.ErrNotExist),
 			errors.Is(err, actions_service.ErrJobNotExecuted),
-			errors.Is(err, actions_service.ErrLogsExpired),
-			errors.Is(err, actions_service.ErrStepOutOfRange),
-			errors.Is(err, actions_service.ErrStepNoLogRange):
+			errors.Is(err, actions_service.ErrLogsExpired):
 			ctx.Error(http.StatusNotFound, "OpenJobLogReader", err)
 		default:
 			ctx.Error(http.StatusInternalServerError, "OpenJobLogReader", err)

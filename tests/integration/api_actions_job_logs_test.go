@@ -37,19 +37,6 @@ func TestAPIGetActionJobLogs(t *testing.T) {
 			{Time: timestamppb.New(now.Add(2 * time.Second)), Content: "second line"},
 			{Time: timestamppb.New(now.Add(3 * time.Second)), Content: "third line"},
 		},
-		// One workflow step ("echo hello") at Id 0, covering all three log
-		// rows. The runner protocol keys steps by Id; the service layer maps
-		// Id -> ActionTaskStep.Index when persisting LogIndex/LogLength.
-		stepStates: []*runnerv1.StepState{
-			{
-				Id:        0,
-				Result:    runnerv1.Result_RESULT_SUCCESS,
-				LogIndex:  0,
-				LogLength: 3,
-				StartedAt: timestamppb.New(now),
-				StoppedAt: timestamppb.New(now.Add(3 * time.Second)),
-			},
-		},
 	}
 	workflow := `name: api-job-logs
 on: push
@@ -150,31 +137,6 @@ jobs:
 			assert.LessOrEqual(t, resp.Body.Len(), 16)
 		})
 
-		t.Run("step filter: 200 returns step's slice", func(t *testing.T) {
-			// Step 0 is configured (via outcome.stepStates above) to cover
-			// the full log range, so its body must equal the no-param body
-			// byte-for-byte. The no-param body is already verified
-			// line-by-line in the happy-path subtest, so transitive equality
-			// confirms the correct bytes are emitted here too.
-			defaultReq := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/jobs/%d/logs",
-				repoA.FullName(), jobID,
-			)
-			defaultReq.AddTokenAuth(token)
-			defaultResp := MakeRequest(t, defaultReq, http.StatusOK)
-
-			stepReq := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/jobs/%d/logs?step=0",
-				repoA.FullName(), jobID,
-			)
-			stepReq.AddTokenAuth(token)
-			stepResp := MakeRequest(t, stepReq, http.StatusOK)
-
-			require.NotEmpty(t, stepResp.Body.String(), "step 0 covers the whole log; body must be non-empty")
-			assert.Equal(t, defaultResp.Body.String(), stepResp.Body.String(),
-				"?step=0 (covering full log) should return the same bytes as no-param")
-		})
-
 		t.Run("attempt=1: 200 matches no-param (only attempt)", func(t *testing.T) {
 			defaultReq := NewRequestf(t, "GET",
 				"/api/v1/repos/%s/actions/jobs/%d/logs",
@@ -205,15 +167,6 @@ jobs:
 		t.Run("attempt=999: 404 unknown attempt", func(t *testing.T) {
 			req := NewRequestf(t, "GET",
 				"/api/v1/repos/%s/actions/jobs/%d/logs?attempt=999",
-				repoA.FullName(), jobID,
-			)
-			req.AddTokenAuth(token)
-			MakeRequest(t, req, http.StatusNotFound)
-		})
-
-		t.Run("step out of range: 404", func(t *testing.T) {
-			req := NewRequestf(t, "GET",
-				"/api/v1/repos/%s/actions/jobs/%d/logs?step=99",
 				repoA.FullName(), jobID,
 			)
 			req.AddTokenAuth(token)

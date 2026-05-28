@@ -24,73 +24,14 @@ import (
 var (
 	ErrJobNotExecuted = errors.New("job has not been executed yet")
 	ErrLogsExpired    = errors.New("logs have expired")
-	ErrStepOutOfRange = errors.New("step index out of range")
-	ErrStepNoLogRange = errors.New("step has no recorded log range")
 )
-
-// boundedReadSeekCloser exposes a [start, start+size) window of the underlying
-// reader as if it started at offset 0. It exists so the step-filtered path
-// can return an io.ReadSeekCloser (required by http.ServeContent for Range)
-// without buffering the entire step slice into memory.
-type boundedReadSeekCloser struct {
-	inner io.ReadSeekCloser
-	start int64
-	size  int64
-	pos   int64
-}
-
-func newBoundedReadSeekCloser(inner io.ReadSeekCloser, start, size int64) (*boundedReadSeekCloser, error) {
-	if _, err := inner.Seek(start, io.SeekStart); err != nil {
-		return nil, err
-	}
-	return &boundedReadSeekCloser{inner: inner, start: start, size: size}, nil
-}
-
-func (b *boundedReadSeekCloser) Read(p []byte) (int, error) {
-	if b.pos >= b.size {
-		return 0, io.EOF
-	}
-	if remaining := b.size - b.pos; int64(len(p)) > remaining {
-		p = p[:remaining]
-	}
-	n, err := b.inner.Read(p)
-	b.pos += int64(n)
-	return n, err
-}
-
-func (b *boundedReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
-	var abs int64
-	switch whence {
-	case io.SeekStart:
-		abs = offset
-	case io.SeekCurrent:
-		abs = b.pos + offset
-	case io.SeekEnd:
-		abs = b.size + offset
-	default:
-		return 0, errors.New("boundedReadSeekCloser: invalid whence")
-	}
-	if abs < 0 {
-		return 0, errors.New("boundedReadSeekCloser: negative position")
-	}
-	if _, err := b.inner.Seek(b.start+abs, io.SeekStart); err != nil {
-		return 0, err
-	}
-	b.pos = abs
-	return abs, nil
-}
-
-func (b *boundedReadSeekCloser) Close() error { return b.inner.Close() }
 
 // OpenJobLogReader returns a reader for an action job's log along with the
 // filename and modtime to expose via Content-Disposition / Last-Modified.
 //
-//   - attempt, when set, selects a specific historical attempt (uses
-//     GetTaskByJobAttempt). When unset, the latest attempt is used via the
-//     job.TaskID pointer maintained by the runner.
-//   - stepFilter, when set, narrows the returned bytes to that 0-indexed
-//     step's portion of the log via a bounded ReadSeekCloser window over the
-//     underlying log file. Range requests still work via http.ServeContent.
+// attempt, when set, selects a specific historical attempt (uses
+// GetTaskByJobAttempt). When unset, the latest attempt is used via the
+// job.TaskID pointer maintained by the runner.
 //
 // The caller is responsible for closing the returned reader.
 func OpenJobLogReader(
@@ -98,7 +39,6 @@ func OpenJobLogReader(
 	repo *repo_model.Repository,
 	jobID int64,
 	attempt optional.Option[int64],
-	stepFilter optional.Option[int],
 ) (io.ReadSeekCloser, string, time.Time, error) {
 	job, err := actions_model.GetRunJobByID(ctx, jobID)
 	if err != nil {
@@ -111,7 +51,6 @@ func OpenJobLogReader(
 	}
 
 	hasAttempt, attemptVal := attempt.Get()
-	hasStep, stepIdx := stepFilter.Get()
 
 	var task *actions_model.ActionTask
 	switch {
@@ -135,39 +74,6 @@ func OpenJobLogReader(
 		return nil, "", time.Time{}, ErrLogsExpired
 	}
 
-	// Validate the step filter (if any) BEFORE opening the log reader so a
-	// request that's going to 404 doesn't pay for an OpenLogs call.
-	var startByte, length int64
-	if hasStep {
-		step, err := actions_model.GetTaskStepByTaskIDAndIndex(ctx, task.ID, int64(stepIdx))
-		if err != nil {
-			if errors.Is(err, util.ErrNotExist) {
-				return nil, "", time.Time{}, ErrStepOutOfRange
-			}
-			return nil, "", time.Time{}, fmt.Errorf("look up step %d on task %d: %w", stepIdx, task.ID, err)
-		}
-
-		// LogIndexes maps line number -> byte offset; guard against a task
-		// whose log indexes haven't been populated (or whose step references
-		// a line beyond what's been recorded).
-		if step.LogIndex < 0 || step.LogIndex >= int64(len(task.LogIndexes)) {
-			return nil, "", time.Time{}, ErrStepNoLogRange
-		}
-
-		startByte = task.LogIndexes[step.LogIndex]
-		endIdx := step.LogIndex + step.LogLength
-		var endByte int64
-		if endIdx < int64(len(task.LogIndexes)) {
-			endByte = task.LogIndexes[endIdx]
-		} else {
-			// Step's log range extends beyond recorded indexes (e.g. the
-			// step is still running). Treat the slice as running to the end
-			// of the log rather than refusing to serve.
-			endByte = task.LogSize
-		}
-		length = endByte - startByte
-	}
-
 	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
 	if err != nil {
 		return nil, "", time.Time{}, fmt.Errorf("open logs for task %d: %w", task.ID, err)
@@ -178,19 +84,8 @@ func OpenJobLogReader(
 		modtime = task.Updated.AsTime() // Best-guess modtime while still running.
 	}
 
-	if !hasStep {
-		filename := fmt.Sprintf("job-%d-attempt-%d.log", job.ID, task.Attempt)
-		return reader, filename, modtime, nil
-	}
-
-	bounded, err := newBoundedReadSeekCloser(reader, startByte, length)
-	if err != nil {
-		reader.Close()
-		return nil, "", time.Time{}, fmt.Errorf("seek log to step start: %w", err)
-	}
-
-	stepFilename := fmt.Sprintf("job-%d-attempt-%d-step-%d.log", job.ID, task.Attempt, stepIdx)
-	return bounded, stepFilename, modtime, nil
+	filename := fmt.Sprintf("job-%d-attempt-%d.log", job.ID, task.Attempt)
+	return reader, filename, modtime, nil
 }
 
 // WriteRunLogsZip writes a ZIP of the latest per-job logs for the run to w.
