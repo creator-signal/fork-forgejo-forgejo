@@ -201,3 +201,4 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
 // TODO: check the various error layouts
 // TODO: check with ridiculously long repo/user names
 // TODO: check with attempted XSS cases
+// TODO: can we test that all images load too?

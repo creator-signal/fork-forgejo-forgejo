@@ -459,6 +459,6 @@ type RepoFundingEntry struct {
 	Text         string `json:"text"`
 	// URL to a profile on the funding provider
 	URL          string `json:"url"`
-	// URL to the logo of the funding provider
+	// Path to the logo of the funding provider
 	Icon         string `json:"icon"`
 }

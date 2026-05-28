@@ -85,15 +85,12 @@ func (err ErrInvalidYamlType) Error() string {
 	return fmt.Sprintf("%s has a invalid type. Expected string or string array", err.Name)
 }
 
-func getFundingEntry(provider *api.FundingProvider, text string) *api.RepoFundingEntry {
+func getFundingEntry(provider *setting.FundingProviderConfig, text string) *api.RepoFundingEntry {
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, text)
 	entry.URL = fmt.Sprintf(provider.URL, text)
-
-	if provider.Icon != "" {
-		entry.Icon = setting.AppSubURL + "/assets/" + provider.Icon
-	}
+	entry.Icon = setting.IconForProvider(provider)
 
 	return entry
 }

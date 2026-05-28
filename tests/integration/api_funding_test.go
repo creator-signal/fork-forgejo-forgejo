@@ -76,10 +76,10 @@ func TestAPIFundingSettings(t *testing.T) {
 			req := NewRequest(t, "GET", "/api/v1/settings/funding")
 			resp := MakeRequest(t, req, http.StatusOK)
 
-			var providers []*api.RepoFundingEntry
+			var providers api.FundingSettings
 			DecodeJSON(t, resp, &providers)
 
-			assert.Len(t, providers, 3) // we have 3 default providers (smoke test to see that these decode correctly)
+			assert.Len(t, providers.Providers, 3) // we have 3 default providers (smoke test to see that these decode correctly)
 			// TODO: assert order is consistent too
 		})
 	})

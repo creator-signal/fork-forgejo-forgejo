@@ -99,7 +99,16 @@ func GetFundingSettings(ctx *context.APIContext) {
 
 	providers := make([]*api.FundingProvider, 0, len(setting.FundingProviders))
 	for k := range setting.FundingProviders {
-		providers = append(providers, setting.FundingProviders[k])
+		provider := setting.FundingProviders[k]
+
+		entry := new(api.FundingProvider)
+		entry.Name = provider.Name
+		entry.Limit = provider.Limit
+		entry.Text = provider.Text
+		entry.URL = provider.URL
+		entry.Icon = setting.IconForProvider(provider)
+
+		providers = append(providers, entry)
 	}
 	slices.SortFunc(providers, func(a *api.FundingProvider, b *api.FundingProvider) int {
 		if a.Name < b.Name {

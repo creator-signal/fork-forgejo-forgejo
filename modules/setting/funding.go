@@ -4,14 +4,45 @@
 package setting
 
 import (
+	"fmt"
 	"strings"
 
 	"forgejo.org/modules/log"
-	api "forgejo.org/modules/structs"
 )
 
-// TODO: this should probably be its own type. In the API, we should send an absolute icon URL in all cases, i.e. IconURL
-var FundingProviders map[string]*api.FundingProvider
+// A funding provider, as it appears in the server config
+type FundingProviderConfig struct {
+	// The name of the funding platform
+	Name     string
+
+	// The number of entries of this platform which may appear in a repo's
+	// funding config. A value of 0 effectively disables the funding option.
+	Limit    uint
+
+	// A format string that defines a URL, ideally to a given user profile, to
+	// which users should be sent to support a project. This string should
+	// contain at least one instance of %s or %[1]s, which are replaced with the
+	// string given in the repo's funding config.
+	URL      string
+
+	// A format string that defines the text that should show in place of a URL
+	// in the UI. This string should contain at least one instance of %s or
+	// %[1]s, which are replaced with the string given in the repo's funding
+	// config.
+	//
+	// When parsed from the server config, this value defaults to the value of
+	// `URL` without the scheme.
+	Text     string
+
+	// The name of the icon to use. When parsed from the server config, this
+	// value defaults to `{Name}.svg`. For custom funding providers, add a small
+	// square image or vector to public/assets/img/funding/provider_name.png (or
+	// whatever image file extension you please) and, if the filename differs
+	// {Name}.svg, add its name here.
+	IconName string
+}
+
+var FundingProviders map[string]*FundingProviderConfig
 
 // Ensures that any formatting sigils (%s, etc.) are rendered inert, except for
 // %[1]s. Also, %s is transformed into %[1]s, because these format strings only
@@ -23,41 +54,42 @@ func cleanUpSigils(s string) (string) {
 	return result
 }
 
-// Removes the last element of the slice.
-func popLast(s []string) []string {
-	if len(s) > 0 {
-		s = s[:len(s) - 1]
+// Returns the path to the provider's icon
+func IconForProvider(p *FundingProviderConfig) (string) {
+	if p.Name == "custom" {
+		return fmt.Sprintf("%s/assets/img/svg/octicon-link.svg", AppSubURL)
+	} else if p.IconName == "" {
+		return fmt.Sprintf("%s/assets/img/funding/%s.svg", AppSubURL, p.Name)
+	} else {
+		return fmt.Sprintf("%s/assets/img/funding/%s", AppSubURL, p.IconName)
 	}
-	return s
 }
 
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
-	// FIXME: The Gitea guys say "suggest uing option method like lable templates. see https://github.com/go-gitea/gitea/blob/main/modules/options/base.go", I'm not sure what that means tho? Maybe ask in my PR whether this or some other way is the "best" approach to adding a new category of app.ini options
-	FundingProviders = make(map[string]*api.FundingProvider)
+	FundingProviders = make(map[string]*FundingProviderConfig)
 
-	FundingProviders["custom"] = &api.FundingProvider{
+	FundingProviders["custom"] = &FundingProviderConfig{
 		Name: "custom",
 		Limit: 4,
 		Text: "%[1]s",
 		URL:  "%[1]s",
-		Icon: "img/svg/octicon-link.svg", // this value is ignored for Name:custom
-		// TODO: we should derive the asset path here; if the file does not exist, warn in the console and leave it empty (template defaults to octicon-heart)
+		IconName: "", // the template ignores this for "custom"
 	}
 
-	FundingProviders["ko_fi"] = &api.FundingProvider{
+	FundingProviders["ko_fi"] = &FundingProviderConfig{
 		Name: "ko_fi",
 		Limit: 1,
 		Text: "ko-fi.com/%[1]s",
 		URL:  "https://ko-fi.com/%[1]s",
-		Icon: "img/funding/ko_fi.svg",
+		IconName: "ko_fi.svg",
 	}
 
-	FundingProviders["liberapay"] = &api.FundingProvider{
+	FundingProviders["liberapay"] = &FundingProviderConfig{
 		Name: "liberapay",
 		Limit: 1,
 		Text: "liberapay.com/%[1]s",
 		URL:  "https://liberapay.com/%[1]s",
-		Icon: "img/funding/liberapay.svg",
+		IconName: "liberapay.svg",
 	}
 
 	const keyLimit = "LIMIT"
@@ -107,12 +139,21 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 			text = cleanUpSigils(text)
 		}
 
-		provider := new(api.FundingProvider)
+		// make the icon safe to use as a path segment
+		icon := raw_icon
+		if icon == "" {
+			icon = fmt.Sprintf("%s.svg", name)
+		} else if strings.Contains(icon, "..") || strings.ContainsAny(icon, "/\\") {
+			icon = fmt.Sprintf("%s.svg", name)
+			log.Warn("%s.%s must be a valid filename in public/assets/img/funding, using %s instead", sec.Name(), keyIcon, icon)
+		}
+
+		provider := new(FundingProviderConfig)
 		provider.Name = name
 		provider.Limit = limit
 		provider.Text = text
 		provider.URL = url
-		provider.Icon = raw_icon
+		provider.IconName = icon
 
 		if FundingProviders[name] != nil {
 			log.Warn("%s funding provider already exists, existing provider %s is unchanged", sec.Name(), name)
@@ -122,7 +163,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	}
 }
 
-func GetFundingProviderByName(name string) *api.FundingProvider {
+func GetFundingProviderByName(name string) *FundingProviderConfig {
 	for _, provider := range FundingProviders {
 		if provider.Name == name {
 			return provider
