@@ -137,6 +137,6 @@ dialog .actions .ui.button .svg {
   }
 }
 
-dialog .ui.button.close-dialog {
+dialog .close.icon {
   margin-inline-start: auto;
 }
