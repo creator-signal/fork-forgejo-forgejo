@@ -1490,7 +1490,7 @@ func ValidateFundingConfig(ctx *context.APIContext) {
 	if funding != nil && len(funding.Errors) > 0 {
 		err := errors.Join(funding.Errors...)
 		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: false, Message: err.Error()})
-		} else {
+	} else {
 		ctx.JSON(http.StatusOK, api.ConfigValidation{Valid: true, Message: ""})
 	}
 }
