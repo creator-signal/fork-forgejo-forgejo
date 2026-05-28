@@ -34,7 +34,7 @@ URL = "https://mycustom.example.com/%s"
 func TestNewFundingProviderConfigWithMailtoUrl(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
-	// not sure what an email domain would do for funding stuffs, but it is a silly formatting case to test
+	// not sure what an email domain would do for funding stuffs, but weird formatting cases are good to test
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
 URL = "mailto:%s@localhost"
