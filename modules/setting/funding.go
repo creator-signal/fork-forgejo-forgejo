@@ -117,10 +117,10 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 
 		limit := uint(1)
 		if raw_limit < lowerLimit {
-			log.Warn("%s.%s should be no lower than %d, clamping to %d", sec.Name(), keyLimit, lowerLimit, lowerLimit)
+			log.Warn("%s.%s should be no lower than %[3]d, clamping to %[3]d", sec.Name(), keyLimit, lowerLimit)
 			limit = lowerLimit
 		} else if raw_limit > upperLimit {
-			log.Warn("%s.%s should be no higher than %d, clamping to %d", sec.Name(), keyLimit, upperLimit, upperLimit)
+			log.Warn("%s.%s should be no higher than %[3]d, clamping to %[3]d", sec.Name(), keyLimit, upperLimit)
 			limit = upperLimit
 		} else {
 			limit = uint(raw_limit)
