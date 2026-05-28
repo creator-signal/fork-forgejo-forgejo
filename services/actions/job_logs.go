@@ -5,7 +5,6 @@ package actions
 
 import (
 	"archive/zip"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -29,13 +28,59 @@ var (
 	ErrStepNoLogRange = errors.New("step has no recorded log range")
 )
 
-// nopReadSeekCloser wraps a bytes.Reader so the step-filtered path can return
-// the same io.ReadSeekCloser shape as actions.OpenLogs.
-type nopReadSeekCloser struct {
-	*bytes.Reader
+// boundedReadSeekCloser exposes a [start, start+size) window of the underlying
+// reader as if it started at offset 0. It exists so the step-filtered path
+// can return an io.ReadSeekCloser (required by http.ServeContent for Range)
+// without buffering the entire step slice into memory.
+type boundedReadSeekCloser struct {
+	inner io.ReadSeekCloser
+	start int64
+	size  int64
+	pos   int64
 }
 
-func (n nopReadSeekCloser) Close() error { return nil }
+func newBoundedReadSeekCloser(inner io.ReadSeekCloser, start, size int64) (*boundedReadSeekCloser, error) {
+	if _, err := inner.Seek(start, io.SeekStart); err != nil {
+		return nil, err
+	}
+	return &boundedReadSeekCloser{inner: inner, start: start, size: size}, nil
+}
+
+func (b *boundedReadSeekCloser) Read(p []byte) (int, error) {
+	if b.pos >= b.size {
+		return 0, io.EOF
+	}
+	if remaining := b.size - b.pos; int64(len(p)) > remaining {
+		p = p[:remaining]
+	}
+	n, err := b.inner.Read(p)
+	b.pos += int64(n)
+	return n, err
+}
+
+func (b *boundedReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
+	var abs int64
+	switch whence {
+	case io.SeekStart:
+		abs = offset
+	case io.SeekCurrent:
+		abs = b.pos + offset
+	case io.SeekEnd:
+		abs = b.size + offset
+	default:
+		return 0, errors.New("boundedReadSeekCloser: invalid whence")
+	}
+	if abs < 0 {
+		return 0, errors.New("boundedReadSeekCloser: negative position")
+	}
+	if _, err := b.inner.Seek(b.start+abs, io.SeekStart); err != nil {
+		return 0, err
+	}
+	b.pos = abs
+	return abs, nil
+}
+
+func (b *boundedReadSeekCloser) Close() error { return b.inner.Close() }
 
 // OpenJobLogReader returns a reader for an action job's log along with the
 // filename and modtime to expose via Content-Disposition / Last-Modified.
@@ -44,8 +89,8 @@ func (n nopReadSeekCloser) Close() error { return nil }
 //     GetTaskByJobAttempt). When unset, the latest attempt is used via the
 //     job.TaskID pointer maintained by the runner.
 //   - stepFilter, when set, narrows the returned bytes to that 0-indexed
-//     step's portion of the log. The reader is then a bytes.Reader over the
-//     pre-sliced bytes; Range requests still work via http.ServeContent.
+//     step's portion of the log via a bounded ReadSeekCloser window over the
+//     underlying log file. Range requests still work via http.ServeContent.
 //
 // The caller is responsible for closing the returned reader.
 func OpenJobLogReader(
@@ -138,19 +183,14 @@ func OpenJobLogReader(
 		return reader, filename, modtime, nil
 	}
 
-	if _, err := reader.Seek(startByte, io.SeekStart); err != nil {
+	bounded, err := newBoundedReadSeekCloser(reader, startByte, length)
+	if err != nil {
 		reader.Close()
 		return nil, "", time.Time{}, fmt.Errorf("seek log to step start: %w", err)
 	}
-	buf := make([]byte, length)
-	if _, err := io.ReadFull(reader, buf); err != nil {
-		reader.Close()
-		return nil, "", time.Time{}, fmt.Errorf("read step log slice: %w", err)
-	}
-	reader.Close()
 
 	stepFilename := fmt.Sprintf("job-%d-attempt-%d-step-%d.log", job.ID, task.Attempt, stepIdx)
-	return nopReadSeekCloser{bytes.NewReader(buf)}, stepFilename, modtime, nil
+	return bounded, stepFilename, modtime, nil
 }
 
 // WriteRunLogsZip writes a ZIP of the latest per-job logs for the run to w.
@@ -158,8 +198,10 @@ func OpenJobLogReader(
 // job's current attempt — the run itself has no attempt number, so jobs that
 // were re-run independently show different attempts here. Jobs that haven't
 // run, can't be looked up, or have expired logs get a .MISSING marker; a
-// mid-stream read failure gets a sibling .PARTIAL marker. Caller sets
-// Content-Type / Content-Disposition before calling.
+// mid-stream read failure gets a sibling .PARTIAL marker. Any ZIP-level
+// write failure (e.g. the HTTP client disconnects mid-stream) is propagated
+// so the caller can abort instead of churning through the remaining jobs.
+// Caller sets Content-Type / Content-Disposition before calling.
 func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.ActionRun) error {
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
@@ -188,48 +230,49 @@ func WriteRunLogsZip(ctx context.Context, w io.Writer, run *actions_model.Action
 		return fmt.Sprintf("%s-%d-attempt-%d.%s", sanitize(job.Name), job.ID, job.Attempt, suffix)
 	}
 
-	writeMarker := func(job *actions_model.ActionRunJob, suffix, msg string) {
+	writeMarker := func(job *actions_model.ActionRunJob, suffix, msg string) error {
 		entry, werr := zw.Create(entryName(job, suffix))
-		if werr == nil {
-			_, _ = entry.Write([]byte(msg))
+		if werr != nil {
+			return werr
 		}
+		_, werr = entry.Write([]byte(msg))
+		return werr
 	}
 
-	for _, job := range jobs {
+	// Inner closure so reader.Close runs per iteration via defer.
+	processJob := func(job *actions_model.ActionRunJob) error {
 		if job.TaskID == 0 {
-			writeMarker(job, "MISSING", "job has not been executed yet\n")
-			continue
+			return writeMarker(job, "MISSING", "job has not been executed yet\n")
 		}
 		task, err := actions_model.GetTaskByID(ctx, job.TaskID)
 		if err != nil {
-			writeMarker(job, "MISSING", fmt.Sprintf("task lookup failed: %v\n", err))
-			continue
+			return writeMarker(job, "MISSING", fmt.Sprintf("task lookup failed: %v\n", err))
 		}
-
 		if task.LogExpired {
-			writeMarker(job, "MISSING", "logs have been cleaned up\n")
-			continue
+			return writeMarker(job, "MISSING", "logs have been cleaned up\n")
 		}
 
 		reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
 		if err != nil {
-			writeMarker(job, "MISSING", fmt.Sprintf("log open failed: %v\n", err))
-			continue
+			return writeMarker(job, "MISSING", fmt.Sprintf("log open failed: %v\n", err))
 		}
+		defer reader.Close()
 
 		entry, err := zw.Create(entryName(job, "log"))
 		if err != nil {
-			reader.Close()
-			writeMarker(job, "MISSING", fmt.Sprintf("zip entry create failed: %v\n", err))
-			continue
+			return writeMarker(job, "MISSING", fmt.Sprintf("zip entry create failed: %v\n", err))
 		}
 
 		if _, copyErr := io.Copy(entry, reader); copyErr != nil {
-			reader.Close()
-			writeMarker(job, "PARTIAL", fmt.Sprintf("log read failed mid-stream: %v\n", copyErr))
-			continue
+			return writeMarker(job, "PARTIAL", fmt.Sprintf("log read failed mid-stream: %v\n", copyErr))
 		}
-		reader.Close()
+		return nil
+	}
+
+	for _, job := range jobs {
+		if err := processJob(job); err != nil {
+			return err
+		}
 	}
 	return nil
 }

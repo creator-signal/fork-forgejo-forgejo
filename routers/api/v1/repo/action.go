@@ -1551,9 +1551,9 @@ func GetActionJobLogs(ctx *context.APIContext) {
 			errors.Is(err, actions_service.ErrLogsExpired),
 			errors.Is(err, actions_service.ErrStepOutOfRange),
 			errors.Is(err, actions_service.ErrStepNoLogRange):
-			ctx.Error(http.StatusNotFound, "GetActionJobLogs", err)
+			ctx.Error(http.StatusNotFound, "OpenJobLogReader", err)
 		default:
-			ctx.Error(http.StatusInternalServerError, "GetActionJobLogs", err)
+			ctx.Error(http.StatusInternalServerError, "OpenJobLogReader", err)
 		}
 		return
 	}
