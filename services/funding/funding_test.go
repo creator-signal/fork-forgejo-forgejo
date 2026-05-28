@@ -39,4 +39,7 @@ func TestIsFundingConfig(t *testing.T) {
 	assert.False(t, funding_service.IsFundingConfig("README.md"))
 	assert.False(t, funding_service.IsFundingConfig(".gitea/FUNDING.yml"))
 	assert.False(t, funding_service.IsFundingConfig("custom/FUNDING.yml"))
+	assert.False(t, funding_service.IsFundingConfig(".forgejo/_FUNDING.yml"))
+	assert.False(t, funding_service.IsFundingConfig(".forgejo/.FUNDING.yml"))
+	assert.False(t, funding_service.IsFundingConfig(".forgejo/FUNDING.yml."))
 }
