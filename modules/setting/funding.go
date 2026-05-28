@@ -15,37 +15,41 @@ type FundingProviderConfig struct {
 	// The name of the funding platform
 	Name     string
 
-	// The number of entries of this platform which may appear in a repo's
+	// The max number of entries of this platform which may appear in a repo's
 	// funding config. A value of 0 effectively disables the funding option.
 	Limit    uint
 
 	// A format string that defines a URL, ideally to a given user profile, to
 	// which users should be sent to support a project. This string should
-	// contain at least one instance of %s or %[1]s, which are replaced with the
-	// string given in the repo's funding config.
+	// contain at least one instance of %s or %[1]s, which will be replaced with
+	// the string given in a repo's funding config.
+	//
+	// This is the only required config key; the other details may be derived
+	// from this and the platform name.
 	URL      string
 
 	// A format string that defines the text that should show in place of a URL
 	// in the UI. This string should contain at least one instance of %s or
-	// %[1]s, which are replaced with the string given in the repo's funding
+	// %[1]s, which will be replaced with the string given in a repo's funding
 	// config.
 	//
 	// When parsed from the server config, this value defaults to the value of
 	// `URL` without the scheme.
 	Text     string
 
-	// The name of the icon to use. When parsed from the server config, this
-	// value defaults to `{Name}.svg`. For custom funding providers, add a small
-	// square image or vector to public/assets/img/funding/provider_name.png (or
-	// whatever image file extension you please) and, if the filename differs
-	// {Name}.svg, add its name here.
+	// The name of an icon file that identifies the platform. When parsed from
+	// the server config, this value defaults to `{Name}.svg`. For custom funding
+	// providers, add a small square image or vector to
+	// public/assets/img/funding/provider_name.svg. If the file extension differs
+	// from svg, or the provider_name differs from the platform name, set the
+	// actual filename here.
 	IconName string
 }
 
 var FundingProviders map[string]*FundingProviderConfig
 
 // Ensures that any formatting sigils (%s, etc.) are rendered inert, except for
-// %[1]s. Also, %s is transformed into %[1]s, because these format strings only
+// %[1]s. Also transforms %s into %[1]s, because these format strings only
 // ever receive a single argument, which may be used in multiple places.
 func cleanUpSigils(s string) (string) {
 	result := strings.ReplaceAll(s, "%", "%%") // escape away all sigils
