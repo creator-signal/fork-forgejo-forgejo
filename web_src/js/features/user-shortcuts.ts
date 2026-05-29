@@ -1,3 +1,5 @@
+import {POST} from '../modules/fetch.js';
+
 const Page = Object.freeze({
   Actions: 0,
   Code: 1,
@@ -68,6 +70,23 @@ function initPopupTabs() {
   });
 }
 
+function initEnableCheckbox() {
+  const checkbox = document.querySelector<HTMLInputElement>('#shortcuts input');
+  checkbox?.addEventListener('change', () => {
+    const enable = checkbox.checked;
+    if (enable) document.addEventListener('keydown', onKeydown);
+    else document.removeEventListener('keydown', onKeydown);
+    const data = new URLSearchParams();
+    if (enable) {
+      data.set('enable_shortcuts', 'on');
+    }
+    POST(`${window.config.appSubUrl}/user/settings/appearance/shortcuts`, {
+      headers: {Accept: 'application/json'},
+      data,
+    }).catch(console.error);
+  });
+}
+
 function goto(page: (typeof Page)[keyof typeof Page]) {
   if (!goto_state) return true;
   switch (page) {
@@ -111,125 +130,128 @@ function goto(page: (typeof Page)[keyof typeof Page]) {
   return false;
 }
 
-export function initUserShortcuts() {
-  initPopupTabs();
-  document.addEventListener('keydown', (e) => {
-    if (
-      (e.altKey ||
-        e.ctrlKey ||
-        e.metaKey ||
-        e.shiftKey ||
-        !(e.target instanceof Element) ||
-        e.target.closest('input, textarea, [contenteditable]')) &&
-      (e.target as HTMLInputElement).type !== 'checkbox'
-    ) {
-      goto_state = false;
-      return;
-    }
-    switch (e.key) {
-      case 'a':
-        goto(Page.Actions);
-        break;
-      case 'b':
-        document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
-        break;
-      case 'c':
-        if (goto(Page.Code)) {
-          document
-            .querySelector<HTMLAnchorElement>(
-              '.issue-list-new, .release-list-buttons .primary',
-            )
-            ?.click();
-        }
-        break;
-      case 'd':
-        goto(Page.Dashboard);
-        break;
-      case 'g':
-        if (goto_state) return;
-        goto_state = true;
-        setTimeout(() => {
-          goto_state = false;
-        }, 750);
-        return;
-      case 'h':
-        document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
-        break;
-      case 'i':
-        goto(Page.Issues);
-        break;
-      case 'j':
-        (e.target as HTMLInputElement).blur();
-        keyboardSelector(false);
-        break;
-      case 'k':
-        (e.target as HTMLInputElement).blur();
-        keyboardSelector(true);
-        break;
-      case 'n':
-        goto(Page.Notifications);
-        break;
-      case 'o':
-        goto(Page.Projects);
-        break;
-      case 'p':
-        goto(Page.Pulls);
-        break;
-      case 'r':
-        if (goto(Page.Releases)) {
-          document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
-        }
-        break;
-      case 'w':
-        if (goto(Page.Wiki)) {
-          document
-            .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
-            ?.click();
-          e.preventDefault();
-        }
-        break;
-      case 'x':
+function onKeydown(e: KeyboardEvent) {
+  if (
+    (e.altKey ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.shiftKey ||
+      !(e.target instanceof Element) ||
+      e.target.closest('input, textarea, [contenteditable]')) &&
+    (e.target as HTMLInputElement).type !== 'checkbox'
+  ) {
+    goto_state = false;
+    return;
+  }
+  switch (e.key) {
+    case 'a':
+      goto(Page.Actions);
+      break;
+    case 'b':
+      document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
+      break;
+    case 'c':
+      if (goto(Page.Code)) {
         document
-          .querySelector<HTMLInputElement>(
-            '.keyboard-selected input[type="checkbox"]',
+          .querySelector<HTMLAnchorElement>(
+            '.issue-list-new, .release-list-buttons .primary',
           )
           ?.click();
-        break;
-      case 'y':
-        document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
-        break;
-      case '/':
+      }
+      break;
+    case 'd':
+      goto(Page.Dashboard);
+      break;
+    case 'g':
+      if (goto_state) return;
+      goto_state = true;
+      setTimeout(() => {
+        goto_state = false;
+      }, 750);
+      return;
+    case 'h':
+      document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
+      break;
+    case 'i':
+      goto(Page.Issues);
+      break;
+    case 'j':
+      (e.target as HTMLInputElement).blur();
+      keyboardSelector(false);
+      break;
+    case 'k':
+      (e.target as HTMLInputElement).blur();
+      keyboardSelector(true);
+      break;
+    case 'n':
+      goto(Page.Notifications);
+      break;
+    case 'o':
+      goto(Page.Projects);
+      break;
+    case 'p':
+      goto(Page.Pulls);
+      break;
+    case 'r':
+      if (goto(Page.Releases)) {
+        document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
+      }
+      break;
+    case 'w':
+      if (goto(Page.Wiki)) {
         document
-          .querySelector<HTMLInputElement>('input[type="search"]')
-          ?.focus();
+          .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
+          ?.click();
         e.preventDefault();
-        break;
-      case 'ArrowLeft': {
-        const btns = Array.from(
-          document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
-        );
-        const idx = btns.findIndex((btn) => btn.classList.contains('active'));
-        if (idx > 0) {
-          btns[idx - 1].click();
-        }
-        break;
       }
-      case 'ArrowRight': {
-        const btns = Array.from(
-          document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
-        );
-        const idx = btns.findIndex((btn) => btn.classList.contains('active'));
-        if (idx < btns.length - 1) {
-          btns[idx + 1].click();
-        }
-        break;
+      break;
+    case 'x':
+      document
+        .querySelector<HTMLInputElement>(
+          '.keyboard-selected input[type="checkbox"]',
+        )
+        ?.click();
+      break;
+    case 'y':
+      document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
+      break;
+    case '/':
+      document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+      e.preventDefault();
+      break;
+    case 'ArrowLeft': {
+      const btns = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
+      );
+      const idx = btns.findIndex((btn) => btn.classList.contains('active'));
+      if (idx > 0) {
+        btns[idx - 1].click();
       }
-      case 'Escape':
-        document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
+      break;
     }
-    goto_state = false;
-  });
-  document.addEventListener('keydown', (e) => {
+    case 'ArrowRight': {
+      const btns = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
+      );
+      const idx = btns.findIndex((btn) => btn.classList.contains('active'));
+      if (idx < btns.length - 1) {
+        btns[idx + 1].click();
+      }
+      break;
+    }
+    case 'Escape':
+      document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
+  }
+  goto_state = false;
+}
+
+export function initUserShortcuts() {
+  initPopupTabs();
+  initEnableCheckbox();
+  if (document.querySelector<HTMLInputElement>('#shortcuts input')?.checked) {
+    document.addEventListener('keydown', onKeydown);
+  }
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === '?' && e.shiftKey) {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
     }

@@ -66,6 +66,7 @@ func UpdateUserSettings(ctx *context.APIContext) {
 		KeepPronounsPrivate: optional.FromPtr(form.HidePronouns),
 		KeepActivityPrivate: optional.FromPtr(form.HideActivity),
 		EnableRepoUnitHints: optional.FromPtr(form.EnableRepoUnitHints),
+		EnableShortcuts:     optional.FromPtr(form.EnableShortcuts),
 	}
 	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
 		ctx.InternalServerError(err)

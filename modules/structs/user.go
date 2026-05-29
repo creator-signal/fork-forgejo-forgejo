@@ -82,6 +82,7 @@ type UserSettings struct {
 	Theme               string `json:"theme"`
 	DiffViewStyle       string `json:"diff_view_style"`
 	EnableRepoUnitHints bool   `json:"enable_repo_unit_hints"`
+	EnableShortcuts     bool   `json:"enable_shortcuts"`
 	// Privacy
 	HideEmail    bool `json:"hide_email"`
 	HidePronouns bool `json:"hide_pronouns"`
@@ -100,6 +101,7 @@ type UserSettingsOptions struct {
 	Theme               *string `json:"theme"`
 	DiffViewStyle       *string `json:"diff_view_style"`
 	EnableRepoUnitHints *bool   `json:"enable_repo_unit_hints"`
+	EnableShortcuts     *bool   `json:"enable_shortcuts"`
 	// Privacy
 	HideEmail    *bool `json:"hide_email"`
 	HidePronouns *bool `json:"hide_pronouns"`

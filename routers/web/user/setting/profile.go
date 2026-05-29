@@ -422,6 +422,28 @@ func UpdateUserHints(ctx *context.Context) {
 	ctx.Redirect(setting.AppSubURL + "/user/settings/appearance")
 }
 
+// UpdateUserShortcuts updates a user's keyboard shortcut settings
+func UpdateUserShortcuts(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.UpdateShortcutsForm)
+
+	opts := &user_service.UpdateOptions{
+		EnableShortcuts: optional.Some(form.EnableShortcuts),
+	}
+	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
+		ctx.ServerError("UpdateUser", err)
+		return
+	}
+
+	log.Trace("User shortcut settings updated: %s", ctx.Doer.Name)
+	if ctx.Req.Header.Get("Accept") == "application/json" {
+		ctx.JSON(http.StatusOK, map[string]bool{
+			"enable_shortcuts": ctx.Doer.EnableShortcuts,
+		})
+		return
+	}
+	ctx.Redirect(setting.AppSubURL + "/")
+}
+
 // UpdateUserHiddenComments update a user's shown comment types
 func UpdateUserHiddenComments(ctx *context.Context) {
 	err := user_model.SetUserSetting(ctx, ctx.Doer.ID, user_model.SettingsKeyHiddenCommentTypes, forms.UserHiddenCommentTypesFromRequest(ctx).String())

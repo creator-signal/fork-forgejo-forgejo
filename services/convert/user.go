@@ -101,6 +101,7 @@ func User2UserSettings(user *user_model.User) api.UserSettings {
 		HideActivity:        user.KeepActivityPrivate,
 		DiffViewStyle:       user.DiffViewStyle,
 		EnableRepoUnitHints: user.EnableRepoUnitHints,
+		EnableShortcuts:     user.EnableShortcuts,
 	}
 }
 

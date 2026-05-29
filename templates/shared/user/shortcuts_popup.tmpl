@@ -126,5 +126,11 @@
 				</li>
 			</ul>
 		</div>
+		{{if .IsSigned}}
+			<input type="checkbox"{{if .SignedUser.EnableShortcuts}} checked{{end}}>
+		{{else}}
+			<input type="checkbox" checked>
+		{{end}}
+		<label>{{ctx.Locale.Tr "shortcuts.enable"}}</label>
 	</article>
 </dialog>

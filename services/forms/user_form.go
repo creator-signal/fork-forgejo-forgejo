@@ -243,6 +243,11 @@ type UpdateHintsForm struct {
 	EnableRepoUnitHints bool
 }
 
+// UpdateShortcutsForm form for updating keyboard shortcut settings
+type UpdateShortcutsForm struct {
+	EnableShortcuts bool
+}
+
 // Validate validates the fields
 func (f *UpdateLanguageForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
 	ctx := context.GetValidateContext(req)
