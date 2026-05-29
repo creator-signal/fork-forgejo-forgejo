@@ -17,10 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: link to the page from the modal when there are errors
-// TODO: handle instance-custom entries (app.ini)
 // TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
-// TODO: test uniqueness (duplicate "custom" entries get elided)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in UI
 
 func TestSponsorButton(t *testing.T) {
@@ -168,6 +165,53 @@ func TestSponsorButton(t *testing.T) {
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
 				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
+			})
+
+			t.Run("sponsor modal skips duplicate funding entries", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []string{"test1", "test1", "test2"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				sponsorButton := htmlDoc.Find("button.sponsor")
+				assert.Equal(t, 1, sponsorButton.Length())
+				assert.Contains(t, sponsorButton.Text(), "Sponsor")
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
+
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 2, sponsorEntries.Length())
+
+				// duplicate entries are skipped
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "test1")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "test2")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", true)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 1, fileErrorDetails.Length())
+				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
+				assert.Contains(t, fileErrorDetails.Text(), "Duplicate entry for key 'custom': test1")
 			})
 
 			t.Run("funding config describes multiple issues", func(t *testing.T) {
@@ -491,8 +535,8 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) svg.octicon-link", true)
 
 				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) a", "href", "https://ko-fi.com/test")
-			htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) img", "src", "/assets/img/funding/ko_fi.svg")
-			htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(5) svg.octicon-link", false)
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(5) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(5) svg.octicon-link", false)
 
 				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
 				resp = MakeRequest(t, req, http.StatusOK)

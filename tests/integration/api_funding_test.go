@@ -61,11 +61,8 @@ var testFundingCandidates = []string {
 	"fUnDiNg.yaml",
 }
 
-// TODO: Test API responses when funding config is invalid
-// TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in API except in /settings/funding)
-// TODO: Ensure providers are unique (duplicate "custom" entries get elided)
 
 func TestAPIFundingSettings(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
@@ -137,12 +134,30 @@ func TestAPIRepoFunding(t *testing.T) {
 			t.Run("Custom string array", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				testSlice := make([]string, 2)
-				testSlice[0] = "https://a.com"
-				testSlice[1] = "https://b.com"
+				config := make(map[string]any)
+				config["custom"] = []string{"https://a.com", "https://b.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 2)
+
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "https://a.com", funding[0].Text)
+				assert.Equal(t, "https://a.com", funding[0].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "custom", funding[1].ProviderName)
+				assert.Equal(t, "https://b.com", funding[1].Text)
+				assert.Equal(t, "https://b.com", funding[1].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+			})
+
+			t.Run("Skips duplicate entries", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = testSlice
+				config["custom"] = []string{"https://a.com", "https://a.com", "https://b.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -679,6 +694,23 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				assert.False(t, fundingValidation.Valid)
 				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom\nExpected up to 1 of funding provider ko_fi")
+			})
+
+			t.Run("Partially invalid (duplicate entries)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []string{"https://a.com", "https://a.com", "https://b.com"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, "Duplicate entry for key 'custom': https://a.com", fundingValidation.Message)
 			})
 		})
 	}

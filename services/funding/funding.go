@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -41,7 +42,7 @@ func (err ErrUnknownFundingProvider) Error() string {
 
 // ErrTooManyOfFundingProvider represents a "TooManyOfFundingProvider" kind of error.
 type ErrTooManyOfFundingProvider struct {
-	Name string
+	Name  string
 	Limit uint
 }
 
@@ -53,7 +54,17 @@ func (err ErrTooManyOfFundingProvider) Error() string {
 	}
 }
 
-// ErrInvalidYamlType represents a "InvalidYamlType" kind of error.
+// ErrDuplicateFundingEntry represents a "DuplicateFundingEntry" kind of error.
+type ErrDuplicateFundingEntry struct {
+	Name string
+	URL  string
+}
+
+func (err ErrDuplicateFundingEntry) Error() string {
+	return fmt.Sprintf("Duplicate entry for key '%s': %s", err.Name, err.URL)
+}
+
+// ErrInvalidYamlType represents an "InvalidYamlType" kind of error.
 type ErrInvalidYamlType struct {
 	Name string
 }
@@ -153,7 +164,14 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 					errs = append(errs, ErrInvalidYamlType{Name: providerName})
 					continue // keep searching this provider, there may be more we want
 				}
-				entryList = append(entryList, getFundingEntry(provider, str))
+				newEntry := getFundingEntry(provider, str)
+				if slices.ContainsFunc(entryList, func(e *api.RepoFundingEntry) bool {
+					return e.URL == newEntry.URL
+				}) {
+					errs = append(errs, ErrDuplicateFundingEntry{Name: providerName, URL: newEntry.URL})
+					continue
+				}
+				entryList = append(entryList, newEntry)
 			}
 		default:
 			errs = append(errs, ErrInvalidYamlType{Name: providerName})
