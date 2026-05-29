@@ -956,7 +956,7 @@
 		"one": "Error parsing funding config:",
 		"other": "Errors parsing funding config:"
 	},
-	"funding.invalid_provider_error": "Unknown funding provider: %s",
+	"funding.unknown_provider_error": "Unknown funding provider: %s",
 	"funding.provider_disallowed_error": "Funding provider %s is not allowed",
 	"funding.n_too_many_of_provider_error": "Expected up to %d of funding provider %s",
 	"funding.invalid_yaml_type_error": "Invalid type for key '%s', expected a string or string array",

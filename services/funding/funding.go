@@ -30,12 +30,12 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
-// ErrInvalidFundingProvider represents an "UnknownFundingProvider" kind of error.
-type ErrInvalidFundingProvider struct {
+// ErrUnknownFundingProvider represents an "UnknownFundingProvider" kind of error.
+type ErrUnknownFundingProvider struct {
 	Name string
 }
 
-func (err ErrInvalidFundingProvider) Error() string {
+func (err ErrUnknownFundingProvider) Error() string {
 	return fmt.Sprintf("Unknown funding provider: %s", err.Name)
 }
 
@@ -127,7 +127,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		fundingData := fundingMap[providerName]
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
-			errs = append(errs, ErrInvalidFundingProvider{Name: providerName})
+			errs = append(errs, ErrUnknownFundingProvider{Name: providerName})
 			continue
 		}
 

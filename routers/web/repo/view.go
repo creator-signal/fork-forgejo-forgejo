@@ -462,8 +462,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 
 			details := make([]template.HTML, 0, len(funding.Errors))
 			for _, err := range funding.Errors {
-				if invalid_provider_err, ok := errors.AsType[funding_service.ErrInvalidFundingProvider](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", invalid_provider_err.Name))
+				if unknown_provider_err, ok := errors.AsType[funding_service.ErrUnknownFundingProvider](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.unknown_provider_error", unknown_provider_err.Name))
 				} else if too_many_err, ok := errors.AsType[funding_service.ErrTooManyOfFundingProvider](err); ok {
 					if too_many_err.Limit == 0 {
 						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", too_many_err.Name))
