@@ -153,7 +153,6 @@ type ErrInvalidCloneAddr struct {
 // IsErrInvalidCloneAddr checks if an error is a ErrInvalidCloneAddr.
 func IsErrInvalidCloneAddr(err error) bool {
 	return errors.Is(err, &ErrInvalidCloneAddr{})
-
 }
 
 func (err *ErrInvalidCloneAddr) Error() string {
@@ -192,8 +191,7 @@ type ErrInvalidTagName struct {
 
 // IsErrInvalidTagName checks if an error is a ErrInvalidTagName.
 func IsErrInvalidTagName(err error) bool {
-	_, ok := err.(ErrInvalidTagName)
-	return ok
+	return errors.Is(err, ErrInvalidTagName{})
 }
 
 func (err ErrInvalidTagName) Error() string {
@@ -204,6 +202,11 @@ func (err ErrInvalidTagName) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
+func (err ErrInvalidTagName) Is(target error) bool {
+	_, ok := target.(ErrInvalidTagName)
+	return ok
+}
+
 // ErrProtectedTagName represents a "ProtectedTagName" kind of error.
 type ErrProtectedTagName struct {
 	TagName string
@@ -211,8 +214,7 @@ type ErrProtectedTagName struct {
 
 // IsErrProtectedTagName checks if an error is a ErrProtectedTagName.
 func IsErrProtectedTagName(err error) bool {
-	_, ok := err.(ErrProtectedTagName)
-	return ok
+	return errors.Is(err, ErrProtectedTagName{})
 }
 
 func (err ErrProtectedTagName) Error() string {
@@ -223,6 +225,11 @@ func (err ErrProtectedTagName) Unwrap() error {
 	return util.ErrPermissionDenied
 }
 
+func (err ErrProtectedTagName) Is(target error) bool {
+	_, ok := target.(ErrProtectedTagName)
+	return ok
+}
+
 // ErrRepoFileAlreadyExists represents a "RepoFileAlreadyExist" kind of error.
 type ErrRepoFileAlreadyExists struct {
 	Path string
@@ -230,8 +237,7 @@ type ErrRepoFileAlreadyExists struct {
 
 // IsErrRepoFileAlreadyExists checks if an error is a ErrRepoFileAlreadyExists.
 func IsErrRepoFileAlreadyExists(err error) bool {
-	_, ok := err.(ErrRepoFileAlreadyExists)
-	return ok
+	return errors.Is(err, ErrRepoFileAlreadyExists{})
 }
 
 func (err ErrRepoFileAlreadyExists) Error() string {
@@ -242,6 +248,11 @@ func (err ErrRepoFileAlreadyExists) Unwrap() error {
 	return util.ErrAlreadyExist
 }
 
+func (err ErrRepoFileAlreadyExists) Is(target error) bool {
+	_, ok := target.(ErrRepoFileAlreadyExists)
+	return ok
+}
+
 // ErrRepoFileDoesNotExist represents a "RepoFileDoesNotExist" kind of error.
 type ErrRepoFileDoesNotExist struct {
 	Path string
@@ -250,8 +261,7 @@ type ErrRepoFileDoesNotExist struct {
 
 // IsErrRepoFileDoesNotExist checks if an error is a ErrRepoDoesNotExist.
 func IsErrRepoFileDoesNotExist(err error) bool {
-	_, ok := err.(ErrRepoFileDoesNotExist)
-	return ok
+	return errors.Is(err, ErrRepoFileDoesNotExist{})
 }
 
 func (err ErrRepoFileDoesNotExist) Error() string {
@@ -262,6 +272,11 @@ func (err ErrRepoFileDoesNotExist) Unwrap() error {
 	return util.ErrNotExist
 }
 
+func (err ErrRepoFileDoesNotExist) Is(target error) bool {
+	_, ok := target.(ErrRepoFileDoesNotExist)
+	return ok
+}
+
 // ErrFilenameInvalid represents a "FilenameInvalid" kind of error.
 type ErrFilenameInvalid struct {
 	Path string
@@ -269,8 +284,7 @@ type ErrFilenameInvalid struct {
 
 // IsErrFilenameInvalid checks if an error is an ErrFilenameInvalid.
 func IsErrFilenameInvalid(err error) bool {
-	_, ok := err.(ErrFilenameInvalid)
-	return ok
+	return errors.Is(err, ErrFilenameInvalid{})
 }
 
 func (err ErrFilenameInvalid) Error() string {
@@ -281,6 +295,11 @@ func (err ErrFilenameInvalid) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
+func (err ErrFilenameInvalid) Is(target error) bool {
+	_, ok := target.(ErrFilenameInvalid)
+	return ok
+}
+
 // ErrUserCannotCommit represents "UserCannotCommit" kind of error.
 type ErrUserCannotCommit struct {
 	UserName string
@@ -288,8 +307,7 @@ type ErrUserCannotCommit struct {
 
 // IsErrUserCannotCommit checks if an error is an ErrUserCannotCommit.
 func IsErrUserCannotCommit(err error) bool {
-	_, ok := err.(ErrUserCannotCommit)
-	return ok
+	return errors.Is(err, ErrUserCannotCommit{})
 }
 
 func (err ErrUserCannotCommit) Error() string {
@@ -298,6 +316,11 @@ func (err ErrUserCannotCommit) Error() string {
 
 func (err ErrUserCannotCommit) Unwrap() error {
 	return util.ErrPermissionDenied
+}
+
+func (err ErrUserCannotCommit) Is(target error) bool {
+	_, ok := target.(ErrUserCannotCommit)
+	return ok
 }
 
 // ErrFilePathInvalid represents a "FilePathInvalid" kind of error.
@@ -310,8 +333,7 @@ type ErrFilePathInvalid struct {
 
 // IsErrFilePathInvalid checks if an error is an ErrFilePathInvalid.
 func IsErrFilePathInvalid(err error) bool {
-	_, ok := err.(ErrFilePathInvalid)
-	return ok
+	return errors.Is(err, ErrFilePathInvalid{})
 }
 
 func (err ErrFilePathInvalid) Error() string {
@@ -325,6 +347,11 @@ func (err ErrFilePathInvalid) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
+func (err ErrFilePathInvalid) Is(target error) bool {
+	_, ok := target.(ErrFilePathInvalid)
+	return ok
+}
+
 // ErrFilePathProtected represents a "FilePathProtected" kind of error.
 type ErrFilePathProtected struct {
 	Message string
@@ -333,8 +360,7 @@ type ErrFilePathProtected struct {
 
 // IsErrFilePathProtected checks if an error is an ErrFilePathProtected.
 func IsErrFilePathProtected(err error) bool {
-	_, ok := err.(ErrFilePathProtected)
-	return ok
+	return errors.Is(err, ErrFilePathProtected{})
 }
 
 func (err ErrFilePathProtected) Error() string {
@@ -348,6 +374,11 @@ func (err ErrFilePathProtected) Unwrap() error {
 	return util.ErrPermissionDenied
 }
 
+func (err ErrFilePathProtected) Is(target error) bool {
+	_, ok := target.(ErrFilePathProtected)
+	return ok
+}
+
 // ErrDisallowedToMerge represents an error that a branch is protected and the current user is not allowed to modify it.
 type ErrDisallowedToMerge struct {
 	Reason string
@@ -355,8 +386,7 @@ type ErrDisallowedToMerge struct {
 
 // IsErrDisallowedToMerge checks if an error is an ErrDisallowedToMerge.
 func IsErrDisallowedToMerge(err error) bool {
-	_, ok := err.(ErrDisallowedToMerge)
-	return ok
+	return errors.Is(err, ErrDisallowedToMerge{})
 }
 
 func (err ErrDisallowedToMerge) Error() string {
@@ -367,6 +397,11 @@ func (err ErrDisallowedToMerge) Unwrap() error {
 	return util.ErrPermissionDenied
 }
 
+func (err ErrDisallowedToMerge) Is(target error) bool {
+	_, ok := target.(ErrDisallowedToMerge)
+	return ok
+}
+
 // ErrTagAlreadyExists represents an error that tag with such name already exists.
 type ErrTagAlreadyExists struct {
 	TagName string
@@ -374,8 +409,7 @@ type ErrTagAlreadyExists struct {
 
 // IsErrTagAlreadyExists checks if an error is an ErrTagAlreadyExists.
 func IsErrTagAlreadyExists(err error) bool {
-	_, ok := err.(ErrTagAlreadyExists)
-	return ok
+	return errors.Is(err, ErrTagAlreadyExists{})
 }
 
 func (err ErrTagAlreadyExists) Error() string {
@@ -384,6 +418,11 @@ func (err ErrTagAlreadyExists) Error() string {
 
 func (err ErrTagAlreadyExists) Unwrap() error {
 	return util.ErrAlreadyExist
+}
+
+func (err ErrTagAlreadyExists) Is(target error) bool {
+	_, ok := target.(ErrTagAlreadyExists)
+	return ok
 }
 
 // ErrSHADoesNotMatch represents a "SHADoesNotMatch" kind of error.
@@ -395,12 +434,16 @@ type ErrSHADoesNotMatch struct {
 
 // IsErrSHADoesNotMatch checks if an error is a ErrSHADoesNotMatch.
 func IsErrSHADoesNotMatch(err error) bool {
-	_, ok := err.(ErrSHADoesNotMatch)
-	return ok
+	return errors.Is(err, ErrSHADoesNotMatch{})
 }
 
 func (err ErrSHADoesNotMatch) Error() string {
 	return fmt.Sprintf("sha does not match [given: %s, expected: %s]", err.GivenSHA, err.CurrentSHA)
+}
+
+func (err ErrSHADoesNotMatch) Is(target error) bool {
+	_, ok := target.(ErrSHADoesNotMatch)
+	return ok
 }
 
 // ErrSHANotFound represents a "SHADoesNotMatch" kind of error.
@@ -410,8 +453,7 @@ type ErrSHANotFound struct {
 
 // IsErrSHANotFound checks if an error is a ErrSHANotFound.
 func IsErrSHANotFound(err error) bool {
-	_, ok := err.(ErrSHANotFound)
-	return ok
+	return errors.Is(err, ErrSHANotFound{})
 }
 
 func (err ErrSHANotFound) Error() string {
@@ -422,6 +464,11 @@ func (err ErrSHANotFound) Unwrap() error {
 	return util.ErrNotExist
 }
 
+func (err ErrSHANotFound) Is(target error) bool {
+	_, ok := target.(ErrSHANotFound)
+	return ok
+}
+
 // ErrCommitIDDoesNotMatch represents a "CommitIDDoesNotMatch" kind of error.
 type ErrCommitIDDoesNotMatch struct {
 	GivenCommitID   string
@@ -430,12 +477,16 @@ type ErrCommitIDDoesNotMatch struct {
 
 // IsErrCommitIDDoesNotMatch checks if an error is a ErrCommitIDDoesNotMatch.
 func IsErrCommitIDDoesNotMatch(err error) bool {
-	_, ok := err.(ErrCommitIDDoesNotMatch)
-	return ok
+	return errors.Is(err, ErrCommitIDDoesNotMatch{})
 }
 
 func (err ErrCommitIDDoesNotMatch) Error() string {
 	return fmt.Sprintf("file CommitID does not match [given: %s, expected: %s]", err.GivenCommitID, err.CurrentCommitID)
+}
+
+func (err ErrCommitIDDoesNotMatch) Is(target error) bool {
+	_, ok := target.(ErrCommitIDDoesNotMatch)
+	return ok
 }
 
 // ErrSHAOrCommitIDNotProvided represents a "SHAOrCommitIDNotProvided" kind of error.
@@ -443,12 +494,16 @@ type ErrSHAOrCommitIDNotProvided struct{}
 
 // IsErrSHAOrCommitIDNotProvided checks if an error is a ErrSHAOrCommitIDNotProvided.
 func IsErrSHAOrCommitIDNotProvided(err error) bool {
-	_, ok := err.(ErrSHAOrCommitIDNotProvided)
-	return ok
+	return errors.Is(err, ErrSHAOrCommitIDNotProvided{})
 }
 
 func (err ErrSHAOrCommitIDNotProvided) Error() string {
 	return "a SHA or commit ID must be provided when updating a file"
+}
+
+func (err ErrSHAOrCommitIDNotProvided) Is(target error) bool {
+	_, ok := target.(ErrSHAOrCommitIDNotProvided)
+	return ok
 }
 
 // ErrInvalidMergeStyle represents an error if merging with disabled merge strategy
@@ -459,8 +514,7 @@ type ErrInvalidMergeStyle struct {
 
 // IsErrInvalidMergeStyle checks if an error is a ErrInvalidMergeStyle.
 func IsErrInvalidMergeStyle(err error) bool {
-	_, ok := err.(ErrInvalidMergeStyle)
-	return ok
+	return errors.Is(err, ErrInvalidMergeStyle{})
 }
 
 func (err ErrInvalidMergeStyle) Error() string {
@@ -470,6 +524,11 @@ func (err ErrInvalidMergeStyle) Error() string {
 
 func (err ErrInvalidMergeStyle) Unwrap() error {
 	return util.ErrInvalidArgument
+}
+
+func (err ErrInvalidMergeStyle) Is(target error) bool {
+	_, ok := target.(ErrInvalidMergeStyle)
+	return ok
 }
 
 // ErrMergeConflicts represents an error if merging fails with a conflict
@@ -482,12 +541,16 @@ type ErrMergeConflicts struct {
 
 // IsErrMergeConflicts checks if an error is a ErrMergeConflicts.
 func IsErrMergeConflicts(err error) bool {
-	_, ok := err.(ErrMergeConflicts)
-	return ok
+	return errors.Is(err, ErrMergeConflicts{})
 }
 
 func (err ErrMergeConflicts) Error() string {
 	return fmt.Sprintf("Merge Conflict Error: %v: %s\n%s", err.Err, err.StdErr, err.StdOut)
+}
+
+func (err ErrMergeConflicts) Is(target error) bool {
+	_, ok := target.(ErrMergeConflicts)
+	return ok
 }
 
 // ErrMergeUnrelatedHistories represents an error if merging fails due to unrelated histories
@@ -500,12 +563,16 @@ type ErrMergeUnrelatedHistories struct {
 
 // IsErrMergeUnrelatedHistories checks if an error is a ErrMergeUnrelatedHistories.
 func IsErrMergeUnrelatedHistories(err error) bool {
-	_, ok := err.(ErrMergeUnrelatedHistories)
-	return ok
+	return errors.Is(err, ErrMergeUnrelatedHistories{})
 }
 
 func (err ErrMergeUnrelatedHistories) Error() string {
 	return fmt.Sprintf("Merge UnrelatedHistories Error: %v: %s\n%s", err.Err, err.StdErr, err.StdOut)
+}
+
+func (err ErrMergeUnrelatedHistories) Is(target error) bool {
+	_, ok := target.(ErrMergeUnrelatedHistories)
+	return ok
 }
 
 // ErrMergeDivergingFastForwardOnly represents an error if a fast-forward-only merge fails because the branches diverge
@@ -517,12 +584,16 @@ type ErrMergeDivergingFastForwardOnly struct {
 
 // IsErrMergeDivergingFastForwardOnly checks if an error is a ErrMergeDivergingFastForwardOnly.
 func IsErrMergeDivergingFastForwardOnly(err error) bool {
-	_, ok := err.(ErrMergeDivergingFastForwardOnly)
-	return ok
+	return errors.Is(err, ErrMergeDivergingFastForwardOnly{})
 }
 
 func (err ErrMergeDivergingFastForwardOnly) Error() string {
 	return fmt.Sprintf("Merge DivergingFastForwardOnly Error: %v: %s\n%s", err.Err, err.StdErr, err.StdOut)
+}
+
+func (err ErrMergeDivergingFastForwardOnly) Is(target error) bool {
+	_, ok := target.(ErrMergeDivergingFastForwardOnly)
+	return ok
 }
 
 // ErrRebaseConflicts represents an error if rebase fails with a conflict
@@ -536,12 +607,16 @@ type ErrRebaseConflicts struct {
 
 // IsErrRebaseConflicts checks if an error is a ErrRebaseConflicts.
 func IsErrRebaseConflicts(err error) bool {
-	_, ok := err.(ErrRebaseConflicts)
-	return ok
+	return errors.Is(err, ErrRebaseConflicts{})
 }
 
 func (err ErrRebaseConflicts) Error() string {
 	return fmt.Sprintf("Rebase Error: %v: Whilst Rebasing: %s\n%s\n%s", err.Err, err.CommitSHA, err.StdErr, err.StdOut)
+}
+
+func (err ErrRebaseConflicts) Is(target error) bool {
+	_, ok := target.(ErrRebaseConflicts)
+	return ok
 }
 
 // ErrPullRequestHasMerged represents a "PullRequestHasMerged"-error
@@ -556,12 +631,16 @@ type ErrPullRequestHasMerged struct {
 
 // IsErrPullRequestHasMerged checks if an error is a ErrPullRequestHasMerged.
 func IsErrPullRequestHasMerged(err error) bool {
-	_, ok := err.(ErrPullRequestHasMerged)
-	return ok
+	return errors.Is(err, ErrPullRequestHasMerged{})
 }
 
 // Error does pretty-printing :D
 func (err ErrPullRequestHasMerged) Error() string {
 	return fmt.Sprintf("pull request has merged [id: %d, issue_id: %d, head_repo_id: %d, base_repo_id: %d, head_branch: %s, base_branch: %s]",
 		err.ID, err.IssueID, err.HeadRepoID, err.BaseRepoID, err.HeadBranch, err.BaseBranch)
+}
+
+func (err ErrPullRequestHasMerged) Is(target error) bool {
+	_, ok := target.(ErrPullRequestHasMerged)
+	return ok
 }
