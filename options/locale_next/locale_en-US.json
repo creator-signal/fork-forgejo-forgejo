@@ -943,11 +943,11 @@
 		"title": "Keyboard Shortcuts",
 		"hint": "Navigate with arrow keys",
 		"button": {
-			"site": "Site Wide",
+			"global": "Global Wide",
 			"repo": "Repositories",
 			"code": "Code View"
 		},
-		"site": {
+		"global": {
 			"down": "Navigate down in list",
 			"up": "Navigate up in list",
 			"home": "Go to Dashboard (home)",

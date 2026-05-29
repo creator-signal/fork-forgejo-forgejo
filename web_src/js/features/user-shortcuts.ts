@@ -66,7 +66,7 @@ function initPopupTabs() {
     });
   }
   dialog.addEventListener('close', () => {
-    selectList('site');
+    selectList('global');
   });
 }
 
