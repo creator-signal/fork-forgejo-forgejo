@@ -531,7 +531,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'custom', expected a string or string array")
+				assert.Equal(t, "Invalid type for key 'custom', expected a string or string array", fundingValidation.Message)
 				// TODO: feels weird sending API response data like this in only english.. send a list of issue code strings instead (maybe just our locale strings?), and document them enough for an API consumer to explain them to their users in their users' language.
 			})
 
@@ -550,7 +550,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'ko_fi', expected a string or string array")
+				assert.Equal(t, "Invalid type for key 'ko_fi', expected a string or string array", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (single unknown key)", func(t *testing.T) {
@@ -568,7 +568,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Unknown funding provider: whatever")
+				assert.Equal(t, "Unknown funding provider: whatever", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (single bad unknown key)", func(t *testing.T) {
@@ -586,7 +586,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Unknown funding provider: whatever")
+				assert.Equal(t, "Unknown funding provider: whatever", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (one bad and one unknown key)", func(t *testing.T) {
@@ -605,7 +605,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'ko_fi', expected a string or string array\nUnknown funding provider: whatever")
+				assert.Equal(t, "Invalid type for key 'ko_fi', expected a string or string array\nUnknown funding provider: whatever", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
@@ -622,7 +622,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'custom', expected a string or string array")
+				assert.Equal(t, "Invalid type for key 'custom', expected a string or string array", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
@@ -639,7 +639,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+				assert.Equal(t, "Expected up to 4 of funding provider custom", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
@@ -657,7 +657,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+				assert.Equal(t, "Expected up to 4 of funding provider custom", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
@@ -675,7 +675,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom")
+				assert.Equal(t, "Expected up to 4 of funding provider custom", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
@@ -693,7 +693,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "Expected up to 4 of funding provider custom\nExpected up to 1 of funding provider ko_fi")
+				assert.Equal(t, "Expected up to 4 of funding provider custom\nExpected up to 1 of funding provider ko_fi", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (duplicate entries)", func(t *testing.T) {
