@@ -113,7 +113,7 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 	}
 
-	ctx.SetLinkHeader(ctx.ContextUser.NumStars, opts.PageSize)
+	ctx.SetLinkHeader(ctx.Doer.NumStars, opts.PageSize)
 	ctx.SetTotalCountHeader(int64(ctx.Doer.NumStars))
 	ctx.JSON(http.StatusOK, &repos)
 }
