@@ -19,9 +19,9 @@ import (
 
 // TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in UI
+// TODO: also test against a user profile
 
 func TestSponsorButton(t *testing.T) {
-	// TODO: also test against a user profile
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -29,7 +29,7 @@ func TestSponsorButton(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+			req := NewRequest(t, "GET", "/user2/diff-test") // repo has no funding config!
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
@@ -45,7 +45,7 @@ func TestSponsorButton(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequest(t, "GET", fmt.Sprintf("/%s", repo.OwnerName))
+			req := NewRequest(t, "GET", "/user2") // /user2/.profile doesn't exist (no funding config!)
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
@@ -64,7 +64,7 @@ func TestSponsorButton(t *testing.T) {
 			config := make(map[string]any)
 			config["custom"] = "https://example.com"
 			config["ko_fi"] = "test"
-			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config)
+			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config) // TODO: these tests might be way faster if we used the test repos already installed, but those aren't (yet?) comprehensive around funding.yml positions
 
 			config = make(map[string]any)
 			config["custom"] = 42
