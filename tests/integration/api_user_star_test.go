@@ -58,6 +58,7 @@ func TestAPIStar(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		assert.Equal(t, "1", resp.Header().Get("X-Total-Count"))
+		// TODO: Add a test to validate the Link header exists in the response (might possibly need a higher number of repos)
 
 		var repos []api.Repository
 		DecodeJSON(t, resp, &repos)
@@ -78,6 +79,7 @@ func TestAPIStar(t *testing.T) {
 		resp := MakeRequest(t, req, http.StatusOK)
 
 		assert.Equal(t, "1", resp.Header().Get("X-Total-Count"))
+		// TODO: Add a test to validate the Link header exists in the response (might possibly need a higher number of repos)
 
 		var repos []api.Repository
 		DecodeJSON(t, resp, &repos)

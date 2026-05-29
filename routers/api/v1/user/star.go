@@ -70,12 +70,15 @@ func GetStarredRepos(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	private := ctx.ContextUser.ID == ctx.Doer.ID
-	repos, err := getStarredRepos(ctx, ctx.ContextUser, private, utils.GetListOptions(ctx))
+
+	opts := utils.GetListOptions(ctx)
+	repos, err := getStarredRepos(ctx, ctx.ContextUser, private, opts)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 		return
 	}
 
+	ctx.SetLinkHeader(ctx.ContextUser.NumStars, opts.PageSize)
 	ctx.SetTotalCountHeader(int64(ctx.ContextUser.NumStars))
 	ctx.JSON(http.StatusOK, &repos)
 }
@@ -104,11 +107,13 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	repos, err := getStarredRepos(ctx, ctx.Doer, true, utils.GetListOptions(ctx))
+	opts := utils.GetListOptions(ctx)
+	repos, err := getStarredRepos(ctx, ctx.Doer, true, opts)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 	}
 
+	ctx.SetLinkHeader(ctx.ContextUser.NumStars, opts.PageSize)
 	ctx.SetTotalCountHeader(int64(ctx.Doer.NumStars))
 	ctx.JSON(http.StatusOK, &repos)
 }
