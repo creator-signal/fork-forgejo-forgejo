@@ -459,19 +459,19 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			ctx.Data["FileError"] = ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error()))
 		} else if funding != nil && len(funding.Errors) > 0 {
 			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.n_config_parsing_errors")
+
 			details := make([]template.HTML, 0, len(funding.Errors))
 			for _, err := range funding.Errors {
-				// TODO: what is errors.As?
-				if funding_service.IsErrInvalidFundingProvider(err) {
-					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", err.(funding_service.ErrInvalidFundingProvider).Name))
-				} else if funding_service.IsErrTooManyOfFundingProvider(err) {
-					if err.(funding_service.ErrTooManyOfFundingProvider).Limit == 0 {
-						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", err.(funding_service.ErrTooManyOfFundingProvider).Name))
+				if invalid_provider_err, ok := errors.AsType[funding_service.ErrInvalidFundingProvider](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", invalid_provider_err.Name))
+				} else if too_many_err, ok := errors.AsType[funding_service.ErrTooManyOfFundingProvider](err); ok {
+					if too_many_err.Limit == 0 {
+						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", too_many_err.Name))
 					} else {
-						details = append(details, ctx.Locale.Tr("funding.n_too_many_of_provider_error", err.(funding_service.ErrTooManyOfFundingProvider).Limit, err.(funding_service.ErrTooManyOfFundingProvider).Name))
+						details = append(details, ctx.Locale.Tr("funding.n_too_many_of_provider_error", too_many_err.Limit, too_many_err.Name))
 					}
-				} else if funding_service.IsErrInvalidYamlType(err) {
-					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", err.(funding_service.ErrInvalidYamlType).Name))
+				} else if invalid_yaml_err, ok := errors.AsType[funding_service.ErrInvalidYamlType](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", invalid_yaml_err.Name))
 				} else {
 					details = append(details, ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error())))
 				}

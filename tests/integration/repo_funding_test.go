@@ -20,7 +20,7 @@ import (
 // TODO: link to the page from the modal when there are errors
 // TODO: handle instance-custom entries (app.ini)
 // TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
-// TODO: test uniqueness
+// TODO: test uniqueness (duplicate "custom" entries get elided)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in UI
 
 func TestSponsorButton(t *testing.T) {
@@ -167,7 +167,7 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "custom has an invalid type. Expected string or string array")
+				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
 			})
 
 			t.Run("funding config describes multiple issues", func(t *testing.T) {
@@ -212,8 +212,8 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 2, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "custom has an invalid type. Expected string or string array")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
+				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding platform: whatever")
+				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor modal shows only valid string array items", func(t *testing.T) {
@@ -392,7 +392,7 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "custom has an invalid type. Expected string or string array")
+				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
 			})
 
 			t.Run("sponsor modal shows only up to the configured limit for custom", func(t *testing.T) {

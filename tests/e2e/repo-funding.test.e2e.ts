@@ -170,7 +170,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   const errors = page.locator('.ui.error.message').filter({hasText: 'Error parsing funding config:'});
   await expect(sponsorModal).toBeHidden();
   await expect(errors).toBeVisible();
-  await expect(errors).toContainText('ko_fi has an invalid type. Expected string or string array');
+  await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
 });
 
 test('Sponsor button (user): appears when a user profile has a valid funding config', async ({ browser }) => {

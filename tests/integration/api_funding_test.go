@@ -64,9 +64,8 @@ var testFundingCandidates = []string {
 // TODO: Test API responses when funding config is invalid
 // TODO: Test API responses when there's both a valid and invalid funding config (the first one found should apply, regardless of whether it even has valid entries!)
 // TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
-// TODO: Test that funding entries are in alphabetical order by key (later: the same order as they were defined in the config)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in API except in /settings/funding)
-// TODO: Ensure providers are unique
+// TODO: Ensure providers are unique (duplicate "custom" entries get elided)
 
 func TestAPIFundingSettings(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
@@ -517,7 +516,8 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "custom has a invalid type. Expected string or string array") // FIXME: i hate sending API response data in only english.. send a list of code strings instead, and document them enough for an API consumer to explain them to their users in their users' language.
+				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'custom', expected a string or string array")
+				// TODO: feels weird sending API response data like this in only english.. send a list of issue code strings instead (maybe just our locale strings?), and document them enough for an API consumer to explain them to their users in their users' language.
 			})
 
 			t.Run("Partially invalid (single bad key)", func(t *testing.T) {
@@ -535,7 +535,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "ko_fi has a invalid type. Expected string or string array")
+				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'ko_fi', expected a string or string array")
 			})
 
 			t.Run("Partially invalid (single unknown key)", func(t *testing.T) {
@@ -553,7 +553,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "funding provider whatever is unknown")
+				assert.Equal(t, fundingValidation.Message, "Unknown funding provider: whatever")
 			})
 
 			t.Run("Partially invalid (single bad unknown key)", func(t *testing.T) {
@@ -571,7 +571,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "funding provider whatever is unknown")
+				assert.Equal(t, fundingValidation.Message, "Unknown funding provider: whatever")
 			})
 
 			t.Run("Partially invalid (one bad and one unknown key)", func(t *testing.T) {
@@ -590,7 +590,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "ko_fi has a invalid type. Expected string or string array\nfunding provider whatever is unknown")
+				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'ko_fi', expected a string or string array\nUnknown funding provider: whatever")
 			})
 
 			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
@@ -607,7 +607,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, fundingValidation.Message, "custom has a invalid type. Expected string or string array")
+				assert.Equal(t, fundingValidation.Message, "Invalid type for key 'custom', expected a string or string array")
 			})
 
 			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {

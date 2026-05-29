@@ -30,24 +30,13 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
-func IsErrFundingValidationError(err error) bool {
-	return IsErrInvalidFundingProvider(err) || IsErrTooManyOfFundingProvider(err) || IsErrInvalidYamlType(err)
-}
-
 // ErrInvalidFundingProvider represents an "UnknownFundingProvider" kind of error.
 type ErrInvalidFundingProvider struct {
 	Name string
 }
 
-// IsErrInvalidFundingProvider checks if an error is a ErrInvalidFundingProvider.
-func IsErrInvalidFundingProvider(err error) bool {
-	_, ok := err.(ErrInvalidFundingProvider)
-	return ok
-}
-
 func (err ErrInvalidFundingProvider) Error() string {
-	// TODO: make this better
-	return fmt.Sprintf("funding provider %s is unknown", err.Name)
+	return fmt.Sprintf("Unknown funding provider: %s", err.Name)
 }
 
 // ErrTooManyOfFundingProvider represents a "TooManyOfFundingProvider" kind of error.
@@ -56,14 +45,9 @@ type ErrTooManyOfFundingProvider struct {
 	Limit uint
 }
 
-func IsErrTooManyOfFundingProvider(err error) bool {
-	_, ok := err.(ErrTooManyOfFundingProvider)
-	return ok
-}
-
 func (err ErrTooManyOfFundingProvider) Error() string {
 	if err.Limit == 0 {
-		return fmt.Sprintf("Expected exactly 0 of funding provider %s", err.Name)
+		return fmt.Sprintf("Funding provider %s is not allowed", err.Name)
 	} else {
 		return fmt.Sprintf("Expected up to %d of funding provider %s", err.Limit, err.Name)
 	}
@@ -74,15 +58,8 @@ type ErrInvalidYamlType struct {
 	Name string
 }
 
-// IsErrInvalidYamlType checks if an error is a ErrInvalidYamlType.
-func IsErrInvalidYamlType(err error) bool {
-	_, ok := err.(ErrInvalidYamlType)
-	return ok
-}
-
 func (err ErrInvalidYamlType) Error() string {
-	// TODO: make this better
-	return fmt.Sprintf("%s has a invalid type. Expected string or string array", err.Name)
+	return fmt.Sprintf("Invalid type for key '%s', expected a string or string array", err.Name)
 }
 
 func getFundingEntry(provider *setting.FundingProviderConfig, text string) *api.RepoFundingEntry {
@@ -142,7 +119,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	for key := range fundingMap {
 		fundingKeys = append(fundingKeys, key)
 	}
-	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on config later on
+	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on the funding config later on
 
 	entryList := make([]*api.RepoFundingEntry, 0)
 	var errs []error
