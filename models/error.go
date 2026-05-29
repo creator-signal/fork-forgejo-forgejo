@@ -5,6 +5,7 @@
 package models
 
 import (
+	"errors"
 	"fmt"
 
 	repo_model "forgejo.org/models/repo"
@@ -19,12 +20,16 @@ type ErrUserOwnRepos struct {
 
 // IsErrUserOwnRepos checks if an error is a ErrUserOwnRepos.
 func IsErrUserOwnRepos(err error) bool {
-	_, ok := err.(ErrUserOwnRepos)
-	return ok
+	return errors.Is(err, ErrUserOwnRepos{})
 }
 
 func (err ErrUserOwnRepos) Error() string {
 	return fmt.Sprintf("user still has ownership of repositories [uid: %d]", err.UID)
+}
+
+func (err ErrUserOwnRepos) Is(target error) bool {
+	_, ok := target.(ErrUserOwnRepos)
+	return ok
 }
 
 // ErrUserHasOrgs represents a "UserHasOrgs" kind of error.
@@ -34,12 +39,16 @@ type ErrUserHasOrgs struct {
 
 // IsErrUserHasOrgs checks if an error is a ErrUserHasOrgs.
 func IsErrUserHasOrgs(err error) bool {
-	_, ok := err.(ErrUserHasOrgs)
-	return ok
+	return errors.Is(err, ErrUserHasOrgs{})
 }
 
 func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
+}
+
+func (err ErrUserHasOrgs) Is(target error) bool {
+	_, ok := target.(ErrUserHasOrgs)
+	return ok
 }
 
 // ErrUserOwnPackages notifies that the user (still) owns the packages.
@@ -49,12 +58,16 @@ type ErrUserOwnPackages struct {
 
 // IsErrUserOwnPackages checks if an error is an ErrUserOwnPackages.
 func IsErrUserOwnPackages(err error) bool {
-	_, ok := err.(ErrUserOwnPackages)
-	return ok
+	return errors.Is(err, ErrUserOwnPackages{})
 }
 
 func (err ErrUserOwnPackages) Error() string {
 	return fmt.Sprintf("user still has ownership of packages [uid: %d]", err.UID)
+}
+
+func (err ErrUserOwnPackages) Is(target error) bool {
+	_, ok := target.(ErrUserOwnPackages)
+	return ok
 }
 
 // ErrDeleteLastAdminUser represents a "DeleteLastAdminUser" kind of error.
@@ -64,12 +77,16 @@ type ErrDeleteLastAdminUser struct {
 
 // IsErrDeleteLastAdminUser checks if an error is a ErrDeleteLastAdminUser.
 func IsErrDeleteLastAdminUser(err error) bool {
-	_, ok := err.(ErrDeleteLastAdminUser)
-	return ok
+	return errors.Is(err, ErrDeleteLastAdminUser{})
 }
 
 func (err ErrDeleteLastAdminUser) Error() string {
 	return fmt.Sprintf("can not delete the last admin user [uid: %d]", err.UID)
+}
+
+func (err ErrDeleteLastAdminUser) Is(target error) bool {
+	_, ok := target.(ErrDeleteLastAdminUser)
+	return ok
 }
 
 // ErrNoPendingRepoTransfer is an error type for repositories without a pending
@@ -82,11 +99,15 @@ func (err ErrNoPendingRepoTransfer) Error() string {
 	return fmt.Sprintf("repository doesn't have a pending transfer [repo_id: %d]", err.RepoID)
 }
 
+func (err ErrNoPendingRepoTransfer) Is(target error) bool {
+	_, ok := target.(ErrNoPendingRepoTransfer)
+	return ok
+}
+
 // IsErrNoPendingTransfer is an error type when a repository has no pending
 // transfers
 func IsErrNoPendingTransfer(err error) bool {
-	_, ok := err.(ErrNoPendingRepoTransfer)
-	return ok
+	return errors.Is(err, ErrNoPendingRepoTransfer{})
 }
 
 func (err ErrNoPendingRepoTransfer) Unwrap() error {
@@ -102,12 +123,16 @@ type ErrRepoTransferInProgress struct {
 
 // IsErrRepoTransferInProgress checks if an error is a ErrRepoTransferInProgress.
 func IsErrRepoTransferInProgress(err error) bool {
-	_, ok := err.(ErrRepoTransferInProgress)
-	return ok
+	return errors.Is(err, ErrRepoTransferInProgress{})
 }
 
 func (err ErrRepoTransferInProgress) Error() string {
 	return fmt.Sprintf("repository is already being transferred [uname: %s, name: %s]", err.Uname, err.Name)
+}
+
+func (err ErrRepoTransferInProgress) Is(target error) bool {
+	_, ok := target.(ErrRepoTransferInProgress)
+	return ok
 }
 
 func (err ErrRepoTransferInProgress) Unwrap() error {
@@ -127,8 +152,8 @@ type ErrInvalidCloneAddr struct {
 
 // IsErrInvalidCloneAddr checks if an error is a ErrInvalidCloneAddr.
 func IsErrInvalidCloneAddr(err error) bool {
-	_, ok := err.(*ErrInvalidCloneAddr)
-	return ok
+	return errors.Is(err, &ErrInvalidCloneAddr{})
+
 }
 
 func (err *ErrInvalidCloneAddr) Error() string {
@@ -153,6 +178,11 @@ func (err *ErrInvalidCloneAddr) Error() string {
 
 func (err *ErrInvalidCloneAddr) Unwrap() error {
 	return util.ErrInvalidArgument
+}
+
+func (err *ErrInvalidCloneAddr) Is(target error) bool {
+	_, ok := target.(*ErrInvalidCloneAddr)
+	return ok
 }
 
 // ErrInvalidTagName represents a "InvalidTagName" kind of error.
