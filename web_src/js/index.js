@@ -91,6 +91,7 @@ import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
 import {initModalClose} from './modules/modal.ts';
 import {initAuthorizedIntegrationClaimRuleEditor} from './features/authorized-integration.js';
+import {initUserShortcuts} from './features/user-shortcuts.ts';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -193,6 +194,7 @@ onDomReady(() => {
   initUserAuthWebAuthn();
   initUserAuthWebAuthnRegister();
   initUserAuth();
+  initUserShortcuts();
   initRepoDiffView();
   initColorPickers();
   initModalClose();
