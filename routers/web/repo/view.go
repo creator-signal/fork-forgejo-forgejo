@@ -458,7 +458,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		if err != nil {
 			ctx.Data["FileError"] = ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error()))
 		} else if funding != nil && len(funding.Errors) > 0 {
-			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.config_parsing_errors")
+			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.n_config_parsing_errors")
 			details := make([]template.HTML, 0, len(funding.Errors))
 			for _, err := range funding.Errors {
 				// TODO: what is errors.As?
@@ -466,9 +466,9 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_provider_error", err.(funding_service.ErrInvalidFundingProvider).Name))
 				} else if funding_service.IsErrTooManyOfFundingProvider(err) {
 					if err.(funding_service.ErrTooManyOfFundingProvider).Limit == 0 {
-						details = append(details, ctx.Locale.Tr("funding.too_many_of_provider_error_expected_none", err.(funding_service.ErrTooManyOfFundingProvider).Name))
+						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", err.(funding_service.ErrTooManyOfFundingProvider).Name))
 					} else {
-						details = append(details, ctx.Locale.Tr("funding.too_many_of_provider_error_expected_n", err.(funding_service.ErrTooManyOfFundingProvider).Limit, err.(funding_service.ErrTooManyOfFundingProvider).Name))
+						details = append(details, ctx.Locale.Tr("funding.n_too_many_of_provider_error", err.(funding_service.ErrTooManyOfFundingProvider).Limit, err.(funding_service.ErrTooManyOfFundingProvider).Name))
 					}
 				} else if funding_service.IsErrInvalidYamlType(err) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", err.(funding_service.ErrInvalidYamlType).Name))
