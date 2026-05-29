@@ -29,7 +29,7 @@ func TestSponsorButton(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequest(t, "GET", "/user2/diff-test") // repo has no funding config!
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
@@ -45,7 +45,7 @@ func TestSponsorButton(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequest(t, "GET", "/user2") // /user2/.profile doesn't exist (no funding config!)
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s", owner.Name))
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
