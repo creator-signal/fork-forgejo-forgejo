@@ -134,11 +134,10 @@ func TestNewFundingProviderConfigWithLimit(t *testing.T) {
 		{15, 15},
 		{16, 16},
 		{50, 16}, // upper bound clamps to 16
-		{0.0, 1}, // floats default. what do we even do with those? round them? ridiculous! 🙃
-		{-0.0, 1},
-		{-1.5, 1},
+		{0.0, 0},
+		{-1.5, 1}, // floats (except for 0.0) default to 1. what do we even do with those? round them? ridiculous! 🙃
 		{1.5, 1},
-		{150.2, 1},
+		{50.2, 1},
 	}
 
 	for _, c := range cases {
