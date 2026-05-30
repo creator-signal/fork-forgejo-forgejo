@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"reflect"
 	"slices"
 	"sort"
@@ -64,6 +65,26 @@ func (err ErrDuplicateFundingEntry) Error() string {
 	return fmt.Sprintf("Duplicate entry for key '%s': %s", err.Name, err.URL)
 }
 
+// ErrCannotParseURL represents an "CannotParseURL" kind of error.
+type ErrCannotParseURL struct {
+	Name  string
+	Err   error
+}
+
+func (err ErrCannotParseURL) Error() string {
+	return fmt.Sprintf("Invalid URL value for key '%s': %v", err.Name, err.Err.Error())
+}
+
+// ErrURLMissingScheme represents an "URLMissingScheme" kind of error.
+type ErrURLMissingScheme struct {
+	Name string
+	URL  *url.URL
+}
+
+func (err ErrURLMissingScheme) Error() string {
+	return fmt.Sprintf("Missing URL scheme in value for key '%s': %s", err.Name, err.URL.String())
+}
+
 // ErrInvalidYamlType represents an "InvalidYamlType" kind of error.
 type ErrInvalidYamlType struct {
 	Name string
@@ -73,14 +94,45 @@ func (err ErrInvalidYamlType) Error() string {
 	return fmt.Sprintf("Invalid type for key '%s', expected a string or string array", err.Name)
 }
 
-func getFundingEntry(provider *setting.FundingProviderConfig, text string) *api.RepoFundingEntry {
+// Constructs a funding entry from the known funding provider config and the
+// user-provided `text`.
+func getFundingEntry(provider *setting.FundingProviderConfig, text string) (*api.RepoFundingEntry, error) {
+	text = strings.TrimSpace(text)
+	valid_schemes := setting.Service.ValidSiteURLSchemes // same as user profile config
+
+	is_url_template := false
+	for _, scheme := range valid_schemes {
+		if strings.HasPrefix(provider.URL, scheme + "://") {
+			is_url_template = true
+			break
+		}
+	}
+
+	url_text := ""
+	if is_url_template {
+		// assume value is a path segment to be encoded accordingly
+		url_text = fmt.Sprintf(provider.URL, url.PathEscape(text))
+	} else {
+		// assume value is to be injected verbatim
+		url_text = fmt.Sprintf(provider.URL, text)
+	}
+	url_value, err := url.Parse(url_text) // value should parse as a URL, just in case interpolation got us something invalid
+	if err != nil {
+		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
+	}
+	if url_value.Scheme == "" {
+		// TODO: should we instead try re-parsing using https://? Is it better to default to https here, or to make users pick?
+		return nil, &ErrURLMissingScheme{Name: provider.Name, URL: url_value}
+	}
+	url_text = url_value.String()
+
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, text)
-	entry.URL = fmt.Sprintf(provider.URL, text)
+	entry.URL = url_text
 	entry.Icon = setting.IconForProvider(provider)
 
-	return entry
+	return entry, nil
 }
 
 type RepoFunding struct {
@@ -150,7 +202,12 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 				errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
 				continue
 			}
-			entryList = append(entryList, getFundingEntry(provider, fundingData.(string)))
+			newEntry, err := getFundingEntry(provider, fundingData.(string))
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			entryList = append(entryList, newEntry)
 		case reflect.Slice:
 			// no need to sort these, they'll come in the same order as they were given
 			stringSlice := reflect.ValueOf(fundingData)
@@ -164,7 +221,11 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 					errs = append(errs, &ErrInvalidYamlType{Name: providerName})
 					continue // keep searching this provider, there may be more we want
 				}
-				newEntry := getFundingEntry(provider, str)
+				newEntry, err := getFundingEntry(provider, str)
+				if err != nil {
+					errs = append(errs, err)
+					continue
+				}
 				if slices.ContainsFunc(entryList, func(e *api.RepoFundingEntry) bool {
 					return e.URL == newEntry.URL
 				}) {

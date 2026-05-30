@@ -197,20 +197,6 @@ liberapay: example
 custom: "https://example.com"
 `},
 	}}, nil)
-	newRepo(t, 2, "funding_basic_extras", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-ko_fi: example
-custom: "https://example.com"
-whatever: example
-`},
-	}}, nil)
-	newRepo(t, 2, "funding_invalid", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-liberapay: 1337
-`},
-	}}, nil)
 	newRepo(t, 2, "funding_some_valid", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
@@ -218,35 +204,16 @@ ko_fi: 1337
 custom: "https://example.com"
 `},
 	}}, nil)
-	newRepo(t, 2, "funding_invalid_twice", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-ko_fi: 1337
-whatever: example
-`},
-	}}, nil)
-	newRepo(t, 2, "funding_invalid_twice_valid_once", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-ko_fi: 1337
-whatever: example
-custom: "https://example.com"
-`},
-	}}, nil)
-	newRepo(t, 2, "funding_too_many_ko_fi", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-ko_fi: ["test", "test2"]
-custom: "https://example.com"
-`},
-	}}, nil)
 	newRepo(t, 2, "funding_evil", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 ko_fi: '"><script>alert(1);</script><a class="'
+liberapay: "text/other"
 custom:
-  - '." style="background: url(localhost)'
+  - '#" style="background: url(localhost)'
   - 'https://example.com" class="rogue injection'
+  - 'https://example.com/" class="rogue injection'
+  - '<script>alert`+"`"+`1`+"`"+`</script>'
 `},
 	}}, nil)
 	newRepo(t, 44, ".profile", nil, []FileChanges{{

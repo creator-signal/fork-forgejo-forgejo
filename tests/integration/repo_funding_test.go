@@ -14,10 +14,10 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/tests"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: the given values are interpolated and escaped correctly; a repo can't simply cause XSS using FUNDING.yml! (Go templates and translations should be smart enough for that, but we should add a test to be sure)
 // TODO: test a provider limit of 0 (provider is disabled, never shows in UI
 // TODO: also test against a user profile
 
@@ -64,7 +64,7 @@ func TestSponsorButton(t *testing.T) {
 			config := make(map[string]any)
 			config["custom"] = "https://example.com"
 			config["ko_fi"] = "test"
-			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config) // TODO: these tests might be way faster if we used the test repos already installed, but those aren't (yet?) comprehensive around funding.yml positions
+			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config)
 
 			config = make(map[string]any)
 			config["custom"] = 42
@@ -171,7 +171,7 @@ func TestSponsorButton(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"test1", "test1", "test2"}
+				config["custom"] = []string{"http://test1", "http://test1", "http://test2"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -192,11 +192,11 @@ func TestSponsorButton(t *testing.T) {
 				assert.Equal(t, 2, sponsorEntries.Length())
 
 				// duplicate entries are skipped
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "test1")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "http://test1")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "test2")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "http://test2")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", true)
 
@@ -211,7 +211,7 @@ func TestSponsorButton(t *testing.T) {
 				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
 				assert.Equal(t, 1, fileErrorDetails.Length())
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Duplicate entry for key 'custom': test1")
+				assert.Contains(t, fileErrorDetails.Text(), "Duplicate entry for key 'custom': http://test1")
 			})
 
 			t.Run("funding config describes multiple issues", func(t *testing.T) {
@@ -443,7 +443,13 @@ func TestSponsorButton(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -463,7 +469,7 @@ func TestSponsorButton(t *testing.T) {
 				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
 				assert.Equal(t, 4, sponsorEntries.Length())
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "test1")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "http://test1")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
 
@@ -471,11 +477,11 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "test3")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "http://test3")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "test4")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "http://test4")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) svg.octicon-link", true)
 
@@ -498,7 +504,13 @@ func TestSponsorButton(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = "test"
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -518,7 +530,7 @@ func TestSponsorButton(t *testing.T) {
 				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
 				assert.Equal(t, 5, sponsorEntries.Length())
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "test1")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "http://test1")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
 
@@ -526,11 +538,11 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "test3")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "http://test3")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "test4")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "http://test4")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) svg.octicon-link", true)
 
@@ -557,7 +569,13 @@ func TestSponsorButton(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test", "test2"}
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -577,7 +595,7 @@ func TestSponsorButton(t *testing.T) {
 				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
 				assert.Equal(t, 5, sponsorEntries.Length())
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "test1")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "http://test1")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
 
@@ -585,11 +603,11 @@ func TestSponsorButton(t *testing.T) {
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "test3")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "http://test3")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) svg.octicon-link", true)
 
-				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "test4")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(4) a", "href", "http://test4")
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) img", false)
 				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(4) svg.octicon-link", true)
 
@@ -610,6 +628,75 @@ func TestSponsorButton(t *testing.T) {
 				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
 				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 4 of funding provider custom")
 				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 1 of funding provider ko_fi")
+			})
+
+			t.Run("sponsor modal mitigates XSS", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
+				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway?
+				config["custom"] = []string{
+					"#\" style=\"background: url(localhost)", // omitted (no scheme)
+					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
+					"https://example.com/\" class=\"rogue injection", // URL escaped
+					"<script>alert`1`</script>", // omitted (no scheme)
+				}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s", repo.OwnerName, repo.Name))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				sponsorButton := htmlDoc.Find("button.sponsor")
+				assert.Equal(t, 1, sponsorButton.Length())
+				assert.Contains(t, sponsorButton.Text(), "Sponsor")
+				htmlDoc.AssertElement(t, "button.sponsor > svg.octicon-heart", true)
+
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 3, sponsorEntries.Length())
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com/%22%20class=%22rogue%20injection")
+				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(1) a", func(el *goquery.Selection) {
+					assert.Equal(t, "https://example.com/\" class=\"rogue injection", el.Text())
+				})
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22")
+				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(2) a", func(el *goquery.Selection) {
+					assert.Equal(t, "ko-fi.com/\"><script>alert(1);</script><a class=\"", el.Text())
+					assert.Zero(t, el.Children().Length()) // no real injected <script>
+				})
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "https://liberapay.com/text%2Fother")
+				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(3) a", func(el *goquery.Selection) {
+					assert.Equal(t, "liberapay.com/text/other", el.Text())
+				})
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) img", "src", "/assets/img/funding/liberapay.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) svg.octicon-link", false)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
+				assert.Equal(t, 1, fileError.Length())
+				assert.Contains(t, fileError.Text(), "Errors parsing funding config:")
+
+				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
+				assert.Equal(t, 3, fileErrorDetails.Length())
+				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
+				assert.Contains(t, fileErrorDetails.Text(), "Missing URL scheme in value for key 'custom': #%22%20style=%22background:%20url(localhost)")
+				assert.Contains(t, fileErrorDetails.Text(), `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
+				assert.Contains(t, fileErrorDetails.Text(), "Missing URL scheme in value for key 'custom': %3Cscript%3Ealert%601%60%3C/script%3E")
 			})
 		})
 	}

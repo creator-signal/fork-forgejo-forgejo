@@ -135,12 +135,17 @@ func TestAPIRepoFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"https://a.com", "https://b.com"}
+				config["custom"] = []string{
+					"https://a.com",
+					"https://b.com",
+					"http://withquery.example.com?test=foo",
+					"http://thistimewithhash#foo",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
-				assert.Len(t, funding, 2)
+				assert.Len(t, funding, 4)
 
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://a.com", funding[0].Text)
@@ -151,6 +156,16 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, "https://b.com", funding[1].Text)
 				assert.Equal(t, "https://b.com", funding[1].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
+
+				assert.Equal(t, "custom", funding[2].ProviderName)
+				assert.Equal(t, "http://withquery.example.com?test=foo", funding[2].Text)
+				assert.Equal(t, "http://withquery.example.com?test=foo", funding[2].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
+
+				assert.Equal(t, "custom", funding[3].ProviderName)
+				assert.Equal(t, "http://thistimewithhash#foo", funding[3].Text)
+				assert.Equal(t, "http://thistimewithhash#foo", funding[3].URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
 			})
 
 			t.Run("Skips duplicate entries", func(t *testing.T) {
@@ -179,7 +194,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				testSlice := make([][]string, 1)
-				testSlice[0] = []string{"test"}
+				testSlice[0] = []string{"http://test"}
 
 				config := make(map[string]any)
 				config["custom"] = testSlice
@@ -196,7 +211,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				config := make(map[string]any)
 				config["liberapay"] = "test"
 				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -206,8 +221,8 @@ func TestAPIRepoFunding(t *testing.T) {
 				// no ko_fi, it's not a string value
 
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test", funding[0].Text)
-				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, "http://test", funding[0].Text)
+				assert.Equal(t, "http://test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -226,7 +241,7 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["whatever"] = "test"
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -235,8 +250,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no whatever, it's not a known value
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test", funding[0].Text)
-				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, "http://test", funding[0].Text)
+				assert.Equal(t, "http://test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -250,7 +265,7 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["whatever"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -259,8 +274,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no whatever, it's not a known value
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test", funding[0].Text)
-				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, "http://test", funding[0].Text)
+				assert.Equal(t, "http://test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -275,7 +290,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				config := make(map[string]any)
 				config["whatever"] = "test"
 				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -285,8 +300,8 @@ func TestAPIRepoFunding(t *testing.T) {
 				// no whatever, it's not a known value
 				// no ko_fi, it's not a string
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test", funding[0].Text)
-				assert.Equal(t, "test", funding[0].URL)
+				assert.Equal(t, "http://test", funding[0].Text)
+				assert.Equal(t, "http://test", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -317,7 +332,13 @@ func TestAPIRepoFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -326,8 +347,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no too_many, we have enough
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, "http://test1", funding[0].Text)
+				assert.Equal(t, "http://test1", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -336,13 +357,13 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, "http://test3", funding[2].Text)
+				assert.Equal(t, "http://test3", funding[2].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, "http://test4", funding[3].Text)
+				assert.Equal(t, "http://test4", funding[3].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
 			})
 
@@ -351,7 +372,13 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = "test"
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -360,8 +387,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no too_many, we have enough
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, "http://test1", funding[0].Text)
+				assert.Equal(t, "http://test1", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -370,13 +397,13 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, "http://test3", funding[2].Text)
+				assert.Equal(t, "http://test3", funding[2].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, "http://test4", funding[3].Text)
+				assert.Equal(t, "http://test4", funding[3].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
 
 				assert.Equal(t, "ko_fi", funding[4].ProviderName)
@@ -390,7 +417,13 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test"}
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -399,8 +432,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no too_many, we have enough
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, "http://test1", funding[0].Text)
+				assert.Equal(t, "http://test1", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -409,13 +442,13 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, "http://test3", funding[2].Text)
+				assert.Equal(t, "http://test3", funding[2].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, "http://test4", funding[3].Text)
+				assert.Equal(t, "http://test4", funding[3].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
 
 				assert.Equal(t, "ko_fi", funding[4].ProviderName)
@@ -429,7 +462,13 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test", "test2"}
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -438,8 +477,8 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				// no custom/too_many or ko_fi/test2, we have enough
 				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "test1", funding[0].URL)
+				assert.Equal(t, "http://test1", funding[0].Text)
+				assert.Equal(t, "http://test1", funding[0].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
@@ -448,19 +487,55 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "test3", funding[2].URL)
+				assert.Equal(t, "http://test3", funding[2].Text)
+				assert.Equal(t, "http://test3", funding[2].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "test4", funding[3].URL)
+				assert.Equal(t, "http://test4", funding[3].Text)
+				assert.Equal(t, "http://test4", funding[3].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
 
 				assert.Equal(t, "ko_fi", funding[4].ProviderName)
 				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
 				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
+			})
+
+			t.Run("Bad URLs get escaped or elided", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
+				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway?
+				config["custom"] = []string{
+					"#\" style=\"background: url(localhost)", // omitted (no scheme)
+					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
+					"https://example.com/\" class=\"rogue injection", // URL escaped
+					"<script>alert`1`</script>", // omitted (no scheme)
+				}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
+				assert.Len(t, funding, 3)
+
+				// omits values that don't parse as URLs.
+				// returned URL values are always valid, but it's the API consumer's responsibility to escape Text for its presentation context (e.g. HTML)
+				assert.Equal(t, "custom", funding[0].ProviderName)
+				assert.Equal(t, "https://example.com/%22%20class=%22rogue%20injection", funding[0].URL)
+				assert.Equal(t, "https://example.com/\" class=\"rogue injection", funding[0].Text)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
+
+				assert.Equal(t, "ko_fi", funding[1].ProviderName)
+				assert.Equal(t, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", funding[1].URL)
+				assert.Equal(t, "ko-fi.com/\"><script>alert(1);</script><a class=\"", funding[1].Text)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
+
+				assert.Equal(t, "liberapay", funding[2].ProviderName)
+				assert.Equal(t, "https://liberapay.com/text%2Fother", funding[2].URL)
+				assert.Equal(t, "liberapay.com/text/other", funding[2].Text)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", funding[2].Icon)
 			})
 		})
 	}
@@ -518,7 +593,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				testSlice := make([][]string, 1)
-				testSlice[0] = []string{"test"}
+				testSlice[0] = []string{"http://test"}
 
 				config := make(map[string]any)
 				config["custom"] = testSlice
@@ -540,7 +615,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -558,7 +633,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["whatever"] = "test"
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -576,7 +651,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["whatever"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -595,7 +670,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				config := make(map[string]any)
 				config["whatever"] = "test"
 				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
+				config["custom"] = []string{"http://test", "https://example.com"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -629,7 +704,13 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -647,7 +728,13 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = "test"
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -665,7 +752,13 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test"}
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -683,7 +776,13 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test", "test2"}
-				config["custom"] = []string{"test1", "https://example.com", "test3", "test4", "too_many"}
+				config["custom"] = []string{
+					"http://test1",
+					"https://example.com",
+					"http://test3",
+					"http://test4",
+					"http://too_many",
+				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -711,6 +810,30 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				assert.False(t, fundingValidation.Valid)
 				assert.Equal(t, "Duplicate entry for key 'custom': https://a.com", fundingValidation.Message)
+			})
+
+			t.Run("Bad URLs are may cause invalid config", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["ko_fi"] = "\"><script>alert(1);</script><a class=\""
+				config["liberapay"] = "text/other"
+				config["custom"] = []string{
+					"#\" style=\"background: url(localhost)",
+					"https://example.com\" class=\"rogue injection",
+					"https://example.com/\" class=\"rogue injection",
+					"<script>alert`1`</script>",
+				}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.False(t, fundingValidation.Valid)
+				assert.Equal(t, "Missing URL scheme in value for key 'custom': #%22%20style=%22background:%20url(localhost)\n"+`Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`+"\n"+"Missing URL scheme in value for key 'custom': %3Cscript%3Ealert%601%60%3C/script%3E", fundingValidation.Message)
 			})
 		})
 	}
