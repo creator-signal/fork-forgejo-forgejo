@@ -462,17 +462,17 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 
 			details := make([]template.HTML, 0, len(funding.Errors))
 			for _, err := range funding.Errors {
-				if unknown_provider_err, ok := errors.AsType[funding_service.ErrUnknownFundingProvider](err); ok {
+				if unknown_provider_err, ok := errors.AsType[*funding_service.ErrUnknownFundingProvider](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.unknown_provider_error", unknown_provider_err.Name))
-				} else if too_many_err, ok := errors.AsType[funding_service.ErrTooManyOfFundingProvider](err); ok {
+				} else if too_many_err, ok := errors.AsType[*funding_service.ErrTooManyOfFundingProvider](err); ok {
 					if too_many_err.Limit == 0 {
 						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", too_many_err.Name))
 					} else {
 						details = append(details, ctx.Locale.Tr("funding.n_too_many_of_provider_error", too_many_err.Limit, too_many_err.Name))
 					}
-				} else if duplicate_entry_err, ok := errors.AsType[funding_service.ErrDuplicateFundingEntry](err); ok {
+				} else if duplicate_entry_err, ok := errors.AsType[*funding_service.ErrDuplicateFundingEntry](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.duplicate_entry_error", duplicate_entry_err.Name, duplicate_entry_err.URL))
-				} else if invalid_yaml_err, ok := errors.AsType[funding_service.ErrInvalidYamlType](err); ok {
+				} else if invalid_yaml_err, ok := errors.AsType[*funding_service.ErrInvalidYamlType](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", invalid_yaml_err.Name))
 				} else {
 					details = append(details, ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error())))

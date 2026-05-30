@@ -138,7 +138,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		fundingData := fundingMap[providerName]
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
-			errs = append(errs, ErrUnknownFundingProvider{Name: providerName})
+			errs = append(errs, &ErrUnknownFundingProvider{Name: providerName})
 			continue
 		}
 
@@ -147,7 +147,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		case reflect.String:
 			if provider.Limit == 0 {
 				// 1 is too many! this provider is disabled.
-				errs = append(errs, ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
+				errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
 				continue
 			}
 			entryList = append(entryList, getFundingEntry(provider, fundingData.(string)))
@@ -156,25 +156,25 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 			stringSlice := reflect.ValueOf(fundingData)
 			for i := 0; i < stringSlice.Len(); i++ {
 				if uint(i) >= provider.Limit {
-					errs = append(errs, ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
+					errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
 					break // stop here for this provider, we've got enough
 				}
 				str, ok := stringSlice.Index(i).Interface().(string)
 				if !ok {
-					errs = append(errs, ErrInvalidYamlType{Name: providerName})
+					errs = append(errs, &ErrInvalidYamlType{Name: providerName})
 					continue // keep searching this provider, there may be more we want
 				}
 				newEntry := getFundingEntry(provider, str)
 				if slices.ContainsFunc(entryList, func(e *api.RepoFundingEntry) bool {
 					return e.URL == newEntry.URL
 				}) {
-					errs = append(errs, ErrDuplicateFundingEntry{Name: providerName, URL: newEntry.URL})
+					errs = append(errs, &ErrDuplicateFundingEntry{Name: providerName, URL: newEntry.URL})
 					continue
 				}
 				entryList = append(entryList, newEntry)
 			}
 		default:
-			errs = append(errs, ErrInvalidYamlType{Name: providerName})
+			errs = append(errs, &ErrInvalidYamlType{Name: providerName})
 			continue
 		}
 	}
