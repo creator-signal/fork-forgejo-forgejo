@@ -90,6 +90,12 @@ func TestAPIDeleteGitHook(t *testing.T) {
 	DecodeJSON(t, resp, &apiGitHook2)
 	assert.False(t, apiGitHook2.IsActive)
 	assert.Empty(t, apiGitHook2.Content)
+
+	// after deletion, the sample webhook should be shown in the web interface
+	resp = session.MakeRequest(t, NewRequestf(t, "GET", "/%s/settings/hooks/git/pre-receive", repo.FullName()), http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	sampleHook := htmlDoc.doc.Find("#content").Text()
+	assert.Contains(t, sampleHook, "#!/bin/bash")
 }
 
 func TestAPIGitHooksFromEmpty(t *testing.T) {
