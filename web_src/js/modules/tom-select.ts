@@ -1,5 +1,5 @@
 import type TomSelectType from 'tom-select';
-import type {TomSettings} from 'tom-select/dist/types/types';
+import type {TomSettings} from 'tom-select/dist/esm/types/index.ts';
 
 export async function createTomSelect(el: HTMLInputElement, opts: Partial<TomSettings> = {}): Promise<TomSelectType> {
   const {default: TomSelect} = await import(/* webpackChunkName: "tom-select" */'tom-select');
