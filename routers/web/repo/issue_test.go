@@ -23,7 +23,7 @@ func TestNewIssueValidateProject(t *testing.T) {
 		IsAdmin: true, // to allow creating organisation
 	})
 
-	chooseProject :=  func(t *testing.T, repo *repo_model.Repository, p *project_model.Project, isFound bool) {
+	chooseProject := func(t *testing.T, repo *repo_model.Repository, p *project_model.Project, isFound bool) {
 		ctx, _ := contexttest.MockContext(
 			t, fmt.Sprintf(
 				"%s/issues/new?project=%d",
