@@ -54,6 +54,20 @@ func assertSponsorButton(t *testing.T, htmlDoc *HTMLDoc) *goquery.Selection {
 	return sponsorButton
 }
 
+// Ensures the page's Sponsor modal has the given header text.
+func assertSponsorModalHeader(t *testing.T, htmlDoc *HTMLDoc, expectedHeaderText string) {
+	htmlDoc.AssertElement(t, "dialog#sponsor-modal", true)
+	sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+	assert.Equal(t, 1, sponsorModalHeader.Length())
+	assert.Equal(t, expectedHeaderText, strings.TrimSpace(sponsorModalHeader.Text()))
+}
+
+// Ensures the page's Sponsor modal has the goven number of entries.
+func assertNFundingEntries(t *testing.T, htmlDoc *HTMLDoc, expectedNumberOfEntries int) {
+	sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+	assert.Equal(t, expectedNumberOfEntries, sponsorEntries.Length())
+}
+
 // Ensures the page's Sponsor modal contains the given entry.
 //
 // `nth` is 1-indexed, indicating which entry in the list to check.
@@ -71,6 +85,18 @@ func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href string, i
 		htmlDoc.AssertAttrEqual(t, sel + " img", "src", imgSrc)
 		htmlDoc.AssertElement(t, sel + " svg.octicon-link", false)
 	}
+}
+
+// Ensures the page's Sponsor modal contains the given text in the given entry,
+// and that the element has no inner child elements.
+//
+// `nth` is 1-indexed, indicating which entry in the list to check.
+func assertFundingEntryHasText(t *testing.T, htmlDoc *HTMLDoc, nth uint, expectedText string) {
+	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
+	htmlDoc.AssertElementPredicate(t, sel + " a", func(el *goquery.Selection) {
+		assert.Equal(t, expectedText, el.Text())
+		assert.Zero(t, el.Children().Length()) // no injected <script>, etc.
+	})
 }
 
 func TestSponsorButton(t *testing.T) {
@@ -112,12 +138,8 @@ func TestSponsorButton(t *testing.T) {
 			assertSponsorButton(t, htmlDoc)
 
 			// e2e tests check open/close behavior and accessibility, here we check data
-			sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-			assert.Equal(t, 1, sponsorModalHeader.Length())
-			assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-			sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-			assert.Equal(t, 2, sponsorEntries.Length())
+			assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+			assertNFundingEntries(t, htmlDoc, 2)
 			assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 			assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 		})
@@ -145,19 +167,11 @@ custom: "https://example.com"
 					Files: mfs,
 				})
 
+				// includes the whole config
 				htmlDoc = getUserPage(t, user)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
-				assert.Equal(t, 1, sponsorModal.Length())
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Equal(t, fmt.Sprintf("Sponsor %s", user.Name), strings.TrimSpace(sponsorModalHeader.Text()))
-
-				// includes the whole config
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 3, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", user.Name))
+				assertNFundingEntries(t, htmlDoc, 3)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
 				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
@@ -191,16 +205,11 @@ custom: "https://example.com"
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
+				// invalid entries are skipped
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				// invalid entries are skipped
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 2, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/test", "/assets/img/funding/liberapay.svg")
 
@@ -226,16 +235,11 @@ custom: "https://example.com"
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
+				// duplicate entries are skipped
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				// duplicate entries are skipped
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 2, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
 				assertFundingEntry(t, htmlDoc, 2, "http://test2", "")
 
@@ -263,16 +267,11 @@ custom: "https://example.com"
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
+				// invalid entries are skipped
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				// invalid entries are skipped
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 1, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 1)
 				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
 				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
@@ -301,13 +300,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 2, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
@@ -331,13 +325,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 2, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
@@ -367,13 +356,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 2, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
@@ -401,13 +385,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 1, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 1)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 
 				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
@@ -440,13 +419,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 4, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 4)
 				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
@@ -483,13 +457,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 5, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 5)
 				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
@@ -527,13 +496,8 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 5, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 5)
 				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
@@ -572,29 +536,17 @@ custom: "https://example.com"
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
-
-				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
-				assert.Equal(t, 1, sponsorModalHeader.Length())
-				assert.Contains(t, sponsorModalHeader.Text(), fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-
-				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
-				assert.Equal(t, 3, sponsorEntries.Length())
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 3)
 
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com/%22%20class=%22rogue%20injection", "")
-				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(1) a", func(el *goquery.Selection) {
-					assert.Equal(t, "https://example.com/\" class=\"rogue injection", el.Text())
-				})
+				assertFundingEntryHasText(t, htmlDoc, 1, "https://example.com/\" class=\"rogue injection")
 
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", "/assets/img/funding/ko_fi.svg")
-				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(2) a", func(el *goquery.Selection) {
-					assert.Equal(t, "ko-fi.com/\"><script>alert(1);</script><a class=\"", el.Text())
-					assert.Zero(t, el.Children().Length()) // no real injected <script>
-				})
+				assertFundingEntryHasText(t, htmlDoc, 2, "ko-fi.com/\"><script>alert(1);</script><a class=\"")
 
 				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/text%2Fother", "/assets/img/funding/liberapay.svg")
-				htmlDoc.AssertElementPredicate(t, "dialog#sponsor-modal li:nth-child(3) a", func(el *goquery.Selection) {
-					assert.Equal(t, "liberapay.com/text/other", el.Text())
-				})
+				assertFundingEntryHasText(t, htmlDoc, 3, "liberapay.com/text/other")
 
 				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
 				resp := MakeRequest(t, req, http.StatusOK)
