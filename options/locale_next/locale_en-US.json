@@ -790,7 +790,7 @@
 	"actions.runners.task_list.commit": "Commit",
 	"actions.runners.task_list.done_at": "Done at",
 	"actions.runners.edit_runner_button": "Edit runner",
-	"actions.runners.create_runner.page_title": "Create new runner",
+	"actions.runners.create_runner.page_title": "New runner",
 	"actions.runners.create_runner.title": "Create new runner",
 	"actions.runners.create_runner.create_button": "Create",
 	"actions.runners.edit_runner.page_title": "Edit runner %s",
