@@ -943,14 +943,14 @@
 		"title": "Keyboard Shortcuts",
 		"hint": "Navigate with arrow keys",
 		"button": {
-			"global": "Global Wide",
+			"global": "Global",
 			"repo": "Repositories",
 			"code": "Code View"
 		},
 		"global": {
-			"down": "Navigate down in list",
-			"up": "Navigate up in list",
-			"home": "Go to Dashboard (home)",
+			"down": "Navigate down a list",
+			"up": "Navigate up a list",
+			"home": "Go to Homepage",
 			"notifications": "Go to Notifications",
 			"toggle": "Toggle checkbox on list",
 			"search": "Focus on searchbar",

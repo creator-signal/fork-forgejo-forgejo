@@ -2,12 +2,12 @@
 	<caption class="tw-sr-only">
 		{{ctx.Locale.Tr "repo.files.caption"}}
 	</caption>
-	<thead class="tw-sr-only">
-		<th>{{ctx.Locale.Tr "repo.files.filename"}}</th>
-		<th>{{ctx.Locale.Tr "repo.files.last_commit_message"}}</th>
-		<th>{{ctx.Locale.Tr "repo.files.last_commit_date"}}</th>
-	</thead>
-	<tbody>
+	<thead>
+		<tr class="tw-sr-only">
+			<th>{{ctx.Locale.Tr "repo.files.filename"}}</th>
+			<th>{{ctx.Locale.Tr "repo.files.last_commit_message"}}</th>
+			<th>{{ctx.Locale.Tr "repo.files.last_commit_date"}}</th>
+		</tr>
 		<tr class="commit-list">
 			<td class="tw-overflow-hidden repo-files-table-latest-commit-cell repo-files-table-latest-commit-left" colspan="2">
 				<div class="tw-flex">
@@ -18,6 +18,8 @@
 			</td>
 			<td class="text grey right age repo-files-table-latest-commit-cell tw-py-0">{{if .LatestCommit}}{{if .LatestCommit.Committer}}{{DateUtils.TimeSince .LatestCommit.Committer.When}}{{end}}{{end}}</td>
 		</tr>
+	</thead>
+	<tbody>
 		{{if .HasParentPath}}
 			<tr class="has-parent">
 				<td colspan="3"><a class="muted" href="{{.BranchLink}}{{if .ParentPath}}{{PathEscapeSegments .ParentPath}}{{end}}">{{svg "octicon-reply" 16 "tw-mr-2"}}..</a></td>

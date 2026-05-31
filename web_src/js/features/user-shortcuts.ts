@@ -3,7 +3,7 @@ import {POST} from '../modules/fetch.js';
 const Page = Object.freeze({
   Actions: 0,
   Code: 1,
-  Dashboard: 2,
+  Homepage: 2,
   Issues: 3,
   Notifications: 4,
   Projects: 5,
@@ -96,7 +96,7 @@ function goto(page: (typeof Page)[keyof typeof Page]) {
     case Page.Code:
       document.querySelector<HTMLAnchorElement>('#repo-code-tab')?.click();
       break;
-    case Page.Dashboard:
+    case Page.Homepage:
       window.location.pathname = '/';
       break;
     case Page.Issues: {
@@ -159,9 +159,6 @@ function onKeydown(e: KeyboardEvent) {
           ?.click();
       }
       break;
-    case 'd':
-      goto(Page.Dashboard);
-      break;
     case 'g':
       if (goto_state) return;
       goto_state = true;
@@ -170,7 +167,9 @@ function onKeydown(e: KeyboardEvent) {
       }, 750);
       return;
     case 'h':
-      document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
+      if (goto(Page.Homepage)) {
+        document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
+      }
       break;
     case 'i':
       goto(Page.Issues);
