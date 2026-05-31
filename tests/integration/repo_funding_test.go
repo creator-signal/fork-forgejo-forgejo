@@ -29,6 +29,15 @@ func getRepoPage(t *testing.T, repo *repo_model.Repository) *HTMLDoc {
 	return NewHTMLParser(t, resp.Body)
 }
 
+// Returns the main HTML webpage for the given file in the given repo.
+func getFilePage(t *testing.T, repo *repo_model.Repository, treePath string) *HTMLDoc {
+	t.Helper()
+
+	req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/%s/%s", repo.OwnerName, repo.Name, repo.DefaultBranch, treePath))
+	resp := MakeRequest(t, req, http.StatusOK)
+	return NewHTMLParser(t, resp.Body)
+}
+
 // Returns the main HTML webpage for the given user profile.
 func getUserPage(t *testing.T, user *user_model.User) *HTMLDoc {
 	t.Helper()
@@ -93,12 +102,45 @@ func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href string, i
 // `nth` is 1-indexed, indicating which entry in the list to check.
 func assertFundingEntryHasText(t *testing.T, htmlDoc *HTMLDoc, nth uint, expectedText string) {
 	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
+
 	htmlDoc.AssertElementPredicate(t, sel + " a", func(el *goquery.Selection) {
 		assert.Equal(t, expectedText, el.Text())
 		assert.Zero(t, el.Children().Length()) // no injected <script>, etc.
 	})
 }
 
+// Ensures the page contains the given number of file errors.
+func assertNFundingErrors(t *testing.T, htmlDoc *HTMLDoc, expectedNumberOfErrors int) {
+	if expectedNumberOfErrors == 0 {
+		htmlDoc.AssertElement(t, ".ui.error.message", false)
+		return
+	}
+
+	fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
+	assert.Equal(t, 1, fileError.Length())
+	if expectedNumberOfErrors == 1 {
+		assert.Contains(t, strings.TrimSpace(fileError.Text()), "Error parsing funding config:")
+	} else {
+		assert.Contains(t, strings.TrimSpace(fileError.Text()), "Errors parsing funding config:")
+	}
+
+	fileErrorDetails := htmlDoc.Find(".non-diff-file-content .ui.error.message li")
+	assert.Equal(t, expectedNumberOfErrors, fileErrorDetails.Length())
+}
+
+// Ensures the page's file error details contain the given notice.
+//
+// `nth` is 1-indexed, indicating which error detail in the list to check.
+func assertFundingError(t *testing.T, htmlDoc *HTMLDoc, nth int, expectedText string) {
+	fileErrorDetails := htmlDoc.Find(".non-diff-file-content .ui.error.message li")
+	assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
+
+	sel := fmt.Sprintf(".non-diff-file-content .ui.error.message li:nth-child(%d)", nth)
+	fileErrorDetails = htmlDoc.Find(sel)
+	assert.Equal(t, expectedText, strings.TrimSpace(fileErrorDetails.Text()))
+}
+
+// e2e tests check open/close behavior and accessibility, here we check data
 func TestSponsorButton(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -137,7 +179,6 @@ func TestSponsorButton(t *testing.T) {
 			htmlDoc := getRepoPage(t, repo)
 			assertSponsorButton(t, htmlDoc)
 
-			// e2e tests check open/close behavior and accessibility, here we check data
 			assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 			assertNFundingEntries(t, htmlDoc, 2)
 			assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
@@ -176,11 +217,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
 				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/.profile/src/branch/%s/%s", repo.OwnerName, repo.DefaultBranch, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				htmlDoc.AssertElement(t, ".non-diff-file-content .ui.error.message", false)
+				// no validation error!
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 0)
 			})
 
 			t.Run("sponsor button hidden with invalid funding config", func(t *testing.T) {
@@ -213,18 +252,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/test", "/assets/img/funding/liberapay.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Invalid type for key 'custom', expected a string or string array")
 			})
 
 			t.Run("sponsor modal skips duplicate funding entries", func(t *testing.T) {
@@ -243,18 +273,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
 				assertFundingEntry(t, htmlDoc, 2, "http://test2", "")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Duplicate entry for key 'custom': http://test1")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Duplicate entry for key 'custom': http://test1")
 			})
 
 			t.Run("funding config describes multiple issues", func(t *testing.T) {
@@ -274,19 +295,10 @@ custom: "https://example.com"
 				assertNFundingEntries(t, htmlDoc, 1)
 				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Errors parsing funding config:") // plural! multiple independent errors in this file!
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 2, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 2)
+				assertFundingError(t, htmlDoc, 1, "Invalid type for key 'custom', expected a string or string array")
+				assertFundingError(t, htmlDoc, 2, "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config", func(t *testing.T) {
@@ -305,12 +317,8 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				// no validation error!
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				htmlDoc.AssertElement(t, ".ui.error.message", false)
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 0)
 			})
 
 			t.Run("sponsor button shown with valid funding config with unknown keys", func(t *testing.T) {
@@ -330,18 +338,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
@@ -361,18 +360,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Unknown funding provider: whatever")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Unknown funding provider: whatever")
 			})
 
 			t.Run("sponsor modal shows only valid string array items", func(t *testing.T) {
@@ -389,18 +379,9 @@ custom: "https://example.com"
 				assertNFundingEntries(t, htmlDoc, 1)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Invalid type for key 'custom', expected a string or string array")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Invalid type for key 'custom', expected a string or string array")
 			})
 
 			t.Run("sponsor modal shows only up to the configured limit for custom", func(t *testing.T) {
@@ -426,18 +407,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
 				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 4 of funding provider custom")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Expected up to 4 of funding provider custom")
 			})
 
 			t.Run("sponsor modal shows only up to the configured limit for custom, valid others", func(t *testing.T) {
@@ -465,18 +437,9 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
 				assertFundingEntry(t, htmlDoc, 5, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Error parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 1, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 4 of funding provider custom")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Expected up to 4 of funding provider custom")
 			})
 
 			t.Run("sponsor modal shows only up to the configured limit for custom and ko_fi", func(t *testing.T) {
@@ -504,19 +467,10 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
 				assertFundingEntry(t, htmlDoc, 5, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Errors parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 2, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 4 of funding provider custom")
-				assert.Contains(t, fileErrorDetails.Text(), "Expected up to 1 of funding provider ko_fi")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 2)
+				assertFundingError(t, htmlDoc, 1, "Expected up to 4 of funding provider custom")
+				assertFundingError(t, htmlDoc, 2, "Expected up to 1 of funding provider ko_fi")
 			})
 
 			t.Run("sponsor modal mitigates XSS", func(t *testing.T) {
@@ -548,20 +502,11 @@ custom: "https://example.com"
 				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/text%2Fother", "/assets/img/funding/liberapay.svg")
 				assertFundingEntryHasText(t, htmlDoc, 3, "liberapay.com/text/other")
 
-				req := NewRequest(t, "GET", fmt.Sprintf("/%s/%s/src/branch/master/%s", repo.OwnerName, repo.Name, treePath))
-				resp := MakeRequest(t, req, http.StatusOK)
-
-				htmlDoc = NewHTMLParser(t, resp.Body)
-				fileError := htmlDoc.Find(".non-diff-file-content .ui.error.message")
-				assert.Equal(t, 1, fileError.Length())
-				assert.Contains(t, fileError.Text(), "Errors parsing funding config:")
-
-				fileErrorDetails := htmlDoc.Find(".ui.error.message li")
-				assert.Equal(t, 3, fileErrorDetails.Length())
-				assert.NotContains(t, fileErrorDetails.Text(), "Unknown error")
-				assert.Contains(t, fileErrorDetails.Text(), "Missing URL scheme in value for key 'custom': #%22%20style=%22background:%20url(localhost)")
-				assert.Contains(t, fileErrorDetails.Text(), `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
-				assert.Contains(t, fileErrorDetails.Text(), "Missing URL scheme in value for key 'custom': %3Cscript%3Ealert%601%60%3C/script%3E")
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 3)
+				assertFundingError(t, htmlDoc, 1, "Missing URL scheme in value for key 'custom': #%22%20style=%22background:%20url(localhost)")
+				assertFundingError(t, htmlDoc, 2, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
+				assertFundingError(t, htmlDoc, 3, "Missing URL scheme in value for key 'custom': %3Cscript%3Ealert%601%60%3C/script%3E")
 			})
 		})
 	}
