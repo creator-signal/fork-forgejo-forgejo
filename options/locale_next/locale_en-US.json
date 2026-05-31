@@ -468,7 +468,7 @@
 	"settings.authorized_integration.create_success": "Created authorized integration: %s",
 	"settings.authorized_integration.field.name": "Name",
 	"settings.authorized_integration.field.description": "Description",
-	"settings.authorized_integration.field.description.placeholder": "Used to publish packages when ...",
+	"settings.authorized_integration.field.description.placeholder": "Used to publish packages when…",
 	"settings.authorized_integration.field.audience": "Audience (<code>aud</code> Claim)",
 	"settings.authorized_integration.field.issuer": "Issuer (<code>iss</code> Claim)",
 	"settings.authorized_integration.field.claim_rules": "Claim Rules JSON",
