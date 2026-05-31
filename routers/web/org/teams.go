@@ -371,6 +371,7 @@ func TeamMembers(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Org.Team.Name
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["PageIsOrgTeamMembers"] = true
+	ctx.Data["AddMembersByInvitations"] = setting.Service.AddMembersByInvitations
 
 	if err := shared_user.LoadHeaderCount(ctx); err != nil {
 		ctx.ServerError("LoadHeaderCount", err)

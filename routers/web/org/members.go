@@ -78,6 +78,7 @@ func Members(ctx *context.Context) {
 	ctx.Data["MembersIsPublicMember"] = membersIsPublic
 	ctx.Data["MembersIsUserOrgOwner"] = organization.IsUserOrgOwner(ctx, members, org.ID)
 	ctx.Data["MembersTwoFaStatus"] = members.GetTwoFaStatus(ctx)
+	ctx.Data["AddMembersByInvitations"] = setting.Service.AddMembersByInvitations
 
 	ctx.HTML(http.StatusOK, tplMembers)
 }

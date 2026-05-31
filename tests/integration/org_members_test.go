@@ -59,7 +59,18 @@ func TestOrgMembersPage(t *testing.T) {
 		assert.Less(t, 2, doc.Find(".members .list .link-action").Length())
 		assert.Less(t, 2, doc.Find(".members .list .delete-button").Length())
 		/* Adding new members is possible */
-		doc.AssertElement(t, "#add-org-member-button", true)
+		assert.Equal(t, "Add member", strings.TrimSpace(doc.Find("#add-org-member-button").Text()))
+	})
+
+	t.Run("Owner PoV with ADD_MEMBERS_BY_INVITATIONS setting on", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, true)()
+
+		session := loginUser(t, "user2") // user2 owns org3
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", testPage), http.StatusOK).Body)
+
+		/* Inviting new members is possible */
+		assert.Equal(t, "Invite member", strings.TrimSpace(doc.Find("#add-org-member-button").Text()))
 	})
 }
 

@@ -16,7 +16,13 @@
 									<input class="prompt" name="uname" placeholder="{{ctx.Locale.Tr "search.user_kind"}}" autocomplete="off" required>
 								</div>
 							</div>
-							<button class="ui primary button">{{ctx.Locale.Tr "org.teams.add_team_member"}}</button>
+							<button class="ui primary button">
+								{{if $.AddMembersByInvitations}}
+									{{ctx.Locale.Tr "members.invite_team_member"}}
+								{{else}}
+									{{ctx.Locale.Tr "org.teams.add_team_member"}}
+								{{end}}
+							</button>
 						</form>
 					</div>
 				{{end}}
