@@ -91,6 +91,28 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
 }
 
+func TestUpdateUserEnableShortcuts(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
+
+	require.NoError(t, UpdateUser(db.DefaultContext, user, &UpdateOptions{
+		EnableShortcuts: optional.Some(false),
+	}))
+	assert.False(t, user.EnableShortcuts)
+
+	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
+	assert.False(t, user.EnableShortcuts)
+
+	require.NoError(t, UpdateUser(db.DefaultContext, user, &UpdateOptions{
+		EnableShortcuts: optional.Some(true),
+	}))
+	assert.True(t, user.EnableShortcuts)
+
+	user = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
+	assert.True(t, user.EnableShortcuts)
+}
+
 func TestUpdateAuth(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

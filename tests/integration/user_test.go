@@ -533,6 +533,99 @@ func TestUserHints(t *testing.T) {
 	})
 }
 
+func TestUserShortcuts(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+
+	ensureShortcuts := func(t *testing.T, enabled bool) {
+		t.Helper()
+
+		req := NewRequestWithJSON(t, "PATCH", "/api/v1/user/settings", &api.UserSettingsOptions{
+			EnableShortcuts: &enabled,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var userSettings api.UserSettings
+		DecodeJSON(t, resp, &userSettings)
+		assert.Equal(t, enabled, userSettings.EnableShortcuts)
+	}
+
+	t.Run("API", func(t *testing.T) {
+		t.Run("setting shortcuts on and off", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			ensureShortcuts(t, false)
+			ensureShortcuts(t, true)
+		})
+
+		t.Run("retrieving settings", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			for _, v := range []bool{true, false} {
+				ensureShortcuts(t, v)
+
+				req := NewRequest(t, "GET", "/api/v1/user/settings").AddTokenAuth(token)
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				var userSettings api.UserSettings
+				DecodeJSON(t, resp, &userSettings)
+				assert.Equal(t, v, userSettings.EnableShortcuts)
+			}
+		})
+	})
+
+	t.Run("shortcuts popup", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		ensureShortcuts(t, true)
+
+		assertShortcutsCheckbox := func(t *testing.T, enabled bool) {
+			t.Helper()
+
+			req := NewRequest(t, "GET", "/")
+			resp := session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+
+			htmlDoc.AssertElement(t, `#shortcuts`, true)
+			_, checked := htmlDoc.Find(`#shortcuts input[type="checkbox"]`).Attr("checked")
+			assert.Equal(t, enabled, checked)
+		}
+
+		t.Run("view", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			assertShortcutsCheckbox(t, true)
+		})
+
+		t.Run("change via appearance endpoint", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequestWithValues(t, "POST", "/user/settings/appearance/shortcuts", map[string]string{}).
+				SetHeader("Accept", "application/json")
+			resp := session.MakeRequest(t, req, http.StatusOK)
+
+			var result map[string]bool
+			DecodeJSON(t, resp, &result)
+			assert.False(t, result["enable_shortcuts"])
+
+			assertShortcutsCheckbox(t, false)
+
+			req = NewRequestWithValues(t, "POST", "/user/settings/appearance/shortcuts", map[string]string{
+				"enable_shortcuts": "on",
+			}).SetHeader("Accept", "application/json")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+
+			DecodeJSON(t, resp, &result)
+			assert.True(t, result["enable_shortcuts"])
+
+			assertShortcutsCheckbox(t, true)
+		})
+	})
+}
+
 func TestUserPronouns(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
