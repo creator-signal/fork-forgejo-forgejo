@@ -61,9 +61,6 @@ var testFundingCandidates = []string {
 	"fUnDiNg.yaml",
 }
 
-// TODO: Test API responses when the config contains HTML-malicious entries (think XSS); the output must be valid URL matter! (our frontend interpolator already escapes the data, we should do the same for outgoing API responses too)
-// TODO: test a provider limit of 0 (provider is disabled, never shows in API except in /settings/funding)
-
 func TestAPIFundingSettings(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 		t.Run("Global funding config", func(t *testing.T) {
@@ -507,7 +504,7 @@ func TestAPIRepoFunding(t *testing.T) {
 
 				config := make(map[string]any)
 				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
-				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway?
+				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway? Tidelift? Should we permit arbitrary paths, or should we specifically allow these for particular providers?
 				config["custom"] = []string{
 					"#\" style=\"background: url(localhost)", // omitted (no scheme)
 					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)

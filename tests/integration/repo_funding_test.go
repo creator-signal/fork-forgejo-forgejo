@@ -7,19 +7,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
 )
-
-// TODO: test a provider limit of 0 (provider is disabled, never shows in UI
-// TODO: also test against a user profile
 
 func TestSponsorButton(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -33,11 +32,8 @@ func TestSponsorButton(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			sponsorButton := htmlDoc.Find("button.sponsor")
-			assert.Equal(t, 0, sponsorButton.Length())
-
-			sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
-			assert.Equal(t, 0, sponsorModal.Length())
+			htmlDoc.AssertElement(t, "button.sponsor", false)
+			htmlDoc.AssertElement(t, "dialog#sponsor-modal", false)
 		})
 	})
 
@@ -49,11 +45,8 @@ func TestSponsorButton(t *testing.T) {
 			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			sponsorButton := htmlDoc.Find("button.sponsor")
-			assert.Equal(t, 0, sponsorButton.Length())
-
-			sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
-			assert.Equal(t, 0, sponsorModal.Length())
+			htmlDoc.AssertElement(t, "button.sponsor", false)
+			htmlDoc.AssertElement(t, "dialog#sponsor-modal", false)
 		})
 	})
 
@@ -99,6 +92,68 @@ func TestSponsorButton(t *testing.T) {
 
 	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			t.Run("sponsor button shown on user profile", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// first, without the special .profile repo:
+				user := forgery.CreateUser(t, &forgery.CreateUserOptions{IsAdmin: false})
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				htmlDoc.AssertElement(t, "button.sponsor", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal", false)
+
+				// then, with the user's special .profile repo:
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile(`
+ko_fi: example
+liberapay: example
+custom: "https://example.com"
+`)
+				repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+					Name: ".profile",
+					Files: mfs,
+				})
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s", user.Name))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				sponsorButton := htmlDoc.Find("button.sponsor")
+				assert.Equal(t, 1, sponsorButton.Length())
+
+				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
+				assert.Equal(t, 1, sponsorModal.Length())
+
+				sponsorModalHeader := htmlDoc.Find("dialog#sponsor-modal header")
+				assert.Equal(t, 1, sponsorModalHeader.Length())
+				assert.Equal(t, fmt.Sprintf("Sponsor %s", user.Name), strings.TrimSpace(sponsorModalHeader.Text()))
+
+				sponsorEntries := htmlDoc.Find("dialog#sponsor-modal li")
+				assert.Equal(t, 3, sponsorEntries.Length())
+
+				// includes the whole config
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(1) a", "href", "https://example.com")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) img", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) a", "href", "https://ko-fi.com/example")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(2) img", "src", "/assets/img/funding/ko_fi.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(2) svg.octicon-link", false)
+
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) a", "href", "https://liberapay.com/example")
+				htmlDoc.AssertAttrEqual(t, "dialog#sponsor-modal li:nth-child(3) img", "src", "/assets/img/funding/liberapay.svg")
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal li:nth-child(3) svg.octicon-link", false)
+
+				req = NewRequest(t, "GET", fmt.Sprintf("/%s/.profile/src/branch/%s/%s", repo.OwnerName, repo.DefaultBranch, treePath))
+				resp = MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc = NewHTMLParser(t, resp.Body)
+				htmlDoc.AssertElement(t, ".non-diff-file-content .ui.error.message", false)
+			})
+
 			t.Run("sponsor button hidden with invalid funding config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
@@ -111,11 +166,8 @@ func TestSponsorButton(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				htmlDoc := NewHTMLParser(t, resp.Body)
-				sponsorButton := htmlDoc.Find("button.sponsor")
-				assert.Equal(t, 0, sponsorButton.Length())
-
-				sponsorModal := htmlDoc.Find("dialog#sponsor-modal")
-				assert.Equal(t, 0, sponsorModal.Length())
+				htmlDoc.AssertElement(t, "button.sponsor", false)
+				htmlDoc.AssertElement(t, "dialog#sponsor-modal", false)
 			})
 
 			t.Run("sponsor modal skips invalid funding entries", func(t *testing.T) {
