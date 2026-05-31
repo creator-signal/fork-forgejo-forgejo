@@ -971,6 +971,7 @@
 		"code": {
 			"blame": "Toggle between blame and normal",
 			"history": "Go to history",
+			"line": "Go to line",
 			"raw": "View raw",
 			"permalink": "Get permalink"
 		},

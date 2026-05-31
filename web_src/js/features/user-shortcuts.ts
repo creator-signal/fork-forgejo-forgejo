@@ -182,6 +182,13 @@ function onKeydown(e: KeyboardEvent) {
       (e.target as HTMLInputElement).blur();
       keyboardSelector(true);
       break;
+    case 'l': {
+      const line = Number(window.prompt('Jump to line', ''));
+      if (Number.isNaN(line) || line < 1) return alert('Invalid line number');
+      if (!document.querySelector(`#L${line}`)) return alert('Line not found');
+      window.location.hash = `L${line}`;
+      break;
+    }
     case 'n':
       goto(Page.Notifications);
       break;
