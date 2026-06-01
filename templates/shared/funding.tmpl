@@ -1,7 +1,7 @@
 <dialog closedby="any" id="sponsor-modal" aria-labelledby="sponsor-modal-header">
 	<article>
-		<header id="sponsor-modal-header">
-			<span role="heading" aria-level="1">{{ctx.Locale.Tr "funding.sponsor_header" .FundingTarget}}</span>
+		<header>
+			<span role="heading" aria-level="1" id="sponsor-modal-header">{{ctx.Locale.Tr "funding.sponsor_header" .FundingTarget}}</span>
 			<button type="button" commandfor="sponsor-modal" command="close" aria-label="Close" class="ui button mini compact basic close icon">{{svg "octicon-x" 24}}</button>
 		</header>
 		<div class="content">
