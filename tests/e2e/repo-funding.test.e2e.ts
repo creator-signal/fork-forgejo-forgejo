@@ -31,7 +31,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(11);
+  await expect(items).toHaveLength(12);
 
   const buy_me_a_coffee = items[0];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
@@ -87,6 +87,11 @@ test('Sponsor modal', async ({browser}) => {
   await expect(patreon.locator('a')).toHaveAttribute('href', 'https://patreon.com/example');
   await expect(patreon.locator('a')).toHaveText('patreon.com/example');
   await expect(patreon.locator('img')).toHaveAccessibleName('patreon');
+
+  const polar = items[11];
+  await expect(polar.locator('a')).toHaveAttribute('href', 'https://polar.sh/example');
+  await expect(polar.locator('a')).toHaveText('polar.sh/example');
+  await expect(polar.locator('img')).toHaveAccessibleName('polar');
 
   await screenshot(page);
 });

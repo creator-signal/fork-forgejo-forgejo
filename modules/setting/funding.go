@@ -123,15 +123,24 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "patreon.com/%[1]s",
 		URL:  "https://patreon.com/%[1]s",
-		IconName: "patreon.svg", // FIXME: this does NOT look good in dark mode 😠
+		IconName: "patreon.svg",
+	})
+	// TODO: Tidelift
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "polar",
+		Limit: 1,
+		Text: "polar.sh/%[1]s",
+		URL:  "https://polar.sh/%[1]s",
+		IconName: "polar.png",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "buy_me_a_coffee",
 		Limit: 1,
 		Text: "buymeacoffee.com/%[1]s",
 		URL:  "https://buymeacoffee.com/%[1]s",
-		IconName: "buy_me_a_coffee.svg", // FIXME: dark mode
+		IconName: "buy_me_a_coffee.svg",
 	})
+	// TODO: thanks.dev
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "custom",
 		Limit: 4,
