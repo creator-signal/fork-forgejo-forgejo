@@ -1,6 +1,6 @@
 # Contributing to Forgejo
 
-Thank you for improving Forgejo! This project is developed and maintained by a diverse and inclusive community of people from around the world. Please review our [Code of Conduct](https://forgejo.org/docs/latest/contributor/coc/).
+Thank you for improving Forgejo! This project is developed and maintained by a diverse and inclusive community of people from around the world. Please review our [Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
 
 #### About the Use of Coding Agents
 
