@@ -8,7 +8,7 @@ Forgejo does not accept any works (code, documentation, ...) that are partially 
 
 #### Reporting Security Vulnerabilities
 
-Please report all security related issues by sending an [encrypted](https://keyoxide.org/security@forgejo.org) email to [security@forgejo.org](mailto:security@forgejo.org). Please review our Security Policy for details.
+Please report all security related issues by sending an [encrypted](https://keyoxide.org/security@forgejo.org) email to [security@forgejo.org](mailto:security@forgejo.org). Please review our [Security Policy](https://codeberg.org/forgejo/governance/src/branch/main/SECURITY-POLICY.md) for details.
 
 #### Before Sending a PR
 
