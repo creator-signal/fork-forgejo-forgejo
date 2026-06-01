@@ -164,6 +164,9 @@ dialog ul .funding-logo > img {
   width: 24px;
   height: 24px;
   aspect-ratio: 1;
-  padding: 2px;
   overflow: hidden;
+}
+
+dialog ul .funding-logo > img {
+  padding: 2px;
 }
