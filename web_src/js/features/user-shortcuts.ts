@@ -11,6 +11,7 @@ const Page = Object.freeze({
   Releases: 7,
   Wiki: 8,
 });
+type PageType = (typeof Page)[keyof typeof Page];
 
 let goto_state = false;
 const list = document.querySelector(`\
@@ -138,8 +139,8 @@ function initLineJump() {
   });
 }
 
-function goto(page: (typeof Page)[keyof typeof Page]) {
-  if (!goto_state) return true;
+function goto(page: PageType): boolean {
+  if (!goto_state) return false;
   switch (page) {
     case Page.Actions:
       document.querySelector<HTMLAnchorElement>('#repo-actions-tab')?.click();
@@ -178,7 +179,7 @@ function goto(page: (typeof Page)[keyof typeof Page]) {
     case Page.Wiki:
       document.querySelector<HTMLAnchorElement>('#repo-wiki-tab')?.click();
   }
-  return false;
+  return true;
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -202,13 +203,12 @@ function onKeydown(e: KeyboardEvent) {
       document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
       break;
     case 'c':
-      if (goto(Page.Code)) {
-        document
-          .querySelector<HTMLAnchorElement>(
-            '.issue-list-new, .release-list-buttons .primary',
-          )
-          ?.click();
-      }
+      if (goto(Page.Code)) return;
+      document
+        .querySelector<HTMLAnchorElement>(
+          '.issue-list-new, .release-list-buttons .primary',
+        )
+        ?.click();
       break;
     case 'g':
       if (goto_state) return;
@@ -218,9 +218,8 @@ function onKeydown(e: KeyboardEvent) {
       }, 750);
       return;
     case 'h':
-      if (goto(Page.Homepage)) {
-        document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
-      }
+      if (goto(Page.Homepage)) return;
+      document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
       break;
     case 'i':
       goto(Page.Issues);
@@ -252,17 +251,15 @@ function onKeydown(e: KeyboardEvent) {
       goto(Page.Pulls);
       break;
     case 'r':
-      if (goto(Page.Releases)) {
-        document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
-      }
+      if (goto(Page.Releases)) return;
+      document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
       break;
     case 'w':
-      if (goto(Page.Wiki)) {
-        document
-          .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
-          ?.click();
-        e.preventDefault();
-      }
+      if (goto(Page.Wiki)) return;
+      document
+        .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
+        ?.click();
+      e.preventDefault();
       break;
     case 'x':
       document
