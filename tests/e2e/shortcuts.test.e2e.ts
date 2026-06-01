@@ -23,19 +23,19 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/user2/repo2/src/branch/master/test.xml');
 
+  await page.reload();
+  await page.keyboard.press('w');
+  await expect(page.locator('[name="search"]')).toBeVisible();
+
+  await page.reload();
+  await page.keyboard.press('l');
+  await page.keyboard.press('2');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#L2$/);
+
   // Shortcuts that handle page navigation are flaky on Firefox using Playwright
   if (browser.browserType() === firefox) return;
 
-  await page.keyboard.press('w');
-  await expect(page.locator('[name="search"]')).toBeVisible();
-  await page.keyboard.press('Escape');
-
-  await page.reload();
-  page.on('dialog', async (dialog) => {
-    await dialog.accept('2');
-  });
-  await page.keyboard.press('l');
-  await expect(page).toHaveURL(/#L2$/);
   await page.keyboard.press('b');
   await expect(page).toHaveURL('/user2/repo2/blame/branch/master/test.xml');
   await page.keyboard.press('b');

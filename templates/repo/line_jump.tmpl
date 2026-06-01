@@ -1,0 +1,20 @@
+<dialog id="line-jump">
+	<header>
+		<span>{{ctx.Locale.Tr "shortcuts.line.title"}}</span>
+		<form method="dialog">
+			<button type="submit" class="ui compact icon button" aria-label="Close">{{svg "octicon-x" 16}}</button>
+		</form>
+	</header>
+	<article class="content">
+		<div class="ui small fluid action input">
+			<input type="number" min="1" placeholder={{ctx.Locale.Tr "shortcuts.line.prompt"}}>
+			<button type="button" class="ui button">{{ctx.Locale.Tr "shortcuts.line.button"}}</button>
+		</div>
+		<div data-error="invalid" style="display: none" aria-hidden="true" class="ui negative message flash-message flash-error">
+			{{ctx.Locale.Tr "shortcuts.line.invalid"}}
+		</div>
+		<div data-error="notfound" style="display: none" aria-hidden="true" class="ui negative message flash-message flash-error">
+			{{ctx.Locale.Tr "shortcuts.line.notfound"}}
+		</div>
+	</article>
+</dialog>

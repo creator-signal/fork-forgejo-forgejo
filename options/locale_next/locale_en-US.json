@@ -942,6 +942,7 @@
 	"shortcuts": {
 		"title": "Keyboard Shortcuts",
 		"hint": "Navigate with arrow keys",
+		"enable": "Enable keyboard shortcuts",
 		"button": {
 			"global": "Global",
 			"repo": "Repositories",
@@ -975,7 +976,13 @@
 			"raw": "View raw",
 			"permalink": "Get permalink"
 		},
-		"enable": "Enable keyboard shortcuts"
+		"line": {
+			"title": "Jump to line",
+			"prompt": "Line number",
+			"button": "Go",
+			"invalid": "Invalid input",
+			"notfound": "Line not found"
+		}
 	},
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

@@ -3,7 +3,8 @@
   box-shadow: inset 2px 0 0 var(--color-primary);
 }
 
-#shortcuts[open] {
+#shortcuts[open],
+#line-jump[open] {
   display: block;
 }
 
@@ -15,7 +16,8 @@
   width: 100%;
 }
 
-#shortcuts header {
+#shortcuts header,
+#line-jump header {
   display: flex;
   justify-content: space-between;
   padding: 1rem;

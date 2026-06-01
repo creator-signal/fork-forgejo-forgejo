@@ -150,6 +150,7 @@
 					</tbody>
 				</table>
 				{{else}}
+				{{template "repo/line_jump" .}}
 				{{if .IsCitationFile}}
 				<lazy-webc tag="citation-information">
 				{{end}}

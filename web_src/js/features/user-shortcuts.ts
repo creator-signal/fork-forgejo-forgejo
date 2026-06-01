@@ -87,6 +87,57 @@ function initEnableCheckbox() {
   });
 }
 
+function clearErrors(dialog: HTMLDialogElement) {
+  for (const el of dialog.querySelectorAll<HTMLElement>('[data-error]')) {
+    el.style.display = 'none';
+    el.toggleAttribute('aria-hidden', true);
+  }
+}
+
+function showError(dialog: HTMLDialogElement, type: string) {
+  clearErrors(dialog);
+  const div = dialog.querySelector<HTMLElement>(`[data-error="${type}"]`);
+  if (!div) return;
+  div.style.display = '';
+  div.toggleAttribute('aria-hidden', false);
+}
+
+function validate(input: HTMLInputElement, dialog: HTMLDialogElement) {
+  const num = Number(input.value);
+  if (Number.isNaN(num) || num < 1) {
+    showError(dialog, 'invalid');
+    return;
+  }
+  if (!document.querySelector(`#L${num}`)) {
+    showError(dialog, 'notfound');
+    return;
+  }
+  window.location.hash = `#L${num}`;
+  input.value = '';
+  dialog.close();
+}
+
+function initLineJump() {
+  const dialog = document.querySelector<HTMLDialogElement>('#line-jump');
+  if (!dialog) return;
+  clearErrors(dialog);
+  const input = dialog.querySelector('input');
+  if (!input) return;
+  dialog.addEventListener('close', () => {
+    input.value = '';
+    clearErrors(dialog);
+  });
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    validate(input, dialog);
+  });
+  const btn = dialog.querySelector('[type="button"]');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    validate(input, dialog);
+  });
+}
+
 function goto(page: (typeof Page)[keyof typeof Page]) {
   if (!goto_state) return true;
   switch (page) {
@@ -183,10 +234,12 @@ function onKeydown(e: KeyboardEvent) {
       keyboardSelector(true);
       break;
     case 'l': {
-      const line = Number(window.prompt('Jump to line', ''));
-      if (Number.isNaN(line) || line < 1) return alert('Invalid line number');
-      if (!document.querySelector(`#L${line}`)) return alert('Line not found');
-      window.location.hash = `L${line}`;
+      const dialog = document.querySelector<HTMLDialogElement>('#line-jump');
+      if (dialog) {
+        dialog.showModal();
+        dialog.querySelector('input')?.focus();
+        e.preventDefault();
+      }
       break;
     }
     case 'n':
@@ -246,7 +299,7 @@ function onKeydown(e: KeyboardEvent) {
       break;
     }
     case 'Escape':
-      document.querySelector<HTMLDialogElement>('#shortcuts')?.close();
+      document.querySelector<HTMLDialogElement>('dialog[open]')?.close();
   }
   goto_state = false;
 }
@@ -254,6 +307,7 @@ function onKeydown(e: KeyboardEvent) {
 export function initUserShortcuts() {
   initPopupTabs();
   initEnableCheckbox();
+  initLineJump();
   if (document.querySelector<HTMLInputElement>('#shortcuts input')?.checked) {
     document.addEventListener('keydown', onKeydown);
   }
