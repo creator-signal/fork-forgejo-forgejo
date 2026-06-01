@@ -191,7 +191,7 @@ type TransactionConfig struct {
 // is returned.
 func WithTxOpts(parentCtx context.Context, config *TransactionConfig, f func(ctx context.Context) error) error {
 	if sess, ok := inTransaction(parentCtx); ok {
-		if config == nil {
+		if config != nil {
 			return errors.New("unsupported operation: attempted to use WithTxOpts with a non-nil config in a transaction")
 		}
 
@@ -210,8 +210,14 @@ func WithTxOpts(parentCtx context.Context, config *TransactionConfig, f func(ctx
 
 	sess := x.NewSession()
 	defer sess.Close()
+
+	isolationLevel := sql.LevelDefault
+	if config != nil {
+		isolationLevel = config.IsolationLevel
+	}
+
 	if err := sess.BeginOpts(&sql.TxOptions{
-		Isolation: config.IsolationLevel,
+		Isolation: isolationLevel,
 	}); err != nil {
 		return err
 	}

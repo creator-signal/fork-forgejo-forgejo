@@ -74,7 +74,7 @@ func DeleteRepositoryDirectly(ctx context.Context, repoID int64, opts DeleteRepo
 	var releaseAttachments []string
 	var newAttachmentPaths []string
 
-	if err := db.WithTxOpts(ctx, db.TransactionConfig{
+	if err := db.WithTxOpts(ctx, &db.TransactionConfig{
 		// This transaction is gigantic, and of all transactions touches the most
 		// tables, not only to read from them but also to delete many rows from
 		// them. As such, we don't want to this transaction to lock rows and block
