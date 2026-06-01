@@ -28,7 +28,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
   await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
   await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal).toHaveAccessibleName("Sponsor user2/funding_basic_complete");
+  await expect(sponsorModal).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
@@ -147,12 +147,29 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
 
   const items = await sponsorModal.getByRole('listitem').all();
   await expect(items).toHaveLength(1);
-  await expect(items[0].locator("a")).toHaveAttribute("href", 'https://example.com');
-  await expect(items[0].locator("a")).toHaveText('https://example.com');
+  await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
+  await expect(items[0].locator('a')).toHaveText('https://example.com');
   // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`Sponsor modal: all images load (${colorScheme} mode)`, async ({browser}) => {
+    const context = await browser.newContext({colorScheme});
+    const page = await context.newPage();
+
+    const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
+    expect(response?.status()).toBe(200);
+
+    await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+    await expect(page.locator('#sponsor-modal')).toBeVisible();
+
+    await page.waitForFunction(() => {
+      return Array.from(document.querySelectorAll('#sponsor-modal img')).every((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
+    });
+  });
+}
 
 test('Sponsor modal: closes on Esc', async ({browser}) => {
   // this test doesn't need JS
@@ -229,8 +246,8 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
 
   const items = await sponsorModal.getByRole('listitem').all();
   await expect(items).toHaveLength(1);
-  await expect(items[0].locator("a")).toHaveAttribute("href", 'https://example.com');
-  await expect(items[0].locator("a")).toHaveText('https://example.com');
+  await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
+  await expect(items[0].locator('a')).toHaveText('https://example.com');
   // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
@@ -243,7 +260,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
 });
 
-test('Sponsor modal (repo): mitigates XSS', async ({ browser }) => {
+test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   // this test doesn't need JS
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
@@ -262,30 +279,30 @@ test('Sponsor modal (repo): mitigates XSS', async ({ browser }) => {
   const items = await sponsorModal.getByRole('listitem').all();
   await expect(items).toHaveLength(5);
 
-  await expect(items[0].locator("a")).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
-  await expect(items[0].locator("a")).toHaveText('#\" style=\"background: url(localhost)');
+  await expect(items[0].locator('a')).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
+  await expect(items[0].locator('a')).toHaveText('#" style="background: url(localhost)');
   // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
-  await expect(items[1].locator("a")).toHaveAttribute('href', 'https://example.com/%22%20class=%22rogue%20injection');
-  await expect(items[1].locator("a")).toHaveText('https://example.com/" class="rogue injection');
+  await expect(items[1].locator('a')).toHaveAttribute('href', 'https://example.com/%22%20class=%22rogue%20injection');
+  await expect(items[1].locator('a')).toHaveText('https://example.com/" class="rogue injection');
   // await expect(items[1].locator('svg')).toHaveAccessibleName('custom'); // TODO: same
 
-  await expect(items[2].locator("a")).toHaveAttribute('href', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
-  await expect(items[2].locator("a")).toHaveText('<script>alert`1`</script>');
+  await expect(items[2].locator('a')).toHaveAttribute('href', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
+  await expect(items[2].locator('a')).toHaveText('<script>alert`1`</script>');
   // await expect(items[2].locator('svg')).toHaveAccessibleName('custom'); // TODO: same
 
-  await expect(items[3].locator("a")).toHaveAttribute("href", "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22");
-  await expect(items[3].locator("a")).toHaveText('ko-fi.com/"><script>alert(1);</script><a class="');
+  await expect(items[3].locator('a')).toHaveAttribute('href', 'https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22');
+  await expect(items[3].locator('a')).toHaveText('ko-fi.com/"><script>alert(1);</script><a class="');
   await expect(items[3].locator('img')).toHaveAccessibleName('ko_fi');
   await expect(items[3].locator('a *')).toBeHidden(); // no real injected <script>
   await expect(sponsorModal.locator('script')).toBeHidden();
 
-  await expect(items[4].locator("a")).toHaveAttribute("href", "https://liberapay.com/text%2Fother");
-  await expect(items[4].locator("a")).toHaveText('liberapay.com/text/other');
+  await expect(items[4].locator('a')).toHaveAttribute('href', 'https://liberapay.com/text%2Fother');
+  await expect(items[4].locator('a')).toHaveText('liberapay.com/text/other');
   await expect(items[4].locator('img')).toHaveAccessibleName('liberapay');
-})
+});
 
-test('Sponsor button (user): appears when a user profile has a valid funding config', async ({ browser }) => {
+test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {
   // this test doesn't need JS
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
@@ -293,7 +310,7 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   let response = await page.goto('/user2', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
   await expect(page.locator('#sponsor-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({ hasText: 'Sponsor' })).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
 
   response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
@@ -324,10 +341,7 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
-})
+});
 
 // TODO: check the modal text is a reasonable size and spacing, even on mobile
-// TODO: check the various error layouts
-// TODO: check with ridiculously long repo/user names
-// TODO: can we test that all images load too?
-// TODO: test that all the images load
+// TODO: check with ridiculously long repo/user/entry names
