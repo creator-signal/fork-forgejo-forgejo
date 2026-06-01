@@ -284,11 +284,14 @@
 }
 
 /* Multi-line comment selection highlight (shift+drag in progress) */
-tr.diff-line-selected > td {
+/* Unified view highlights the whole row; split view highlights only the commented side's cells */
+tr.diff-line-selected > td,
+td.diff-line-selected {
   background-color: var(--color-primary-alpha-20) !important;
 }
 
 /* Existing multi-line comment range highlight */
-tr.diff-line-commented-range > td {
+tr.diff-line-commented-range > td,
+td.diff-line-commented-range {
   background-color: var(--color-yellow-badge-bg) !important;
 }

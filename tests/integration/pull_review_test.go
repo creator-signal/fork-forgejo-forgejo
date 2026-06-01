@@ -1840,41 +1840,6 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			assert.EqualValues(t, 2, updatedComment.ExtraLinesCount)
 		})
 
-		t.Run("negative ExtraLinesCount is rejected", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-			tester := newPullRequestCommentPlacementTester(t)
-
-			content := tester.fileContent
-			content = strings.Replace(content, "Line 48\n", "Line 48--modified\n", 1)
-			tester.changeFile("file1.md", content)
-			tester.createPR()
-
-			// Try to create a comment with negative extra_lines_count
-			req := NewRequest(tester.t, "GET",
-				fmt.Sprintf("/%s/%s/pulls/%d/files/reviews/new_comment", tester.repo.OwnerName, tester.repo.Name, tester.pr.Index))
-			resp := tester.session.MakeRequest(tester.t, req, http.StatusOK)
-
-			commentContent := uuid.New().String()
-			doc := NewHTMLParser(tester.t, resp.Body)
-			req = NewRequestWithValues(tester.t, "POST",
-				fmt.Sprintf("/%s/%s/pulls/%d/files/reviews/comments", tester.repo.OwnerName, tester.repo.Name, tester.pr.Index),
-				map[string]string{
-					"origin":            doc.GetInputValueByName("origin"),
-					"before_commit_id":  doc.GetInputValueByName("before_commit_id"),
-					"latest_commit_id":  doc.GetInputValueByName("latest_commit_id"),
-					"side":              "proposed",
-					"line":              "48",
-					"extra_lines_count": "-1",
-					"path":              "file1.md",
-					"diff_start_cid":    doc.GetInputValueByName("diff_start_cid"),
-					"diff_end_cid":      doc.GetInputValueByName("diff_end_cid"),
-					"diff_base_cid":     doc.GetInputValueByName("diff_base_cid"),
-					"content":           commentContent,
-					"single_review":     "true",
-				})
-			tester.session.MakeRequest(tester.t, req, http.StatusBadRequest)
-		})
-
 		t.Run("multi-line comment invalidated when line inserted in range by second commit", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 			tester := newPullRequestCommentPlacementTester(t)

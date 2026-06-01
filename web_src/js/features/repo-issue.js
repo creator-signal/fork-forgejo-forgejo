@@ -153,6 +153,9 @@ export function initRepoIssueCommentDelete() {
           conversationHolder.remove();
         }
 
+        // Recompute multi-line comment highlights so a removed comment no longer leaves a stale range highlight.
+        refreshMultiLineCommentHighlights();
+
         // Check if there is no review content, move the time avatar upward to avoid overlapping the content below.
         if (!parentTimelineGroup?.querySelector('.timeline-item.comment') && !parentTimelineItem?.querySelector('.conversation-holder')) {
           const timelineAvatar = parentTimelineGroup?.querySelector('.timeline-avatar');
@@ -399,16 +402,40 @@ function findDiffLineRow(path, side, lineNum) {
   return null;
 }
 
+// addLineHighlight applies a highlight class to a single diff line.
+// In split view a row holds both sides, so only the cells of `side` are highlighted to avoid
+// lighting up the opposite column. In unified view there is a single code column, so the whole
+// row is highlighted.
+function addLineHighlight(row, side, className) {
+  if (!row.closest('.code-diff-split')) {
+    row.classList.add(className);
+    return;
+  }
+  const suffix = side === 'left' ? 'old' : 'new';
+  for (const cell of row.querySelectorAll(`.lines-num-${suffix}, .lines-escape-${suffix}, .lines-type-marker-${suffix}, .lines-code-${suffix}`)) {
+    cell.classList.add(className);
+  }
+}
+
 function highlightLineRange(path, side, startLine, endLine) {
   for (let i = startLine; i <= endLine; i++) {
     const row = findDiffLineRow(path, side, i);
     if (row) {
-      row.classList.add('diff-line-selected');
+      addLineHighlight(row, side, 'diff-line-selected');
     }
   }
 }
 
-function highlightExistingMultiLineComments() {
+// refreshMultiLineCommentHighlights recomputes the highlight of every existing multi-line
+// comment range from the current DOM. It is idempotent: it first clears all previous range
+// highlights so that comments removed since the last call no longer leave stale highlighting,
+// then re-applies the highlight for every conversation holder still present.
+// Call it on page load and after any dynamic create/delete of a code comment.
+export function refreshMultiLineCommentHighlights() {
+  for (const el of document.querySelectorAll('.diff-line-commented-range')) {
+    el.classList.remove('diff-line-commented-range');
+  }
+
   for (const holder of document.querySelectorAll('.conversation-holder[data-extra-lines-count]')) {
     const extraLinesCount = parseInt(holder.getAttribute('data-extra-lines-count'));
     if (!extraLinesCount) continue;
@@ -420,9 +447,9 @@ function highlightExistingMultiLineComments() {
     // idx is UnsignedLine (first line), the comment displays at idx + extraLinesCount (last line)
     // Highlight from idx to idx + extraLinesCount
     for (let i = idx; i <= idx + extraLinesCount; i++) {
-      const row = findDiffLineRow(path, side === 'left' ? 'left' : 'right', i);
+      const row = findDiffLineRow(path, side, i);
       if (row) {
-        row.classList.add('diff-line-commented-range');
+        addLineHighlight(row, side, 'diff-line-commented-range');
       }
     }
   }
@@ -430,7 +457,7 @@ function highlightExistingMultiLineComments() {
 
 export function initRepoPullRequestReview() {
   // Highlight existing multi-line comment ranges
-  highlightExistingMultiLineComments();
+  refreshMultiLineCommentHighlights();
 
   if (window.location.hash && window.location.hash.startsWith('#issuecomment-')) {
     // set scrollRestoration to 'manual' when there is a hash in url, so that the scroll position will not be remembered after refreshing
@@ -545,7 +572,7 @@ export function initRepoPullRequestReview() {
 
     // Highlight the initial line
     const row = findDiffLineRow(path, side, idx);
-    if (row) row.classList.add('diff-line-selected');
+    if (row) addLineHighlight(row, side, 'diff-line-selected');
 
     // Prevent text selection during drag
     document.body.style.userSelect = 'none';

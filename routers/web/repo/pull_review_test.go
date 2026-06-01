@@ -6,6 +6,7 @@ package repo
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -13,8 +14,10 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/templates"
+	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
 	"forgejo.org/services/contexttest"
+	"forgejo.org/services/forms"
 	"forgejo.org/services/pull"
 
 	"github.com/stretchr/testify/assert"
@@ -141,4 +144,32 @@ func TestRenderConversation(t *testing.T) {
 		// Verify the conversation-holder has data-extra-lines-count attribute
 		assert.Contains(t, body, `data-extra-lines-count="2"`)
 	})
+}
+
+// TestCreateCodeCommentRejectsNegativeExtraLinesCount checks that the CreateCodeComment handler
+// rejects a negative extra_lines_count with a 400 response, before reaching any comment creation.
+func TestCreateCodeCommentRejectsNegativeExtraLinesCount(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	pr, err := issues_model.GetPullRequestByID(db.DefaultContext, 2)
+	require.NoError(t, err)
+	require.NoError(t, pr.LoadIssue(db.DefaultContext))
+
+	ctx, resp := contexttest.MockContext(t, "/")
+	contexttest.LoadUser(t, ctx, pr.Issue.PosterID)
+	contexttest.LoadRepo(t, ctx, pr.BaseRepoID)
+	ctx.SetParams(":index", strconv.FormatInt(pr.Issue.Index, 10))
+
+	web.SetForm(ctx, &forms.CodeCommentForm{
+		Origin:          "diff",
+		Content:         "a comment",
+		Side:            "proposed",
+		Line:            1,
+		TreePath:        "README.md",
+		ExtraLinesCount: -1,
+	})
+
+	CreateCodeComment(ctx)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
