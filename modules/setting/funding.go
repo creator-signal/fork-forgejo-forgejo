@@ -77,6 +77,13 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	FundingProviders = make(map[string]*FundingProviderConfig)
 
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "issuehunt",
+		Limit: 1,
+		Text: "issuehunt.io/r/%[1]s",
+		URL:  "https://issuehunt.io/r/%[1]s",
+		IconName: "issuehunt.svg",
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "ko_fi",
 		Limit: 1,
 		Text: "ko-fi.com/%[1]s",

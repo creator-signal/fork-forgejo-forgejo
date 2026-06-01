@@ -192,6 +192,7 @@ body:
 	newRepo(t, 2, "funding_basic_complete", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
+issuehunt: example
 ko_fi: example
 liberapay: example
 patreon: example
