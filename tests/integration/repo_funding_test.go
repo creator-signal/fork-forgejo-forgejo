@@ -147,8 +147,6 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button hidden without funding config (repo)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			// defer tests.PrintCurrentTest(t)() // FIXME: no need for PrintCurrentTest when using onApplicationRun
-
 			htmlDoc := getRepoPage(t, repo)
 			assertNoFunding(t, htmlDoc)
 		})
@@ -156,8 +154,6 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button hidden without funding config (user)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			// defer tests.PrintCurrentTest(t)()
-
 			htmlDoc := getUserPage(t, owner)
 			assertNoFunding(t, htmlDoc)
 		})
@@ -165,8 +161,6 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button shown with one valid and one invalid config", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			// defer tests.PrintCurrentTest(t)()
-
 			config := make(map[string]any)
 			config["custom"] = "example.com" // no scheme is assumed HTTP
 			config["ko_fi"] = "test"
