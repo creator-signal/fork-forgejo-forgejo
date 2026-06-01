@@ -131,9 +131,8 @@ func TestCommitListActions(t *testing.T) {
 		session := loginUser(t, user.Name)
 		var commitID string
 		repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
-			Files: 
-			forgery.MapFS{
-				      "test.sh": forgery.MapFile("Hello there!"),
+			Files: forgery.MapFS{
+				"test.sh": forgery.MapFile("Hello there!"),
 			},
 			LatestSha: &commitID,
 		})
