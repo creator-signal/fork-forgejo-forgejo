@@ -195,6 +195,7 @@ body:
 ko_fi: example
 liberapay: example
 patreon: example
+open_collective: example
 buy_me_a_coffee: example
 custom: ["https://example.com", example.com]
 `},

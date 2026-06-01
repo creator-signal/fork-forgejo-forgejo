@@ -69,48 +69,55 @@ func IconForProvider(p *FundingProviderConfig) (string) {
 	}
 }
 
+func addFundingProvider(providers map[string]*FundingProviderConfig, provider *FundingProviderConfig) {
+	providers[provider.Name] = provider
+}
+
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	FundingProviders = make(map[string]*FundingProviderConfig)
 
-	FundingProviders["ko_fi"] = &FundingProviderConfig{
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "ko_fi",
 		Limit: 1,
 		Text: "ko-fi.com/%[1]s",
 		URL:  "https://ko-fi.com/%[1]s",
 		IconName: "ko_fi.svg",
-	}
-
-	FundingProviders["liberapay"] = &FundingProviderConfig{
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "liberapay",
 		Limit: 1,
 		Text: "liberapay.com/%[1]s",
 		URL:  "https://liberapay.com/%[1]s",
 		IconName: "liberapay.svg",
-	}
-
-	FundingProviders["patreon"] = &FundingProviderConfig{
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "open_collective",
+		Limit: 1,
+		Text: "opencollective.com/%[1]s",
+		URL:  "https://opencollective.com/%[1]s",
+		IconName: "open_collective.svg",
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "patreon",
 		Limit: 1,
 		Text: "patreon.com/%[1]s",
 		URL:  "https://patreon.com/%[1]s",
 		IconName: "patreon.svg", // FIXME: this does NOT look good in dark mode 😠
-	}
-
-	FundingProviders["buy_me_a_coffee"] = &FundingProviderConfig{
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "buy_me_a_coffee",
 		Limit: 1,
 		Text: "buymeacoffee.com/%[1]s",
 		URL:  "https://buymeacoffee.com/%[1]s",
 		IconName: "buy_me_a_coffee.svg", // FIXME: dark mode
-	}
-
-	FundingProviders["custom"] = &FundingProviderConfig{
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "custom",
 		Limit: 4,
 		Text: "%[1]s",
 		URL:  "%[1]s",
 		IconName: "", // the template ignores this for "custom"
-	}
+	})
 
 	const keyLimit = "LIMIT"
 	const keyText = "TEXT"
