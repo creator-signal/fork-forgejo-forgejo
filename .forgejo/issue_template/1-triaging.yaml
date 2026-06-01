@@ -1,6 +1,6 @@
 name: "Stage 1: Report a problem or need"
 description: "[➡️ Start here] Describe your experience using Forgejo, including things that are not working or need a feature"
-labels: ["stage/1-triaging", "impact/unknown", "affects/unknown"]
+labels: ["stage/1-triaging"]
 body:
 - type: markdown
   attributes:
@@ -13,7 +13,7 @@ body:
       - Be civil, and follow the [Forgejo Code of Conduct](https://codeberg.org/forgejo/code-of-conduct).
       - Please take a look at [Forgejo's AI agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).\
         in short: **Do not use AI to write issues** (except for help with translation or language checking)
-      - Please [check for similar described problems]https://codeberg.org/forgejo/forgejo/issues?labels=841206&state=all). Feel free to **add a comment with your own experience** there.
+      - Please [check for similar described problems](https://codeberg.org/forgejo/forgejo/issues?labels=841206&state=all). Feel free to **add a comment with your own experience** there.
 - type: markdown
   attributes:
     value: |
@@ -29,7 +29,9 @@ body:
         * We want to remain open-minded. There are usually multiple ways to address an issue. We aim to consider carefully, avoiding too early bias.
         * You are **not required** to follow-up with a solution. You can just drop your problem report and leave the rest to us.
         * However, if you want to share your idea, it is fine to follow up with it in a common in the conversation, outside of this template.
-      * Want to learn more? [→ Workflow documentation](https://forgejo.org/docs/next/contributor/issue_workflow/), [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
+      * Want to learn more?
+        * [→ Workflow documentation](https://forgejo.org/docs/next/contributor/issue_workflow/)
+        * [→ Discussion issue](https://codeberg.org/forgejo/discussions/issues/415).
       
       </details>
 - type: dropdown
@@ -45,13 +47,13 @@ body:
   validations:
     required: true
 - type: textarea
-  id: environment
+  id: usage
   attributes:
     label: About your usage of Forgejo
     description: |
       A (brief) description of your Forgejo usage. You can be brief, but we value the insights you share. It helps us to understand your use case.
       
-      <details><summary>Details</summary>
+      <details><summary>More about this field</summary>
       
       * Already explained your usage elsewhere? Link to the issue or other data sources.
       * Include related information to your problem. Examples:
@@ -69,7 +71,7 @@ body:
     description: |
       Please focus on **your first-hand experience** and the problem or need you encountered. **Do not suggest a solution!**
       
-      <details><summary>Details</summary>
+      <details><summary>More about this field</summary>
       
       * What you want to achieve? ("I wanted to find an issue to work on", "I want to manage the permissions for my project")
       * Which steps did you take? ("I opened the issue tracker, clicked on …, then …")
@@ -81,20 +83,14 @@ body:
   validations:
     required: true
 - type: textarea
-  id: logs
-  attributes:
-    label: Technical logs
-    description: |
-      Please attach error messages or logfiles here.
-- type: textarea
   id: workarounds
   attributes:
     label: Workarounds
     description: |
       Found a (temporary / bad) solution for your problem? Please share your experiences with it.
-      Only explain what you already do, do not request changes here.
+      Only explain what you already tried. Do not request changes here.
       
-      <details><summary>Details</summary>
+      <details><summary>More about this field</summary>
       
       * What did you try? How well did it work? ("I used X and it gives me almost what I want ...").
       * What are the problems with your workaround(s)? ("It takes long to get there", "It looks very ugly")
@@ -108,22 +104,32 @@ body:
   validations:
     required: true
 - type: textarea
-  id: versions
+  id: environment
   attributes:
-    label: Other details about your environment (software names and versions)
+    label: Your environment
     description: |
-      Please include as much as possible. You can remove the parts of the template that are not relevant to your situation.
-    value: |
-       * Operating system and version running Forgejo: 
-       * Database engine and version: 
-       * Deployment methods and relevant third-party packages (e.g. renderers, identity providers): 
-       * [For UI issues] Browser engine and version: 
+      Please provide details about the environment you run Forgejo in. Depending on the type of the issue, the following information can be helpful: as much as possible. You can remove the parts of the template that are not relevant to your situation.
+        * Operating system and version running Forgejo
+        * Git version
+        * Database engine and version
+        * Deployment methods and relevant third-party packages (e.g. renderers, identity providers)
+        * [For UI issues] Browser engine and version
   validations:
     required: true
-- type: markdown
+- type: textarea
+  id: logs
   attributes:
-    value: |
-      ### Solutions
+    label: Error messages and logs
+    description: |
+      If you can share server logs, please share them here.
+      To save space, you can attach them as a text file or enclose them in in a spoiler element like this:
       
-      *Accepted solutions to address this problem will go here*
-  visible: [content]
+      ```
+      <details><summary>Logs</summary>
+      
+      ~~~
+      your logs posted here
+      ~~~
+      
+      </details>
+      ```
