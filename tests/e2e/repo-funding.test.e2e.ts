@@ -31,7 +31,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(9);
+  await expect(items).toHaveLength(11);
 
   const buy_me_a_coffee = items[0];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
@@ -53,27 +53,37 @@ test('Sponsor modal', async ({browser}) => {
   await expect(custom2.locator('a')).toHaveText('example.com');
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: same
 
-  const issuehunt = items[4];
+  const github1 = items[4];
+  await expect(github1.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example');
+  await expect(github1.locator('a')).toHaveText('github.com/sponsors/example');
+  await expect(github1.locator('img')).toHaveAccessibleName('github');
+
+  const github2 = items[5];
+  await expect(github2.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example2');
+  await expect(github2.locator('a')).toHaveText('github.com/sponsors/example2');
+  await expect(github2.locator('img')).toHaveAccessibleName('github');
+
+  const issuehunt = items[6];
   await expect(issuehunt.locator('a')).toHaveAttribute('href', 'https://issuehunt.io/r/example');
   await expect(issuehunt.locator('a')).toHaveText('issuehunt.io/r/example');
   await expect(issuehunt.locator('img')).toHaveAccessibleName('issuehunt');
 
-  const ko_fi = items[5];
+  const ko_fi = items[7];
   await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
   await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
   await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
 
-  const liberapay = items[6];
+  const liberapay = items[8];
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
 
-  const open_collective = items[7];
+  const open_collective = items[9];
   await expect(open_collective.locator('a')).toHaveAttribute('href', 'https://opencollective.com/example');
   await expect(open_collective.locator('a')).toHaveText('opencollective.com/example');
   await expect(open_collective.locator('img')).toHaveAccessibleName('open_collective');
 
-  const patreon = items[8];
+  const patreon = items[10];
   await expect(patreon.locator('a')).toHaveAttribute('href', 'https://patreon.com/example');
   await expect(patreon.locator('a')).toHaveText('patreon.com/example');
   await expect(patreon.locator('img')).toHaveAccessibleName('patreon');

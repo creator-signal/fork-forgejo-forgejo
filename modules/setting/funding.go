@@ -84,6 +84,13 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconName: "community_bridge.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "github",
+		Limit: 4, // this much feels a bit github-centric, but I'll leave it for compat
+		Text: "github.com/sponsors/%[1]s",
+		URL:  "https://github.com/sponsors/%[1]s",
+		IconName: "github.svg",
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "issuehunt",
 		Limit: 1,
 		Text: "issuehunt.io/r/%[1]s",

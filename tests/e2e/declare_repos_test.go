@@ -193,6 +193,9 @@ body:
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 community_bridge: example
+github:
+  - example
+  - example2
 issuehunt: example
 ko_fi: example
 liberapay: example
