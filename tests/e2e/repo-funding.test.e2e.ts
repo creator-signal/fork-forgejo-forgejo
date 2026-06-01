@@ -32,7 +32,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(12);
+  expect(items).toHaveLength(12);
 
   const buy_me_a_coffee = items[0];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
@@ -146,13 +146,54 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(1);
+  expect(items).toHaveLength(1);
   await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(items[0].locator('a')).toHaveText('https://example.com');
   // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
+
+const widths = [208, 310, 400, 600] as const;
+for (const testCase of [
+  {
+    kind: 'tall',
+    name: 'funding_with_a_really_ridiculously_long_title_that_doesnt_really_happen_all_that_often_normally_but_could_really_mess_with_things_if_not_handled_properly',
+  },
+  {
+    kind: 'wide',
+    name: 'funding_with_a_really_ridiculously_long_title_that_doesnt_really_happen_all_that_often_normally_but_could_really_mess_with_things_if_not_handled_properly',
+  },
+] as const) {
+  for (const width of widths) {
+    test(`Sponsor modal (${testCase.kind}): usable at ${width}px wide`, async ({browser}) => {
+      const context = await browser.newContext({screen: {width, height: 600}});
+      const page = await context.newPage();
+
+      const response = await page.goto(`/user2/${testCase.name}`, {waitUntil: 'domcontentloaded'});
+      expect(response?.status()).toBe(200);
+
+      const sponsorModal = page.locator('#sponsor-modal');
+      await expect(sponsorModal).toBeHidden();
+      await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+      await expect(sponsorModal).toBeVisible();
+      await expect(sponsorModal.getByRole('heading')).toBeInViewport({ratio: 1}); // shouldn't have to scroll to access a scrolling modal!
+
+      await expect(sponsorModal.getByRole('heading')).toHaveText(`Sponsor user2/${testCase.name}`);
+      await expect(sponsorModal.getByRole('heading')).toBeInViewport({ratio: 1}); // title should remain at least partly visible (perhaps shortened with ellipsis) unless we scroll
+
+      await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
+
+      const item = sponsorModal.getByRole('listitem').first();
+      await expect(item).toBeInViewport({ratio: 1});
+
+      const close = sponsorModal.getByLabel('Close');
+      await expect(close).toBeInViewport({ratio: 1});
+
+      await accessibilityCheck({ page }, ['dialog#sponsor-modal'], [], []);
+    });
+  }
+}
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`Sponsor modal: all images load (${colorScheme} mode)`, async ({browser}) => {
@@ -245,7 +286,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(1);
+  expect(items).toHaveLength(1);
   await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(items[0].locator('a')).toHaveText('https://example.com');
   // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
@@ -277,7 +318,7 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   // list items should contain encoded strings as given in config; these strings should be interpreted as text, NOT as HTML markup
   // strings that don't produce valid URLs are omitted with error
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(5);
+  expect(items).toHaveLength(5);
 
   await expect(items[0].locator('a')).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
   await expect(items[0].locator('a')).toHaveText('#" style="background: url(localhost)');
@@ -325,7 +366,7 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(3);
+  expect(items).toHaveLength(3);
 
   const custom = items[0];
   await expect(custom.locator('a')).toHaveAttribute('href', 'http://localhost:3003/');
@@ -342,6 +383,3 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
 });
-
-// TODO: check the modal text is a reasonable size and spacing, even on mobile
-// TODO: check with ridiculously long repo/user/entry names
