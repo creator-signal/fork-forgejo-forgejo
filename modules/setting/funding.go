@@ -146,7 +146,6 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconName: "patreon.svg",
 		IconNameDark: "patreon_dark.svg",
 	})
-	// TODO: Tidelift
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "polar",
 		Limit: 1,
