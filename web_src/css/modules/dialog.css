@@ -140,3 +140,19 @@ dialog .actions .ui.button .svg {
 dialog .close.icon {
   margin-inline-start: auto;
 }
+
+dialog ul li {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+}
+
+dialog ul .funding-logo {
+  width: 24px;
+  height: 24px;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  padding: 2px;
+  /* slightly lighter than background to keep the darker logos visible without having to configure a variant */
+  background-color: color-mix(in srgb, var(--color-white), transparent 84%);
+}

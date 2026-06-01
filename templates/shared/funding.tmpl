@@ -16,11 +16,11 @@
 					{{if eq .ProviderName "custom"}}
 						{{/* we render this svg directly, rather than relying on the configured img src, for better color theming */}}
 						{{/* TODO: alt-text */}}
-						{{svg "octicon-link" 24}}
+						{{svg "octicon-link" 24 "funding-logo"}}
 					{{else if .Icon}}
-						<img class="tw-h-full" src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
+						<img class="funding-logo {{.ProviderName}}" src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
 					{{else}}
-						{{svg "octicon-heart" 24}}
+						{{svg "octicon-heart" 24 "funding-logo"}}
 					{{end}}
 					<a rel="noopener" href="{{.URL}}">{{.Text}}</a>
 				</li>
