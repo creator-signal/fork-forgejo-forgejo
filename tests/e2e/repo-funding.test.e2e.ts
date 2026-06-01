@@ -28,6 +28,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
   await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
   await expect(sponsorModal).toBeVisible();
+  await expect(sponsorModal).toHaveAccessibleName("Sponsor user2/funding_basic_complete");
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
