@@ -147,7 +147,7 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button hidden without funding config (repo)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			defer tests.PrintCurrentTest(t)()
+			// defer tests.PrintCurrentTest(t)() // FIXME: no need for PrintCurrentTest when using onApplicationRun
 
 			htmlDoc := getRepoPage(t, repo)
 			assertNoFunding(t, htmlDoc)
@@ -156,7 +156,7 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button hidden without funding config (user)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			defer tests.PrintCurrentTest(t)()
+			// defer tests.PrintCurrentTest(t)()
 
 			htmlDoc := getUserPage(t, owner)
 			assertNoFunding(t, htmlDoc)
@@ -165,10 +165,10 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button shown with one valid and one invalid config", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			defer tests.PrintCurrentTest(t)()
+			// defer tests.PrintCurrentTest(t)()
 
 			config := make(map[string]any)
-			config["custom"] = "https://example.com"
+			config["custom"] = "example.com" // no scheme is assumed HTTP
 			config["ko_fi"] = "test"
 			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config)
 
@@ -178,10 +178,9 @@ func TestSponsorButton(t *testing.T) {
 
 			htmlDoc := getRepoPage(t, repo)
 			assertSponsorButton(t, htmlDoc)
-
 			assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 			assertNFundingEntries(t, htmlDoc, 2)
-			assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
+			assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
 			assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 		})
 	})
@@ -201,7 +200,7 @@ func TestSponsorButton(t *testing.T) {
 				mfs[treePath] = forgery.MapFile(`
 ko_fi: example
 liberapay: example
-custom: "https://example.com"
+custom: example.com
 `)
 				repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
 					Name: ".profile",
@@ -213,7 +212,7 @@ custom: "https://example.com"
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", user.Name))
 				assertNFundingEntries(t, htmlDoc, 3)
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
+				assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
 				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
 
@@ -261,7 +260,28 @@ custom: "https://example.com"
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["custom"] = []string{"http://test1", "http://test1", "http://test2"}
+				config["custom"] = []string{"test1", "test1", "test2"}
+
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				// duplicate entries are skipped
+				htmlDoc := getRepoPage(t, repo)
+				assertSponsorButton(t, htmlDoc)
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
+				assertNFundingEntries(t, htmlDoc, 2)
+				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
+				assertFundingEntry(t, htmlDoc, 2, "http://test2", "")
+
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, "Duplicate entry for key 'custom': http://test1")
+			})
+
+			t.Run("sponsor modal skips duplicate funding entries where one has a scheme", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				config["custom"] = []string{"test1", "http://test1", "test2"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -389,11 +409,11 @@ custom: "https://example.com"
 
 				config := make(map[string]any)
 				config["custom"] = []string{
-					"http://test1",
+					"test1",
 					"https://example.com",
-					"http://test3",
-					"http://test4",
-					"http://too_many",
+					"test3",
+					"test4",
+					"too_many",
 				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
@@ -418,11 +438,11 @@ custom: "https://example.com"
 				config := make(map[string]any)
 				config["ko_fi"] = "test"
 				config["custom"] = []string{
-					"http://test1",
+					"test1",
 					"https://example.com",
-					"http://test3",
-					"http://test4",
-					"http://too_many",
+					"test3",
+					"test4",
+					"too_many",
 				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
@@ -448,11 +468,11 @@ custom: "https://example.com"
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test", "test2"}
 				config["custom"] = []string{
-					"http://test1",
+					"test1",
 					"https://example.com",
-					"http://test3",
-					"http://test4",
-					"http://too_many",
+					"test3",
+					"test4",
+					"too_many",
 				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
@@ -480,10 +500,10 @@ custom: "https://example.com"
 				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
 				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway?
 				config["custom"] = []string{
-					"#\" style=\"background: url(localhost)", // omitted (no scheme)
+					"#\" style=\"background: url(localhost)",
 					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
 					"https://example.com/\" class=\"rogue injection", // URL escaped
-					"<script>alert`1`</script>", // omitted (no scheme)
+					"<script>alert`1`</script>",
 				}
 
 				createFundingConfig(t, owner, repo, treePath, config)
@@ -491,22 +511,26 @@ custom: "https://example.com"
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-				assertNFundingEntries(t, htmlDoc, 3)
+				assertNFundingEntries(t, htmlDoc, 5)
 
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com/%22%20class=%22rogue%20injection", "")
-				assertFundingEntryHasText(t, htmlDoc, 1, "https://example.com/\" class=\"rogue injection")
+				assertFundingEntry(t, htmlDoc, 1, "http://#%22%20style=%22background:%20url%28localhost%29", "")
+				assertFundingEntryHasText(t, htmlDoc, 1, "#\" style=\"background: url(localhost)")
 
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntryHasText(t, htmlDoc, 2, "ko-fi.com/\"><script>alert(1);</script><a class=\"")
+				assertFundingEntry(t, htmlDoc, 2, "https://example.com/%22%20class=%22rogue%20injection", "")
+				assertFundingEntryHasText(t, htmlDoc, 2, "https://example.com/\" class=\"rogue injection")
 
-				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/text%2Fother", "/assets/img/funding/liberapay.svg")
-				assertFundingEntryHasText(t, htmlDoc, 3, "liberapay.com/text/other")
+				assertFundingEntry(t, htmlDoc, 3, "http://%3Cscript%3Ealert%601%60%3C/script%3E", "")
+				assertFundingEntryHasText(t, htmlDoc, 3, "<script>alert`1`</script>")
+
+				assertFundingEntry(t, htmlDoc, 4, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntryHasText(t, htmlDoc, 4, "ko-fi.com/\"><script>alert(1);</script><a class=\"")
+
+				assertFundingEntry(t, htmlDoc, 5, "https://liberapay.com/text%2Fother", "/assets/img/funding/liberapay.svg")
+				assertFundingEntryHasText(t, htmlDoc, 5, "liberapay.com/text/other")
 
 				htmlDoc = getFilePage(t, repo, treePath)
-				assertNFundingErrors(t, htmlDoc, 3)
-				assertFundingError(t, htmlDoc, 1, "Missing URL scheme in value for key 'custom': #%22%20style=%22background:%20url(localhost)")
-				assertFundingError(t, htmlDoc, 2, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
-				assertFundingError(t, htmlDoc, 3, "Missing URL scheme in value for key 'custom': %3Cscript%3Ealert%601%60%3C/script%3E")
+				assertNFundingErrors(t, htmlDoc, 1)
+				assertFundingError(t, htmlDoc, 1, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
 			})
 		})
 	}

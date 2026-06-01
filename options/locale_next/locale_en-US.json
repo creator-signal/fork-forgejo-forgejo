@@ -961,7 +961,6 @@
 	"funding.provider_disallowed_error": "Funding provider %s is not allowed",
 	"funding.n_too_many_of_provider_error": "Expected up to %d of funding provider %s",
 	"funding.parse_url_error": "Invalid URL value for key '%s': %v",
-	"funding.missing_scheme_error": "Missing URL scheme in value for key '%s': %s",
 	"funding.invalid_yaml_type_error": "Invalid type for key '%s', expected a string or string array",
 	"funding.unknown_error": "Unknown error: %s",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."

@@ -194,7 +194,7 @@ body:
 		Versions: []string{`
 ko_fi: example
 liberapay: example
-custom: "https://example.com"
+custom: ["https://example.com", example.com]
 `},
 	}}, nil)
 	newRepo(t, 2, "funding_some_valid", nil, []FileChanges{{

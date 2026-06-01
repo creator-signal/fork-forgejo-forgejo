@@ -75,16 +75,6 @@ func (err ErrCannotParseURL) Error() string {
 	return fmt.Sprintf("Invalid URL value for key '%s': %v", err.Name, err.Err.Error())
 }
 
-// ErrURLMissingScheme represents an "URLMissingScheme" kind of error.
-type ErrURLMissingScheme struct {
-	Name string
-	URL  *url.URL
-}
-
-func (err ErrURLMissingScheme) Error() string {
-	return fmt.Sprintf("Missing URL scheme in value for key '%s': %s", err.Name, err.URL.String())
-}
-
 // ErrInvalidYamlType represents an "InvalidYamlType" kind of error.
 type ErrInvalidYamlType struct {
 	Name string
@@ -121,10 +111,11 @@ func getFundingEntry(provider *setting.FundingProviderConfig, text string) (*api
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
 	if url_value.Scheme == "" {
-		// TODO: should we instead try re-parsing using https://? Is it better to default to https here, or to make users pick?
-		return nil, &ErrURLMissingScheme{Name: provider.Name, URL: url_value}
+		// assume HTTP
+		url_text = "http://" + url_value.String()
+	} else {
+		url_text = url_value.String()
 	}
-	url_text = url_value.String()
 
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name

@@ -476,8 +476,6 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", invalid_yaml_err.Name))
 				} else if parse_err, ok := errors.AsType[*funding_service.ErrCannotParseURL](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.parse_url_error", parse_err.Name, parse_err.Err.Error()))
-				} else if scheme_err, ok := errors.AsType[*funding_service.ErrURLMissingScheme](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.missing_scheme_error", scheme_err.Name, scheme_err.URL.String()))
 				} else {
 					details = append(details, ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error())))
 				}
