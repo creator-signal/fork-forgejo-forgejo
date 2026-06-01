@@ -96,6 +96,14 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconName: "liberapay.svg",
 	}
 
+	FundingProviders["buy_me_a_coffee"] = &FundingProviderConfig{
+		Name: "buy_me_a_coffee",
+		Limit: 1,
+		Text: "buymeacoffee.com/%[1]s",
+		URL:  "https://buymeacoffee.com/%[1]s",
+		IconName: "buy_me_a_coffee.svg", // FIXME: this does NOT look good in dark mode 😠
+	}
+
 	const keyLimit = "LIMIT"
 	const keyText = "TEXT"
 	const keyUrl = "URL"

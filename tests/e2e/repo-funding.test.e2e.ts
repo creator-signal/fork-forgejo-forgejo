@@ -31,24 +31,29 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(4);
+  await expect(items).toHaveLength(5);
 
-  const custom1 = items[0];
+  const buy_me_a_coffee = items[0];
+  await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
+  await expect(buy_me_a_coffee.locator('a')).toHaveText('buymeacoffee.com/example');
+  await expect(buy_me_a_coffee.locator('img')).toHaveAccessibleName('buy_me_a_coffee');
+
+  const custom1 = items[1];
   await expect(custom1.locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(custom1.locator('a')).toHaveText('https://example.com');
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
-  const custom2 = items[1];
+  const custom2 = items[2];
   await expect(custom2.locator('a')).toHaveAttribute('href', 'http://example.com');
   await expect(custom2.locator('a')).toHaveText('example.com');
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: same
 
-  const ko_fi = items[2];
+  const ko_fi = items[3];
   await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
   await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
   await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
 
-  const liberapay = items[3];
+  const liberapay = items[4];
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
