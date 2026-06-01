@@ -72,14 +72,6 @@ func IconForProvider(p *FundingProviderConfig) (string) {
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	FundingProviders = make(map[string]*FundingProviderConfig)
 
-	FundingProviders["custom"] = &FundingProviderConfig{
-		Name: "custom",
-		Limit: 4,
-		Text: "%[1]s",
-		URL:  "%[1]s",
-		IconName: "", // the template ignores this for "custom"
-	}
-
 	FundingProviders["ko_fi"] = &FundingProviderConfig{
 		Name: "ko_fi",
 		Limit: 1,
@@ -96,12 +88,28 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconName: "liberapay.svg",
 	}
 
+	FundingProviders["patreon"] = &FundingProviderConfig{
+		Name: "patreon",
+		Limit: 1,
+		Text: "patreon.com/%[1]s",
+		URL:  "https://patreon.com/%[1]s",
+		IconName: "patreon.svg", // FIXME: this does NOT look good in dark mode 😠
+	}
+
 	FundingProviders["buy_me_a_coffee"] = &FundingProviderConfig{
 		Name: "buy_me_a_coffee",
 		Limit: 1,
 		Text: "buymeacoffee.com/%[1]s",
 		URL:  "https://buymeacoffee.com/%[1]s",
-		IconName: "buy_me_a_coffee.svg", // FIXME: this does NOT look good in dark mode 😠
+		IconName: "buy_me_a_coffee.svg", // FIXME: dark mode
+	}
+
+	FundingProviders["custom"] = &FundingProviderConfig{
+		Name: "custom",
+		Limit: 4,
+		Text: "%[1]s",
+		URL:  "%[1]s",
+		IconName: "", // the template ignores this for "custom"
 	}
 
 	const keyLimit = "LIMIT"

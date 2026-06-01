@@ -194,6 +194,7 @@ body:
 		Versions: []string{`
 ko_fi: example
 liberapay: example
+patreon: example
 buy_me_a_coffee: example
 custom: ["https://example.com", example.com]
 `},
