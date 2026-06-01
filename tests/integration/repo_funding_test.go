@@ -91,9 +91,15 @@ func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href string, i
 		htmlDoc.AssertElement(t, sel + " img", false)
 		htmlDoc.AssertElement(t, sel + " svg.octicon-link", true)
 	} else {
-		htmlDoc.AssertAttrEqual(t, sel + " img", "src", imgSrc)
+		htmlDoc.AssertAttrEqual(t, sel + " picture > img", "src", imgSrc)
 		htmlDoc.AssertElement(t, sel + " svg.octicon-link", false)
 	}
+}
+
+func assertFundingEntryHasDarkIconVariant(t *testing.T, htmlDoc *HTMLDoc, nth uint, darkImgSrc string) {
+	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
+	htmlDoc.AssertAttrEqual(t, sel + " picture > source", "srcset", darkImgSrc)
+	htmlDoc.AssertAttrEqual(t, sel + " picture > source", "media", "(prefers-color-scheme: dark)")
 }
 
 // Ensures the page's Sponsor modal contains the given text in the given entry,
@@ -320,7 +326,7 @@ custom: example.com
 
 				config := make(map[string]any)
 				config["custom"] = "https://example.com"
-				config["ko_fi"] = []string{"test"}
+				config["patreon"] = []string{"test"}
 
 				createFundingConfig(t, owner, repo, treePath, config)
 
@@ -329,7 +335,8 @@ custom: example.com
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
 				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 2, "https://patreon.com/test", "/assets/img/funding/patreon.svg")
+				assertFundingEntryHasDarkIconVariant(t, htmlDoc, 2, "/assets/img/funding/patreon_dark.svg")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 0)

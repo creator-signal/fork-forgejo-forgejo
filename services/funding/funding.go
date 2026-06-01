@@ -122,6 +122,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, text string) (*api
 	entry.Text = fmt.Sprintf(provider.Text, text)
 	entry.URL = url_text
 	entry.Icon = setting.IconForProvider(provider)
+	entry.IconDark = setting.DarkIconForProvider(provider)
 
 	return entry, nil
 }

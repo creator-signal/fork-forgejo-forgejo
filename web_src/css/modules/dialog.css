@@ -147,12 +147,11 @@ dialog ul li {
   align-items: center;
 }
 
-dialog ul .funding-logo {
+dialog ul .funding-logo,
+dialog ul .funding-logo > img {
   width: 24px;
   height: 24px;
   aspect-ratio: 1;
-  border-radius: 4px;
   padding: 2px;
-  /* slightly lighter than background to keep the darker logos visible without having to configure a variant */
-  background-color: color-mix(in srgb, var(--color-white), transparent 84%);
+  overflow: hidden;
 }

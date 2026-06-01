@@ -49,6 +49,8 @@ type FundingProvider struct {
 	URL   string `json:"url"`
 	// Path to the logo of the funding provider
 	Icon  string `json:"icon"`
+	// Path to the dark-theme logo, if any, of the funding provider
+	IconDark string `json:"icon_dark"`
 }
 
 // FundingProvider contains global funding provider settings exposed by API

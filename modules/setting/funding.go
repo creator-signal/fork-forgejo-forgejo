@@ -44,6 +44,11 @@ type FundingProviderConfig struct {
 	// from svg, or the provider_name differs from the platform name, set the
 	// actual filename here.
 	IconName string
+
+	// Like `IconName` but only shown in dark theme. `IconName` is used if this
+	// value is empty. Note that a default fallback icon is used if `IconName` is
+	// not given, NOT `IconNameDark`.
+	IconNameDark string
 }
 
 var FundingProviders map[string]*FundingProviderConfig
@@ -69,6 +74,15 @@ func IconForProvider(p *FundingProviderConfig) (string) {
 	}
 }
 
+// Returns the path to the provider's dark-theme icon, if any
+func DarkIconForProvider(p *FundingProviderConfig) (string) {
+	if p.IconNameDark == "" {
+		return ""
+	} else {
+		return fmt.Sprintf("%s/assets/img/funding/%s", AppSubURL, p.IconNameDark)
+	}
+}
+
 func addFundingProvider(providers map[string]*FundingProviderConfig, provider *FundingProviderConfig) {
 	providers[provider.Name] = provider
 }
@@ -82,6 +96,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "funding.communitybridge.org/projects/%[1]s",
 		URL:  "https://funding.communitybridge.org/projects/%[1]s",
 		IconName: "community_bridge.svg",
+		IconNameDark: "community_bridge_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "github",
@@ -89,6 +104,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "github.com/sponsors/%[1]s",
 		URL:  "https://github.com/sponsors/%[1]s",
 		IconName: "github.svg",
+		IconNameDark: "github_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "issuehunt",
@@ -96,6 +112,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "issuehunt.io/r/%[1]s",
 		URL:  "https://issuehunt.io/r/%[1]s",
 		IconName: "issuehunt.svg",
+		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "ko_fi",
@@ -103,6 +120,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "ko-fi.com/%[1]s",
 		URL:  "https://ko-fi.com/%[1]s",
 		IconName: "ko_fi.svg",
+		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "liberapay",
@@ -110,6 +128,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "liberapay.com/%[1]s",
 		URL:  "https://liberapay.com/%[1]s",
 		IconName: "liberapay.svg",
+		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "open_collective",
@@ -117,6 +136,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "opencollective.com/%[1]s",
 		URL:  "https://opencollective.com/%[1]s",
 		IconName: "open_collective.svg",
+		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "patreon",
@@ -124,6 +144,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "patreon.com/%[1]s",
 		URL:  "https://patreon.com/%[1]s",
 		IconName: "patreon.svg",
+		IconNameDark: "patreon_dark.svg",
 	})
 	// TODO: Tidelift
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -132,6 +153,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "polar.sh/%[1]s",
 		URL:  "https://polar.sh/%[1]s",
 		IconName: "polar.png",
+		IconNameDark: "polar_dark.png",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "buy_me_a_coffee",
@@ -139,6 +161,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "buymeacoffee.com/%[1]s",
 		URL:  "https://buymeacoffee.com/%[1]s",
 		IconName: "buy_me_a_coffee.svg",
+		IconNameDark: "buy_me_a_coffee_dark.svg",
 	})
 	// TODO: thanks.dev
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -146,13 +169,15 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 4,
 		Text: "%[1]s",
 		URL:  "%[1]s",
-		IconName: "", // the template ignores this for "custom"
+		IconName: "", // the template ignores the configured icon for "custom" specifically
+		IconNameDark: "",
 	})
 
 	const keyLimit = "LIMIT"
 	const keyText = "TEXT"
 	const keyUrl = "URL"
 	const keyIcon = "ICON"
+	const keyIconDark = "ICON_DARK"
 	const lowerLimit = 0 // a value of 0 effectively disables the provider
 	const upperLimit = 16
 
@@ -167,6 +192,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		raw_text := sec.Key(keyText).MustString("")
 		raw_url := sec.Key(keyUrl).MustString("")
 		raw_icon := sec.Key(keyIcon).MustString("")
+		raw_icon_dark := sec.Key(keyIconDark).MustString("")
 
 		limit := uint(1)
 		if raw_limit < lowerLimit {
@@ -205,12 +231,19 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 			log.Warn("%s.%s must be a valid filename in public/assets/img/funding, using %s instead", sec.Name(), keyIcon, icon)
 		}
 
+		icon_dark := raw_icon_dark
+		if icon_dark != "" && strings.Contains(icon_dark, "..") || strings.ContainsAny(icon_dark, "/\\") {
+			icon_dark = ""
+			log.Warn("%s.%s must be a valid filename in public/assets/img/funding, value is ignored", sec.Name(), keyIconDark)
+		}
+
 		provider := new(FundingProviderConfig)
 		provider.Name = name
 		provider.Limit = limit
 		provider.Text = text
 		provider.URL = url
 		provider.IconName = icon
+		provider.IconNameDark = icon_dark
 
 		if FundingProviders[name] != nil {
 			log.Warn("%s funding provider already exists, existing provider %s is unchanged", sec.Name(), name)

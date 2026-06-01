@@ -18,7 +18,12 @@
 						{{/* TODO: alt-text */}}
 						{{svg "octicon-link" 24 "funding-logo"}}
 					{{else if .Icon}}
-						<img class="funding-logo {{.ProviderName}}" src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
+						<picture class="funding-logo {{.ProviderName}}">
+							{{if .IconDark}}
+							<source srcset="{{.IconDark}}" media="(prefers-color-scheme: dark)" />
+							{{end}}
+							<img src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
+						</picture>
 					{{else}}
 						{{svg "octicon-heart" 24 "funding-logo"}}
 					{{end}}
