@@ -31,44 +31,49 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  await expect(items).toHaveLength(8);
+  await expect(items).toHaveLength(9);
 
   const buy_me_a_coffee = items[0];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
   await expect(buy_me_a_coffee.locator('a')).toHaveText('buymeacoffee.com/example');
   await expect(buy_me_a_coffee.locator('img')).toHaveAccessibleName('buy_me_a_coffee');
 
-  const custom1 = items[1];
+  const community_bridge = items[1];
+  await expect(community_bridge.locator('a')).toHaveAttribute('href', 'https://funding.communitybridge.org/projects/example');
+  await expect(community_bridge.locator('a')).toHaveText('funding.communitybridge.org/projects/example');
+  await expect(community_bridge.locator('img')).toHaveAccessibleName('community_bridge');
+
+  const custom1 = items[2];
   await expect(custom1.locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(custom1.locator('a')).toHaveText('https://example.com');
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 
-  const custom2 = items[2];
+  const custom2 = items[3];
   await expect(custom2.locator('a')).toHaveAttribute('href', 'http://example.com');
   await expect(custom2.locator('a')).toHaveText('example.com');
   // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: same
 
-  const issuehunt = items[3];
+  const issuehunt = items[4];
   await expect(issuehunt.locator('a')).toHaveAttribute('href', 'https://issuehunt.io/r/example');
   await expect(issuehunt.locator('a')).toHaveText('issuehunt.io/r/example');
   await expect(issuehunt.locator('img')).toHaveAccessibleName('issuehunt');
 
-  const ko_fi = items[4];
+  const ko_fi = items[5];
   await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
   await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
   await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
 
-  const liberapay = items[5];
+  const liberapay = items[6];
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
 
-  const open_collective = items[6];
+  const open_collective = items[7];
   await expect(open_collective.locator('a')).toHaveAttribute('href', 'https://opencollective.com/example');
   await expect(open_collective.locator('a')).toHaveText('opencollective.com/example');
   await expect(open_collective.locator('img')).toHaveAccessibleName('open_collective');
 
-  const patreon = items[7];
+  const patreon = items[8];
   await expect(patreon.locator('a')).toHaveAttribute('href', 'https://patreon.com/example');
   await expect(patreon.locator('a')).toHaveText('patreon.com/example');
   await expect(patreon.locator('img')).toHaveAccessibleName('patreon');
