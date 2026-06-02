@@ -30,6 +30,7 @@ import (
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pquerna/otp/totp"
@@ -411,17 +412,16 @@ func TestUserHints(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
 
 	// Create a known-good repo, with only one unit enabled
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
-		unit_model.TypeCode,
-	}, []unit_model.Type{
+	repo := forgery.CreateRepository(t, user, nil)
+	forgery.EnableRepoUnits(t, repo, unit_model.TypeCode)
+	forgery.DisableRepoUnits(t, repo,
 		unit_model.TypePullRequests,
 		unit_model.TypeProjects,
 		unit_model.TypePackages,
 		unit_model.TypeActions,
 		unit_model.TypeIssues,
 		unit_model.TypeWiki,
-	}, nil)
-	defer f()
+	)
 
 	ensureRepoUnitHints := func(t *testing.T, hints bool) {
 		t.Helper()
@@ -502,11 +502,19 @@ func TestUserHints(t *testing.T) {
 		assertAddMore := func(t *testing.T, present bool) {
 			t.Helper()
 
+			// check if the tab is present
 			req := NewRequest(t, "GET", repo.Link())
 			resp := session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 
 			htmlDoc.AssertElement(t, fmt.Sprintf("a[href='%s/settings/units']", repo.Link()), present)
+
+			// check if the user settings hint is present
+			req = NewRequest(t, "GET", repo.Link()+"/settings/units")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			htmlDoc.AssertElement(t, ".user-main-content a[href='/user/settings/appearance#hints']", present)
 		}
 
 		t.Run("hints enabled", func(t *testing.T) {

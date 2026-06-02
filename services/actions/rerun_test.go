@@ -171,8 +171,13 @@ func TestRerun_RerunJob(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683910})
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
 
-		unittest.AssertCount(t, &actions_model.ActionArtifact{RunID: job.RunID}, 1)
+		assert.Equal(t, actions_model.StatusSuccess, run.Status)
+		assert.Equal(t, timeutil.TimeStamp(1776331635), run.Started)
+		assert.Equal(t, timeutil.TimeStamp(1776331721), run.Stopped)
+		assert.Zero(t, run.PreviousDuration)
+
 		unittest.AssertCount(t, &actions_model.ActionArtifact{
 			RunID: job.RunID, Status: int64(actions_model.ArtifactStatusPendingDeletion),
 		}, 0)
@@ -185,11 +190,17 @@ func TestRerun_RerunJob(t *testing.T) {
 		assert.Equal(t, job.ID, rerunJobs[0].ID)
 
 		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683910})
+		run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
 
 		assert.Equal(t, int64(2), job.Attempt)
 		assert.Equal(t, actions_model.StatusWaiting, job.Status)
 		assert.Equal(t, timeutil.TimeStamp(0), job.Started)
 		assert.Equal(t, timeutil.TimeStamp(0), job.Stopped)
+
+		assert.Equal(t, actions_model.StatusWaiting, run.Status)
+		assert.Zero(t, run.Started)
+		assert.Zero(t, run.Stopped)
+		assert.Equal(t, 86*time.Second, run.PreviousDuration)
 
 		unittest.AssertCount(t, &actions_model.ActionArtifact{
 			RunID: job.RunID, Status: int64(actions_model.ArtifactStatusPendingDeletion),
@@ -220,6 +231,58 @@ func TestRerun_RerunJob(t *testing.T) {
 		dependentJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683912})
 
 		assert.Equal(t, int64(2), dependentJob.Attempt)
+		assert.Equal(t, actions_model.StatusBlocked, dependentJob.Status)
+		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Started)
+		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Stopped)
+	})
+
+	t.Run("Rerun job needed by others with cancellation", func(t *testing.T) {
+		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683911})
+
+		rerunJobs, err := RerunJob(t.Context(), job)
+		require.NoError(t, err)
+
+		assert.Equal(t, int64(683911), rerunJobs[0].ID)
+		assert.Equal(t, int64(683912), rerunJobs[1].ID)
+
+		// Cancel the first job so that we can rerun it.
+		require.NoError(t, cancelSingleJob(t.Context(), job, actions_model.StatusFailure))
+
+		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683911})
+
+		assert.Equal(t, int64(2), job.Attempt)
+		assert.Equal(t, actions_model.StatusFailure, job.Status)
+		assert.Equal(t, timeutil.TimeStamp(0), job.Started)
+		assert.NotZero(t, job.Stopped)
+
+		dependentJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683912})
+
+		assert.Equal(t, int64(2), dependentJob.Attempt)
+		assert.Equal(t, actions_model.StatusBlocked, dependentJob.Status)
+		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Started)
+		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Stopped)
+
+		// Rerun again. The dependent job should be cancelled first.
+		rerunJobs, err = RerunJob(t.Context(), job)
+		require.NoError(t, err)
+
+		assert.Len(t, rerunJobs, 2)
+		assert.Equal(t, int64(683911), rerunJobs[0].ID)
+		assert.Equal(t, int64(683912), rerunJobs[1].ID)
+
+		job = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683911})
+
+		assert.Equal(t, int64(3), job.Attempt)
+		assert.Equal(t, actions_model.StatusWaiting, job.Status)
+		assert.Equal(t, timeutil.TimeStamp(0), job.Started)
+		assert.Equal(t, timeutil.TimeStamp(0), job.Stopped)
+
+		dependentJob = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683912})
+
+		assert.Equal(t, int64(3), dependentJob.Attempt)
 		assert.Equal(t, actions_model.StatusBlocked, dependentJob.Status)
 		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Started)
 		assert.Equal(t, timeutil.TimeStamp(0), dependentJob.Stopped)
@@ -317,5 +380,31 @@ func TestRerun_RerunJob(t *testing.T) {
 		assert.Equal(t, actions_model.StatusRunning, job.Status)
 		assert.Equal(t, timeutil.TimeStamp(1776331665), job.Started)
 		assert.Equal(t, timeutil.TimeStamp(0), job.Stopped)
+	})
+
+	t.Run("Run not altered when run is already running", func(t *testing.T) {
+		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683920})
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
+
+		assert.Equal(t, actions_model.StatusRunning, run.Status)
+		assert.Equal(t, timeutil.TimeStamp(1776331635), run.Started)
+		assert.Zero(t, run.Stopped)
+		assert.Zero(t, run.PreviousDuration)
+
+		rerunJobs, err := RerunJob(t.Context(), job)
+
+		require.NoError(t, err)
+		assert.Len(t, rerunJobs, 1)
+		assert.Equal(t, int64(683920), rerunJobs[0].ID)
+
+		run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: job.RunID})
+
+		assert.Equal(t, actions_model.StatusRunning, run.Status)
+		assert.Equal(t, timeutil.TimeStamp(1776331635), run.Started)
+		assert.Zero(t, run.Stopped)
+		assert.Zero(t, run.PreviousDuration)
 	})
 }

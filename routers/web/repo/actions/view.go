@@ -63,6 +63,15 @@ func View(ctx *app_context.Context) {
 		return
 	}
 
+	workflowDefinitionCommitSHA := job.Run.CommitSHA
+	// if the trigger event is `pull_request_target`, then the definition of the workflow is taken
+	// from the base branch instead of the commit the workflow is triggered on
+	if job.Run.TriggerEvent == actions.GithubEventPullRequestTarget {
+		if pullPayload, err := job.Run.GetPullRequestEventPayload(); err == nil && pullPayload.PullRequest != nil && pullPayload.PullRequest.Base != nil {
+			workflowDefinitionCommitSHA = pullPayload.PullRequest.Base.Sha
+		}
+	}
+
 	workflowName := job.Run.WorkflowID
 
 	ctx.Data["RunIndex"] = runIndex
@@ -72,7 +81,7 @@ func View(ctx *app_context.Context) {
 	ctx.Data["AttemptNumber"] = attemptNumber
 	ctx.Data["WorkflowName"] = workflowName
 	ctx.Data["WorkflowURL"] = ctx.Repo.RepoLink + "/actions?workflow=" + workflowName
-	ctx.Data["WorkflowSourceURL"] = ctx.Repo.RepoLink + "/src/commit/" + job.Run.CommitSHA + "/" + job.Run.WorkflowPath()
+	ctx.Data["WorkflowSourceURL"] = ctx.Repo.RepoLink + "/src/commit/" + workflowDefinitionCommitSHA + "/" + job.Run.WorkflowPath()
 
 	viewResponse := getViewResponse(ctx, &ViewRequest{}, runIndex, jobIndex, attemptNumber)
 	if ctx.Written() {
@@ -349,6 +358,39 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 		Branch:         branch,
 	}
 
+	taskAttempts, err := current.GetAllAttempts(ctx)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, err.Error())
+		return nil
+	}
+
+	var allAttempts []*TaskAttempt
+	// If the latest attempt has not been taken up yet by a runner, there is no task that could be displayed. As a
+	// stopgap, inject a phantom task that provides the necessary information until a real tasks is created, if ever.
+	if len(taskAttempts) == 0 || taskAttempts[0].Attempt != current.Attempt {
+		taskAttempt := &TaskAttempt{
+			Number:            current.Attempt,
+			Status:            current.Status.String(),
+			Started:           template.HTML(ctx.Locale.TrString("actions.jobs.not_started")),
+			StatusDiagnostics: statusDiagnostics(current.Status, current, ctx.Locale),
+		}
+		allAttempts = append(allAttempts, taskAttempt)
+	}
+	for _, actionTask := range taskAttempts {
+		taskAttempt := &TaskAttempt{
+			Number:            actionTask.Attempt,
+			Started:           templates.TimeSince(actionTask.Started),
+			Status:            actionTask.Status.String(),
+			StatusDiagnostics: statusDiagnostics(actionTask.Status, current, ctx.Locale),
+		}
+		allAttempts = append(allAttempts, taskAttempt)
+	}
+
+	resp.State.CurrentJob.Title = current.Name
+	resp.State.CurrentJob.Details = statusDiagnostics(current.Status, current, ctx.Locale)
+	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
+	resp.State.CurrentJob.AllAttempts = allAttempts
+
 	var task *actions_model.ActionTask
 	// TaskID will be set only when the ActionRunJob has been picked by a runner, resulting in an ActionTask being
 	// created representing the specific task.  If current.TaskID is not set, then the user is attempting to view a job
@@ -369,29 +411,9 @@ func getViewResponse(ctx *app_context.Context, req *ViewRequest, runIndex, jobIn
 		}
 	}
 
-	resp.State.CurrentJob.Title = current.Name
-	resp.State.CurrentJob.Details = statusDiagnostics(current.Status, current, ctx.Locale)
-
-	resp.State.CurrentJob.Steps = make([]*ViewJobStep, 0) // marshal to '[]' instead of 'null' in json
-	resp.Logs.StepsLog = make([]*ViewStepLog, 0)          // marshal to '[]' instead of 'null' in json
+	resp.Logs.StepsLog = make([]*ViewStepLog, 0) // marshal to '[]' instead of 'null' in json
 	// As noted above with TaskID; task will be nil when the job hasn't be picked yet...
 	if task != nil {
-		taskAttempts, err := task.GetAllAttempts(ctx)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, err.Error())
-			return nil
-		}
-		allAttempts := make([]*TaskAttempt, len(taskAttempts))
-		for i, actionTask := range taskAttempts {
-			allAttempts[i] = &TaskAttempt{
-				Number:            actionTask.Attempt,
-				Started:           templates.TimeSince(actionTask.Started),
-				Status:            actionTask.Status.String(),
-				StatusDiagnostics: statusDiagnostics(actionTask.Status, task.Job, ctx.Locale),
-			}
-		}
-		resp.State.CurrentJob.AllAttempts = allAttempts
-
 		steps := actions.FullSteps(task)
 		for _, v := range steps {
 			resp.State.CurrentJob.Steps = append(resp.State.CurrentJob.Steps, &ViewJobStep{
