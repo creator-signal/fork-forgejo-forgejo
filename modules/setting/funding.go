@@ -169,6 +169,15 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconNameDark: "patreon_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "tidelift",
+		Limit: 0, // this provider no longer exists, we include it here for testing custom providers with limit 0
+		Text: "tidelift.com/funding/github/%[1]s",
+		URL:  "https://tidelift.com/funding/github/%[1]s",
+		InputPattern: singleSegmentRegex, // normally takes two segments, but there's no point instantiating a whole Regexp for an impossible case
+		IconName:     "tidelift.svg", // file does not exist, who cares :/
+		IconNameDark: "",
+	})
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "polar",
 		Limit: 1,
 		Text: "polar.sh/%[1]s",
@@ -195,7 +204,6 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		IconName:     "thanks_dev.svg",
 		IconNameDark: "thanks_dev_dark.svg",
 	})
-	// TODO: make tidelift a limit 0 (good for testing!)
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "custom",
 		Limit: 4,

@@ -468,6 +468,7 @@ custom: example.com
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test", "test2"}
+				config["tidelift"] = "npm/example"
 				config["custom"] = []string{
 					"test1",
 					"https://example.com",
@@ -489,9 +490,10 @@ custom: example.com
 				assertFundingEntry(t, htmlDoc, 5, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
 
 				htmlDoc = getFilePage(t, repo, treePath)
-				assertNFundingErrors(t, htmlDoc, 2)
+				assertNFundingErrors(t, htmlDoc, 3)
 				assertFundingError(t, htmlDoc, 1, "Expected up to 4 of funding provider custom")
 				assertFundingError(t, htmlDoc, 2, "Expected up to 1 of funding provider ko_fi")
+				assertFundingError(t, htmlDoc, 3, "Funding provider tidelift is not allowed")
 			})
 
 			t.Run("sponsor modal mitigates XSS", func(t *testing.T) {

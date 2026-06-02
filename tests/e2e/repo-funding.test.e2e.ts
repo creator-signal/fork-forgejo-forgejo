@@ -300,10 +300,11 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await page.getByText('funding config').click();
   await page.waitForURL('/user2/funding_some_valid/src/branch/main/.forgejo/FUNDING.yml');
 
-  const errors = page.locator('.ui.error.message').filter({hasText: 'Error parsing funding config:'});
+  const errors = page.locator('.ui.error.message').filter({hasText: 'Errors parsing funding config:'});
   await expect(sponsorModal).toBeHidden();
   await expect(errors).toBeVisible();
   await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
+  await expect(errors).toContainText("Funding provider tidelift is not allowed"); // sad day, probably :(
 });
 
 test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {

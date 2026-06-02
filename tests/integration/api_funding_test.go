@@ -74,7 +74,7 @@ func TestAPIFundingSettings(t *testing.T) {
 			var providers api.FundingSettings
 			DecodeJSON(t, resp, &providers)
 
-			assert.Len(t, providers.Providers, 11) // we have 11 default providers (smoke test to see that these decode correctly)
+			assert.Len(t, providers.Providers, 12) // we have 12 default providers (smoke test to see that these decode correctly)
 
 			custom_idx := slices.IndexFunc(providers.Providers, func(p *api.FundingProvider) bool {
 				return p.Name == "custom"
@@ -503,11 +503,12 @@ custom: example.com
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", funding[5].IconDark)
 			})
 
-			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
+			t.Run("Partially invalid (too many of two providers, valid list of others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
 				config["ko_fi"] = []string{"test"}
+				config["tidelift"] = "npm/example"
 				config["custom"] = []string{
 					"test1",
 					"https://example.com",
@@ -843,11 +844,12 @@ custom: example.com
 				assert.Equal(t, "Expected up to 4 of funding provider custom", fundingValidation.Message)
 			})
 
-			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
+			t.Run("Partially invalid (too many of two providers, valid others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
 				config["ko_fi"] = "test"
+				config["tidelift"] = "npm/example"
 				config["custom"] = []string{
 					"test1",
 					"https://example.com",
@@ -864,7 +866,7 @@ custom: example.com
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, "Expected up to 4 of funding provider custom", fundingValidation.Message)
+				assert.Equal(t, "Expected up to 4 of funding provider custom\nFunding provider tidelift is not allowed", fundingValidation.Message)
 			})
 
 			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
