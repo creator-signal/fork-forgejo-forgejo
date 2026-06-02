@@ -34,10 +34,12 @@ var fundingCandidates = []string{
 }
 
 // ErrFundingNotExist occurs when a repo has no funding config.
-type ErrFundingNotExist struct{}
+type ErrFundingNotExist struct {
+	Repo *repo_model.Repository
+}
 
 func (err ErrFundingNotExist) Error() string {
-	return "No funding config found in repo"
+	return fmt.Sprintf("No funding config found in repo %s/%s", err.Repo.OwnerName, err.Repo.Name)
 }
 
 // IsErrFundingNotExist checks if an error is a ErrFundingNotExist.
@@ -260,13 +262,13 @@ func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) (*RepoFu
 		}
 	}
 
-	return nil, &ErrFundingNotExist{}
+	return nil, ErrFundingNotExist{Repo: r}
 }
 
 // GetFundingFromDefaultBranch returns the funding for this repo.
 func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) (*RepoFunding, error) {
 	if r.IsEmpty {
-		return nil, &ErrFundingNotExist{}
+		return nil, ErrFundingNotExist{Repo: r}
 	}
 
 	gitRepo, err := git.OpenRepository(ctx, r.RepoPath())
