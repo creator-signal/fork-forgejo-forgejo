@@ -80,12 +80,12 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	ctx.Data["HasOrgsVisible"] = organization.HasOrgsVisible(ctx, orgs, ctx.Doer)
 
 	profileDbRepo, err := GetProfileDbRepo(ctx)
-	if err != nil {
+	if err != nil && !repo_model.IsErrRepoNotExist(err) {
 		log.Error("PrepareContextForProfileBigAvatar failed to GetProfileDbRepo: %v", err)
 	}
 	if profileDbRepo != nil {
 		funding, err := funding_service.GetFundingFromDefaultBranch(ctx, profileDbRepo)
-		if err != nil {
+		if err != nil && !funding_service.IsErrFundingNotExist(err) {
 			log.Error("PrepareContextForProfileBigAvatar failed to GetFundingFromDefaultBranch: %v", err)
 		}
 		if funding != nil {
@@ -116,15 +116,17 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 func GetProfileDbRepo(ctx *context.Context) (profileDbRepo *repo_model.Repository, err error) {
 	profileDbRepo, err = repo_model.GetRepositoryByName(ctx, ctx.ContextUser.ID, ".profile")
 	if err != nil {
-		if repo_model.IsErrRepoNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
 
 	// Don't show profile content if .profile repository is a fork or private
 	if profileDbRepo.IsFork || profileDbRepo.IsPrivate {
-		return nil, nil
+		return nil, repo_model.ErrRepoNotExist{
+			ID:        profileDbRepo.ID,
+			UID:       profileDbRepo.OwnerID,
+			OwnerName: profileDbRepo.OwnerName,
+			Name:      profileDbRepo.Name,
+		}
 	}
 
 	return profileDbRepo, nil
@@ -132,7 +134,7 @@ func GetProfileDbRepo(ctx *context.Context) (profileDbRepo *repo_model.Repositor
 
 func FindUserProfileReadme(ctx *context.Context, doer *user_model.User) (profileDbRepo *repo_model.Repository, profileGitRepo *git.Repository, profileReadmeBlob *git.Blob, profileClose func()) {
 	profileDbRepo, err := GetProfileDbRepo(ctx)
-	if err != nil {
+	if err != nil && !repo_model.IsErrRepoNotExist(err) {
 		log.Error("FindUserProfileReadme failed to GetProfileDbRepo: %v", err)
 	}
 	if profileDbRepo != nil {

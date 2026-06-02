@@ -33,6 +33,19 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
+// ErrFundingNotExist occurs when a repo has no funding config.
+type ErrFundingNotExist struct{}
+
+func (err ErrFundingNotExist) Error() string {
+	return "No funding config found in repo"
+}
+
+// IsErrFundingNotExist checks if an error is a ErrFundingNotExist.
+func IsErrFundingNotExist(err error) bool {
+	_, ok := err.(ErrFundingNotExist)
+	return ok
+}
+
 // ErrUnknownFundingProvider occurs when a funding config contains an unknown
 // funding provider name.
 type ErrUnknownFundingProvider struct {
@@ -157,7 +170,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	reader, err := treeEntry.Blob().DataAsync()
 	if err != nil {
 		log.Error("DataAsync: failed to read blob for funding config due to error: %v", err)
-		return nil, nil
+		return nil, err
 	}
 	defer reader.Close()
 
@@ -247,13 +260,13 @@ func GetFundingFromCommit(r *repo_model.Repository, commit *git.Commit) (*RepoFu
 		}
 	}
 
-	return nil, nil
+	return nil, &ErrFundingNotExist{}
 }
 
 // GetFundingFromDefaultBranch returns the funding for this repo.
 func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) (*RepoFunding, error) {
 	if r.IsEmpty {
-		return nil, nil
+		return nil, &ErrFundingNotExist{}
 	}
 
 	gitRepo, err := git.OpenRepository(ctx, r.RepoPath())
