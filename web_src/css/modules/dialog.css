@@ -148,8 +148,7 @@ dialog .actions .ui.button .svg {
   }
 }
 
-dialog .close.icon {
-  aspect-ratio: 1;
+dialog .toast-close {
   margin-inline-start: auto;
 }
 
