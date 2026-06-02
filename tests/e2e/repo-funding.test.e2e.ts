@@ -32,7 +32,7 @@ test('Sponsor modal', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(12);
+  expect(items).toHaveLength(13);
 
   const buy_me_a_coffee = items[0];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
@@ -93,6 +93,11 @@ test('Sponsor modal', async ({browser}) => {
   await expect(polar.locator('a')).toHaveAttribute('href', 'https://polar.sh/example');
   await expect(polar.locator('a')).toHaveText('polar.sh/example');
   await expect(polar.locator('img')).toHaveAccessibleName('polar');
+
+  const thanks_dev = items[12];
+  await expect(thanks_dev.locator('a')).toHaveAttribute('href', 'https://thanks.dev/u/gh/example');
+  await expect(thanks_dev.locator('a')).toHaveText('thanks.dev/u/gh/example');
+  await expect(thanks_dev.locator('img')).toHaveAccessibleName('thanks_dev');
 
   await screenshot(page);
 });
@@ -316,9 +321,9 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
   // list items should contain encoded strings as given in config; these strings should be interpreted as text, NOT as HTML markup
-  // strings that don't produce valid URLs are omitted with error
+  // strings that don't produce valid URLs or whose value does not match the regex are omitted with error
   const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(5);
+  expect(items).toHaveLength(3);
 
   await expect(items[0].locator('a')).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
   await expect(items[0].locator('a')).toHaveText('#" style="background: url(localhost)');
@@ -331,16 +336,8 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   await expect(items[2].locator('a')).toHaveAttribute('href', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
   await expect(items[2].locator('a')).toHaveText('<script>alert`1`</script>');
   // await expect(items[2].locator('svg')).toHaveAccessibleName('custom'); // TODO: same
-
-  await expect(items[3].locator('a')).toHaveAttribute('href', 'https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22');
-  await expect(items[3].locator('a')).toHaveText('ko-fi.com/"><script>alert(1);</script><a class="');
-  await expect(items[3].locator('img')).toHaveAccessibleName('ko_fi');
-  await expect(items[3].locator('a *')).toBeHidden(); // no real injected <script>
+  await expect(items[2].locator('a *')).toBeHidden(); // no real injected <script>
   await expect(sponsorModal.locator('script')).toBeHidden();
-
-  await expect(items[4].locator('a')).toHaveAttribute('href', 'https://liberapay.com/text%2Fother');
-  await expect(items[4].locator('a')).toHaveText('liberapay.com/text/other');
-  await expect(items[4].locator('img')).toHaveAccessibleName('liberapay');
 });
 
 test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {

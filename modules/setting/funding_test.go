@@ -30,6 +30,7 @@ URL = "https://mycustom.example.com/%s"
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text) // derived from URL
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL) // note that the %s becomes %[1]s as well, since this will only ever have the one input
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
 func TestNewFundingProviderConfigWithMailtoUrl(t *testing.T) {
@@ -50,6 +51,7 @@ URL = "mailto:%s@localhost"
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Text) // same as URL
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
 func TestNewFundingProviderConfigWithMailtoUrlWithText(t *testing.T) {
@@ -70,6 +72,7 @@ TEXT = "Email %s@localhost for info"
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Text)
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
 func TestNewFundingProviderConfigWithText(t *testing.T) {
@@ -90,6 +93,7 @@ URL = "https://mycustom.example.com/%s"
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Text)
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
 func TestNewFundingProviderConfigHandlesSigils(t *testing.T) {
@@ -162,6 +166,42 @@ URL = "https://mycustom.example.com/%%s"
 		assert.Equal(t, expected, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
+	}
+}
+
+func TestNewFundingProviderConfigWithCustomInputPattern(t *testing.T) {
+	defer test.MockProtect(&FundingProviders)()
+
+	cases := [][2]string{
+		{`^[^/]+$`, `^[^/]+$`},
+		{"", `^[^/]+$`}, // default value matches a single path segment
+		{".+", `.+`},
+		{"/.+/", `/.+/`}, // slash delimiters are taken literally (probs shouldn't use them)
+		{`/^[^/]+$/`, `/^[^/]+$/`},
+		{"this is kindof like a regex", `this is kindof like a regex`},
+		{"this is [not a regex", `^[^/]+$`},
+	}
+
+	for _, c := range cases {
+		input := c[0]
+		expected := c[1]
+		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
+[funding.mycustom]
+URL = "https://mycustom.example.com/%%s"
+INPUT_PATTERN = %v
+`, input))
+		require.NoError(t, err)
+		loadCustomFundingProvidersFrom(cfg)
+
+		mycustom := FundingProviders["mycustom"]
+		assert.Equal(t, "mycustom", mycustom.Name)
+		assert.Equal(t, "mycustom.svg", mycustom.IconName)
+		assert.Equal(t, "", mycustom.IconNameDark)
+		assert.Equal(t, 1, int(mycustom.Limit))
+		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
+		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+		assert.Equal(t, expected, mycustom.InputPattern.String())
 	}
 }
 
@@ -200,6 +240,7 @@ ICON = "%s"
 		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 	}
 }
 
@@ -238,6 +279,7 @@ ICON_DARK = "%s"
 		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 	}
 }
 
@@ -258,4 +300,5 @@ LIMIT = 0
 	assert.Equal(t, 1, int(ko_fi.Limit)) // no change from builtin
 	assert.Equal(t, "ko-fi.com/%[1]s", ko_fi.Text)
 	assert.Equal(t, "https://ko-fi.com/%[1]s", ko_fi.URL)
+	assert.Equal(t, `^[^/]+$`, ko_fi.InputPattern.String())
 }

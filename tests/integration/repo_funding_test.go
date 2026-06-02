@@ -498,8 +498,9 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
-				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway?
+				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // omitted (too many path segments)
+				config["liberapay"] = "text/other" // omitted (too many path segments)
+				config["thanks_dev"] = "could/be/real/bad" // omitted (too many path segments)
 				config["custom"] = []string{
 					"#\" style=\"background: url(localhost)",
 					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
@@ -512,7 +513,7 @@ custom: example.com
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
-				assertNFundingEntries(t, htmlDoc, 5)
+				assertNFundingEntries(t, htmlDoc, 3)
 
 				assertFundingEntry(t, htmlDoc, 1, "http://#%22%20style=%22background:%20url%28localhost%29", "")
 				assertFundingEntryHasText(t, htmlDoc, 1, "#\" style=\"background: url(localhost)")
@@ -523,15 +524,12 @@ custom: example.com
 				assertFundingEntry(t, htmlDoc, 3, "http://%3Cscript%3Ealert%601%60%3C/script%3E", "")
 				assertFundingEntryHasText(t, htmlDoc, 3, "<script>alert`1`</script>")
 
-				assertFundingEntry(t, htmlDoc, 4, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntryHasText(t, htmlDoc, 4, "ko-fi.com/\"><script>alert(1);</script><a class=\"")
-
-				assertFundingEntry(t, htmlDoc, 5, "https://liberapay.com/text%2Fother", "/assets/img/funding/liberapay.svg")
-				assertFundingEntryHasText(t, htmlDoc, 5, "liberapay.com/text/other")
-
 				htmlDoc = getFilePage(t, repo, treePath)
-				assertNFundingErrors(t, htmlDoc, 1)
+				assertNFundingErrors(t, htmlDoc, 4)
 				assertFundingError(t, htmlDoc, 1, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
+				assertFundingError(t, htmlDoc, 2, "Value for key 'ko_fi' does not match pattern /^[^/]+$/")
+				assertFundingError(t, htmlDoc, 3, "Value for key 'liberapay' does not match pattern /^[^/]+$/")
+				assertFundingError(t, htmlDoc, 4, `Value for key 'thanks_dev' does not match pattern /^[^/]+\/[^/]+\/[^/]+$/`)
 			})
 		})
 	}

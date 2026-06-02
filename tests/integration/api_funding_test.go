@@ -72,7 +72,7 @@ func TestAPIFundingSettings(t *testing.T) {
 			var providers api.FundingSettings
 			DecodeJSON(t, resp, &providers)
 
-			assert.Len(t, providers.Providers, 10) // we have 10 default providers (smoke test to see that these decode correctly)
+			assert.Len(t, providers.Providers, 11) // we have 11 default providers (smoke test to see that these decode correctly)
 			// TODO: assert order is consistent too
 		})
 	})
@@ -554,8 +554,9 @@ func TestAPIRepoFunding(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := make(map[string]any)
-				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // URL escaped
-				config["liberapay"] = "text/other" // URL escaped // TODO: Should this maybe just do without instead? When do we need to support multiple path segments here anyway? Tidelift? Should we permit arbitrary paths, or should we specifically allow these for particular providers?
+				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // omitted (contains a `/`)
+				config["liberapay"] = "text/other" // omitted (contains a `/`)
+				config["thanks_dev"] = "could/be/real/bad" // omitted (too many `/`)
 				config["custom"] = []string{
 					"#\" style=\"background: url(localhost)",
 					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
@@ -566,7 +567,7 @@ func TestAPIRepoFunding(t *testing.T) {
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
-				assert.Len(t, funding, 5)
+				assert.Len(t, funding, 3)
 
 				// omits values that don't parse as URLs.
 				// returned URL values are always valid, but it's the API consumer's responsibility to escape Text for its presentation context (e.g. HTML)
@@ -587,18 +588,6 @@ func TestAPIRepoFunding(t *testing.T) {
 				assert.Equal(t, "<script>alert`1`</script>", funding[2].Text)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
 				assert.Equal(t, "", funding[2].IconDark)
-
-				assert.Equal(t, "ko_fi", funding[3].ProviderName)
-				assert.Equal(t, "https://ko-fi.com/%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E%3Ca%20class=%22", funding[3].URL)
-				assert.Equal(t, "ko-fi.com/\"><script>alert(1);</script><a class=\"", funding[3].Text)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[3].Icon)
-				assert.Equal(t, "", funding[3].IconDark)
-
-				assert.Equal(t, "liberapay", funding[4].ProviderName)
-				assert.Equal(t, "https://liberapay.com/text%2Fother", funding[4].URL)
-				assert.Equal(t, "liberapay.com/text/other", funding[4].Text)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", funding[4].Icon)
-				assert.Equal(t, "", funding[4].IconDark)
 			})
 		})
 	}
@@ -881,6 +870,7 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				config := make(map[string]any)
 				config["ko_fi"] = "\"><script>alert(1);</script><a class=\""
 				config["liberapay"] = "text/other"
+				config["thanks_dev"] = "could/be/real/bad"
 				config["custom"] = []string{
 					"#\" style=\"background: url(localhost)",
 					"https://example.com\" class=\"rogue injection",
@@ -896,7 +886,11 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				DecodeJSON(t, resp, &fundingValidation)
 
 				assert.False(t, fundingValidation.Valid)
-				assert.Equal(t, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`, fundingValidation.Message)
+				assert.Equal(t, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`+"\n"+
+					"Value for key 'ko_fi' does not match pattern /^[^/]+$/\n"+
+					"Value for key 'liberapay' does not match pattern /^[^/]+$/\n"+
+					`Value for key 'thanks_dev' does not match pattern /^[^/]+\/[^/]+\/[^/]+$/`,
+					fundingValidation.Message)
 			})
 		})
 	}

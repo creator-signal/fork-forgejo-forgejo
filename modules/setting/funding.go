@@ -5,6 +5,7 @@ package setting
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"forgejo.org/modules/log"
@@ -27,6 +28,12 @@ type FundingProviderConfig struct {
 	// This is the only required config key; the other details may be derived
 	// from this and the platform name.
 	URL      string
+
+	// A regular expression which input values must match before they may be
+	// interpolated into the URL template.
+	//
+	// The default value permits a single path segment.
+	InputPattern *regexp.Regexp
 
 	// A format string that defines the text that should show in place of a URL
 	// in the UI. This string should contain at least one instance of %s or
@@ -87,15 +94,24 @@ func addFundingProvider(providers map[string]*FundingProviderConfig, provider *F
 	providers[provider.Name] = provider
 }
 
+const singleSegmentPattern = `^[^/]+$`              // e.g. "example"
+const threeSegmentPattern = `^[^/]+\/[^/]+\/[^/]+$` // e.g. "a/b/c"
+const anythingPattern = `.+`                        // e.g. "http://a.com"
+
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	FundingProviders = make(map[string]*FundingProviderConfig)
+
+	singleSegmentRegex := regexp.MustCompile(singleSegmentPattern)
+	threeSegmentRegex := regexp.MustCompile(threeSegmentPattern)
+	anythingRegex := regexp.MustCompile(anythingPattern)
 
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "community_bridge",
 		Limit: 1,
 		Text: "funding.communitybridge.org/projects/%[1]s",
 		URL:  "https://funding.communitybridge.org/projects/%[1]s",
-		IconName: "community_bridge.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "community_bridge.svg",
 		IconNameDark: "community_bridge_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -103,7 +119,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 4, // this much feels a bit github-centric, but I'll leave it for compat
 		Text: "github.com/sponsors/%[1]s",
 		URL:  "https://github.com/sponsors/%[1]s",
-		IconName: "github.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "github.svg",
 		IconNameDark: "github_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -111,7 +128,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "issuehunt.io/r/%[1]s",
 		URL:  "https://issuehunt.io/r/%[1]s",
-		IconName: "issuehunt.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "issuehunt.svg",
 		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -119,7 +137,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "ko-fi.com/%[1]s",
 		URL:  "https://ko-fi.com/%[1]s",
-		IconName: "ko_fi.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "ko_fi.svg",
 		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -127,7 +146,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "liberapay.com/%[1]s",
 		URL:  "https://liberapay.com/%[1]s",
-		IconName: "liberapay.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "liberapay.svg",
 		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -135,7 +155,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "opencollective.com/%[1]s",
 		URL:  "https://opencollective.com/%[1]s",
-		IconName: "open_collective.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "open_collective.svg",
 		IconNameDark: "",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -143,7 +164,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "patreon.com/%[1]s",
 		URL:  "https://patreon.com/%[1]s",
-		IconName: "patreon.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "patreon.svg",
 		IconNameDark: "patreon_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -151,7 +173,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "polar.sh/%[1]s",
 		URL:  "https://polar.sh/%[1]s",
-		IconName: "polar.png",
+		InputPattern: singleSegmentRegex,
+		IconName:     "polar.png",
 		IconNameDark: "polar_dark.png",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -159,22 +182,34 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Limit: 1,
 		Text: "buymeacoffee.com/%[1]s",
 		URL:  "https://buymeacoffee.com/%[1]s",
-		IconName: "buy_me_a_coffee.svg",
+		InputPattern: singleSegmentRegex,
+		IconName:     "buy_me_a_coffee.svg",
 		IconNameDark: "buy_me_a_coffee_dark.svg",
 	})
-	// TODO: thanks.dev
+	addFundingProvider(FundingProviders, &FundingProviderConfig{
+		Name: "thanks_dev",
+		Limit: 1,
+		Text: "thanks.dev/%[1]s",
+		URL:  "https://thanks.dev/%[1]s",
+		InputPattern: threeSegmentRegex, // we expect something like "u/gh/example"
+		IconName:     "thanks_dev.svg",
+		IconNameDark: "thanks_dev_dark.svg",
+	})
+	// TODO: make tidelift a limit 0 (good for testing!)
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "custom",
 		Limit: 4,
 		Text: "%[1]s",
 		URL:  "%[1]s",
-		IconName: "", // the template ignores the configured icon for "custom" specifically
+		InputPattern: anythingRegex, // matches anything; the final value is treated like a URL in any case
+		IconName:     "", // the template ignores the configured icon for "custom" specifically
 		IconNameDark: "",
 	})
 
 	const keyLimit = "LIMIT"
 	const keyText = "TEXT"
 	const keyUrl = "URL"
+	const keyInputPattern = "INPUT_PATTERN"
 	const keyIcon = "ICON"
 	const keyIconDark = "ICON_DARK"
 	const lowerLimit = 0 // a value of 0 effectively disables the provider
@@ -190,6 +225,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		raw_limit := sec.Key(keyLimit).MustInt(1)
 		raw_text := sec.Key(keyText).MustString("")
 		raw_url := sec.Key(keyUrl).MustString("")
+		raw_input_pattern := sec.Key(keyInputPattern).MustString(singleSegmentPattern)
 		raw_icon := sec.Key(keyIcon).MustString("")
 		raw_icon_dark := sec.Key(keyIconDark).MustString("")
 
@@ -202,6 +238,12 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 			limit = upperLimit
 		} else {
 			limit = uint(raw_limit)
+		}
+
+		input_pattern, err := regexp.Compile(raw_input_pattern)
+		if err != nil {
+			log.Warn("%s.%s %v, using /%s/ instead", sec.Name(), keyInputPattern, err, singleSegmentRegex.String())
+			input_pattern = singleSegmentRegex
 		}
 
 		url := cleanUpSigils(raw_url)
@@ -241,6 +283,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		provider.Limit = limit
 		provider.Text = text
 		provider.URL = url
+		provider.InputPattern = input_pattern
 		provider.IconName = icon
 		provider.IconNameDark = icon_dark
 

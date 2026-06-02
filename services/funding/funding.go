@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -32,7 +33,8 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
-// ErrUnknownFundingProvider represents an "UnknownFundingProvider" kind of error.
+// ErrUnknownFundingProvider occurs when a funding config contains an unknown
+// funding provider name.
 type ErrUnknownFundingProvider struct {
 	Name string
 }
@@ -41,7 +43,8 @@ func (err ErrUnknownFundingProvider) Error() string {
 	return fmt.Sprintf("Unknown funding provider: %s", err.Name)
 }
 
-// ErrTooManyOfFundingProvider represents a "TooManyOfFundingProvider" kind of error.
+// ErrTooManyOfFundingProvider occurs when a funding config contains more
+// values for a funding provider than expected.
 type ErrTooManyOfFundingProvider struct {
 	Name  string
 	Limit uint
@@ -55,7 +58,8 @@ func (err ErrTooManyOfFundingProvider) Error() string {
 	}
 }
 
-// ErrDuplicateFundingEntry represents a "DuplicateFundingEntry" kind of error.
+// ErrDuplicateFundingEntry occurs when a funding config contains a provider
+// with duplicate entries.
 type ErrDuplicateFundingEntry struct {
 	Name string
 	URL  string
@@ -65,7 +69,18 @@ func (err ErrDuplicateFundingEntry) Error() string {
 	return fmt.Sprintf("Duplicate entry for key '%s': %s", err.Name, err.URL)
 }
 
-// ErrCannotParseURL represents an "CannotParseURL" kind of error.
+// ErrBadInput represents a failure to match the input string against the regex
+// pattern.
+type ErrBadInput struct {
+	Name    string
+	Pattern *regexp.Regexp
+}
+
+func (err ErrBadInput) Error() string {
+	return fmt.Sprintf("Value for key '%s' does not match pattern /%s/", err.Name, err.Pattern.String())
+}
+
+// ErrCannotParseURL represents a failure to parse an entry URL.
 type ErrCannotParseURL struct {
 	Name  string
 	Err   error
@@ -75,7 +90,7 @@ func (err ErrCannotParseURL) Error() string {
 	return fmt.Sprintf("Invalid URL value for key '%s': %v", err.Name, err.Err.Error())
 }
 
-// ErrInvalidYamlType represents an "InvalidYamlType" kind of error.
+// ErrInvalidYamlType occurs when a funding config is misshaped.
 type ErrInvalidYamlType struct {
 	Name string
 }
@@ -86,26 +101,14 @@ func (err ErrInvalidYamlType) Error() string {
 
 // Constructs a funding entry from the known funding provider config and the
 // user-provided `text`.
-func getFundingEntry(provider *setting.FundingProviderConfig, text string) (*api.RepoFundingEntry, error) {
-	text = strings.TrimSpace(text)
-	valid_schemes := setting.Service.ValidSiteURLSchemes // same as user profile config
+func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*api.RepoFundingEntry, error) {
+	input = strings.TrimSpace(input)
 
-	is_url_template := false
-	for _, scheme := range valid_schemes {
-		if strings.HasPrefix(provider.URL, scheme + "://") {
-			is_url_template = true
-			break
-		}
+	if !provider.InputPattern.Match([]byte(input)) {
+		return nil, &ErrBadInput{Name: provider.Name, Pattern: provider.InputPattern}
 	}
 
-	url_text := ""
-	if is_url_template {
-		// assume value is a path segment to be encoded accordingly
-		url_text = fmt.Sprintf(provider.URL, url.PathEscape(text))
-	} else {
-		// assume value is to be injected verbatim
-		url_text = fmt.Sprintf(provider.URL, text)
-	}
+	url_text := fmt.Sprintf(provider.URL, input)
 	url_value, err := url.Parse(url_text) // value should parse as a URL, just in case interpolation got us something invalid
 	if err != nil {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
@@ -119,7 +122,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, text string) (*api
 
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
-	entry.Text = fmt.Sprintf(provider.Text, text)
+	entry.Text = fmt.Sprintf(provider.Text, input)
 	entry.URL = url_text
 	entry.Icon = setting.IconForProvider(provider)
 	entry.IconDark = setting.DarkIconForProvider(provider)

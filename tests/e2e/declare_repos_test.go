@@ -203,6 +203,7 @@ patreon: example
 open_collective: example
 polar: example
 buy_me_a_coffee: example
+thanks_dev: u/gh/example
 custom: ["https://example.com", example.com]
 `},
 	}}, nil)
@@ -224,6 +225,7 @@ custom: example.com
 		Versions: []string{`
 ko_fi: '"><script>alert(1);</script><a class="'
 liberapay: "text/other"
+thanks_dev: "could/be/real/bad"
 custom:
   - '#" style="background: url(localhost)'
   - 'https://example.com" class="rogue injection'
