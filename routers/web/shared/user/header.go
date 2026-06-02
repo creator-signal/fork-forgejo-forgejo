@@ -88,7 +88,7 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 		if err != nil && !funding_service.IsErrFundingNotExist(err) {
 			log.Error("PrepareContextForProfileBigAvatar failed to GetFundingFromDefaultBranch: %v", err)
 		}
-		if funding != nil {
+		if funding != nil && len(funding.Entries) > 0 {
 			ctx.Data["Funding"] = funding.Entries
 			ctx.Data["FundingConfig"] = funding.ConfigPath
 			ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0

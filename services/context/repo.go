@@ -722,7 +722,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	}
 
 	funding, _ := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
-	if funding != nil {
+	if funding != nil && len(funding.Entries) > 0 {
 		ctx.Data["Funding"] = funding.Entries
 		ctx.Data["FundingConfig"] = funding.ConfigPath
 		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0

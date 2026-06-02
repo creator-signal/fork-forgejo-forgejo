@@ -150,11 +150,21 @@ custom: example.com
 				_ = MakeRequest(t, req, http.StatusNotFound)
 			})
 
-			t.Run("Empty", func(t *testing.T) {
+			t.Run("Empty repo", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				funding := getRepoFundingConfig(t, repo, token)
 
+				assert.Empty(t, funding)
+			})
+
+			t.Run("Empty funding config", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				funding := getRepoFundingConfig(t, repo, token)
 				assert.Empty(t, funding)
 			})
 
@@ -682,8 +692,21 @@ custom: example.com
 
 			urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", owner.Name, repo.Name)
 
-			t.Run("Empty", func(t *testing.T) {
+			t.Run("Empty repo", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
+
+				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
+
+				var fundingValidation api.ConfigValidation
+				DecodeJSON(t, resp, &fundingValidation)
+
+				assert.True(t, fundingValidation.Valid)
+				assert.Empty(t, fundingValidation.Message)
+			})
+
+			t.Run("Empty funding config", func(t *testing.T) {
+				config := make(map[string]any)
+				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
 

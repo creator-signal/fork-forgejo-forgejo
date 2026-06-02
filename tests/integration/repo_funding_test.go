@@ -187,6 +187,30 @@ func TestSponsorButton(t *testing.T) {
 
 	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			t.Run("sponsor button hidden with empty funding config (repo)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				config := make(map[string]any)
+				createFundingConfig(t, owner, repo, treePath, config)
+
+				htmlDoc := getRepoPage(t, repo)
+				assertNoFunding(t, htmlDoc) // no entries to show!
+			})
+
+			t.Run("sponsor button hidden with empty funding config (user)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile("\n")
+				forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{
+					Name:  ".profile",
+					Files: mfs,
+				})
+
+				htmlDoc := getUserPage(t, owner)
+				assertNoFunding(t, htmlDoc) // no entries to show!
+			})
+
 			t.Run("sponsor button shown on user profile", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
@@ -230,7 +254,7 @@ custom: example.com
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
-				assertNoFunding(t, htmlDoc)
+				assertNoFunding(t, htmlDoc) // no valid entries
 			})
 
 			t.Run("sponsor modal skips invalid funding entries", func(t *testing.T) {

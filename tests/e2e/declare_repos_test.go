@@ -242,6 +242,17 @@ liberapay: example
 custom: "http://localhost:3003/"
 `},
 	}}, nil)
+	newRepo(t, 44, "empty_funding", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+`},
+	}}, nil)
+	newRepo(t, 44, "whoops_all_invalid_funding", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+foo: bar
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 
