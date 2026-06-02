@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
+// templates/org/header.tmpl
+// templates/repo/header.tmpl
 // templates/repo/view_file.tmpl
 // templates/shared/funding.tmpl
 // templates/shared/sponsor_button.tmpl
+// templates/shared/user/profile_big_avatar.tmpl
 // web_src/css/modules/dialog.css
 // web_src/css/modules/message.css
 // web_src/css/repo/header.css
@@ -121,6 +124,18 @@ test('Sponsor button (user): accessibility', async ({page}) => {
   const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
   await expect(sponsorButton).toBeVisible();
   await expect(sponsorButton).toHaveAccessibleName('Sponsor Plz sponsor :3');
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+
+  await accessibilityCheck({page}, ['button.sponsor'], [], []);
+});
+
+test('Sponsor button (org): accessibility', async ({page}) => {
+  const response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await expect(sponsorButton).toHaveAccessibleName('Sponsor Org Six');
   await expect(page.locator('#sponsor-modal')).toBeHidden();
 
   await accessibilityCheck({page}, ['button.sponsor'], [], []);
@@ -380,4 +395,40 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
   await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
+});
+
+test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  let response = await page.goto('/org25', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+
+  response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorModal = page.locator('#sponsor-modal');
+  await expect(sponsorModal).toBeHidden();
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await sponsorButton.click();
+
+  await expect(sponsorModal).toBeVisible();
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Org Six');
+
+  const items = await sponsorModal.getByRole('listitem').all();
+  expect(items).toHaveLength(2);
+
+  const bmac = items[0];
+  await expect(bmac.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
+  await expect(bmac.locator('a')).toHaveText('buymeacoffee.com/example');
+  await expect(bmac.locator('img')).toHaveAccessibleName('buy_me_a_coffee');
+
+  const custom = items[1];
+  await expect(custom.locator('a')).toHaveAttribute('href', 'http://example.com');
+  await expect(custom.locator('a')).toHaveText('example.com');
+  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
 });

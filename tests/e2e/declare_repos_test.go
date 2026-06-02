@@ -253,6 +253,13 @@ custom: "http://localhost:3003/"
 foo: bar
 `},
 	}}, nil)
+	newRepo(t, 6, ".profile", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+buy_me_a_coffee: example
+custom: example.com
+`},
+	}}, nil)
 	// add your repo declarations here
 }
 

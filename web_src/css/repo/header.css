@@ -67,6 +67,7 @@
   pointer-events: none !important;
 }
 
-.repo-buttons .ui.button.sponsor .icon-sponsor.svg {
+.repo-buttons .ui.button.sponsor .icon-sponsor.svg,
+.button-sequence .button.sponsor .icon-sponsor.svg {
   color: var(--color-icon-sponsor);
 }

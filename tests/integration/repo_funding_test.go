@@ -150,6 +150,7 @@ func assertFundingError(t *testing.T, htmlDoc *HTMLDoc, nth int, expectedText st
 func TestSponsorButton(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 6})
 
 	t.Run("sponsor button hidden without funding config (repo)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
@@ -161,6 +162,13 @@ func TestSponsorButton(t *testing.T) {
 	t.Run("sponsor button hidden without funding config (user)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			htmlDoc := getUserPage(t, owner)
+			assertNoFunding(t, htmlDoc)
+		})
+	})
+
+	t.Run("sponsor button hidden without funding config (org)", func(t *testing.T) {
+		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			htmlDoc := getUserPage(t, org)
 			assertNoFunding(t, htmlDoc)
 		})
 	})
@@ -235,6 +243,48 @@ custom: example.com
 				htmlDoc = getUserPage(t, user)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", user.Name))
+				assertNFundingEntries(t, htmlDoc, 3)
+				assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
+				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
+
+				// no validation error!
+				htmlDoc = getFilePage(t, repo, treePath)
+				assertNFundingErrors(t, htmlDoc, 0)
+			})
+
+			t.Run("sponsor button hidden with empty funding config (org)", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile("\n")
+				forgery.CreateRepository(t, org, &forgery.CreateRepositoryOptions{
+					Name:  ".profile",
+					Files: mfs,
+				})
+
+				htmlDoc := getUserPage(t, org)
+				assertNoFunding(t, htmlDoc) // no entries to show!
+			})
+
+			t.Run("sponsor button shown on org profile", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile(`
+ko_fi: example
+liberapay: example
+custom: example.com
+`)
+				repo := forgery.CreateRepository(t, org, &forgery.CreateRepositoryOptions{
+					Name:  ".profile",
+					Files: mfs,
+				})
+
+				// includes the whole config
+				htmlDoc := getUserPage(t, org)
+				assertSponsorButton(t, htmlDoc)
+				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", org.FullName))
 				assertNFundingEntries(t, htmlDoc, 3)
 				assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
 				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
