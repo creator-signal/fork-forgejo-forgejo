@@ -94,7 +94,7 @@ func (err ErrBadInput) Error() string {
 	return fmt.Sprintf("Value for key '%s' does not match pattern /%s/", err.Name, err.Pattern.String())
 }
 
-// ErrCannotParseURL represents a failure to parse an entry URL.
+// ErrCannotParseURL represents a failure to parse a funding entry URL.
 type ErrCannotParseURL struct {
 	Name string
 	Err  error
