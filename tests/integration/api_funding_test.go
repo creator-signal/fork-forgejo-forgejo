@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -131,7 +132,23 @@ func TestAPIRepoFunding(t *testing.T) {
 				_ = MakeRequest(t, req, http.StatusNotFound)
 			})
 
-			// TODO: Private repo should also return 404
+			t.Run("Private repo", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile(`
+ko_fi: example
+liberapay: example
+custom: example.com
+`)
+				repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+					Files: mfs,
+					IsPrivate: true,
+				})
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/funding", repo.OwnerName, repo.Name))
+				_ = MakeRequest(t, req, http.StatusNotFound)
+			})
 
 			t.Run("Empty", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -644,7 +661,23 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 				_ = MakeRequest(t, req, http.StatusNotFound)
 			})
 
-			// TODO: Private repo should also return 404
+			t.Run("Private repo", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				mfs := forgery.MapFS{}
+				mfs[treePath] = forgery.MapFile(`
+ko_fi: example
+liberapay: example
+custom: example.com
+`)
+				repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+					Files: mfs,
+					IsPrivate: true,
+				})
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", repo.OwnerName, repo.Name))
+				_ = MakeRequest(t, req, http.StatusNotFound)
+			})
 
 			urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/funding/validate", owner.Name, repo.Name)
 
