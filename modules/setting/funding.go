@@ -106,18 +106,19 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	threeSegmentRegex := regexp.MustCompile(threeSegmentPattern)
 	anythingRegex := regexp.MustCompile(anythingPattern)
 
+	// built-in providers are largely based on github's list at <https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files>
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
-		Name: "community_bridge",
+		Name: "community_bridge", // aka LFX Mentorship, but the config calls it community_bridge for compat
 		Limit: 1,
 		Text: "funding.communitybridge.org/projects/%[1]s",
-		URL:  "https://funding.communitybridge.org/projects/%[1]s",
+		URL:  "https://funding.communitybridge.org/projects/%[1]s", // we might consider using the new URL here if their redirect ever breaks
 		InputPattern: singleSegmentRegex,
 		IconName:     "community_bridge.svg",
 		IconNameDark: "community_bridge_dark.svg",
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "github",
-		Limit: 4, // this much feels a bit github-centric, but I'll leave it for compat
+		Limit: 4, // this limit feels a bit github-centric, but we'll leave it like this for compat
 		Text: "github.com/sponsors/%[1]s",
 		URL:  "https://github.com/sponsors/%[1]s",
 		InputPattern: singleSegmentRegex,
@@ -171,8 +172,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name: "tidelift",
-		Limit: 0, // this provider no longer exists, we include it here for testing custom providers with limit 0
-		Text: "tidelift.com/funding/github/%[1]s",
+		Limit: 0, // this provider no longer exists, we include it here for testing the behavior of custom providers with limit 0
+		Text: "tidelift.com/funding/github/%[1]s", // not sure how we'd even handle something like this with github baked in :/
 		URL:  "https://tidelift.com/funding/github/%[1]s",
 		InputPattern: singleSegmentRegex, // normally takes two segments, but there's no point instantiating a whole Regexp for an impossible case
 		IconName:     "tidelift.svg", // file does not exist, who cares :/
@@ -211,7 +212,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text: "%[1]s",
 		URL:  "%[1]s",
 		InputPattern: anythingRegex, // matches anything; the final value is treated like a URL in any case
-		IconName:     "", // the template ignores the configured icon for "custom" specifically
+		IconName:     "", // our template ignores the configured icon for "custom" specifically
 		IconNameDark: "",
 	})
 
