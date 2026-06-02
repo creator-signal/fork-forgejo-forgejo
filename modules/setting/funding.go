@@ -62,7 +62,8 @@ var FundingProviders map[string]*FundingProviderConfig
 
 // Ensures that any formatting sigils (%s, etc.) are rendered inert, except for
 // %[1]s. Also transforms %s into %[1]s, because these format strings only
-// ever receive a single argument, which may be used in multiple places.
+// ever receive a single argument, which the template may use in multiple
+// places.
 func cleanUpSigils(s string) (string) {
 	result := strings.ReplaceAll(s, "%", "%%") // escape away all sigils
 	result = strings.ReplaceAll(result, "%%s", "%[1]s") // allow %s
