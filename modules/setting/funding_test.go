@@ -96,6 +96,46 @@ URL = "https://mycustom.example.com/%s"
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
+func TestNewFundingProviderConfigWithSchemalessUrl(t *testing.T) {
+	defer test.MockProtect(&FundingProviders)()
+
+	cfg, err := NewConfigProviderFromData(`
+[funding.mycustom]
+URL = "mycustom.example.com/%s"
+`)
+	require.NoError(t, err)
+	loadCustomFundingProvidersFrom(cfg)
+
+	mycustom := FundingProviders["mycustom"]
+	assert.Equal(t, "mycustom", mycustom.Name)
+	assert.Equal(t, "mycustom.svg", mycustom.IconName)
+	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Equal(t, 1, int(mycustom.Limit))
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
+}
+
+func TestNewFundingProviderConfigWithWeirdSchemalessUrl(t *testing.T) {
+	defer test.MockProtect(&FundingProviders)()
+
+	cfg, err := NewConfigProviderFromData(`
+[funding.mycustom]
+URL = "://mycustom.example.com/%s"
+`)
+	require.NoError(t, err)
+	loadCustomFundingProvidersFrom(cfg)
+
+	mycustom := FundingProviders["mycustom"]
+	assert.Equal(t, "mycustom", mycustom.Name)
+	assert.Equal(t, "mycustom.svg", mycustom.IconName)
+	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Equal(t, 1, int(mycustom.Limit))
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
+	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
+}
+
 func TestNewFundingProviderConfigHandlesSigils(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
