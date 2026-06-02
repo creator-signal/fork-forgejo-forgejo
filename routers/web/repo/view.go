@@ -472,6 +472,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 					}
 				} else if duplicate_entry_err, ok := errors.AsType[*funding_service.ErrDuplicateFundingEntry](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.duplicate_entry_error", duplicate_entry_err.Name, duplicate_entry_err.URL))
+				} else if bad_input_err, ok := errors.AsType[*funding_service.ErrBadInput](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.bad_input_error", bad_input_err.Name, bad_input_err.Pattern.String()))
 				} else if invalid_yaml_err, ok := errors.AsType[*funding_service.ErrInvalidYamlType](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", invalid_yaml_err.Name))
 				} else if parse_err, ok := errors.AsType[*funding_service.ErrCannotParseURL](err); ok {

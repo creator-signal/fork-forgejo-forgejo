@@ -695,7 +695,6 @@ func TestAPIRepoValidateFunding(t *testing.T) {
 
 				assert.False(t, fundingValidation.Valid)
 				assert.Equal(t, "Invalid type for key 'custom', expected a string or string array", fundingValidation.Message)
-				// TODO: feels weird sending API response data like this in only english.. send a list of issue code strings instead (maybe just our locale strings?), and document them enough for an API consumer to explain them to their users in their users' language.
 			})
 
 			t.Run("Partially invalid (single bad key)", func(t *testing.T) {
