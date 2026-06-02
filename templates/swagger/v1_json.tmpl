@@ -9219,6 +9219,80 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/funding": {
+      "get": {
+        "description": "Only the first funding config file is the considered. The file may contain validation errors, in which case, invalid entries are omitted from the returned data. Query /repos/{owner}/{repo}/funding/validate for a description of each error.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Returns the funding options for a repo",
+        "operationId": "repoGetFundingConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/RepoFunding"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/funding/validate": {
+      "get": {
+        "description": "Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Returns the validation information for the funding config of the repo",
+        "operationId": "repoValidateFundingConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ConfigValidation"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/git/blobs": {
       "get": {
         "produces": [
@@ -9258,80 +9332,6 @@
           },
           "400": {
             "$ref": "#/responses/error"
-          }
-        }
-      }
-    },
-    "/repos/{owner}/{repo}/funding": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "repository"
-        ],
-        "summary": "Returns the funding for a repo",
-        "description": "Only the first funding config file is the considered. The file may contain validation errors, in which case, invalid entries are omitted from the returned data. Query /repos/{owner}/{repo}/funding/validate for a description of each error.",
-        "operationId": "GetFundingConfig",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "owner of the repo",
-            "name": "owner",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "name of the repo",
-            "name": "repo",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/RepoFunding"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
-          }
-        }
-      }
-    },
-    "/repos/{owner}/{repo}/funding/validate": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "repository"
-        ],
-        "summary": "Returns the validation information for a funding config",
-        "description": "Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.",
-        "operationId": "repoValidateFundingConfig",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "owner of the repo",
-            "name": "owner",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "name of the repo",
-            "name": "repo",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/ConfigValidation"
-          },
-          "404": {
-            "$ref": "#/responses/notFound"
           }
         }
       }
@@ -26995,6 +26995,7 @@
       "x-go-package": "forgejo.org/modules/forgefed"
     },
     "FundingProvider": {
+      "description": "FundingProvider contains a funding provider exposed by API",
       "type": "object",
       "properties": {
         "icon": {
@@ -27002,15 +27003,26 @@
           "type": "string",
           "x-go-name": "Icon"
         },
-        "name": {
-          "description": "Identifies the funding provider",
+        "icon_dark": {
+          "description": "Path to the dark-theme logo, if any, of the funding provider",
           "type": "string",
-          "x-go-name": "Name"
+          "x-go-name": "IconDark"
+        },
+        "input_pattern": {
+          "description": "A regex string that input text must match before it may be interpolated into either of the URL or Text templates",
+          "type": "string",
+          "x-go-name": "InputPattern"
         },
         "limit": {
           "description": "The max number of times a funding config may specify this provider",
           "type": "integer",
+          "format": "uint64",
           "x-go-name": "Limit"
+        },
+        "name": {
+          "description": "Identifies the funding provider",
+          "type": "string",
+          "x-go-name": "Name"
         },
         "text": {
           "description": "A format string for link text for an instance of this provider",
@@ -27026,6 +27038,7 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "FundingSettings": {
+      "description": "FundingProvider contains global funding provider settings exposed by API",
       "type": "object",
       "properties": {
         "providers": {
@@ -29861,6 +29874,38 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "RepoFundingEntry": {
+      "description": "RepoFundingEntry is a funding option for a repo",
+      "type": "object",
+      "properties": {
+        "icon": {
+          "description": "Path to the logo of the funding provider",
+          "type": "string",
+          "x-go-name": "Icon"
+        },
+        "icon_dark": {
+          "description": "Path to the dark-theme logo, if any, of the funding provider",
+          "type": "string",
+          "x-go-name": "IconDark"
+        },
+        "provider_name": {
+          "description": "Identifies the funding provider",
+          "type": "string",
+          "x-go-name": "ProviderName"
+        },
+        "text": {
+          "description": "Identifies the account on the funding provider",
+          "type": "string",
+          "x-go-name": "Text"
+        },
+        "url": {
+          "description": "URL to a profile on the funding provider",
+          "type": "string",
+          "x-go-name": "URL"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "RepoTargetOption": {
       "type": "object",
       "required": [
@@ -29877,33 +29922,6 @@
           "description": "Name of user or organisation that owns the repository",
           "type": "string",
           "x-go-name": "Owner"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
-    "RepoFundingEntry": {
-      "description": "RepoFundingEntry is a funding option for a repo",
-      "type": "object",
-      "properties": {
-        "provider_name": {
-          "description": "Identifies the funding provider",
-          "type": "string",
-          "x-go-name": "ProviderName"
-        },
-        "icon": {
-          "description": "Path to the logo of the funding provider",
-          "type": "string",
-          "x-go-name": "Icon"
-        },
-        "text": {
-          "description": "Identifies the account on the funding provider",
-          "type": "string",
-          "x-go-name": "Text"
-        },
-        "url": {
-          "description": "URL to a profile on the funding provider",
-          "type": "string",
-          "x-go-name": "URL"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
