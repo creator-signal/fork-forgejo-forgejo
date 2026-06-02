@@ -26,9 +26,9 @@ URL = "https://mycustom.example.com/%s"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
-	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text) // derived from URL
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)        // derived from URL
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL) // note that the %s becomes %[1]s as well, since this will only ever have the one input
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
@@ -47,7 +47,7 @@ URL = "mailto:%s@localhost"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Text) // same as URL
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
@@ -68,7 +68,7 @@ TEXT = "Email %s@localhost for info"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Text)
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
@@ -89,7 +89,7 @@ URL = "https://mycustom.example.com/%s"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Text)
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -109,7 +109,7 @@ URL = "mycustom.example.com/%s"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.URL)
@@ -129,7 +129,7 @@ URL = "://mycustom.example.com/%s"
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
 	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Equal(t, "", mycustom.IconNameDark)
+	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.URL)
@@ -154,7 +154,7 @@ func TestNewFundingProviderConfigHandlesSigils(t *testing.T) {
 	for _, c := range cases {
 		url := c[0]
 		expectedText := c[1]
-		expectedUrl := c[2]
+		expectedURL := c[2]
 
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
 [funding.mycustom]
@@ -165,7 +165,7 @@ URL = "%s"
 
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, expectedText, mycustom.Text)
-		assert.Equal(t, expectedUrl, mycustom.URL)
+		assert.Equal(t, expectedURL, mycustom.URL)
 	}
 }
 
@@ -202,7 +202,7 @@ URL = "https://mycustom.example.com/%%s"
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
 		assert.Equal(t, "mycustom.svg", mycustom.IconName)
-		assert.Equal(t, "", mycustom.IconNameDark)
+		assert.Empty(t, mycustom.IconNameDark)
 		assert.Equal(t, expected, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -237,7 +237,7 @@ INPUT_PATTERN = %v
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
 		assert.Equal(t, "mycustom.svg", mycustom.IconName)
-		assert.Equal(t, "", mycustom.IconNameDark)
+		assert.Empty(t, mycustom.IconNameDark)
 		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -276,7 +276,7 @@ ICON = "%s"
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
 		assert.Equal(t, expected, mycustom.IconName)
-		assert.Equal(t, "", mycustom.IconNameDark)
+		assert.Empty(t, mycustom.IconNameDark)
 		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -333,12 +333,12 @@ LIMIT = 0
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
-	ko_fi := FundingProviders["ko_fi"]
-	assert.Equal(t, "ko_fi", ko_fi.Name)
-	assert.Equal(t, "ko_fi.svg", ko_fi.IconName)
-	assert.Equal(t, "", ko_fi.IconNameDark)
-	assert.Equal(t, 1, int(ko_fi.Limit)) // no change from builtin
-	assert.Equal(t, "ko-fi.com/%[1]s", ko_fi.Text)
-	assert.Equal(t, "https://ko-fi.com/%[1]s", ko_fi.URL)
-	assert.Equal(t, `^[^/]+$`, ko_fi.InputPattern.String())
+	koFi := FundingProviders["ko_fi"]
+	assert.Equal(t, "ko_fi", koFi.Name)
+	assert.Equal(t, "ko_fi.svg", koFi.IconName)
+	assert.Empty(t, koFi.IconNameDark)
+	assert.Equal(t, 1, int(koFi.Limit)) // no change from builtin
+	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text)
+	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.URL)
+	assert.Equal(t, `^[^/]+$`, koFi.InputPattern.String())
 }

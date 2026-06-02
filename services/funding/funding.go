@@ -53,9 +53,8 @@ type ErrTooManyOfFundingProvider struct {
 func (err ErrTooManyOfFundingProvider) Error() string {
 	if err.Limit == 0 {
 		return fmt.Sprintf("Funding provider %s is not allowed", err.Name)
-	} else {
-		return fmt.Sprintf("Expected up to %d of funding provider %s", err.Limit, err.Name)
 	}
+	return fmt.Sprintf("Expected up to %d of funding provider %s", err.Limit, err.Name)
 }
 
 // ErrDuplicateFundingEntry occurs when a funding config contains a provider
@@ -82,8 +81,8 @@ func (err ErrBadInput) Error() string {
 
 // ErrCannotParseURL represents a failure to parse an entry URL.
 type ErrCannotParseURL struct {
-	Name  string
-	Err   error
+	Name string
+	Err  error
 }
 
 func (err ErrCannotParseURL) Error() string {
@@ -108,22 +107,22 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 		return nil, &ErrBadInput{Name: provider.Name, Pattern: provider.InputPattern}
 	}
 
-	url_text := fmt.Sprintf(provider.URL, input)
-	url_value, err := url.Parse(url_text) // value should parse as a URL, just in case interpolation got us something invalid
+	urlText := fmt.Sprintf(provider.URL, input)
+	urlValue, err := url.Parse(urlText) // value should parse as a URL, just in case interpolation got us something invalid
 	if err != nil {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
-	if url_value.Scheme == "" {
+	if urlValue.Scheme == "" {
 		// assume HTTP
-		url_text = "http://" + url_value.String()
+		urlText = "http://" + urlValue.String()
 	} else {
-		url_text = url_value.String()
+		urlText = urlValue.String()
 	}
 
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, input)
-	entry.URL = url_text
+	entry.URL = urlText
 	entry.Icon = setting.IconForProvider(provider)
 	entry.IconDark = setting.DarkIconForProvider(provider)
 
@@ -132,13 +131,13 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 
 type RepoFunding struct {
 	// Funding options for the repository
-	Entries    []*api.RepoFundingEntry
+	Entries []*api.RepoFundingEntry
 
 	// The navigable path to the repository's funding config file
 	ConfigPath string
 
 	// Parsing issues, if any, from parsing the repository's funding config
-	Errors     []error
+	Errors []error
 }
 
 // GetFundingFromPath the given funding file.

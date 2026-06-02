@@ -456,11 +456,11 @@ type RepoFundingEntry struct {
 	// Identifies the funding provider
 	ProviderName string `json:"provider_name"`
 	// Identifies the account on the funding provider
-	Text         string `json:"text"`
+	Text string `json:"text"`
 	// URL to a profile on the funding provider
-	URL          string `json:"url"`
+	URL string `json:"url"`
 	// Path to the logo of the funding provider
-	Icon         string `json:"icon"`
+	Icon string `json:"icon"`
 	// Path to the dark-theme logo, if any, of the funding provider
-	IconDark     string `json:"icon_dark"`
+	IconDark string `json:"icon_dark"`
 }

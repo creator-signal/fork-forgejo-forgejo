@@ -40,17 +40,17 @@ type GeneralAttachmentSettings struct {
 // FundingProvider contains a funding provider exposed by API
 type FundingProvider struct {
 	// Identifies the funding provider
-	Name  string `json:"name"`
+	Name string `json:"name"`
 	// The max number of times a funding config may specify this provider
-	Limit uint   `json:"limit"`
+	Limit uint `json:"limit"`
 	// A format string for link text for an instance of this provider
-	Text  string `json:"text"`
+	Text string `json:"text"`
 	// A format string for the URL to a profile on this provider
-	URL   string `json:"url"`
+	URL string `json:"url"`
 	// A regex string that input text must match before it may be interpolated into either of the URL or Text templates
 	InputPattern string `json:"input_pattern"`
 	// Path to the logo of the funding provider
-	Icon  string `json:"icon"`
+	Icon string `json:"icon"`
 	// Path to the dark-theme logo, if any, of the funding provider
 	IconDark string `json:"icon_dark"`
 }

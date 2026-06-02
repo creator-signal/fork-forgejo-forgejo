@@ -112,12 +112,11 @@ func GetFundingSettings(ctx *context.APIContext) {
 
 		providers = append(providers, providerData)
 	}
-	slices.SortFunc(providers, func(a *api.FundingProvider, b *api.FundingProvider) int {
+	slices.SortFunc(providers, func(a, b *api.FundingProvider) int {
 		if a.Name < b.Name {
 			return -1
-		} else {
-			return 1
 		}
+		return 1
 	})
 
 	ctx.JSON(http.StatusOK, api.FundingSettings{

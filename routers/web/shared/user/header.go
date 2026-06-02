@@ -5,7 +5,6 @@
 package user
 
 import (
-	"fmt"
 	"net/url"
 
 	"forgejo.org/models/db"
@@ -93,7 +92,7 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 			ctx.Data["Funding"] = funding.Entries
 			ctx.Data["FundingConfig"] = funding.ConfigPath
 			ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
-			ctx.Data["FundingTarget"] = fmt.Sprintf("%s", ctx.ContextUser.DisplayName())
+			ctx.Data["FundingTarget"] = ctx.ContextUser.DisplayName()
 		}
 	}
 

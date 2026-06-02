@@ -83,23 +83,23 @@ func assertNFundingEntries(t *testing.T, htmlDoc *HTMLDoc, expectedNumberOfEntri
 //
 // If `imgSrc` is empty, then the entry is assumed to be a Custom URL entry,
 // and an octicon-link SVG will be checked for instead of an image icon.
-func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href string, imgSrc string) {
+func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href, imgSrc string) {
 	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
 
-	htmlDoc.AssertAttrEqual(t, sel + " a", "href", href)
+	htmlDoc.AssertAttrEqual(t, sel+" a", "href", href)
 	if imgSrc == "" {
-		htmlDoc.AssertElement(t, sel + " img", false)
-		htmlDoc.AssertElement(t, sel + " svg.octicon-link", true)
+		htmlDoc.AssertElement(t, sel+" img", false)
+		htmlDoc.AssertElement(t, sel+" svg.octicon-link", true)
 	} else {
-		htmlDoc.AssertAttrEqual(t, sel + " picture > img", "src", imgSrc)
-		htmlDoc.AssertElement(t, sel + " svg.octicon-link", false)
+		htmlDoc.AssertAttrEqual(t, sel+" picture > img", "src", imgSrc)
+		htmlDoc.AssertElement(t, sel+" svg.octicon-link", false)
 	}
 }
 
 func assertFundingEntryHasDarkIconVariant(t *testing.T, htmlDoc *HTMLDoc, nth uint, darkImgSrc string) {
 	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
-	htmlDoc.AssertAttrEqual(t, sel + " picture > source", "srcset", darkImgSrc)
-	htmlDoc.AssertAttrEqual(t, sel + " picture > source", "media", "(prefers-color-scheme: dark)")
+	htmlDoc.AssertAttrEqual(t, sel+" picture > source", "srcset", darkImgSrc)
+	htmlDoc.AssertAttrEqual(t, sel+" picture > source", "media", "(prefers-color-scheme: dark)")
 }
 
 // Ensures the page's Sponsor modal contains the given text in the given entry,
@@ -109,7 +109,7 @@ func assertFundingEntryHasDarkIconVariant(t *testing.T, htmlDoc *HTMLDoc, nth ui
 func assertFundingEntryHasText(t *testing.T, htmlDoc *HTMLDoc, nth uint, expectedText string) {
 	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
 
-	htmlDoc.AssertElementPredicate(t, sel + " a", func(el *goquery.Selection) {
+	htmlDoc.AssertElementPredicate(t, sel+" a", func(el *goquery.Selection) {
 		assert.Equal(t, expectedText, el.Text())
 		assert.Zero(t, el.Children().Length()) // no injected <script>, etc.
 	})
@@ -203,7 +203,7 @@ liberapay: example
 custom: example.com
 `)
 				repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
-					Name: ".profile",
+					Name:  ".profile",
 					Files: mfs,
 				})
 
@@ -501,11 +501,11 @@ custom: example.com
 
 				config := make(map[string]any)
 				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // omitted (too many path segments)
-				config["liberapay"] = "text/other" // omitted (too many path segments)
-				config["thanks_dev"] = "could/be/real/bad" // omitted (too many path segments)
+				config["liberapay"] = "text/other"                           // omitted (too many path segments)
+				config["thanks_dev"] = "could/be/real/bad"                   // omitted (too many path segments)
 				config["custom"] = []string{
 					"#\" style=\"background: url(localhost)",
-					"https://example.com\" class=\"rogue injection", // omitted (space in domain name)
+					"https://example.com\" class=\"rogue injection",  // omitted (space in domain name)
 					"https://example.com/\" class=\"rogue injection", // URL escaped
 					"<script>alert`1`</script>",
 				}

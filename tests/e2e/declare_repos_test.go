@@ -231,7 +231,7 @@ custom:
   - '#" style="background: url(localhost)'
   - 'https://example.com" class="rogue injection'
   - 'https://example.com/" class="rogue injection'
-  - '<script>alert`+"`"+`1`+"`"+`</script>'
+  - '<script>alert` + "`" + `1` + "`" + `</script>'
 `},
 	}}, nil)
 	newRepo(t, 44, ".profile", nil, []FileChanges{{
