@@ -101,15 +101,16 @@ func GetFundingSettings(ctx *context.APIContext) {
 	for k := range setting.FundingProviders {
 		provider := setting.FundingProviders[k]
 
-		entry := new(api.FundingProvider)
-		entry.Name = provider.Name
-		entry.Limit = provider.Limit
-		entry.Text = provider.Text
-		entry.URL = provider.URL
-		entry.Icon = setting.IconForProvider(provider)
-		entry.IconDark = setting.DarkIconForProvider(provider)
+		providerData := new(api.FundingProvider)
+		providerData.Name = provider.Name
+		providerData.Limit = provider.Limit
+		providerData.Text = provider.Text
+		providerData.URL = provider.URL
+		providerData.InputPattern = provider.InputPattern.String()
+		providerData.Icon = setting.IconForProvider(provider)
+		providerData.IconDark = setting.DarkIconForProvider(provider)
 
-		providers = append(providers, entry)
+		providers = append(providers, providerData)
 	}
 	slices.SortFunc(providers, func(a *api.FundingProvider, b *api.FundingProvider) int {
 		if a.Name < b.Name {

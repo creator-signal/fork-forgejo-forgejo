@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
@@ -73,7 +74,42 @@ func TestAPIFundingSettings(t *testing.T) {
 			DecodeJSON(t, resp, &providers)
 
 			assert.Len(t, providers.Providers, 11) // we have 11 default providers (smoke test to see that these decode correctly)
-			// TODO: assert order is consistent too
+
+			custom_idx := slices.IndexFunc(providers.Providers, func(p *api.FundingProvider) bool {
+				return p.Name == "custom"
+			})
+			custom := providers.Providers[custom_idx]
+			assert.NotNil(t, custom)
+			assert.Equal(t, "/assets/img/svg/octicon-link.svg", custom.Icon)
+			assert.Equal(t, "", custom.IconDark)
+			assert.Equal(t, "%[1]s", custom.Text)
+			assert.Equal(t, "%[1]s", custom.URL)
+			assert.Equal(t, 4, int(custom.Limit))
+			assert.Equal(t, ".+", custom.InputPattern)
+
+			liberapay_idx := slices.IndexFunc(providers.Providers, func(p *api.FundingProvider) bool {
+				return p.Name == "liberapay"
+			})
+			liberapay := providers.Providers[liberapay_idx]
+			assert.NotNil(t, liberapay)
+			assert.Equal(t, "/assets/img/funding/liberapay.svg", liberapay.Icon)
+			assert.Equal(t, "", liberapay.IconDark)
+			assert.Equal(t, "liberapay.com/%[1]s", liberapay.Text)
+			assert.Equal(t, "https://liberapay.com/%[1]s", liberapay.URL)
+			assert.Equal(t, 1, int(liberapay.Limit))
+			assert.Equal(t, "^[^/]+$", liberapay.InputPattern)
+
+			thanks_dev_idx := slices.IndexFunc(providers.Providers, func(p *api.FundingProvider) bool {
+				return p.Name == "thanks_dev"
+			})
+			thanks_dev := providers.Providers[thanks_dev_idx]
+			assert.NotNil(t, thanks_dev)
+			assert.Equal(t, "/assets/img/funding/thanks_dev.svg", thanks_dev.Icon)
+			assert.Equal(t, "/assets/img/funding/thanks_dev_dark.svg", thanks_dev.IconDark)
+			assert.Equal(t, "thanks.dev/%[1]s", thanks_dev.Text)
+			assert.Equal(t, "https://thanks.dev/%[1]s", thanks_dev.URL)
+			assert.Equal(t, 1, int(thanks_dev.Limit))
+			assert.Equal(t, `^[^/]+\/[^/]+\/[^/]+$`, thanks_dev.InputPattern)
 		})
 	})
 }

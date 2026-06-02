@@ -47,6 +47,8 @@ type FundingProvider struct {
 	Text  string `json:"text"`
 	// A format string for the URL to a profile on this provider
 	URL   string `json:"url"`
+	// A regex string that input text must match before it may be interpolated into either of the URL or Text templates
+	InputPattern string `json:"input_pattern"`
 	// Path to the logo of the funding provider
 	Icon  string `json:"icon"`
 	// Path to the dark-theme logo, if any, of the funding provider
