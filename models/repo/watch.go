@@ -230,7 +230,7 @@ func GetSelectWatcherIDs(ctx context.Context, repoID int64, selection WatchSelec
 		Find(&ids)
 }
 
-func BuilderWatchAnything() builder.Builder {
+func BuilderWatchAnything() builder.Cond {
 	return builder.Or(
 		builder.Eq{"`watch`.watch_selection_issues": true},
 		builder.Eq{"`watch`.watch_selection_pull_requests": true},
