@@ -52,9 +52,6 @@ test.describe('Pull: Toggle WIP', () => {
     const response = await page.goto('/user2/repo1/pulls/5');
     expect(response?.status()).toBe(200); // Status OK
     // ensure original title
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(prTitle);
-    await page.getByRole('button', {name: 'Save'}).click();
     await setTitle({page}, prTitle);
     await check_wip({page}, false);
   });
@@ -70,9 +67,6 @@ test.describe('Pull: Toggle WIP', () => {
 
   test('manual edit', async ({page}) => {
     // manually edit title to another prefix
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(`[WIP] ${prTitle}`);
-    await page.getByRole('button', {name: 'Save'}).click();
     await setTitle({page}, `[WIP] ${prTitle}`);
     await check_wip({page}, true);
     // remove again
@@ -83,9 +77,6 @@ test.describe('Pull: Toggle WIP', () => {
   test('maximum title length', async ({page}) => {
     // check maximum title length is handled gracefully
     const maxLenStr = prTitle + 'a'.repeat(240);
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(maxLenStr);
-    await page.getByRole('button', {name: 'Save'}).click();
     await setTitle({page}, maxLenStr);
     await expect(page.locator('h1')).toContainText(maxLenStr);
     await check_wip({page}, false);
