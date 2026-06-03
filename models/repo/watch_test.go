@@ -333,6 +333,6 @@ func TestUnwatchRepos(t *testing.T) {
 	err := repo_model.UnwatchRepos(db.DefaultContext, 4, []int64{1, 2})
 	require.NoError(t, err)
 
-	assert.EqualValues(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 4, RepoID: 1}, "source = false AND watch_selection_issues = false AND watch_selection_pull_requests = false AND watch_selection_releases = false"))
-	assert.EqualValues(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 4, RepoID: 2}, "source = false AND watch_selection_issues = false AND watch_selection_pull_requests = false AND watch_selection_releases = false"))
+	assert.Equal(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 4, RepoID: 1}, "source = false AND watch_selection_issues = false AND watch_selection_pull_requests = false AND watch_selection_releases = false"))
+	assert.Equal(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 4, RepoID: 2}, "source = false AND watch_selection_issues = false AND watch_selection_pull_requests = false AND watch_selection_releases = false"))
 }

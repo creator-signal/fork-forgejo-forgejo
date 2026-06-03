@@ -21,6 +21,6 @@ func TestRepoWatch(t *testing.T) {
 		session := loginUser(t, "user2")
 		unittest.AssertNotExistsBean(t, &repo_model.Watch{UserID: 2, RepoID: 3})
 		testEditFile(t, session, "org3", "repo3", "master", "README.md", "Hello, World (Edited for watch)\n")
-		assert.EqualValues(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 2, RepoID: 3}, "source = ?", repo_model.WatchSourceExplicit))
+		assert.Equal(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: 2, RepoID: 3}, "source = ?", repo_model.WatchSourceExplicit))
 	})
 }
