@@ -175,13 +175,12 @@ func TestSponsorButton(t *testing.T) {
 
 	t.Run("sponsor button shown with one valid and one invalid config", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
-			config := make(map[string]any)
-			config["custom"] = "example.com" // no scheme is assumed HTTP
-			config["ko_fi"] = "test"
+			config := "custom: example.com\n" + // no scheme is assumed HTTP
+			"ko_fi: test"
+			// FIXME: don't we check .forgejo first anyway? Add another case of this, but reverse the files.
 			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config)
 
-			config = make(map[string]any)
-			config["custom"] = 42
+			config = "custom: 42"
 			createFundingConfig(t, owner, repo, "FUNDING.yml", config)
 
 			htmlDoc := getRepoPage(t, repo)
@@ -198,8 +197,7 @@ func TestSponsorButton(t *testing.T) {
 			t.Run("sponsor button hidden with empty funding config (repo)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				createFundingConfig(t, owner, repo, treePath, config)
+				createFundingConfig(t, owner, repo, treePath, ``)
 
 				htmlDoc := getRepoPage(t, repo)
 				assertNoFunding(t, htmlDoc) // no entries to show!
@@ -298,9 +296,7 @@ custom: example.com
 			t.Run("sponsor button hidden with invalid funding config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = 42
-
+				config := `custom: 42`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -310,11 +306,9 @@ custom: example.com
 			t.Run("sponsor modal skips invalid funding entries", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = 42
-				config["ko_fi"] = "test"
-				config["liberapay"] = "test"
-
+				config := "custom: 42\n" +
+									"ko_fi: test\n" +
+									"liberapay: test"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// invalid entries are skipped
@@ -333,9 +327,7 @@ custom: example.com
 			t.Run("sponsor modal skips duplicate funding entries", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{"test1", "test1", "test2"}
-
+				config := "custom: [test1, test1, test2]"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// duplicate entries are skipped
@@ -354,9 +346,7 @@ custom: example.com
 			t.Run("sponsor modal skips duplicate funding entries where one has a scheme", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{"test1", "http://test1", "test2"}
-
+				config := `custom: [test1, "http://test1", test2]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// duplicate entries are skipped
@@ -375,11 +365,9 @@ custom: example.com
 			t.Run("funding config describes multiple issues", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = 42
-				config["ko_fi"] = "test"
-				config["whatever"] = "test"
-
+				config := "custom: 42\n" +
+									"ko_fi: test\n" +
+									"whatever: test"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// invalid entries are skipped
@@ -398,10 +386,8 @@ custom: example.com
 			t.Run("sponsor button shown with valid funding config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = "https://example.com"
-				config["patreon"] = []string{"test"}
-
+				config := `custom: "https://example.com"` + "\n" +
+									"patreon: [test]"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -419,11 +405,9 @@ custom: example.com
 			t.Run("sponsor button shown with valid funding config with unknown keys", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = "https://example.com"
-				config["ko_fi"] = "test"
-				config["whatever"] = "whatever"
-
+				config := `custom: "https://example.com"` + "\n" +
+									"ko_fi: test\n" +
+									"whatever: whatever"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -441,11 +425,9 @@ custom: example.com
 			t.Run("sponsor button shown with valid funding config with invalid unknown key", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{"https://example.com"}
-				config["ko_fi"] = "test"
-				config["whatever"] = 42 // we shouldn't care how this key is shaped just yet
-
+				config := `custom: ["https://example.com"]` + "\n" + // single-element list is acceptable
+									"ko_fi: test\n" +
+									"whatever: 42" // we shouldn't care how this key is shaped just yet
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -463,9 +445,7 @@ custom: example.com
 			t.Run("sponsor modal shows only valid string array items", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []any{42, "https://example.com"}
-
+				config := `custom: [42, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -482,15 +462,12 @@ custom: example.com
 			t.Run("sponsor modal shows only up to the configured limit for custom", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -510,16 +487,13 @@ custom: example.com
 			t.Run("sponsor modal shows only up to the configured limit for custom, valid others", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "test"
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: test\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -540,17 +514,14 @@ custom: example.com
 			t.Run("sponsor modal shows only up to the configured limit for custom and ko_fi", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = []string{"test", "test2"}
-				config["tidelift"] = "npm/example"
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: [test, test2]\n" +
+									"tidelift: 'npm/example'\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -573,17 +544,14 @@ custom: example.com
 			t.Run("sponsor modal mitigates XSS", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // omitted (too many path segments)
-				config["liberapay"] = "text/other"                           // omitted (too many path segments)
-				config["thanks_dev"] = "could/be/real/bad"                   // omitted (too many path segments)
-				config["custom"] = []string{
-					"#\" style=\"background: url(localhost)",
-					"https://example.com\" class=\"rogue injection",  // omitted (space in domain name)
-					"https://example.com/\" class=\"rogue injection", // URL escaped
-					"<script>alert`1`</script>",
-				}
-
+				config := `ko_fi: '"><script>alert(1);</script><a class="'` + "\n" + // omitted (contains a `/`)
+									"liberapay: 'text/other'\n" + // omitted (contains a `/`)
+									"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
+									"custom:\n" +
+									`- '#" style="background: url(localhost)'` + "\n" +
+									`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
+									`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
+									"- \"<script>alert`1`</script>\""
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)

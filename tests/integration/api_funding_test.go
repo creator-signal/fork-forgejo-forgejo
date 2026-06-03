@@ -21,16 +21,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
 )
 
-func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, treePath string, fundingConfig map[string]any) {
+func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, treePath string, config string) {
 	t.Helper()
 
-	config, err := yaml.Marshal(fundingConfig)
-	require.NoError(t, err)
-
-	err = createOrReplaceFileInBranch(user, repo, treePath, repo.DefaultBranch, string(config))
+	err := createOrReplaceFileInBranch(user, repo, treePath, repo.DefaultBranch, config)
 	require.NoError(t, err)
 }
 
@@ -75,6 +71,12 @@ func TestAPIFundingSettings(t *testing.T) {
 			DecodeJSON(t, resp, &providers)
 
 			assert.Len(t, providers.Providers, 12) // we have 12 default providers (smoke test to see that these decode correctly)
+
+			names := make([]string, 0, len(providers.Providers))
+			for _, provider := range providers.Providers {
+				names = append(names, provider.Name)
+			}
+			assert.True(t, slices.IsSorted(names), "configured providers should be listed alphabetically")
 
 			customIdx := slices.IndexFunc(providers.Providers, func(p *api.FundingProvider) bool {
 				return p.Name == "custom"
@@ -161,8 +163,7 @@ custom: example.com
 			t.Run("Empty funding config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				createFundingConfig(t, owner, repo, treePath, config)
+				createFundingConfig(t, owner, repo, treePath, ``)
 
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Empty(t, funding)
@@ -171,46 +172,46 @@ custom: example.com
 			t.Run("Simple config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = "https://example.com"
-				config["patreon"] = "test"
-				config["ko_fi"] = "test"
-
+				config := `custom: "https://example.com"` + "\n" +
+									"patreon: test\n" +
+									"ko_fi: test\n"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 3)
 
-				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "https://example.com", funding[0].Text)
-				assert.Equal(t, "https://example.com", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
+				// TODO: order is the same as given in the config
+				custom := funding[0]
+				patreon := funding[2]
+				koFi := funding[1]
 
-				assert.Equal(t, "ko_fi", funding[1].ProviderName)
-				assert.Equal(t, "ko-fi.com/test", funding[1].Text)
-				assert.Equal(t, "https://ko-fi.com/test", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
+				assert.Equal(t, "custom", custom.ProviderName)
+				assert.Equal(t, "https://example.com", custom.Text)
+				assert.Equal(t, "https://example.com", custom.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom.Icon)
+				assert.Empty(t, custom.IconDark)
 
-				assert.Equal(t, "patreon", funding[2].ProviderName)
-				assert.Equal(t, "patreon.com/test", funding[2].Text)
-				assert.Equal(t, "https://patreon.com/test", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", funding[2].Icon)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", funding[2].IconDark) // patreon includes a dark-theme icon, whereas ko-fi does not
+				assert.Equal(t, "ko_fi", koFi.ProviderName)
+				assert.Equal(t, "ko-fi.com/test", koFi.Text)
+				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
+				assert.Empty(t, koFi.IconDark)
+
+				assert.Equal(t, "patreon", patreon.ProviderName)
+				assert.Equal(t, "patreon.com/test", patreon.Text)
+				assert.Equal(t, "https://patreon.com/test", patreon.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", patreon.Icon)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", patreon.IconDark) // patreon includes a dark-theme icon, whereas ko-fi does not
 			})
 
 			t.Run("Custom string array", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{
-					"https://a.com",
-					"b.com",
-					"http://withquery.example.com?test=foo",
-					"http://thistimewithhash#foo",
-				}
-
+				config := "custom:\n" +
+									`- "https://a.com"` + "\n" +
+									"- b.com\n" +
+									`- "http://withquery.example.com?test=foo"` + "\n" +
+									`- "http://thistimewithhash#foo"` + "\n"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -244,9 +245,7 @@ custom: example.com
 			t.Run("Skips duplicate entries", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{"https://a.com", "https://a.com", "https://b.com"}
-
+				config := `custom: ["https://a.com", "https://a.com", "https://b.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -268,12 +267,7 @@ custom: example.com
 			t.Run("Invalid config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				testSlice := make([][]string, 1)
-				testSlice[0] = []string{"test"}
-
-				config := make(map[string]any)
-				config["custom"] = testSlice
-
+				config := `custom: [[test]]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -283,11 +277,9 @@ custom: example.com
 			t.Run("Partially invalid (bad key omitted)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["liberapay"] = "test"
-				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "liberapay: test\n" +
+									"ko_fi: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -295,32 +287,34 @@ custom: example.com
 
 				// no ko_fi, it's not a string value
 
-				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test", funding[0].Text)
-				assert.Equal(t, "http://test", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
+				liberapay := funding[2]
+				custom1 := funding[0]
+				custom2 := funding[1]
 
-				assert.Equal(t, "custom", funding[1].ProviderName)
-				assert.Equal(t, "https://example.com", funding[1].Text)
-				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
+				assert.Equal(t, "custom", custom1.ProviderName)
+				assert.Equal(t, "test", custom1.Text)
+				assert.Equal(t, "http://test", custom1.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom1.Icon)
+				assert.Empty(t, custom1.IconDark)
 
-				assert.Equal(t, "liberapay", funding[2].ProviderName)
-				assert.Equal(t, "liberapay.com/test", funding[2].Text)
-				assert.Equal(t, "https://liberapay.com/test", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
+				assert.Equal(t, "custom", custom2.ProviderName)
+				assert.Equal(t, "https://example.com", custom2.Text)
+				assert.Equal(t, "https://example.com", custom2.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom2.Icon)
+				assert.Empty(t, custom2.IconDark)
+
+				assert.Equal(t, "liberapay", liberapay.ProviderName)
+				assert.Equal(t, "liberapay.com/test", liberapay.Text)
+				assert.Equal(t, "https://liberapay.com/test", liberapay.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", liberapay.Icon)
+				assert.Empty(t, liberapay.IconDark)
 			})
 
 			t.Run("Partially invalid (unknown key omitted)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = "test"
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: test\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -343,10 +337,8 @@ custom: example.com
 			t.Run("Partially invalid (bad and unknown key omitted)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -369,11 +361,9 @@ custom: example.com
 			t.Run("Partially invalid (bad and unknown keys omitted)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = "test"
-				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: test\n" +
+									"ko_fi: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -397,9 +387,7 @@ custom: example.com
 			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []any{42, "https://example.com"}
-
+				config := `custom: [42, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -416,15 +404,12 @@ custom: example.com
 			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -459,155 +444,164 @@ custom: example.com
 			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "test"
-				config["patreon"] = "test"
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: test\n" +
+									"patreon: test\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 6)
 
-				// no too_many, we have enough
-				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "http://test1", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
+				koFi := funding[4]
+				patreon := funding[5]
+				test1 := funding[0]
+				exampleCom := funding[1]
+				test3 := funding[2]
+				test4 := funding[3]
+				// no too_many, we have enough from "custom"
 
-				assert.Equal(t, "custom", funding[1].ProviderName)
-				assert.Equal(t, "https://example.com", funding[1].Text)
-				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
+				assert.Equal(t, "custom", test1.ProviderName)
+				assert.Equal(t, "test1", test1.Text)
+				assert.Equal(t, "http://test1", test1.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
+				assert.Empty(t, test1.IconDark)
 
-				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "http://test3", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
+				assert.Equal(t, "custom", exampleCom.ProviderName)
+				assert.Equal(t, "https://example.com", exampleCom.Text)
+				assert.Equal(t, "https://example.com", exampleCom.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
+				assert.Empty(t, exampleCom.IconDark)
 
-				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "http://test4", funding[3].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
-				assert.Empty(t, funding[3].IconDark)
+				assert.Equal(t, "custom", test3.ProviderName)
+				assert.Equal(t, "test3", test3.Text)
+				assert.Equal(t, "http://test3", test3.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
+				assert.Empty(t, test3.IconDark)
 
-				assert.Equal(t, "ko_fi", funding[4].ProviderName)
-				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
-				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
-				assert.Empty(t, funding[4].IconDark)
+				assert.Equal(t, "custom", test4.ProviderName)
+				assert.Equal(t, "test4", test4.Text)
+				assert.Equal(t, "http://test4", test4.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
+				assert.Empty(t, test4.IconDark)
 
-				assert.Equal(t, "patreon", funding[5].ProviderName)
-				assert.Equal(t, "patreon.com/test", funding[5].Text)
-				assert.Equal(t, "https://patreon.com/test", funding[5].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", funding[5].Icon)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", funding[5].IconDark)
+				assert.Equal(t, "ko_fi", koFi.ProviderName)
+				assert.Equal(t, "ko-fi.com/test", koFi.Text)
+				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
+				assert.Empty(t, koFi.IconDark)
+
+				assert.Equal(t, "patreon", patreon.ProviderName)
+				assert.Equal(t, "patreon.com/test", patreon.Text)
+				assert.Equal(t, "https://patreon.com/test", patreon.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", patreon.Icon)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", patreon.IconDark)
 			})
 
 			t.Run("Partially invalid (too many of two providers, valid list of others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = []string{"test"}
-				config["tidelift"] = "npm/example"
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: [test]\n" +
+									"tidelift: npm/example\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 5)
 
-				// no too_many, we have enough
-				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "http://test1", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
+				koFi := funding[4]
+				test1 := funding[0]
+				exampleCom := funding[1]
+				test3 := funding[2]
+				test4 := funding[3]
 
-				assert.Equal(t, "custom", funding[1].ProviderName)
-				assert.Equal(t, "https://example.com", funding[1].Text)
-				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
+				assert.Equal(t, "custom", test1.ProviderName)
+				assert.Equal(t, "test1", test1.Text)
+				assert.Equal(t, "http://test1", test1.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
+				assert.Empty(t, test1.IconDark)
 
-				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "http://test3", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
+				assert.Equal(t, "custom", exampleCom.ProviderName)
+				assert.Equal(t, "https://example.com", exampleCom.Text)
+				assert.Equal(t, "https://example.com", exampleCom.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
+				assert.Empty(t, exampleCom.IconDark)
 
-				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "http://test4", funding[3].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
-				assert.Empty(t, funding[3].IconDark)
+				assert.Equal(t, "custom", test3.ProviderName)
+				assert.Equal(t, "test3", test3.Text)
+				assert.Equal(t, "http://test3", test3.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
+				assert.Empty(t, test3.IconDark)
 
-				assert.Equal(t, "ko_fi", funding[4].ProviderName)
-				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
-				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
-				assert.Empty(t, funding[4].IconDark)
+				assert.Equal(t, "custom", test4.ProviderName)
+				assert.Equal(t, "test4", test4.Text)
+				assert.Equal(t, "http://test4", test4.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
+				assert.Empty(t, test4.IconDark)
+
+				assert.Equal(t, "ko_fi", koFi.ProviderName)
+				assert.Equal(t, "ko-fi.com/test", koFi.Text)
+				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
+				assert.Empty(t, koFi.IconDark)
 			})
 
 			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = []string{"test", "test2"}
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: [test, test2]\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
 				assert.Len(t, funding, 5)
 
+				koFi := funding[4]
+				test1 := funding[0]
+				exampleCom := funding[1]
+				test3 := funding[2]
+				test4 := funding[3]
+
 				// no custom/too_many or ko_fi/test2, we have enough
-				assert.Equal(t, "custom", funding[0].ProviderName)
-				assert.Equal(t, "test1", funding[0].Text)
-				assert.Equal(t, "http://test1", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
+				assert.Equal(t, "custom", test1.ProviderName)
+				assert.Equal(t, "test1", test1.Text)
+				assert.Equal(t, "http://test1", test1.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
+				assert.Empty(t, test1.IconDark)
 
-				assert.Equal(t, "custom", funding[1].ProviderName)
-				assert.Equal(t, "https://example.com", funding[1].Text)
-				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
+				assert.Equal(t, "custom", exampleCom.ProviderName)
+				assert.Equal(t, "https://example.com", exampleCom.Text)
+				assert.Equal(t, "https://example.com", exampleCom.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
+				assert.Empty(t, exampleCom.IconDark)
 
-				assert.Equal(t, "custom", funding[2].ProviderName)
-				assert.Equal(t, "test3", funding[2].Text)
-				assert.Equal(t, "http://test3", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
+				assert.Equal(t, "custom", test3.ProviderName)
+				assert.Equal(t, "test3", test3.Text)
+				assert.Equal(t, "http://test3", test3.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
+				assert.Empty(t, test3.IconDark)
 
-				assert.Equal(t, "custom", funding[3].ProviderName)
-				assert.Equal(t, "test4", funding[3].Text)
-				assert.Equal(t, "http://test4", funding[3].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
-				assert.Empty(t, funding[3].IconDark)
+				assert.Equal(t, "custom", test4.ProviderName)
+				assert.Equal(t, "test4", test4.Text)
+				assert.Equal(t, "http://test4", test4.URL)
+				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
+				assert.Empty(t, test4.IconDark)
 
-				assert.Equal(t, "ko_fi", funding[4].ProviderName)
+				assert.Equal(t, "ko_fi", koFi.ProviderName)
 				assert.Equal(t, "ko-fi.com/test", funding[4].Text)
 				assert.Equal(t, "https://ko-fi.com/test", funding[4].URL)
 				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", funding[4].Icon)
@@ -617,17 +611,14 @@ custom: example.com
 			t.Run("Bad URLs get escaped or elided", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "\"><script>alert(1);</script><a class=\"" // omitted (contains a `/`)
-				config["liberapay"] = "text/other"                           // omitted (contains a `/`)
-				config["thanks_dev"] = "could/be/real/bad"                   // omitted (too many `/`)
-				config["custom"] = []string{
-					"#\" style=\"background: url(localhost)",
-					"https://example.com\" class=\"rogue injection",  // omitted (space in domain name)
-					"https://example.com/\" class=\"rogue injection", // URL escaped
-					"<script>alert`1`</script>",
-				}
-
+				config := `ko_fi: '"><script>alert(1);</script><a class="'` + "\n" + // omitted (contains a `/`)
+									"liberapay: 'text/other'\n" + // omitted (contains a `/`)
+									"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
+									"custom:\n" +
+									`- '#" style="background: url(localhost)'` + "\n" +
+									`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
+									`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
+									"- \"<script>alert`1`</script>\""
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				funding := getRepoFundingConfig(t, repo, token)
@@ -705,8 +696,7 @@ custom: example.com
 			})
 
 			t.Run("Empty funding config", func(t *testing.T) {
-				config := make(map[string]any)
-				createFundingConfig(t, owner, repo, treePath, config)
+				createFundingConfig(t, owner, repo, treePath, ``)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
 
@@ -720,9 +710,7 @@ custom: example.com
 			t.Run("Valid (single key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = "https://example.com"
-
+				config := `custom: "https://example.com"`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -737,12 +725,7 @@ custom: example.com
 			t.Run("Invalid (single key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				testSlice := make([][]string, 1)
-				testSlice[0] = []string{"test"}
-
-				config := make(map[string]any)
-				config["custom"] = testSlice
-
+				config := `custom: [["test"]]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -757,10 +740,8 @@ custom: example.com
 			t.Run("Partially invalid (single bad key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "ko_fi: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -775,10 +756,8 @@ custom: example.com
 			t.Run("Partially invalid (single unknown key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = "test"
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: test\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -793,10 +772,8 @@ custom: example.com
 			t.Run("Partially invalid (single bad unknown key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -811,11 +788,9 @@ custom: example.com
 			t.Run("Partially invalid (one bad and one unknown key)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["whatever"] = "test"
-				config["ko_fi"] = 42
-				config["custom"] = []string{"test", "https://example.com"}
-
+				config := "whatever: test\n" +
+									"ko_fi: 42\n" +
+									`custom: [test, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -830,9 +805,7 @@ custom: example.com
 			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []any{42, "https://example.com"}
-
+				config := `custom: [42, "https://example.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -847,15 +820,12 @@ custom: example.com
 			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -870,17 +840,14 @@ custom: example.com
 			t.Run("Partially invalid (too many of two providers, valid others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "test"
-				config["tidelift"] = "npm/example"
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: test\n" +
+									"tidelift: 'npm/example'\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -895,16 +862,13 @@ custom: example.com
 			t.Run("Partially invalid (too many of one provider, valid list of others)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = []string{"test"}
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: [test]\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -919,16 +883,13 @@ custom: example.com
 			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = []string{"test", "test2"}
-				config["custom"] = []string{
-					"test1",
-					"https://example.com",
-					"test3",
-					"test4",
-					"too_many",
-				}
-
+				config := "ko_fi: [test, test2]\n" +
+									"custom:\n" +
+									"- test1\n" +
+									`- "https://example.com"` + "\n" +
+									"- test3\n" +
+									"- test4\n" +
+									"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -943,9 +904,7 @@ custom: example.com
 			t.Run("Partially invalid (duplicate entries)", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["custom"] = []string{"https://a.com", "https://a.com", "https://b.com"}
-
+				config := `custom: ["https://a.com", "https://a.com", "https://b.com"]`
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
@@ -960,17 +919,14 @@ custom: example.com
 			t.Run("Bad URLs are may cause invalid config", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				config := make(map[string]any)
-				config["ko_fi"] = "\"><script>alert(1);</script><a class=\""
-				config["liberapay"] = "text/other"
-				config["thanks_dev"] = "could/be/real/bad"
-				config["custom"] = []string{
-					"#\" style=\"background: url(localhost)",
-					"https://example.com\" class=\"rogue injection",
-					"https://example.com/\" class=\"rogue injection",
-					"<script>alert`1`</script>",
-				}
-
+				config := `ko_fi: '"><script>alert(1);</script><a class="'` + "\n" + // omitted (contains a `/`)
+									"liberapay: 'text/other'\n" + // omitted (contains a `/`)
+									"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
+									"custom:\n" +
+									`- '#" style="background: url(localhost)'` + "\n" +
+									`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
+									`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
+									"- \"<script>alert`1`</script>\""
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				resp := MakeRequest(t, NewRequest(t, "GET", urlStr).AddTokenAuth(token), http.StatusOK)
