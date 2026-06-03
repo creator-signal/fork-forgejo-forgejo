@@ -89,8 +89,8 @@ func CreateCodeComment(ctx *context.Context) {
 		signedLine *= -1
 	}
 
-	if form.ExtraLinesCount < 0 {
-		ctx.Error(http.StatusBadRequest, "ExtraLinesCount must be >= 0")
+	if err := pull_service.ValidateCodeCommentLineRange(form.ExtraLinesCount); err != nil {
+		ctx.Error(http.StatusBadRequest, err.Error())
 		return
 	}
 

@@ -770,8 +770,7 @@ func (c *Comment) UnsignedDisplayLine() uint64 {
 // resolveLineAtHead checks whether a specific line is still present at the given head commit.
 // For positive lines (proposed side), uses git blame --reverse.
 // For negative lines (previous side), uses diff + FindAdjustedLineNumber.
-// If cachedDiff is non-nil, reuses it instead of recomputing the diff.
-func (c *Comment) resolveLineAtHead(gitRepo *git.Repository, lineNum uint64, currentHead string, cachedDiff *string) (*git.ReverseLineBlame, error) {
+func (c *Comment) resolveLineAtHead(gitRepo *git.Repository, lineNum uint64, currentHead string) (*git.ReverseLineBlame, error) {
 	if c.Line > 0 {
 		blame, err := gitRepo.ReverseLineBlame(c.CommitSHA, c.TreePath, lineNum, currentHead)
 		if err != nil {
@@ -780,17 +779,13 @@ func (c *Comment) resolveLineAtHead(gitRepo *git.Repository, lineNum uint64, cur
 		return blame, nil
 	}
 
-	// For comments on removed lines, compute the diff (or reuse the cached one)
-	var diff string
-	if cachedDiff != nil {
-		diff = *cachedDiff
-	} else {
-		var buffer bytes.Buffer
-		if err := git.GetRepoRawDiffForFile(gitRepo, c.CommitSHA, currentHead, git.RawDiffNormal, c.TreePath, &buffer); err != nil {
-			return nil, fmt.Errorf("failed to get diff: %w", err)
-		}
-		diff = buffer.String()
+	// For comments on removed lines, diff the commit the line was known to exist in against the head
+	// being viewed, then locate the line in that diff.
+	var buffer bytes.Buffer
+	if err := git.GetRepoRawDiffForFile(gitRepo, c.CommitSHA, currentHead, git.RawDiffNormal, c.TreePath, &buffer); err != nil {
+		return nil, fmt.Errorf("failed to get diff: %w", err)
 	}
+	diff := buffer.String()
 
 	adjustedLine, err := git.FindAdjustedLineNumber(c.Patch, int64(lineNum), strings.NewReader(diff))
 	if err != nil && errors.Is(err, git.ErrLineNotFound) {
@@ -832,7 +827,13 @@ func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repos
 		}
 		defer closer.Close()
 
-		reverseBlame, err := c.resolveLineAtHead(gitRepo, c.UnsignedLine(), currentHead, nil)
+		// On the previous side the patch is cut around the last line of the range, so resolve that line
+		// (for single-line comments and the proposed side it equals UnsignedLine).
+		resolveLine := c.UnsignedLine()
+		if c.Line < 0 {
+			resolveLine = c.UnsignedDisplayLine()
+		}
+		reverseBlame, err := c.resolveLineAtHead(gitRepo, resolveLine, currentHead)
 		if err != nil {
 			return "", err
 		}
@@ -858,11 +859,10 @@ func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repos
 	return c.reverseLineBlame, nil
 }
 
-// CheckLineRangeValid checks if all additional lines in a multi-line comment range
-// are still valid at the given head commit. Uses the same caching pattern as ResolveCurrentLine.
-// In addition it also verifies that the resolved lines form a contiguous range (each resolved line is exactly previous+1),
-// in order to detect cases where lines were inserted or reordered within the commented range.
-// Returns true if the range is valid, false if any line has been invalidated or the range is no longer contiguous.
+// CheckLineRangeValid reports whether a multi-line comment range can still be placed at the given head.
+// Previous (negative) side: only the last line can be located in the cut patch, so only it is checked.
+// Proposed (positive) side: modified lines are tolerated; only a line landing at an unexpected offset
+// (lines inserted/removed inside the range) invalidates it. Uses the same caching pattern as ResolveCurrentLine.
 func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repository, currentHead string) (bool, error) {
 	if c.ExtraLinesCount <= 0 {
 		return true, nil
@@ -875,42 +875,39 @@ func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repo
 		}
 		defer closer.Close()
 
-		// For negative lines, compute the diff once and reuse for all lines in the range
-		var cachedDiff *string
+		// Previous side: only the last line of the range can be located in the cut patch, so validate it.
 		if c.Line < 0 {
-			var buffer bytes.Buffer
-			if err := git.GetRepoRawDiffForFile(gitRepo, c.CommitSHA, currentHead, git.RawDiffNormal, c.TreePath, &buffer); err != nil {
-				return "", fmt.Errorf("GetRepoRawDiffForFile: %w", err)
-			}
-			diff := buffer.String()
-			cachedDiff = &diff
-		}
-
-		// Resolve the first line position at HEAD, so we can check the next ones follow consecutively
-		anchorBlame, err := c.resolveLineAtHead(gitRepo, c.UnsignedLine(), currentHead, cachedDiff)
-		if err != nil {
-			return "", err
-		}
-		if anchorBlame.CommitID != currentHead {
-			return "invalid", nil
-		}
-		previousResolvedLine := anchorBlame.LineNumber
-
-		// Check each additional line: must exist at HEAD and be contiguous with the previous one
-		startLine := c.UnsignedLine()
-		for i := int64(1); i <= c.ExtraLinesCount; i++ {
-			blame, err := c.resolveLineAtHead(gitRepo, startLine+uint64(i), currentHead, cachedDiff)
+			blame, err := c.resolveLineAtHead(gitRepo, c.UnsignedDisplayLine(), currentHead)
 			if err != nil {
 				return "", err
 			}
 			if blame.CommitID != currentHead {
 				return "invalid", nil
 			}
-			// Verify contiguity: Each resolved line must follow the previous one (no gap allowed)
-			if blame.LineNumber != previousResolvedLine+1 {
+			return "valid", nil
+		}
+
+		// Proposed side: resolve the first line; the others are expected to follow it consecutively.
+		anchorBlame, err := c.resolveLineAtHead(gitRepo, c.UnsignedLine(), currentHead)
+		if err != nil {
+			return "", err
+		}
+		if anchorBlame.CommitID != currentHead {
+			return "invalid", nil
+		}
+		anchorResolvedLine := anchorBlame.LineNumber
+
+		// A line that no longer resolves is treated as "modified but present" and tolerated; only a
+		// resolved line landing at an unexpected offset (lines inserted/removed inside the range) is a break.
+		startLine := c.UnsignedLine()
+		for i := int64(1); i <= c.ExtraLinesCount; i++ {
+			blame, err := c.resolveLineAtHead(gitRepo, startLine+uint64(i), currentHead)
+			if err != nil {
+				return "", err
+			}
+			if blame.CommitID == currentHead && blame.LineNumber != anchorResolvedLine+uint64(i) {
 				return "invalid", nil
 			}
-			previousResolvedLine = blame.LineNumber
 		}
 
 		return "valid", nil

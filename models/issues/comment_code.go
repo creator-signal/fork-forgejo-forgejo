@@ -69,9 +69,14 @@ func (tree CodeConversationsAtLineAndTreePath) insertComment(comment *Comment, b
 	line := comment.DisplayLine()
 	if blame != nil {
 		treePath = blame.FilePath
-		line = int64(blame.LineNumber) + comment.ExtraLinesCount
 		if comment.Line < 0 {
-			line = int64(blame.LineNumber)*-1 - comment.ExtraLinesCount
+			// On the previous side, ResolveCurrentLine resolves the last line of the range (the display
+			// line) directly, so blame.LineNumber already is the signed display line.
+			line = int64(blame.LineNumber) * -1
+		} else {
+			// On the proposed side, blame resolves the first line; the display line is that line shifted
+			// down by the number of extra lines.
+			line = int64(blame.LineNumber) + comment.ExtraLinesCount
 		}
 	}
 

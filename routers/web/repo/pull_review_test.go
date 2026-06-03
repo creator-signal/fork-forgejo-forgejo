@@ -13,7 +13,9 @@ import (
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/web"
 	"forgejo.org/services/context"
 	"forgejo.org/services/contexttest"
@@ -167,6 +169,36 @@ func TestCreateCodeCommentRejectsNegativeExtraLinesCount(t *testing.T) {
 		Line:            1,
 		TreePath:        "README.md",
 		ExtraLinesCount: -1,
+	})
+
+	CreateCodeComment(ctx)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+// TestCreateCodeCommentRejectsExceedingMaxLines checks that the CreateCodeComment handler rejects a
+// multi-line comment spanning more than setting.UI.MaxCodeCommentLines lines with a 400 response.
+func TestCreateCodeCommentRejectsExceedingMaxLines(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	defer test.MockVariableValue(&setting.UI.MaxCodeCommentLines, 50)()
+
+	pr, err := issues_model.GetPullRequestByID(db.DefaultContext, 2)
+	require.NoError(t, err)
+	require.NoError(t, pr.LoadIssue(db.DefaultContext))
+
+	ctx, resp := contexttest.MockContext(t, "/")
+	contexttest.LoadUser(t, ctx, pr.Issue.PosterID)
+	contexttest.LoadRepo(t, ctx, pr.BaseRepoID)
+	ctx.SetParams(":index", strconv.FormatInt(pr.Issue.Index, 10))
+
+	web.SetForm(ctx, &forms.CodeCommentForm{
+		Origin:          "diff",
+		Content:         "a comment",
+		Side:            "proposed",
+		Line:            1,
+		TreePath:        "README.md",
+		ExtraLinesCount: 50, // range spans 51 lines > 50
 	})
 
 	CreateCodeComment(ctx)

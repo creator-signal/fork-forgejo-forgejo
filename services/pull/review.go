@@ -102,6 +102,19 @@ func InvalidateCodeComments(ctx context.Context, prs issues_model.PullRequestLis
 	return nil
 }
 
+// ValidateCodeCommentLineRange validates the extra_lines_count of a (multi-line) code comment: it must
+// not be negative and the resulting range must not span more than setting.UI.MaxCodeCommentLines lines
+// (0 = no limit). It is the single source of truth shared by the web and API creation handlers.
+func ValidateCodeCommentLineRange(extraLinesCount int64) error {
+	if extraLinesCount < 0 {
+		return fmt.Errorf("extra_lines_count must be >= 0")
+	}
+	if setting.UI.MaxCodeCommentLines > 0 && extraLinesCount+1 > int64(setting.UI.MaxCodeCommentLines) {
+		return fmt.Errorf("a code comment may span at most %d lines", setting.UI.MaxCodeCommentLines)
+	}
+	return nil
+}
+
 // CreateCodeComment creates a comment on the code line
 func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.Repository,
 	issue *issues_model.Issue, line, extraLinesCount int64, content, treePath string, pendingReview bool,
@@ -275,12 +288,23 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 		blame, err := gitRepo.ReverseLineBlame(beforeCommitID, treePath, uint64(-1*line), afterCommitID)
 		if err != nil {
 			return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", beforeCommitID, treePath, -1*line, afterCommitID, err)
-		} else if blame.CommitID == afterCommitID {
-			// Although this is a comment on the "previous" side of the diff, the reverse blame indicates that the line
-			// of code still exists in the commit being viewed (eg. it was a comment on a white line in the left-side of
-			// the diff, not a red removed line). In order to record the right information for where to place this
-			// commit, we'll convert this into a right-hand comment -- using the present line number that the reverse
-			// blame gave us:
+		}
+
+		// Convert to a right-hand (proposed) comment only when EVERY line of the range still exists at head
+		// (whole selection unchanged); if any line was removed or modified, keep it on the previous side.
+		rangeStillExists := blame.CommitID == afterCommitID
+		for i := int64(1); rangeStillExists && i <= extraLinesCount; i++ {
+			lineBlame, err := gitRepo.ReverseLineBlame(beforeCommitID, treePath, uint64(-1*line)+uint64(i), afterCommitID)
+			if err != nil {
+				return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", beforeCommitID, treePath, -1*line+i, afterCommitID, err)
+			}
+			if lineBlame.CommitID != afterCommitID {
+				rangeStillExists = false
+			}
+		}
+
+		switch {
+		case rangeStillExists:
 			commit, lineres, err := gitRepo.LineBlame(afterCommitID, treePath, blame.LineNumber)
 			if err == nil {
 				blamedCommitID = commit.ID.String()
@@ -288,7 +312,12 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
 				return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
 			}
-		} else {
+		case blame.CommitID == afterCommitID:
+			// First line still exists but a later one changed
+			blamedCommitID = beforeCommitID
+			// retain negative line numbering to identify we're commenting on the "previous" side of the diff
+			blamedLine = line
+		default:
 			blamedCommitID = blame.CommitID
 			// retain negative line numbering to identify we're commenting on the "previous" side of the diff
 			blamedLine = -1 * int64(blame.LineNumber)

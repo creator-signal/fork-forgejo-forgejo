@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/tests"
@@ -225,6 +226,21 @@ func TestAPIPullReviewMultiLineComment(t *testing.T) {
 				Body:            "negative extra_lines_count",
 				NewLineNum:      1,
 				ExtraLinesCount: -1,
+			},
+		},
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+
+	// Create a review with a range exceeding setting.UI.MaxCodeCommentLines → should be rejected
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews", repo.OwnerName, repo.Name, pullIssue.Index), &api.CreatePullReviewOptions{
+		Body:  "too long review",
+		Event: "COMMENT",
+		Comments: []api.CreatePullReviewComment{
+			{
+				Path:            "README.md",
+				Body:            "extra_lines_count over the limit",
+				NewLineNum:      1,
+				ExtraLinesCount: int64(setting.UI.MaxCodeCommentLines), // range spans MaxCodeCommentLines+1 lines
 			},
 		},
 	}).AddTokenAuth(token)

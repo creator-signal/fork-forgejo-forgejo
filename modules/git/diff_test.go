@@ -319,6 +319,35 @@ index 2d203fb..d0cb63f 100644
 		assert.Equal(t, LinePlacement{Left: 50, Right: 52}, lineNumber)
 	})
 
+	t.Run("target line is an unchanged line right after a modification", func(t *testing.T) {
+		// The commented line (49) is a context line immediately following a modified line (48).
+		// The added ('+') line for the modification must be skipped while locating the old-side line,
+		// otherwise it would be matched against line 49 and wrongly reported as changed.
+		cutDiff := `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -46,4 +46,4 @@ Line 45
+ Line 46
+ Line 47
+-Line 48
++Line 48--modified
+ Line 49`
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..b21df3f 100644
+--- a/file1.md
++++ b/file1.md
+@@ -46,4 +46,4 @@ Line 45
+ Line 46
+ Line 47
+-Line 48
++Line 48--modified
+ Line 49
+ Line 50`
+		lineNumber, err := FindAdjustedLineNumber(cutDiff, 49, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 49, Right: 49}, lineNumber)
+	})
+
 	t.Run("changes above in the same hunk", func(t *testing.T) {
 		diff := `diff --git a/file1.md b/file1.md
 index 2d203fb..f35a466 100644
