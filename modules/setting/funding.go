@@ -185,8 +185,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		Text:         "polar.sh/%[1]s",
 		URL:          "https://polar.sh/%[1]s",
 		InputPattern: singleSegmentRegex,
-		IconName:     "polar.png",
-		IconNameDark: "polar_dark.png",
+		IconName:     "polar.svg",
+		IconNameDark: "", // TODO: get rid of this _dark variant nonsense, instead let forgejo optimize the SVGs, add currentColor or other theming variants inline, and inject them into the template using {{svg "brand-polar"}} etc. Do alt text for all of these in some other way, like by wrapping the svg in a labeled div or smth.
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "buy_me_a_coffee",
