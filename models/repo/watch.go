@@ -40,6 +40,8 @@ type WatchSelection struct {
 	Issues       bool
 	PullRequests bool
 	Releases     bool
+	// When changing these options or adding more don't forget to update
+	// BuilderWatchAnything and checkForRepoConsistency in the consistency check.
 }
 
 // When the user is watching at least one thing on a repo they count as a watcher on the repo.
