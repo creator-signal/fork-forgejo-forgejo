@@ -10,6 +10,8 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/setting"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRepoWatch(t *testing.T) {
