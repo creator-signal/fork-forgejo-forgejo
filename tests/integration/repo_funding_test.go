@@ -191,6 +191,7 @@ func TestSponsorButton(t *testing.T) {
 		})
 	})
 
+	// FIXME: we don't need to integration-test every permutation like this, do we? and some of these would probably make be much unit tests. Consider TestAPIRepoIssueConfigPaths, TestAPIRepoValidateIssueConfig, and TestAPIRepoGetIssueConfig for example
 	for _, treePath := range testFundingCandidates {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			t.Run("sponsor button hidden with empty funding config (repo)", func(t *testing.T) {

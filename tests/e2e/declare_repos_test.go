@@ -234,7 +234,7 @@ custom:
   - '<script>alert` + "`" + `1` + "`" + `</script>'
 `},
 	}}, nil)
-	newRepo(t, 44, ".profile", nil, []FileChanges{{
+	newRepo(t, 45, ".profile", nil, []FileChanges{{
 		Filename: "FUNDING.yml",
 		Versions: []string{`
 ko_fi: example
@@ -242,12 +242,12 @@ liberapay: example
 custom: "http://localhost:3003/"
 `},
 	}}, nil)
-	newRepo(t, 44, "empty_funding", nil, []FileChanges{{
+	newRepo(t, 45, "empty_funding", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 `},
 	}}, nil)
-	newRepo(t, 44, "whoops_all_invalid_funding", nil, []FileChanges{{
+	newRepo(t, 45, "whoops_all_invalid_funding", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 foo: bar
