@@ -3,7 +3,7 @@
 
 package forgejo_migrations
 
- import (
+import (
 	"xorm.io/xorm"
 )
 
