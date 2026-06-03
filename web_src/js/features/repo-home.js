@@ -37,6 +37,9 @@ export async function initRepoTopicBar() {
         labelField: 'topic_name',
         searchField: 'topic_name',
         items: originalTopics,
+        render: {
+          no_results: () => null,
+        },
         async load(query, callback) {
           if (!query.length) return callback([]);
           try {

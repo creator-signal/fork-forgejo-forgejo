@@ -954,7 +954,12 @@ func renderRepoTopics(ctx *context.Context) {
 		ctx.ServerError("models.FindTopics", err)
 		return
 	}
-	ctx.Data["Topics"] = topics
+
+	topicNames := make([]string, 0, len(topics))
+	for _, t := range topics {
+		topicNames = append(topicNames, t.Name)
+	}
+	ctx.Data["Topics"] = topicNames
 }
 
 func prepareOpenWithEditorApps(ctx *context.Context) {
