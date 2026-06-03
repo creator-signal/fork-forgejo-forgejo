@@ -42,7 +42,7 @@ func (err ErrFundingNotExist) Error() string {
 	return fmt.Sprintf("No funding config found in repo %s/%s", err.Repo.OwnerName, err.Repo.Name)
 }
 
-// IsErrFundingNotExist checks if an error is a ErrFundingNotExist.
+// IsErrFundingNotExist returns `true` if the error is an `ErrFundingNotExist`.
 func IsErrFundingNotExist(err error) bool {
 	_, ok := err.(ErrFundingNotExist)
 	return ok
@@ -155,7 +155,8 @@ type RepoFunding struct {
 	Errors []error
 }
 
-// GetFundingFromPath the given funding file.
+// GetFundingFromPath parses a funding config from the file at the given `path`
+// in the given commit on the repository.
 func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) (*RepoFunding, error) {
 	var err error
 
@@ -191,7 +192,9 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	for key := range fundingMap {
 		fundingKeys = append(fundingKeys, key)
 	}
-	sort.Strings(fundingKeys) // TODO: This works for now, but consider a stricter order based on the funding config later on
+
+	// This is good for a consistent order, but I'd like for the order to match the funding config :/
+	sort.Strings(fundingKeys)
 
 	entryList := make([]*api.RepoFundingEntry, 0)
 	var errs []error
