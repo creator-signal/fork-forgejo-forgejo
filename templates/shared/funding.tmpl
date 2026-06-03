@@ -12,21 +12,17 @@
 			{{end}}
 			<ul class="tw-list-none tw-p-0">
 				{{range .Funding}}
-				<li class="tw-flex tw-gap-2 tw-mb-4">
-					{{if eq .ProviderName "custom"}}
-						{{/* we render this svg directly, rather than relying on the configured img src, for better color theming */}}
-						{{/* TODO: alt-text */}}
-						{{svg "octicon-link" 24 "funding-logo"}}
-					{{else if .Icon}}
-						<picture class="funding-logo {{.ProviderName}}">
-							{{if .IconDark}}
-							<source srcset="{{.IconDark}}" media="(prefers-color-scheme: dark)" />
-							{{end}}
-							<img src="{{.Icon}}" alt="{{.ProviderName}}" width="24" height="24">
-						</picture>
+				<li class="tw-flex tw-flex-nowrap tw-items-center tw-gap-2 tw-mb-4">
+					<div class="icon" role="img" aria-label="{{.ProviderName}}">
+					{{if eq .ProviderName "buy_me_a_coffee" "community_bridge" "github" "issuehunt" "ko_fi" "liberapay" "open_collective" "patreon" "polar" "thanks_dev"}}
+						{{$iconName := (print "brand-" .ProviderName)}}
+						{{svg $iconName 22}}
+					{{else if eq .ProviderName "custom"}}
+						{{svg "octicon-link" 22}}
 					{{else}}
-						{{svg "octicon-heart" 24 "funding-logo"}}
+						{{svg "octicon-heart" 22}}
 					{{end}}
+					</div>
 					<a rel="noopener" href="{{.URL}}">{{.Text}}</a>
 				</li>
 				{{end}}

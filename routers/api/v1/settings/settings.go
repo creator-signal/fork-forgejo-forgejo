@@ -108,8 +108,6 @@ func GetFundingSettings(ctx *context.APIContext) {
 		providerData.Text = provider.Text
 		providerData.URL = provider.URL
 		providerData.InputPattern = provider.InputPattern.String()
-		providerData.Icon = setting.IconForProvider(provider)
-		providerData.IconDark = setting.DarkIconForProvider(provider)
 
 		providers = append(providers, providerData)
 	}

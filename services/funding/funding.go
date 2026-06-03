@@ -145,8 +145,6 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, input)
 	entry.URL = urlText
-	entry.Icon = setting.IconForProvider(provider)
-	entry.IconDark = setting.DarkIconForProvider(provider)
 
 	return entry, nil
 }

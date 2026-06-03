@@ -459,8 +459,4 @@ type RepoFundingEntry struct {
 	Text string `json:"text"`
 	// URL to a profile on the funding provider
 	URL string `json:"url"`
-	// Path to the logo of the funding provider
-	Icon string `json:"icon"`
-	// Path to the dark-theme logo, if any, of the funding provider
-	IconDark string `json:"icon_dark"`
 }

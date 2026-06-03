@@ -26,8 +26,6 @@ URL = "https://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)        // derived from URL
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL) // note that the %s becomes %[1]s as well, since this will only ever have the one input
@@ -47,8 +45,6 @@ URL = "mailto:%s@localhost"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Text) // same as URL
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
@@ -68,8 +64,6 @@ TEXT = "Email %s@localhost for info"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Text)
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
@@ -89,8 +83,6 @@ URL = "https://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Text)
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -109,8 +101,6 @@ URL = "mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.URL)
@@ -129,8 +119,6 @@ URL = "://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.svg", mycustom.IconName)
-	assert.Empty(t, mycustom.IconNameDark)
 	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.URL)
@@ -202,8 +190,6 @@ URL = "https://mycustom.example.com/%%s"
 
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, "mycustom.svg", mycustom.IconName)
-		assert.Empty(t, mycustom.IconNameDark)
 		assert.Equal(t, expected, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
@@ -237,90 +223,10 @@ INPUT_PATTERN = %v
 
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, "mycustom.svg", mycustom.IconName)
-		assert.Empty(t, mycustom.IconNameDark)
 		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
 		assert.Equal(t, expected, mycustom.InputPattern.String())
-	}
-}
-
-func TestNewFundingProviderConfigWithCustomIcon(t *testing.T) {
-	defer test.MockProtect(&FundingProviders)()
-
-	cases := [][2]string{
-		{"", "mycustom.svg"},
-		{"mycustom.svg", "mycustom.svg"},
-		{"mycustom.png", "mycustom.png"},
-		{"img/funding/mycustom.png", "mycustom.svg"}, // defaults when not a filename
-		{"any/path/here/mycustom.png", "mycustom.svg"},
-		{"any/path/here/mycustom.svg", "mycustom.svg"},
-		{"../mycustom.png", "mycustom.svg"},
-		{"../mycustom.svg", "mycustom.svg"},
-		{"./mycustom.png", "mycustom.svg"},
-		{"/mycustom.png", "mycustom.svg"},
-		{"\\mycustom.png", "mycustom.svg"},
-	}
-
-	for _, c := range cases {
-		input := c[0]
-		expected := c[1]
-		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
-[funding.mycustom]
-URL = "https://mycustom.example.com/%%s"
-ICON = "%s"
-`, input))
-		require.NoError(t, err)
-		loadCustomFundingProvidersFrom(cfg)
-
-		mycustom := FundingProviders["mycustom"]
-		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, expected, mycustom.IconName)
-		assert.Empty(t, mycustom.IconNameDark)
-		assert.Equal(t, 1, int(mycustom.Limit))
-		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
-		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
-	}
-}
-
-func TestNewFundingProviderConfigWithCustomDarkIcon(t *testing.T) {
-	defer test.MockProtect(&FundingProviders)()
-
-	cases := [][2]string{
-		{"", ""}, // unlike regular ICON, this one defaults to nothing
-		{"mycustom.svg", "mycustom.svg"},
-		{"mycustom.png", "mycustom.png"},
-		{"img/funding/mycustom.png", ""},
-		{"any/path/here/mycustom.png", ""},
-		{"any/path/here/mycustom.svg", ""},
-		{"../mycustom.png", ""},
-		{"../mycustom.svg", ""},
-		{"./mycustom.png", ""},
-		{"/mycustom.png", ""},
-		{"\\mycustom.png", ""},
-	}
-
-	for _, c := range cases {
-		input := c[0]
-		expected := c[1]
-		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
-[funding.mycustom]
-URL = "https://mycustom.example.com/%%s"
-ICON_DARK = "%s"
-`, input))
-		require.NoError(t, err)
-		loadCustomFundingProvidersFrom(cfg)
-
-		mycustom := FundingProviders["mycustom"]
-		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, "mycustom.svg", mycustom.IconName)
-		assert.Equal(t, expected, mycustom.IconNameDark)
-		assert.Equal(t, 1, int(mycustom.Limit))
-		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
-		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 	}
 }
 
@@ -336,8 +242,6 @@ LIMIT = 0
 
 	koFi := FundingProviders["ko_fi"]
 	assert.Equal(t, "ko_fi", koFi.Name)
-	assert.Equal(t, "ko_fi.svg", koFi.IconName)
-	assert.Empty(t, koFi.IconNameDark)
 	assert.Equal(t, 1, int(koFi.Limit)) // no change from builtin
 	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text)
 	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.URL)

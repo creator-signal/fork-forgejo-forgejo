@@ -14,7 +14,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
@@ -83,8 +82,6 @@ func TestAPIFundingSettings(t *testing.T) {
 			})
 			custom := providers.Providers[customIdx]
 			assert.NotNil(t, custom)
-			assert.Equal(t, "/assets/img/svg/octicon-link.svg", custom.Icon)
-			assert.Empty(t, custom.IconDark)
 			assert.Equal(t, "%[1]s", custom.Text)
 			assert.Equal(t, "%[1]s", custom.URL)
 			assert.Equal(t, 4, int(custom.Limit))
@@ -95,8 +92,6 @@ func TestAPIFundingSettings(t *testing.T) {
 			})
 			liberapay := providers.Providers[liberapayIdx]
 			assert.NotNil(t, liberapay)
-			assert.Equal(t, "/assets/img/funding/liberapay.svg", liberapay.Icon)
-			assert.Empty(t, liberapay.IconDark)
 			assert.Equal(t, "liberapay.com/%[1]s", liberapay.Text)
 			assert.Equal(t, "https://liberapay.com/%[1]s", liberapay.URL)
 			assert.Equal(t, 1, int(liberapay.Limit))
@@ -107,8 +102,6 @@ func TestAPIFundingSettings(t *testing.T) {
 			})
 			thanksDev := providers.Providers[thanksDevIdx]
 			assert.NotNil(t, thanksDev)
-			assert.Equal(t, "/assets/img/funding/thanks_dev.svg", thanksDev.Icon)
-			assert.Equal(t, "/assets/img/funding/thanks_dev_dark.svg", thanksDev.IconDark)
 			assert.Equal(t, "thanks.dev/%[1]s", thanksDev.Text)
 			assert.Equal(t, "https://thanks.dev/%[1]s", thanksDev.URL)
 			assert.Equal(t, 1, int(thanksDev.Limit))
@@ -188,20 +181,14 @@ custom: example.com
 				assert.Equal(t, "custom", custom.ProviderName)
 				assert.Equal(t, "https://example.com", custom.Text)
 				assert.Equal(t, "https://example.com", custom.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom.Icon)
-				assert.Empty(t, custom.IconDark)
 
 				assert.Equal(t, "ko_fi", koFi.ProviderName)
 				assert.Equal(t, "ko-fi.com/test", koFi.Text)
 				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
-				assert.Empty(t, koFi.IconDark)
 
 				assert.Equal(t, "patreon", patreon.ProviderName)
 				assert.Equal(t, "patreon.com/test", patreon.Text)
 				assert.Equal(t, "https://patreon.com/test", patreon.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", patreon.Icon)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", patreon.IconDark) // patreon includes a dark-theme icon, whereas ko-fi does not
 			})
 
 			t.Run("Custom string array", func(t *testing.T) {
@@ -220,26 +207,18 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://a.com", funding[0].Text)
 				assert.Equal(t, "https://a.com", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "b.com", funding[1].Text)
 				assert.Equal(t, "http://b.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
 				assert.Equal(t, "http://withquery.example.com?test=foo", funding[2].Text)
 				assert.Equal(t, "http://withquery.example.com?test=foo", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
 				assert.Equal(t, "http://thistimewithhash#foo", funding[3].Text)
 				assert.Equal(t, "http://thistimewithhash#foo", funding[3].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
-				assert.Empty(t, funding[3].IconDark)
 			})
 
 			t.Run("Skips duplicate entries", func(t *testing.T) {
@@ -254,14 +233,10 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://a.com", funding[0].Text)
 				assert.Equal(t, "https://a.com", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://b.com", funding[1].Text)
 				assert.Equal(t, "https://b.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 			})
 
 			t.Run("Invalid config", func(t *testing.T) {
@@ -294,20 +269,14 @@ custom: example.com
 				assert.Equal(t, "custom", custom1.ProviderName)
 				assert.Equal(t, "test", custom1.Text)
 				assert.Equal(t, "http://test", custom1.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom1.Icon)
-				assert.Empty(t, custom1.IconDark)
 
 				assert.Equal(t, "custom", custom2.ProviderName)
 				assert.Equal(t, "https://example.com", custom2.Text)
 				assert.Equal(t, "https://example.com", custom2.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", custom2.Icon)
-				assert.Empty(t, custom2.IconDark)
 
 				assert.Equal(t, "liberapay", liberapay.ProviderName)
 				assert.Equal(t, "liberapay.com/test", liberapay.Text)
 				assert.Equal(t, "https://liberapay.com/test", liberapay.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/liberapay.svg", liberapay.Icon)
-				assert.Empty(t, liberapay.IconDark)
 			})
 
 			t.Run("Partially invalid (unknown key omitted)", func(t *testing.T) {
@@ -324,14 +293,10 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "http://test", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 			})
 
 			t.Run("Partially invalid (bad and unknown key omitted)", func(t *testing.T) {
@@ -348,14 +313,10 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "http://test", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 			})
 
 			t.Run("Partially invalid (bad and unknown keys omitted)", func(t *testing.T) {
@@ -374,14 +335,10 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test", funding[0].Text)
 				assert.Equal(t, "http://test", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 			})
 
 			t.Run("Partially invalid (one element of list is bad type)", func(t *testing.T) {
@@ -397,8 +354,6 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "https://example.com", funding[0].Text)
 				assert.Equal(t, "https://example.com", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 			})
 
 			t.Run("Partially invalid (too many of one provider)", func(t *testing.T) {
@@ -419,26 +374,18 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "test1", funding[0].Text)
 				assert.Equal(t, "http://test1", funding[0].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com", funding[1].Text)
 				assert.Equal(t, "https://example.com", funding[1].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
 				assert.Equal(t, "test3", funding[2].Text)
 				assert.Equal(t, "http://test3", funding[2].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
 
 				assert.Equal(t, "custom", funding[3].ProviderName)
 				assert.Equal(t, "test4", funding[3].Text)
 				assert.Equal(t, "http://test4", funding[3].URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[3].Icon)
-				assert.Empty(t, funding[3].IconDark)
 			})
 
 			t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
@@ -468,38 +415,26 @@ custom: example.com
 				assert.Equal(t, "custom", test1.ProviderName)
 				assert.Equal(t, "test1", test1.Text)
 				assert.Equal(t, "http://test1", test1.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
-				assert.Empty(t, test1.IconDark)
 
 				assert.Equal(t, "custom", exampleCom.ProviderName)
 				assert.Equal(t, "https://example.com", exampleCom.Text)
 				assert.Equal(t, "https://example.com", exampleCom.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
-				assert.Empty(t, exampleCom.IconDark)
 
 				assert.Equal(t, "custom", test3.ProviderName)
 				assert.Equal(t, "test3", test3.Text)
 				assert.Equal(t, "http://test3", test3.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
-				assert.Empty(t, test3.IconDark)
 
 				assert.Equal(t, "custom", test4.ProviderName)
 				assert.Equal(t, "test4", test4.Text)
 				assert.Equal(t, "http://test4", test4.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
-				assert.Empty(t, test4.IconDark)
 
 				assert.Equal(t, "ko_fi", koFi.ProviderName)
 				assert.Equal(t, "ko-fi.com/test", koFi.Text)
 				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
-				assert.Empty(t, koFi.IconDark)
 
 				assert.Equal(t, "patreon", patreon.ProviderName)
 				assert.Equal(t, "patreon.com/test", patreon.Text)
 				assert.Equal(t, "https://patreon.com/test", patreon.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon.svg", patreon.Icon)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/patreon_dark.svg", patreon.IconDark)
 			})
 
 			t.Run("Partially invalid (too many of two providers, valid list of others)", func(t *testing.T) {
@@ -527,32 +462,22 @@ custom: example.com
 				assert.Equal(t, "custom", test1.ProviderName)
 				assert.Equal(t, "test1", test1.Text)
 				assert.Equal(t, "http://test1", test1.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
-				assert.Empty(t, test1.IconDark)
 
 				assert.Equal(t, "custom", exampleCom.ProviderName)
 				assert.Equal(t, "https://example.com", exampleCom.Text)
 				assert.Equal(t, "https://example.com", exampleCom.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
-				assert.Empty(t, exampleCom.IconDark)
 
 				assert.Equal(t, "custom", test3.ProviderName)
 				assert.Equal(t, "test3", test3.Text)
 				assert.Equal(t, "http://test3", test3.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
-				assert.Empty(t, test3.IconDark)
 
 				assert.Equal(t, "custom", test4.ProviderName)
 				assert.Equal(t, "test4", test4.Text)
 				assert.Equal(t, "http://test4", test4.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
-				assert.Empty(t, test4.IconDark)
 
 				assert.Equal(t, "ko_fi", koFi.ProviderName)
 				assert.Equal(t, "ko-fi.com/test", koFi.Text)
 				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
-				assert.Empty(t, koFi.IconDark)
 			})
 
 			t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
@@ -580,32 +505,22 @@ custom: example.com
 				assert.Equal(t, "custom", test1.ProviderName)
 				assert.Equal(t, "test1", test1.Text)
 				assert.Equal(t, "http://test1", test1.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test1.Icon)
-				assert.Empty(t, test1.IconDark)
 
 				assert.Equal(t, "custom", exampleCom.ProviderName)
 				assert.Equal(t, "https://example.com", exampleCom.Text)
 				assert.Equal(t, "https://example.com", exampleCom.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", exampleCom.Icon)
-				assert.Empty(t, exampleCom.IconDark)
 
 				assert.Equal(t, "custom", test3.ProviderName)
 				assert.Equal(t, "test3", test3.Text)
 				assert.Equal(t, "http://test3", test3.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test3.Icon)
-				assert.Empty(t, test3.IconDark)
 
 				assert.Equal(t, "custom", test4.ProviderName)
 				assert.Equal(t, "test4", test4.Text)
 				assert.Equal(t, "http://test4", test4.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", test4.Icon)
-				assert.Empty(t, test4.IconDark)
 
 				assert.Equal(t, "ko_fi", koFi.ProviderName)
 				assert.Equal(t, "ko-fi.com/test", koFi.Text)
 				assert.Equal(t, "https://ko-fi.com/test", koFi.URL)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/funding/ko_fi.svg", koFi.Icon)
-				assert.Empty(t, koFi.IconDark)
 			})
 
 			t.Run("Bad URLs get escaped or elided", func(t *testing.T) {
@@ -629,20 +544,14 @@ custom: example.com
 				assert.Equal(t, "custom", funding[0].ProviderName)
 				assert.Equal(t, "http://#%22%20style=%22background:%20url(localhost)", funding[0].URL)
 				assert.Equal(t, "#\" style=\"background: url(localhost)", funding[0].Text)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[0].Icon)
-				assert.Empty(t, funding[0].IconDark)
 
 				assert.Equal(t, "custom", funding[1].ProviderName)
 				assert.Equal(t, "https://example.com/%22%20class=%22rogue%20injection", funding[1].URL)
 				assert.Equal(t, "https://example.com/\" class=\"rogue injection", funding[1].Text)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[1].Icon)
-				assert.Empty(t, funding[1].IconDark)
 
 				assert.Equal(t, "custom", funding[2].ProviderName)
 				assert.Equal(t, "http://%3Cscript%3Ealert%601%60%3C/script%3E", funding[2].URL)
 				assert.Equal(t, "<script>alert`1`</script>", funding[2].Text)
-				assert.Equal(t, setting.AppSubURL+"/assets/img/svg/octicon-link.svg", funding[2].Icon)
-				assert.Empty(t, funding[2].IconDark)
 			})
 		})
 	}

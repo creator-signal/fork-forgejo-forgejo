@@ -40,67 +40,67 @@ test('Sponsor modal', async ({browser}) => {
   const community_bridge = items[0];
   await expect(community_bridge.locator('a')).toHaveAttribute('href', 'https://funding.communitybridge.org/projects/example');
   await expect(community_bridge.locator('a')).toHaveText('funding.communitybridge.org/projects/example');
-  await expect(community_bridge.locator('img')).toHaveAccessibleName('community_bridge');
+  await expect(community_bridge.locator('.icon')).toHaveAccessibleName('community_bridge');
 
   const github1 = items[1];
   await expect(github1.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example');
   await expect(github1.locator('a')).toHaveText('github.com/sponsors/example');
-  await expect(github1.locator('img')).toHaveAccessibleName('github');
+  await expect(github1.locator('.icon')).toHaveAccessibleName('github');
 
   const github2 = items[2];
   await expect(github2.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example2');
   await expect(github2.locator('a')).toHaveText('github.com/sponsors/example2');
-  await expect(github2.locator('img')).toHaveAccessibleName('github');
+  await expect(github2.locator('.icon')).toHaveAccessibleName('github');
 
   const issuehunt = items[3];
   await expect(issuehunt.locator('a')).toHaveAttribute('href', 'https://issuehunt.io/r/example');
   await expect(issuehunt.locator('a')).toHaveText('issuehunt.io/r/example');
-  await expect(issuehunt.locator('img')).toHaveAccessibleName('issuehunt');
+  await expect(issuehunt.locator('.icon')).toHaveAccessibleName('issuehunt');
 
   const ko_fi = items[4];
   await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
   await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
-  await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
+  await expect(ko_fi.locator('.icon')).toHaveAccessibleName('ko_fi');
 
   const liberapay = items[5];
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
-  await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
+  await expect(liberapay.locator('.icon')).toHaveAccessibleName('liberapay');
 
   const patreon = items[6];
   await expect(patreon.locator('a')).toHaveAttribute('href', 'https://patreon.com/example');
   await expect(patreon.locator('a')).toHaveText('patreon.com/example');
-  await expect(patreon.locator('img')).toHaveAccessibleName('patreon');
+  await expect(patreon.locator('.icon')).toHaveAccessibleName('patreon');
 
   const open_collective = items[7];
   await expect(open_collective.locator('a')).toHaveAttribute('href', 'https://opencollective.com/example');
   await expect(open_collective.locator('a')).toHaveText('opencollective.com/example');
-  await expect(open_collective.locator('img')).toHaveAccessibleName('open_collective');
+  await expect(open_collective.locator('.icon')).toHaveAccessibleName('open_collective');
 
   const buy_me_a_coffee = items[8];
   await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
   await expect(buy_me_a_coffee.locator('a')).toHaveText('buymeacoffee.com/example');
-  await expect(buy_me_a_coffee.locator('img')).toHaveAccessibleName('buy_me_a_coffee');
+  await expect(buy_me_a_coffee.locator('.icon')).toHaveAccessibleName('buy_me_a_coffee');
 
   const polar = items[9];
   await expect(polar.locator('a')).toHaveAttribute('href', 'https://polar.sh/example');
   await expect(polar.locator('a')).toHaveText('polar.sh/example');
-  await expect(polar.locator('img')).toHaveAccessibleName('polar');
+  await expect(polar.locator('.icon')).toHaveAccessibleName('polar');
 
   const thanks_dev = items[10];
   await expect(thanks_dev.locator('a')).toHaveAttribute('href', 'https://thanks.dev/u/gh/example');
   await expect(thanks_dev.locator('a')).toHaveText('thanks.dev/u/gh/example');
-  await expect(thanks_dev.locator('img')).toHaveAccessibleName('thanks_dev');
+  await expect(thanks_dev.locator('.icon')).toHaveAccessibleName('thanks_dev');
 
   const custom1 = items[11];
   await expect(custom1.locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(custom1.locator('a')).toHaveText('https://example.com');
-  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(custom1.locator('.icon')).toHaveAccessibleName('custom');
 
   const custom2 = items[12];
   await expect(custom2.locator('a')).toHaveAttribute('href', 'http://example.com');
   await expect(custom2.locator('a')).toHaveText('example.com');
-  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: same
+  await expect(custom2.locator('.icon')).toHaveAccessibleName('custom');
 
   await screenshot(page);
 });
@@ -169,7 +169,7 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
   expect(items).toHaveLength(1);
   await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(items[0].locator('a')).toHaveText('https://example.com');
-  // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
@@ -213,23 +213,6 @@ for (const testCase of [
       await accessibilityCheck({ page }, ['dialog#sponsor-modal'], [], []);
     });
   }
-}
-
-for (const colorScheme of ['light', 'dark'] as const) {
-  test(`Sponsor modal: all images load (${colorScheme} mode)`, async ({browser}) => {
-    const context = await browser.newContext({colorScheme});
-    const page = await context.newPage();
-
-    const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
-    expect(response?.status()).toBe(200);
-
-    await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
-    await expect(page.locator('#sponsor-modal')).toBeVisible();
-
-    await page.waitForFunction(() => {
-      return Array.from(document.querySelectorAll('#sponsor-modal img')).every((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
-    });
-  });
 }
 
 test('Sponsor modal: closes on Esc', async ({browser}) => {
@@ -309,7 +292,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   expect(items).toHaveLength(1);
   await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
   await expect(items[0].locator('a')).toHaveText('https://example.com');
-  // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
 
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
   await page.getByText('funding config').click();
@@ -343,15 +326,15 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
 
   await expect(items[0].locator('a')).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
   await expect(items[0].locator('a')).toHaveText('#" style="background: url(localhost)');
-  // await expect(items[0].locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
 
   await expect(items[1].locator('a')).toHaveAttribute('href', 'https://example.com/%22%20class=%22rogue%20injection');
   await expect(items[1].locator('a')).toHaveText('https://example.com/" class="rogue injection');
-  // await expect(items[1].locator('svg')).toHaveAccessibleName('custom'); // TODO: same
+  await expect(items[1].locator('.icon')).toHaveAccessibleName('custom');
 
   await expect(items[2].locator('a')).toHaveAttribute('href', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
   await expect(items[2].locator('a')).toHaveText('<script>alert`1`</script>');
-  // await expect(items[2].locator('svg')).toHaveAccessibleName('custom'); // TODO: same
+  await expect(items[2].locator('.icon')).toHaveAccessibleName('custom');
   await expect(items[2].locator('a *')).toBeHidden(); // no real injected <script>
   await expect(sponsorModal.locator('script')).toBeHidden();
 });
@@ -384,17 +367,17 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   const ko_fi = items[0];
   await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
   await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
-  await expect(ko_fi.locator('img')).toHaveAccessibleName('ko_fi');
+  await expect(ko_fi.locator('.icon')).toHaveAccessibleName('ko_fi');
 
   const liberapay = items[1];
   await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
   await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
-  await expect(liberapay.locator('img')).toHaveAccessibleName('liberapay');
+  await expect(liberapay.locator('.icon')).toHaveAccessibleName('liberapay');
 
   const custom = items[2];
   await expect(custom.locator('a')).toHaveAttribute('href', 'http://localhost:3003/');
   await expect(custom.locator('a')).toHaveText('http://localhost:3003/');
-  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(custom.locator('.icon')).toHaveAccessibleName('custom');
 });
 
 test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
@@ -425,10 +408,10 @@ test('Sponsor button (org): appears when an org profile has a valid funding conf
   const bmac = items[0];
   await expect(bmac.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
   await expect(bmac.locator('a')).toHaveText('buymeacoffee.com/example');
-  await expect(bmac.locator('img')).toHaveAccessibleName('buy_me_a_coffee');
+  await expect(bmac.locator('.icon')).toHaveAccessibleName('buy_me_a_coffee');
 
   const custom = items[1];
   await expect(custom.locator('a')).toHaveAttribute('href', 'http://example.com');
   await expect(custom.locator('a')).toHaveText('example.com');
-  // await expect(custom.locator('svg')).toHaveAccessibleName('custom'); // TODO: not sure how to do svg alt text yet
+  await expect(custom.locator('.icon')).toHaveAccessibleName('custom');
 });

@@ -80,26 +80,11 @@ func assertNFundingEntries(t *testing.T, htmlDoc *HTMLDoc, expectedNumberOfEntri
 // Ensures the page's Sponsor modal contains the given entry.
 //
 // `nth` is 1-indexed, indicating which entry in the list to check.
-//
-// If `imgSrc` is empty, then the entry is assumed to be a Custom URL entry,
-// and an octicon-link SVG will be checked for instead of an image icon.
-func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href, imgSrc string) {
+func assertFundingEntry(t *testing.T, htmlDoc *HTMLDoc, nth uint, href, imgName string) {
 	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
 
 	htmlDoc.AssertAttrEqual(t, sel+" a", "href", href)
-	if imgSrc == "" {
-		htmlDoc.AssertElement(t, sel+" img", false)
-		htmlDoc.AssertElement(t, sel+" svg.octicon-link", true)
-	} else {
-		htmlDoc.AssertAttrEqual(t, sel+" picture > img", "src", imgSrc)
-		htmlDoc.AssertElement(t, sel+" svg.octicon-link", false)
-	}
-}
-
-func assertFundingEntryHasDarkIconVariant(t *testing.T, htmlDoc *HTMLDoc, nth uint, darkImgSrc string) {
-	sel := fmt.Sprintf("dialog#sponsor-modal li:nth-child(%d)", nth)
-	htmlDoc.AssertAttrEqual(t, sel+" picture > source", "srcset", darkImgSrc)
-	htmlDoc.AssertAttrEqual(t, sel+" picture > source", "media", "(prefers-color-scheme: dark)")
+	htmlDoc.AssertElement(t, sel+" svg."+imgName, true)
 }
 
 // Ensures the page's Sponsor modal contains the given text in the given entry,
@@ -186,8 +171,8 @@ func TestSponsorButton(t *testing.T) {
 			assertSponsorButton(t, htmlDoc)
 			assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 			assertNFundingEntries(t, htmlDoc, 2)
-			assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
-			assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+			assertFundingEntry(t, htmlDoc, 1, "http://example.com", "octicon-link")
+			assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "brand-ko_fi")
 		})
 	})
 
@@ -256,9 +241,9 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", user.Name))
 				assertNFundingEntries(t, htmlDoc, 3)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
-				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "brand-ko_fi")
+				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "brand-liberapay")
+				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "octicon-link")
 
 				// no validation error!
 				htmlDoc = getFilePage(t, repo, treePath)
@@ -298,9 +283,9 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", org.FullName))
 				assertNFundingEntries(t, htmlDoc, 3)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
-				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "brand-ko_fi")
+				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "brand-liberapay")
+				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "octicon-link")
 
 				// no validation error!
 				htmlDoc = getFilePage(t, repo, treePath)
@@ -330,8 +315,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/test", "/assets/img/funding/liberapay.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "brand-ko_fi")
+				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/test", "brand-liberapay")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -349,8 +334,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 2, "http://test2", "")
+				assertFundingEntry(t, htmlDoc, 1, "http://test1", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "http://test2", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -368,8 +353,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 2, "http://test2", "")
+				assertFundingEntry(t, htmlDoc, 1, "http://test1", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "http://test2", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -389,7 +374,7 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 1)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "brand-ko_fi")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 2)
@@ -408,9 +393,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://patreon.com/test", "/assets/img/funding/patreon.svg")
-				assertFundingEntryHasDarkIconVariant(t, htmlDoc, 2, "/assets/img/funding/patreon_dark.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "https://patreon.com/test", "brand-patreon")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 0)
@@ -428,8 +412,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "brand-ko_fi")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -448,8 +432,8 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 2)
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "brand-ko_fi")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -466,7 +450,7 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 1)
-				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "")
+				assertFundingEntry(t, htmlDoc, 1, "https://example.com", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -488,10 +472,10 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 4)
-				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
-				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
+				assertFundingEntry(t, htmlDoc, 1, "http://test1", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 3, "http://test3", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 4, "http://test4", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -514,11 +498,11 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 5)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 2, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 4, "http://test3", "")
-				assertFundingEntry(t, htmlDoc, 5, "http://test4", "")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "brand-ko_fi")
+				assertFundingEntry(t, htmlDoc, 2, "http://test1", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 4, "http://test3", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 5, "http://test4", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -542,11 +526,11 @@ custom: example.com
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 5)
-				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 2, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 4, "http://test3", "")
-				assertFundingEntry(t, htmlDoc, 5, "http://test4", "")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "brand-ko_fi")
+				assertFundingEntry(t, htmlDoc, 2, "http://test1", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 4, "http://test3", "octicon-link")
+				assertFundingEntry(t, htmlDoc, 5, "http://test4", "octicon-link")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 3)
@@ -573,13 +557,13 @@ custom: example.com
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 3)
 
-				assertFundingEntry(t, htmlDoc, 1, "http://#%22%20style=%22background:%20url%28localhost%29", "")
+				assertFundingEntry(t, htmlDoc, 1, "http://#%22%20style=%22background:%20url%28localhost%29", "octicon-link")
 				assertFundingEntryHasText(t, htmlDoc, 1, "#\" style=\"background: url(localhost)")
 
-				assertFundingEntry(t, htmlDoc, 2, "https://example.com/%22%20class=%22rogue%20injection", "")
+				assertFundingEntry(t, htmlDoc, 2, "https://example.com/%22%20class=%22rogue%20injection", "octicon-link")
 				assertFundingEntryHasText(t, htmlDoc, 2, "https://example.com/\" class=\"rogue injection")
 
-				assertFundingEntry(t, htmlDoc, 3, "http://%3Cscript%3Ealert%601%60%3C/script%3E", "")
+				assertFundingEntry(t, htmlDoc, 3, "http://%3Cscript%3Ealert%601%60%3C/script%3E", "octicon-link")
 				assertFundingEntryHasText(t, htmlDoc, 3, "<script>alert`1`</script>")
 
 				htmlDoc = getFilePage(t, repo, treePath)
