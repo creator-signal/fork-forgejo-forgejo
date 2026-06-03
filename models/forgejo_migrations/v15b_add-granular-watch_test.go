@@ -29,8 +29,6 @@ type Watch struct {
 	RepoID int64       `xorm:"UNIQUE(watch)"`
 	Source WatchSource `xorm:"BOOL DEFAULT TRUE"`
 	// In the next PR there will be another mode here, choosing the user preset or a custom selection.
-	// TODO: figure out whether the user preset should count as watching
-	// TODO: (then change the description to IsWatching)
 
 	WatchSelectionIssues       bool `xorm:"BOOL DEFAULT TRUE"`
 	WatchSelectionPullRequests bool `xorm:"BOOL DEFAULT TRUE"`
@@ -105,8 +103,9 @@ func Test_addGranularWatchColumnsAndDropModeColumn(t *testing.T) {
 	}
 
 	require.NotNil(t, getColumn("watch", "mode"))
-	_, err := x.Table("watch").Count()
+	cnt1, err := x.Table("watch").Count()
 	require.NoError(t, err)
+	require.Equal(t, int64(7), cnt1)
 
 	require.NoError(t, addGranularWatchColumnsAndDropModeColumn(x))
 

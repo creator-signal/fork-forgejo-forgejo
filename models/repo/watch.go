@@ -34,7 +34,6 @@ const (
 	WatchSourceAutomatic WatchSource = true
 
 	// There may not be more modes than the above two.
-	// I intend this to be a single bit.
 )
 
 type WatchSelection struct {
@@ -80,7 +79,7 @@ func (w Watch) GetWatchSelection() WatchSelection {
 	return WatchSelection{Issues: w.WatchSelectionIssues, PullRequests: w.WatchSelectionPullRequests, Releases: w.WatchSelectionReleases}
 }
 
-// Warning: this does not set the WatchMode.
+// Warning: this does not set the WatchSource.
 // The caller needs to do that properly.
 func (w *Watch) setWatchSelection(watchSelection WatchSelection) {
 	w.WatchSelectionIssues = watchSelection.Issues

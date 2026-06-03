@@ -3,14 +3,13 @@
 
 package forgejo_migrations
 
-import (
+ import (
 	"xorm.io/xorm"
 )
 
 type WatchSource bool
 
 const (
-	// TOOD: properly migrate this
 	// WatchSourceExplicit means the user explicitly chose to watch certain things (or none or all) of this repo.
 	// It means that setting.Service.AutoWatchOnChanges doesn't have an effect on this user for this repo; they explicitly made their choice after all.
 	// This mode replaces the old WatchModeDont and WatchModeNormal states.
@@ -72,19 +71,11 @@ func addGranularWatchColumnsAndDropModeColumn(x *xorm.Engine) error {
 	)
 	// end copy of old code //
 
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceAutomatic, WatchModeNone)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode IN (?, ?)", WatchSourceAutomatic, WatchModeNone, WatchModeAuto)
 	if err != nil {
 		return err
 	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceExplicit, WatchModeNormal)
-	if err != nil {
-		return err
-	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceExplicit, WatchModeDont)
-	if err != nil {
-		return err
-	}
-	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode = ?", WatchSourceAutomatic, WatchModeAuto)
+	_, err = x.Exec("UPDATE `watch` SET source = ? WHERE mode IN (?, ?)", WatchSourceExplicit, WatchModeNormal, WatchModeDont)
 	if err != nil {
 		return err
 	}
