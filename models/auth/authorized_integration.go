@@ -83,7 +83,7 @@ func init() {
 //	{
 //	  "rules": [{
 //	     "claim": "sub",
-//	     "comparison": "eq",
+//	     "compare": "eq",
 //	     "value": "repo:forgejo/website:pull_request"
 //	  }]
 //	}
@@ -184,6 +184,18 @@ func InsertAuthorizedIntegration(ctx context.Context, ai *AuthorizedIntegration)
 	return err
 }
 
+func UpdateAuthorizedIntegration(ctx context.Context, ai *AuthorizedIntegration) error {
+	// NoAutoTime -- UpdatedUnix is used to track the last used time, don't update it when editing
+	// AllCols -- ensure ResourceAllRepo can be set to false
+	rowsImpacted, err := db.GetEngine(ctx).ID(ai.ID).NoAutoTime().AllCols().Update(ai)
+	if rowsImpacted == 0 {
+		return fmt.Errorf("authorized integration update affected 0 records: %w", util.ErrNotExist)
+	} else if rowsImpacted != 1 {
+		return fmt.Errorf("authorized integration update affected %d records", rowsImpacted)
+	}
+	return err
+}
+
 // Bump the UpdatedUnix field of this authorized integration to now, tracking when it was last used for authentication.
 // To reduce database write workload, this is only tracked by one-minute intervals -- the UPDATE statement conditionally
 // avoids writes.
@@ -256,4 +268,30 @@ func ParseAuthorizedIntegrationUI(ui string) (AuthorizedIntegrationUI, error) {
 		return AuthorizedIntegrationUIForgejoActionsLocal, nil
 	}
 	return AuthorizedIntegrationUI(""), fmt.Errorf("invalid authorized integration UI: %q", ui)
+}
+
+// Delete an authorized integration by ID.  Must only succeed if the authorized integration identified is owned by the
+// user provided.
+func DeleteAuthorizedIntegrationByID(ctx context.Context, id, userID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		// Delete doesn't take into account userID, but will be rolled back by the transaction if the user ID isn't
+		// correct.  Needs to occur first due to foreign key.
+		if err := db.DeleteBeans(ctx,
+			&AuthorizedIntegResourceRepo{IntegID: id},
+		); err != nil {
+			return fmt.Errorf("DeleteBeans: %w", err)
+		}
+
+		cnt, err := db.GetEngine(ctx).
+			ID(id).
+			Delete(&AuthorizedIntegration{
+				UserID: userID,
+			})
+		if err != nil {
+			return err
+		} else if cnt != 1 {
+			return fmt.Errorf("authorized integration %d does not exist: %w", id, util.ErrNotExist)
+		}
+		return nil
+	})
 }

@@ -23,6 +23,24 @@
   },
   "basePath": "{{AppSubUrl | JSEscape}}/api/v1",
   "paths": {
+    "/actions/run": {
+      "get": {
+        "description": "The automatic actions token must be used as the authentication mechanism (\u003ccode\u003eAuthorization: Bearer $\u0026#x7b;\u0026#x7b; forgejo.token \u0026#x7d;\u0026#x7d;\u003c/code\u003e); other types of tokens cannot be used. The token is associated with the job, which must be still running for the request to this endpoint to succeed.\n",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "miscellaneous"
+        ],
+        "summary": "Get a workflow run associated with a token",
+        "operationId": "getActionsRun",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionRun"
+          }
+        }
+      }
+    },
     "/activitypub/actor": {
       "get": {
         "produces": [
@@ -5792,6 +5810,73 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs": {
+      "get": {
+        "description": "Returns the plaintext log for the job. By default the log for the most recent attempt is returned (ActionRunJob.TaskID tracks the latest task). Pass `?attempt=N` to fetch the log for a specific historical attempt; the value matches the `attempt` field returned by the job listing endpoints.\n",
+        "produces": [
+          "text/plain"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Download the plaintext logs of an action job",
+        "operationId": "repoGetActionJobLogs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow job",
+            "name": "job_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "1-based attempt number matching the value of `attempt` in the job listing; omit to fetch the latest attempt of the job",
+            "name": "attempt",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plaintext log content",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "206": {
+            "description": "Partial log content (Range request)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/runners": {
       "get": {
         "produces": [
@@ -6377,6 +6462,60 @@
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/logs": {
+      "get": {
+        "produces": [
+          "application/zip"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Download a ZIP of plaintext logs for every job in an action run",
+        "operationId": "repoGetActionRunLogs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow run. The ZIP contains the latest attempt of each job in the run, with each entry named `{job-name}-{job-id}-attempt-{N}.log` (the job ID prevents collisions when two jobs share a name; the attempt number records which run the log came from). The run itself has no attempt number — jobs are re-run independently, so use the per-job logs endpoint with `?attempt` to fetch a specific historical attempt of one job.\n",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP archive of per-job log files",
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -22792,6 +22931,11 @@
       "type": "object",
       "title": "AccessToken represents an API access token.",
       "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
         "id": {
           "type": "integer",
           "format": "int64",
@@ -24114,7 +24258,7 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitStatusState": {
-      "description": "CommitStatusState holds the state of a CommitStatus\nIt can be \"pending\", \"success\", \"error\", \"failure\" and \"warning\"",
+      "description": "CommitStatusState holds the state of a CommitStatus\nIt can be \"pending\", \"success\", \"error\", \"failure\", \"warning\", or \"skipped\"",
       "type": "string",
       "x-go-package": "forgejo.org/modules/structs"
     },
@@ -27620,19 +27764,19 @@
       "type": "object",
       "properties": {
         "Context": {
-          "description": "Context to render\n\nin: body",
+          "description": "Context to render",
           "type": "string"
         },
         "Mode": {
-          "description": "Mode to render (comment, gfm, markdown)\n\nin: body",
+          "description": "Mode to render (comment, gfm, markdown)",
           "type": "string"
         },
         "Text": {
-          "description": "Text markdown to render\n\nin: body",
+          "description": "Text markdown to render",
           "type": "string"
         },
         "Wiki": {
-          "description": "Is it a wiki page ?\n\nin: body",
+          "description": "Is it a wiki page ?",
           "type": "boolean"
         }
       },
@@ -27643,27 +27787,27 @@
       "type": "object",
       "properties": {
         "BranchPath": {
-          "description": "The current branch path where the form gets posted\n\nin: body",
+          "description": "The current branch path where the form gets posted",
           "type": "string"
         },
         "Context": {
-          "description": "Context to render\n\nin: body",
+          "description": "Context to render",
           "type": "string"
         },
         "FilePath": {
-          "description": "File path for detecting extension in file mode\n\nin: body",
+          "description": "File path for detecting extension in file mode",
           "type": "string"
         },
         "Mode": {
-          "description": "Mode to render (comment, gfm, markdown, file)\n\nin: body",
+          "description": "Mode to render (comment, gfm, markdown, file)",
           "type": "string"
         },
         "Text": {
-          "description": "Text markup to render\n\nin: body",
+          "description": "Text markup to render",
           "type": "string"
         },
         "Wiki": {
-          "description": "Is it a wiki page ?\n\nin: body",
+          "description": "Is it a wiki page ?",
           "type": "boolean"
         }
       },
@@ -28166,6 +28310,11 @@
           "type": "string",
           "x-go-name": "AvatarURL"
         },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
         "description": {
           "type": "string",
           "x-go-name": "Description"
@@ -28498,12 +28647,21 @@
           "type": "string",
           "x-go-name": "Title"
         },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Updated"
+        },
         "url": {
           "type": "string",
           "x-go-name": "URL"
         },
         "user": {
           "$ref": "#/definitions/User"
+        },
+        "verified": {
+          "type": "boolean",
+          "x-go-name": "Verified"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

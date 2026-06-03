@@ -16,6 +16,7 @@ import (
 	quota_model "forgejo.org/models/quota"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
+	"forgejo.org/modules/avatar"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/metrics"
 	"forgejo.org/modules/public"
@@ -101,28 +102,88 @@ func optionsCorsHandler() func(next http.Handler) http.Handler {
 	}
 }
 
-// The OAuth2 plugin is expected to be executed first, as it must ignore the user id stored
-// in the session (if there is a user id stored in session other plugins might return the user
-// object for that id).
-//
-// The Session plugin is expected to be executed second, in order to skip authentication
-// for users that have already signed in.
+// Authentication methods that are applied to all the web URL routes.  They are processed in the order defined; an
+// earlier authentication success would prevent later authentication methods from being attempted.
 func buildAuthGroup() *auth_method.Group {
 	group := auth_method.NewGroup()
-	group.Add(&auth_method.OAuth2{}) // FIXME: this should be removed and only applied in download and oauth related routers
-	group.Add(&auth_method.Basic{})  // FIXME: this should be removed and only applied in download and git/lfs routers
+	if setting.Service.EnableReverseProxyAuth {
+		// reverseproxy should before Session, otherwise the header will be ignored if user has login
+		group.Add(&auth_method.ReverseProxy{
+			CreateSession: true,
+		})
+	}
+	group.Add(&auth_method.Session{})
+	return group
+}
 
-	// FIXME: extracted from OAuth2 & Basic -- these methods have internal URL filters that should be moved into
-	// middlewares (if we can figure out the right way to do that), similar to the notes on OAuth2 & Basic above.
-	group.Add(&auth_method.AccessToken{})
+// Authentication methods that are applied to "mixed" web URL routes.  Mixed routes are those that are primarily
+// designed for web browser access, but can also be accessed by API consumers.
+func buildMixedAuthGroup() *auth_method.Group {
+	group := auth_method.NewGroup()
+	group.Add(&auth_method.OAuth2{})
+	group.Add(&auth_method.Basic{})
+	group.Add(&auth_method.AccessToken{
+		PermitBasic:  true,
+		PermitBearer: true,
+	})
 	group.Add(&auth_method.ActionRuntimeToken{})
-	group.Add(&auth_method.ActionTaskToken{})
-
+	group.Add(&auth_method.ActionTaskToken{
+		PermitBasic:  true,
+		PermitBearer: true,
+	})
+	group.Add(&auth_method.AuthorizedIntegration{})
 	if setting.Service.EnableReverseProxyAuth {
 		group.Add(&auth_method.ReverseProxy{}) // reverseproxy should before Session, otherwise the header will be ignored if user has login
 	}
 	group.Add(&auth_method.Session{})
+	return group
+}
 
+// Authentication methods that are applied to Git LFS HTTP routes.  They are processed in the order defined; an earlier
+// authentication success would prevent later authentication methods from being attempted.
+func buildGitLfsAuthGroup() *auth_method.Group {
+	group := auth_method.NewGroup()
+	group.Add(&auth_method.LFSToken{})
+	group.Add(&auth_method.Basic{})
+	group.Add(&auth_method.AccessToken{
+		PermitBasic: true,
+		// PermitBearer is left at default `false`.  This behaviour is maintained from when one auth method performed
+		// all the "Basic ..." handling, and one performed all the "Bearer ..." handling, and access to LFS paths
+		// weren't permitted in the bearer codepath.  There isn't a clear reason from Forgejo's perspective to deny
+		// usage in this case, it's just maintained because it previously worked that way.
+	})
+	group.Add(&auth_method.ActionTaskToken{
+		PermitBasic: true,
+		// PermitBearer is left at default `false` -- same explanation as above for AccessToken.
+	})
+	group.Add(&auth_method.AuthorizedIntegration{
+		// "Authorization: Basic ..." is easier to use for git operations, and already supported for other tokens, so it
+		// is enabled for Authorized Integrations as well:
+		PermitBasic: true,
+	})
+	return group
+}
+
+// Authentication methods that are applied to Git HTTP routes.  They are processed in the order defined; an earlier
+// authentication success would prevent later authentication methods from being attempted.
+func buildGitAuthGroup() *auth_method.Group {
+	group := auth_method.NewGroup()
+	group.Add(&auth_method.OAuth2{})
+	group.Add(&auth_method.Basic{})
+	group.Add(&auth_method.AccessToken{
+		PermitBasic:  true,
+		PermitBearer: true,
+	})
+	group.Add(&auth_method.ActionRuntimeToken{})
+	group.Add(&auth_method.ActionTaskToken{
+		PermitBasic:  true,
+		PermitBearer: true,
+	})
+	group.Add(&auth_method.AuthorizedIntegration{
+		// "Authorization: Basic ..." is easier to use for git operations, and already supported for other tokens, so it
+		// is enabled for Authorized Integrations as well:
+		PermitBasic: true,
+	})
 	return group
 }
 
@@ -275,87 +336,130 @@ func ctxDataSet(args ...any) func(ctx *context.Context) {
 func Routes() *web.Route {
 	routes := web.NewRoute()
 
+	routes.Use(chi_middleware.GetHead)
+
 	routes.Head("/", misc.DummyOK) // for health check - doesn't need to be passed through gzip handler
 	routes.Methods("GET, HEAD, OPTIONS", "/assets/*", optionsCorsHandler(), public.FileHandlerFunc())
-	routes.Methods("GET, HEAD", "/avatars/*", storageHandler(setting.Avatar.Storage, "avatars", storage.Avatars))
-	routes.Methods("GET, HEAD", "/repo-avatars/*", storageHandler(setting.RepoAvatar.Storage, "repo-avatars", storage.RepoAvatars))
+	routes.Methods("GET, HEAD", "/avatars/*", resizingHandler("avatars", storage.Avatars, avatar.AllowedResizedAvatarSizes))
+	routes.Methods("GET, HEAD", "/repo-avatars/*", resizingHandler("repo-avatars", storage.RepoAvatars, avatar.AllowedResizedAvatarSizes))
 	routes.Methods("GET, HEAD", "/apple-touch-icon.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/apple-touch-icon-precomposed.png", misc.StaticRedirect("/assets/img/apple-touch-icon.png"))
 	routes.Methods("GET, HEAD", "/favicon.ico", misc.StaticRedirect("/assets/img/favicon.png"))
 
 	_ = templates.HTMLRenderer()
 
-	var mid []any
-
+	var gzipMid any
 	if setting.EnableGzip {
 		wrapper, err := gzhttp.NewWrapper(gzhttp.RandomJitter(32, 0, false), gzhttp.MinSize(GzipMinSize))
 		if err != nil {
 			log.Fatal("gzhttp.NewWrapper failed: %v", err)
 		}
-		mid = append(mid, wrapper)
+		gzipMid = wrapper
 	}
 
 	if setting.Service.EnableCaptcha {
 		// The captcha http.Handler should only fire on /captcha/* so we can just mount this on that url
-		routes.Methods("GET,HEAD", "/captcha/*", append(mid, captcha.Server(captcha.StdWidth, captcha.StdHeight).ServeHTTP)...)
+		routes.Methods("GET,HEAD", "/captcha/*", gzipMid, captcha.Server(captcha.StdWidth, captcha.StdHeight).ServeHTTP)
 	}
 
 	if setting.Metrics.Enabled {
 		prometheus.MustRegister(metrics.NewCollector())
-		routes.Get("/metrics", append(mid, Metrics)...)
+		routes.Get("/metrics", gzipMid, Metrics)
 	}
 
-	routes.Methods("GET,HEAD", "/robots.txt", append(mid, misc.RobotsTxt)...)
-	routes.Methods("GET,HEAD", "/manifest.json", append(mid, misc.ManifestJSON)...)
+	routes.Methods("GET,HEAD", "/robots.txt", gzipMid, misc.RobotsTxt)
+	routes.Methods("GET,HEAD", "/manifest.json", gzipMid, misc.ManifestJSON)
 	routes.Get("/ssh_info", misc.SSHInfo)
 	routes.Get("/api/healthz", healthcheck.Check)
 
-	mid = append(mid, common.Sessioner(), context.Contexter())
-
-	// Get user from session if logged in.
-	mid = append(mid, webAuth(buildAuthGroup()))
-
-	// GetHead allows a HEAD request redirect to GET if HEAD method is not defined for that route
-	mid = append(mid, chi_middleware.GetHead)
-
 	if setting.API.EnableSwagger {
-		// Note: The route is here but no in API routes because it renders a web page
-		routes.Get("/api/swagger", append(mid, misc.Swagger)...) // Render V1 by default
-		routes.Get("/api/forgejo/swagger", append(mid, misc.SwaggerForgejo)...)
+		routes.Group("", func() {
+			// Note: The route is here but no in API routes because it renders a web page
+			routes.Get("/api/swagger", misc.Swagger) // Render V1 by default
+			routes.Get("/api/forgejo/swagger", misc.SwaggerForgejo)
+		}, gzipMid, context.Contexter())
 	}
 
-	// TODO: These really seem like things that could be folded into Contexter or as helper functions
-	mid = append(mid, user.GetNotificationCount)
-	mid = append(mid, repo.GetActiveStopwatch)
-	mid = append(mid, goGet)
+	routes.Group("",
+		func() {
+			registerRoutes(routes)
+		},
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
+		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
+		user.GetNotificationCount, repo.GetActiveStopwatch,
+		goGet)
+	routes.Group("",
+		func() {
+			registerMixedRoutes(routes)
+		},
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet)
+	routes.Group("",
+		func() {
+			registerGitLFSRoutes(routes)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet)
+	routes.Group("",
+		func() {
+			registerGitRoutes(routes)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
 
-	others := web.NewRoute()
-	others.Use(mid...)
-	registerRoutes(others)
-	routes.Mount("", others)
+	// The only endpoint which can only be accessed with the OAuth2 authentication method is /userinfo, extracted here
+	// so that other auth methods can't be applied to it
+	routes.Methods(
+		"GET, POST, OPTIONS",
+		"/login/oauth/userinfo",
+		gzipMid, common.Sessioner(), context.Contexter(),
+		oauth2Enabled, optionsCorsHandler(), ignoreCSRF, webAuth(&auth_method.OAuth2{}),
+		auth.InfoOAuth)
+
+	routes.NotFound(
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
+		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
+		user.GetNotificationCount, repo.GetActiveStopwatch,
+		goGet,
+		func(w http.ResponseWriter, req *http.Request) {
+			ctx := context.GetWebContext(req)
+			if ctx == nil {
+				panic("missing middleware context.Contexter()")
+			}
+			ctx.NotFound("", nil)
+		})
+
 	return routes
 }
 
-var ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
-
-// registerRoutes register routes
-func registerRoutes(m *web.Route) {
-	reqSignIn := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true})
-	reqSignOut := verifyAuthWithOptions(&common.VerifyOptions{SignOutRequired: true})
+var (
+	ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
+	reqSignIn  = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true})
+	reqSignOut = verifyAuthWithOptions(&common.VerifyOptions{SignOutRequired: true})
 	// TODO: rename them to "optSignIn", which means that the "sign-in" could be optional, depends on the VerifyOptions (RequireSignInView)
-	ignSignIn := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView})
-	ignExploreSignIn := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView})
+	ignSignIn        = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView})
+	ignExploreSignIn = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView})
 
-	validation.AddBindingRules()
+	reqRepoAdmin               = context.RequireRepoAdmin()
+	reqRepoCodeWriter          = context.RequireRepoWriter(unit.TypeCode)
+	canEnableEditor            = context.CanEnableEditor()
+	reqRepoCodeReader          = context.RequireRepoReader(unit.TypeCode)
+	reqRepoReleaseWriter       = context.RequireRepoWriter(unit.TypeReleases)
+	reqRepoReleaseReader       = context.RequireRepoReader(unit.TypeReleases)
+	reqRepoWikiWriter          = context.RequireRepoWriter(unit.TypeWiki)
+	reqRepoIssueReader         = context.RequireRepoReader(unit.TypeIssues)
+	reqRepoPullsReader         = context.RequireRepoReader(unit.TypePullRequests)
+	reqRepoIssuesOrPullsWriter = context.RequireRepoWriterOr(unit.TypeIssues, unit.TypePullRequests)
+	reqRepoIssuesOrPullsReader = context.RequireRepoReaderOr(unit.TypeIssues, unit.TypePullRequests)
+	reqRepoProjectsReader      = context.RequireRepoReader(unit.TypeProjects)
+	reqRepoProjectsWriter      = context.RequireRepoWriter(unit.TypeProjects)
+	reqRepoActionsReader       = context.RequireRepoReader(unit.TypeActions)
+	reqRepoActionsWriter       = context.RequireRepoWriter(unit.TypeActions)
+	reqRepoDelegateActionTrust = context.RequireRepoDelegateActionTrust()
 
-	linkAccountEnabled := func(ctx *context.Context) {
+	linkAccountEnabled = func(ctx *context.Context) {
 		if !setting.Service.EnableOpenIDSignIn && !setting.Service.EnableOpenIDSignUp && !setting.OAuth2.Enabled {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	requiredTwoFactor := func(ctx *context.Context) {
+	requiredTwoFactor = func(ctx *context.Context) {
 		if !ctx.Doer.MustHaveTwoFactor() {
 			return
 		}
@@ -369,28 +473,28 @@ func registerRoutes(m *web.Route) {
 		ctx.Data["HideNavbarLinks"] = !hasTwoFactor
 	}
 
-	openIDSignInEnabled := func(ctx *context.Context) {
+	openIDSignInEnabled = func(ctx *context.Context) {
 		if !setting.Service.EnableOpenIDSignIn {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	openIDSignUpEnabled := func(ctx *context.Context) {
+	openIDSignUpEnabled = func(ctx *context.Context) {
 		if !setting.Service.EnableOpenIDSignUp {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	oauth2Enabled := func(ctx *context.Context) {
+	oauth2Enabled = func(ctx *context.Context) {
 		if !setting.OAuth2.Enabled {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	reqMilestonesDashboardPageEnabled := func(ctx *context.Context) {
+	reqMilestonesDashboardPageEnabled = func(ctx *context.Context) {
 		if !setting.Service.ShowMilestonesDashboardPage {
 			ctx.Error(http.StatusForbidden)
 			return
@@ -398,56 +502,42 @@ func registerRoutes(m *web.Route) {
 	}
 
 	// webhooksEnabled requires webhooks to be enabled by admin.
-	webhooksEnabled := func(ctx *context.Context) {
+	webhooksEnabled = func(ctx *context.Context) {
 		if setting.DisableWebhooks {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	lfsServerEnabled := func(ctx *context.Context) {
-		if !setting.LFS.StartServer {
-			ctx.Error(http.StatusNotFound)
-			return
-		}
-	}
-
-	federationEnabled := func(ctx *context.Context) {
+	federationEnabled = func(ctx *context.Context) {
 		if !setting.Federation.Enabled {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
 	}
 
-	dlSourceEnabled := func(ctx *context.Context) {
-		if setting.Repository.DisableDownloadSourceArchives {
-			ctx.Error(http.StatusNotFound)
-			return
-		}
-	}
-
-	sitemapEnabled := func(ctx *context.Context) {
+	sitemapEnabled = func(ctx *context.Context) {
 		if !setting.Other.EnableSitemap {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
 	}
 
-	packagesEnabled := func(ctx *context.Context) {
+	packagesEnabled = func(ctx *context.Context) {
 		if !setting.Packages.Enabled {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
 	}
 
-	feedEnabled := func(ctx *context.Context) {
+	feedEnabled = func(ctx *context.Context) {
 		if !setting.Other.EnableFeed {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
 	}
 
-	reqUnitAccess := func(unitType unit.Type, accessMode perm.AccessMode, ignoreGlobal bool) func(ctx *context.Context) {
+	reqUnitAccess = func(unitType unit.Type, accessMode perm.AccessMode, ignoreGlobal bool) func(ctx *context.Context) {
 		return func(ctx *context.Context) {
 			// only check global disabled units when ignoreGlobal is false
 			if !ignoreGlobal && unitType.UnitGlobalDisabled() {
@@ -468,6 +558,11 @@ func registerRoutes(m *web.Route) {
 			}
 		}
 	}
+)
+
+// registerRoutes register routes
+func registerRoutes(m *web.Route) {
+	validation.AddBindingRules()
 
 	addSettingsVariablesRoutes := func() {
 		m.Group("/variables", func() {
@@ -598,7 +693,6 @@ func registerRoutes(m *web.Route) {
 		}, reqSignIn)
 
 		m.Group("", func() {
-			m.Methods("GET, POST, OPTIONS", "/userinfo", auth.InfoOAuth)
 			m.Methods("POST, OPTIONS", "/access_token", web.Bind(forms.AccessTokenForm{}), auth.AccessTokenOAuth)
 			m.Methods("GET, OPTIONS", "/keys", auth.OIDCKeys)
 			m.Methods("POST, OPTIONS", "/introspect", web.Bind(forms.IntrospectTokenForm{}), auth.IntrospectOAuth)
@@ -672,7 +766,15 @@ func registerRoutes(m *web.Route) {
 		})
 
 		m.Group("/authorized-integrations", func() {
-			m.Get("/{ui}/{id}", user_setting.ViewAuthorizedIntegration)
+			m.Group("/{ui}", func() {
+				m.Combo("/new").
+					Get(user_setting.NewAuthorizedIntegration).
+					Post(user_setting.NewAuthorizedIntegrationPost)
+				m.Combo("/{id}").
+					Get(user_setting.EditAuthorizedIntegration).
+					Post(user_setting.EditAuthorizedIntegrationPost)
+			}, user_setting.BindAuthorizedIntegrationUI, user_setting.DynamicBindAuthorizedIntegrationForm)
+			m.Post("/delete", user_setting.DeleteAuthorizedIntegration)
 			m.Get("", user_setting.ListAuthorizedIntegrations)
 		})
 
@@ -882,27 +984,9 @@ func registerRoutes(m *web.Route) {
 
 	m.Group("", func() {
 		m.Get("/{username}", user.UsernameSubRoute)
-		m.Methods("GET, OPTIONS", "/attachments/{uuid}", optionsCorsHandler(), repo.GetAttachment)
 	}, ignSignIn)
 
 	m.Post("/{username}", reqSignIn, context.UserAssignmentWeb(), user.Action)
-
-	reqRepoAdmin := context.RequireRepoAdmin()
-	reqRepoCodeWriter := context.RequireRepoWriter(unit.TypeCode)
-	canEnableEditor := context.CanEnableEditor()
-	reqRepoCodeReader := context.RequireRepoReader(unit.TypeCode)
-	reqRepoReleaseWriter := context.RequireRepoWriter(unit.TypeReleases)
-	reqRepoReleaseReader := context.RequireRepoReader(unit.TypeReleases)
-	reqRepoWikiWriter := context.RequireRepoWriter(unit.TypeWiki)
-	reqRepoIssueReader := context.RequireRepoReader(unit.TypeIssues)
-	reqRepoPullsReader := context.RequireRepoReader(unit.TypePullRequests)
-	reqRepoIssuesOrPullsWriter := context.RequireRepoWriterOr(unit.TypeIssues, unit.TypePullRequests)
-	reqRepoIssuesOrPullsReader := context.RequireRepoReaderOr(unit.TypeIssues, unit.TypePullRequests)
-	reqRepoProjectsReader := context.RequireRepoReader(unit.TypeProjects)
-	reqRepoProjectsWriter := context.RequireRepoWriter(unit.TypeProjects)
-	reqRepoActionsReader := context.RequireRepoReader(unit.TypeActions)
-	reqRepoActionsWriter := context.RequireRepoWriter(unit.TypeActions)
-	reqRepoDelegateActionTrust := context.RequireRepoDelegateActionTrust()
 
 	reqPackageAccess := func(accessMode perm.AccessMode) func(ctx *context.Context) {
 		return func(ctx *context.Context) {
@@ -1429,7 +1513,6 @@ func registerRoutes(m *web.Route) {
 		}, ctxDataSet("EnableFeed", setting.Other.EnableFeed),
 			repo.MustBeNotEmpty, context.RepoRefByType(context.RepoRefTag, true))
 		m.Get("/releases/attachments/{uuid}", repo.MustBeNotEmpty, repo.GetAttachment)
-		m.Get("/releases/download/{vTag}/{fileName}", repo.MustBeNotEmpty, repo.RedirectDownload)
 		m.Group("/releases", func() {
 			m.Combo("/new", context.EnforceQuotaWeb(quota_model.LimitSubjectSizeReposAll, context.QuotaTargetRepo)).
 				Get(repo.NewRelease).
@@ -1443,11 +1526,6 @@ func registerRoutes(m *web.Route) {
 			m.Post("/edit/*", web.Bind(forms.EditReleaseForm{}), repo.EditReleasePost)
 		}, reqSignIn, repo.MustBeNotEmpty, context.RepoMustNotBeArchived(), reqRepoReleaseWriter, repo.CommitInfoCache, context.EnforceQuotaWeb(quota_model.LimitSubjectSizeReposAll, context.QuotaTargetRepo))
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes(), reqRepoReleaseReader)
-
-	// to maintain compatibility with old attachments
-	m.Group("/{username}/{reponame}", func() {
-		m.Get("/attachments/{uuid}", repo.GetAttachment)
-	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
 	m.Group("/{username}/{reponame}", func() {
 		m.Post("/topics", repo.TopicsPost)
@@ -1597,11 +1675,6 @@ func registerRoutes(m *web.Route) {
 			m.Get("/{period}", repo.ActivityAuthors)
 		}, context.RepoRef(), repo.MustBeNotEmpty, context.RequireRepoReaderOr(unit.TypeCode))
 
-		m.Group("/archive", func() {
-			m.Get("/*", repo.Download)
-			m.Post("/*", repo.InitiateDownload)
-		}, repo.MustBeNotEmpty, dlSourceEnabled, reqRepoCodeReader)
-
 		m.Group("/branches", func() {
 			m.Get("/list", repo.GetBranchesList)
 			m.Get("", repo.Branches)
@@ -1672,15 +1745,6 @@ func registerRoutes(m *web.Route) {
 			m.Get("/*", context.RepoRefByType(context.RepoRefLegacy), repo.SingleDownloadOrLFS)
 		}, repo.MustBeNotEmpty, reqRepoCodeReader)
 
-		m.Group("/raw", func() {
-			m.Get("/branch/*", context.RepoRefByType(context.RepoRefBranch), repo.SingleDownload)
-			m.Get("/tag/*", context.RepoRefByType(context.RepoRefTag), repo.SingleDownload)
-			m.Get("/commit/*", context.RepoRefByType(context.RepoRefCommit), repo.SingleDownload)
-			m.Get("/blob/{sha}", context.RepoRefByType(context.RepoRefBlob), repo.DownloadByID)
-			// "/*" route is deprecated, and kept for backward compatibility
-			m.Get("/*", context.RepoRefByType(context.RepoRefLegacy), repo.SingleDownload)
-		}, repo.MustBeNotEmpty, reqRepoCodeReader)
-
 		m.Group("/render", func() {
 			m.Get("/branch/*", context.RepoRefByType(context.RepoRefBranch), repo.RenderFile)
 			m.Get("/tag/*", context.RepoRefByType(context.RepoRefTag), repo.RenderFile)
@@ -1736,7 +1800,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/sync_fork", context.RepoMustNotBeArchived(), repo.MustBeNotEmpty, reqRepoCodeWriter, repo.SyncFork)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
-	m.Post("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
+	m.Get("/{username}/{reponame}/lastcommit/*", ignSignIn, context.RepoAssignment, context.UnitTypes(), context.RepoRefByType(context.RepoRefCommit), reqRepoCodeReader, repo.LastCommit)
 
 	m.Group("/{username}/{reponame}", func() {
 		if !setting.Repository.DisableStars {
@@ -1756,27 +1820,6 @@ func registerRoutes(m *web.Route) {
 		m.Group("/{reponame}", func() {
 			m.Get("", repo.SetEditorconfigIfExists, repo.Home)
 		}, ignSignIn, context.RepoAssignment, context.RepoRef(), context.UnitTypes())
-
-		m.Group("/{reponame}", func() {
-			m.Group("/info/lfs", func() {
-				m.Post("/objects/batch", lfs.CheckAcceptMediaType, lfs.BatchHandler)
-				m.Put("/objects/{oid}/{size}", lfs.UploadHandler)
-				m.Get("/objects/{oid}/{filename}", lfs.DownloadHandler)
-				m.Get("/objects/{oid}", lfs.DownloadHandler)
-				m.Post("/verify", lfs.CheckAcceptMediaType, lfs.VerifyHandler)
-				m.Group("/locks", func() {
-					m.Get("/", lfs.GetListLockHandler)
-					m.Post("/", lfs.PostLockHandler)
-					m.Post("/verify", lfs.VerifyLockHandler)
-					m.Post("/{lid}/unlock", lfs.UnLockHandler)
-				}, lfs.CheckAcceptMediaType)
-				m.Any("/*", func(ctx *context.Context) {
-					ctx.NotFound("", nil)
-				})
-			}, ignoreCSRF, lfsServerEnabled)
-
-			gitHTTPRouters(m)
-		})
 	})
 
 	if setting.Repository.EnableFlags {
@@ -1808,11 +1851,76 @@ func registerRoutes(m *web.Route) {
 			m.Get("/demo/error/{errcode}", demo.ErrorPage)
 		}, ignSignIn)
 	}
+}
 
-	m.NotFound(func(w http.ResponseWriter, req *http.Request) {
-		ctx := context.GetWebContext(req)
-		ctx.NotFound("", nil)
+// Registers HTTP Git related routes, which have different top-level middleware than [registerRoutes].
+func registerGitLFSRoutes(m *web.Route) {
+	lfsServerEnabled := func(ctx *context.Context) {
+		if !setting.LFS.StartServer {
+			ctx.Error(http.StatusNotFound)
+			return
+		}
+	}
+	m.Group("/{username}/{reponame}/info/lfs", func() {
+		m.Post("/objects/batch", lfs.CheckAcceptMediaType, lfs.BatchHandler)
+		m.Put("/objects/{oid}/{size}", lfs.UploadHandler)
+		m.Get("/objects/{oid}/{filename}", lfs.DownloadHandler)
+		m.Get("/objects/{oid}", lfs.DownloadHandler)
+		m.Post("/verify", lfs.CheckAcceptMediaType, lfs.VerifyHandler)
+		m.Group("/locks", func() {
+			m.Get("/", lfs.GetListLockHandler)
+			m.Post("/", lfs.PostLockHandler)
+			m.Post("/verify", lfs.VerifyLockHandler)
+			m.Post("/{lid}/unlock", lfs.UnLockHandler)
+		}, lfs.CheckAcceptMediaType)
+		m.Any("/*", func(ctx *context.Context) {
+			ctx.NotFound("", nil)
+		})
+	}, ignoreCSRF, lfsServerEnabled)
+}
+
+func registerGitRoutes(m *web.Route) {
+	m.Group("/{username}/{reponame}", func() {
+		gitHTTPRouters(m)
 	})
+}
+
+func registerMixedRoutes(m *web.Route) {
+	dlSourceEnabled := func(ctx *context.Context) {
+		if setting.Repository.DisableDownloadSourceArchives {
+			ctx.Error(http.StatusNotFound)
+			return
+		}
+	}
+
+	m.Group("/{username}/{reponame}", func() {
+		m.Group("/raw", func() {
+			m.Get("/branch/*", context.RepoRefByType(context.RepoRefBranch), repo.SingleDownload)
+			m.Get("/tag/*", context.RepoRefByType(context.RepoRefTag), repo.SingleDownload)
+			m.Get("/commit/*", context.RepoRefByType(context.RepoRefCommit), repo.SingleDownload)
+			m.Get("/blob/{sha}", context.RepoRefByType(context.RepoRefBlob), repo.DownloadByID)
+			// "/*" route is deprecated, and kept for backward compatibility
+			m.Get("/*", context.RepoRefByType(context.RepoRefLegacy), repo.SingleDownload)
+		}, repo.MustBeNotEmpty, reqRepoCodeReader)
+
+		m.Group("/archive", func() {
+			m.Get("/*", repo.Download)
+			m.Post("/*", repo.InitiateDownload)
+		}, repo.MustBeNotEmpty, dlSourceEnabled, reqRepoCodeReader)
+	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
+
+	m.Group("/{username}/{reponame}", func() {
+		m.Get("/releases/download/{vTag}/{fileName}", repo.MustBeNotEmpty, repo.RedirectDownload)
+	}, ignSignIn, context.RepoAssignment, context.UnitTypes(), reqRepoReleaseReader)
+
+	// to maintain compatibility with old attachments
+	m.Group("/{username}/{reponame}", func() {
+		m.Get("/attachments/{uuid}", repo.GetAttachment)
+	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
+
+	m.Group("", func() {
+		m.Methods("GET, OPTIONS", "/attachments/{uuid}", optionsCorsHandler(), repo.GetAttachment)
+	}, ignSignIn)
 }
 
 func BindUpload() http.HandlerFunc {

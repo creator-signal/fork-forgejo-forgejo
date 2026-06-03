@@ -29,10 +29,10 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/tests"
 
+	"code.forgejo.org/xorm/xorm"
 	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"xorm.io/xorm"
 )
 
 var currentEngine *xorm.Engine
@@ -51,11 +51,7 @@ func initMigrationTest(t *testing.T) func() {
 
 	deferFn := tests.PrintCurrentTest(t, 2)
 	root := getRoot(t)
-	setting.AppPath = path.Join(root, "gitea")
-	if _, err := os.Stat(setting.AppPath); err != nil {
-		tests.Printf("Could not find gitea binary at %s\n", setting.AppPath)
-		os.Exit(1)
-	}
+	setting.AppPath = path.Join(root, "migration-test-should-not-need-a-binary") // use WrapMainAppPath if a binary is needed
 
 	giteaConf := os.Getenv("GITEA_CONF")
 	if giteaConf == "" {
