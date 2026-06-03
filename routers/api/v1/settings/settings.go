@@ -4,6 +4,7 @@
 package settings
 
 import (
+	"cmp"
 	"net/http"
 	"slices"
 
@@ -112,11 +113,10 @@ func GetFundingSettings(ctx *context.APIContext) {
 
 		providers = append(providers, providerData)
 	}
+
+	// alphabetical by name (the order of these is arbitrary, but we gotta pick something consistent!)
 	slices.SortFunc(providers, func(a, b *api.FundingProvider) int {
-		if a.Name < b.Name {
-			return -1
-		}
-		return 1
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	ctx.JSON(http.StatusOK, api.FundingSettings{

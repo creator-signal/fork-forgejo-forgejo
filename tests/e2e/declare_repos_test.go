@@ -201,8 +201,8 @@ ko_fi: example
 liberapay: example
 patreon: example
 open_collective: example
-polar: example
 buy_me_a_coffee: example
+polar: example
 thanks_dev: u/gh/example
 custom: ["https://example.com", example.com]
 `},
@@ -212,7 +212,7 @@ custom: ["https://example.com", example.com]
 		Versions: []string{`
 ko_fi: 1337
 custom: "https://example.com"
-tidelift: "npm/example"
+tidelift: ["npm/example"]
 `},
 	}}, nil)
 	newRepo(t, 2, "funding_with_a_really_ridiculously_long_title_that_doesnt_really_happen_all_that_often_normally_but_could_really_mess_with_things_if_not_handled_properly", nil, []FileChanges{{

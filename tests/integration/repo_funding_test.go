@@ -173,15 +173,14 @@ func TestSponsorButton(t *testing.T) {
 		})
 	})
 
-	t.Run("sponsor button shown with one valid and one invalid config", func(t *testing.T) {
+	t.Run("sponsor button shown with one valid and one invalid config (first found wins)", func(t *testing.T) {
 		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
 			config := "custom: example.com\n" + // no scheme is assumed HTTP
-			"ko_fi: test"
-			// FIXME: don't we check .forgejo first anyway? Add another case of this, but reverse the files.
-			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config)
+				"ko_fi: test"
+			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config) // .forgejo is checked first, so we take it whether or not it's invalid
 
 			config = "custom: 42"
-			createFundingConfig(t, owner, repo, "FUNDING.yml", config)
+			createFundingConfig(t, owner, repo, "FUNDING.yml", config) // invalid config, but ignored anyway because we already have a .forgejo/FUNDING.yml
 
 			htmlDoc := getRepoPage(t, repo)
 			assertSponsorButton(t, htmlDoc)
@@ -189,6 +188,21 @@ func TestSponsorButton(t *testing.T) {
 			assertNFundingEntries(t, htmlDoc, 2)
 			assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
 			assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+		})
+	})
+
+	t.Run("sponsor button shown with one invalid and one valid config (first found wins)", func(t *testing.T) {
+		// reversed files from the above test: the one checked first is invalid in this case
+		onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+			config := "custom: 42"
+			createFundingConfig(t, owner, repo, ".forgejo/FUNDING.yml", config) // .forgejo is checked first, but this one is invalid. we take it anyway, because we assume it's intentional
+
+			config = "custom: example.com\n" +
+				"ko_fi: test"
+			createFundingConfig(t, owner, repo, "FUNDING.yml", config) // valid config, but ignored because we already have a .forgejo/FUNDING.yml
+
+			htmlDoc := getRepoPage(t, repo)
+			assertNoFunding(t, htmlDoc)
 		})
 	})
 
@@ -237,14 +251,14 @@ custom: example.com
 					Files: mfs,
 				})
 
-				// includes the whole config
+				// includes the whole config, in the order it was given
 				htmlDoc = getUserPage(t, user)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", user.Name))
 				assertNFundingEntries(t, htmlDoc, 3)
-				assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
+				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "")
 
 				// no validation error!
 				htmlDoc = getFilePage(t, repo, treePath)
@@ -279,14 +293,14 @@ custom: example.com
 					Files: mfs,
 				})
 
-				// includes the whole config
+				// includes the whole config, in the order it was given
 				htmlDoc := getUserPage(t, org)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s", org.FullName))
 				assertNFundingEntries(t, htmlDoc, 3)
-				assertFundingEntry(t, htmlDoc, 1, "http://example.com", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
-				assertFundingEntry(t, htmlDoc, 3, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/example", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 2, "https://liberapay.com/example", "/assets/img/funding/liberapay.svg")
+				assertFundingEntry(t, htmlDoc, 3, "http://example.com", "")
 
 				// no validation error!
 				htmlDoc = getFilePage(t, repo, treePath)
@@ -307,8 +321,8 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := "custom: 42\n" +
-									"ko_fi: test\n" +
-									"liberapay: test"
+					"ko_fi: test\n" +
+					"liberapay: test"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// invalid entries are skipped
@@ -366,8 +380,8 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := "custom: 42\n" +
-									"ko_fi: test\n" +
-									"whatever: test"
+					"ko_fi: test\n" +
+					"whatever: test"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				// invalid entries are skipped
@@ -387,7 +401,7 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := `custom: "https://example.com"` + "\n" +
-									"patreon: [test]"
+					"patreon: [test]"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -406,8 +420,8 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := `custom: "https://example.com"` + "\n" +
-									"ko_fi: test\n" +
-									"whatever: whatever"
+					"ko_fi: test\n" +
+					"whatever: whatever"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -426,8 +440,8 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := `custom: ["https://example.com"]` + "\n" + // single-element list is acceptable
-									"ko_fi: test\n" +
-									"whatever: 42" // we shouldn't care how this key is shaped just yet
+					"ko_fi: test\n" +
+					"whatever: 42" // we shouldn't care how this key is shaped just yet
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -463,11 +477,11 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := "custom:\n" +
-									"- test1\n" +
-									`- "https://example.com"` + "\n" +
-									"- test3\n" +
-									"- test4\n" +
-									"- too_many"
+					"- test1\n" +
+					`- "https://example.com"` + "\n" +
+					"- test3\n" +
+					"- test4\n" +
+					"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -488,23 +502,23 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := "ko_fi: test\n" +
-									"custom:\n" +
-									"- test1\n" +
-									`- "https://example.com"` + "\n" +
-									"- test3\n" +
-									"- test4\n" +
-									"- too_many"
+					"custom:\n" +
+					"- test1\n" +
+					`- "https://example.com"` + "\n" +
+					"- test3\n" +
+					"- test4\n" +
+					"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 5)
-				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
-				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
-				assertFundingEntry(t, htmlDoc, 5, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 2, "http://test1", "")
+				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "")
+				assertFundingEntry(t, htmlDoc, 4, "http://test3", "")
+				assertFundingEntry(t, htmlDoc, 5, "http://test4", "")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 1)
@@ -515,43 +529,43 @@ custom: example.com
 				defer tests.PrintCurrentTest(t)()
 
 				config := "ko_fi: [test, test2]\n" +
-									"tidelift: 'npm/example'\n" +
-									"custom:\n" +
-									"- test1\n" +
-									`- "https://example.com"` + "\n" +
-									"- test3\n" +
-									"- test4\n" +
-									"- too_many"
+					"tidelift: 'npm/example'\n" +
+					"custom:\n" +
+					"- test1\n" +
+					`- "https://example.com"` + "\n" +
+					"- test3\n" +
+					"- test4\n" +
+					"- too_many"
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
 				assertSponsorButton(t, htmlDoc)
 				assertSponsorModalHeader(t, htmlDoc, fmt.Sprintf("Sponsor %s/%s", repo.OwnerName, repo.Name))
 				assertNFundingEntries(t, htmlDoc, 5)
-				assertFundingEntry(t, htmlDoc, 1, "http://test1", "")
-				assertFundingEntry(t, htmlDoc, 2, "https://example.com", "")
-				assertFundingEntry(t, htmlDoc, 3, "http://test3", "")
-				assertFundingEntry(t, htmlDoc, 4, "http://test4", "")
-				assertFundingEntry(t, htmlDoc, 5, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 1, "https://ko-fi.com/test", "/assets/img/funding/ko_fi.svg")
+				assertFundingEntry(t, htmlDoc, 2, "http://test1", "")
+				assertFundingEntry(t, htmlDoc, 3, "https://example.com", "")
+				assertFundingEntry(t, htmlDoc, 4, "http://test3", "")
+				assertFundingEntry(t, htmlDoc, 5, "http://test4", "")
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 3)
-				assertFundingError(t, htmlDoc, 1, "Expected up to 4 of funding provider custom")
-				assertFundingError(t, htmlDoc, 2, "Expected up to 1 of funding provider ko_fi")
-				assertFundingError(t, htmlDoc, 3, "Funding provider tidelift is not allowed")
+				assertFundingError(t, htmlDoc, 1, "Expected up to 1 of funding provider ko_fi")
+				assertFundingError(t, htmlDoc, 2, "Funding provider tidelift is not allowed")
+				assertFundingError(t, htmlDoc, 3, "Expected up to 4 of funding provider custom")
 			})
 
 			t.Run("sponsor modal mitigates XSS", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				config := `ko_fi: '"><script>alert(1);</script><a class="'` + "\n" + // omitted (contains a `/`)
-									"liberapay: 'text/other'\n" + // omitted (contains a `/`)
-									"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
-									"custom:\n" +
-									`- '#" style="background: url(localhost)'` + "\n" +
-									`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
-									`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
-									"- \"<script>alert`1`</script>\""
+					"liberapay: 'text/other'\n" + // omitted (contains a `/`)
+					"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
+					"custom:\n" +
+					`- '#" style="background: url(localhost)'` + "\n" +
+					`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
+					`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
+					"- \"<script>alert`1`</script>\""
 				createFundingConfig(t, owner, repo, treePath, config)
 
 				htmlDoc := getRepoPage(t, repo)
@@ -570,10 +584,10 @@ custom: example.com
 
 				htmlDoc = getFilePage(t, repo, treePath)
 				assertNFundingErrors(t, htmlDoc, 4)
-				assertFundingError(t, htmlDoc, 1, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
-				assertFundingError(t, htmlDoc, 2, "Value for key 'ko_fi' does not match pattern /^[^/]+$/")
-				assertFundingError(t, htmlDoc, 3, "Value for key 'liberapay' does not match pattern /^[^/]+$/")
-				assertFundingError(t, htmlDoc, 4, `Value for key 'thanks_dev' does not match pattern /^[^/]+\/[^/]+\/[^/]+$/`)
+				assertFundingError(t, htmlDoc, 1, "Value for key 'ko_fi' does not match pattern /^[^/]+$/")
+				assertFundingError(t, htmlDoc, 2, "Value for key 'liberapay' does not match pattern /^[^/]+$/")
+				assertFundingError(t, htmlDoc, 3, `Value for key 'thanks_dev' does not match pattern /^[^/]+\/[^/]+\/[^/]+$/`)
+				assertFundingError(t, htmlDoc, 4, `Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`)
 			})
 		})
 	}

@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	repo_model "forgejo.org/models/repo"
@@ -24,6 +23,14 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// Funding config files are considered in this order. When a file is found
+// matching one of these (case-insensitive) paths, it is treated as the config
+// and others are ignored.
+//
+// If that config is invalid, the other candidates are still ignored. This is
+// because a funding file in one of the more specific .forgejo or .github
+// directories is more likely to have intentional meaning than one at the
+// directory root, so users would probably expect this degree of strictness.
 var fundingCandidates = []string{
 	".forgejo/FUNDING.yaml",
 	".forgejo/FUNDING.yml",
@@ -155,6 +162,46 @@ type RepoFunding struct {
 	Errors []error
 }
 
+type RawRepoFundingConfigEntry struct {
+	Key   string
+	Value any
+}
+
+// A funding config consists of unique key-value pairs, considered in order.
+// Each key corresponds to at least one value, which should be either a bare
+// string or a list of strings, but the parser doesn't have to worry about the
+// actual type; that's the validator's job.
+type RawRepoFundingConfig []RawRepoFundingConfigEntry
+
+// called by `yaml.Unmarshal` when decoding file data
+func (c *RawRepoFundingConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("Expected YAML mapping, got %v", value.Kind)
+	}
+
+	// in a mapping, Content contains pairs of nodes, so we iterate two at a time
+	for i := 0; i < len(value.Content); i += 2 {
+		// peeking ahead at the value, store it if it's there
+		var entryData any
+		if err := value.Content[i+1].Decode(&entryData); err != nil {
+			return err // not sure what we hit that won't fit into `any`, but it wasn't good :/
+		}
+
+		// since we have a value, grab the key
+		key := value.Content[i].Value
+		for _, alreadyEntry := range *c {
+			if alreadyEntry.Key == key {
+				return fmt.Errorf("Duplicate YAML key: %s", key)
+			}
+		}
+
+		// record the pair
+		*c = append(*c, RawRepoFundingConfigEntry{Key: key, Value: entryData})
+	}
+
+	return nil
+}
+
 // GetFundingFromPath parses a funding config from the file at the given `path`
 // in the given commit on the repository.
 func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) (*RepoFunding, error) {
@@ -182,31 +229,24 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		return nil, err
 	}
 
-	fundingMap := make(map[string]any)
-	if err := yaml.Unmarshal(configContent, &fundingMap); err != nil {
+	// no need to sort these, they'll come in the order they were given
+	config := make(RawRepoFundingConfig, 0)
+	if err := yaml.Unmarshal(configContent, &config); err != nil {
 		return nil, err
 	}
 
-	// Sort keys so we return a consistent order
-	fundingKeys := make([]string, 0, len(fundingMap))
-	for key := range fundingMap {
-		fundingKeys = append(fundingKeys, key)
-	}
-
-	// This is good for a consistent order, but I'd like for the order to match the funding config :/
-	sort.Strings(fundingKeys)
-
 	entryList := make([]*api.RepoFundingEntry, 0)
 	var errs []error
-	for _, providerName := range fundingKeys {
-		fundingData := fundingMap[providerName]
+	for _, entry := range config {
+		providerName := entry.Key
+		entryData := entry.Value
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
 			errs = append(errs, &ErrUnknownFundingProvider{Name: providerName})
 			continue
 		}
 
-		dataType := reflect.TypeOf(fundingData)
+		dataType := reflect.TypeOf(entryData)
 		switch dataType.Kind() {
 		case reflect.String:
 			if provider.Limit == 0 {
@@ -214,15 +254,15 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 				errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
 				continue
 			}
-			newEntry, err := getFundingEntry(provider, fundingData.(string))
+			newEntry, err := getFundingEntry(provider, entryData.(string))
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
 			entryList = append(entryList, newEntry)
 		case reflect.Slice:
-			// no need to sort these, they'll come in the same order as they were given
-			stringSlice := reflect.ValueOf(fundingData)
+			// no need to sort these either, they'll come in the order they were given
+			stringSlice := reflect.ValueOf(entryData)
 			for i := 0; i < stringSlice.Len(); i++ {
 				if uint(i) >= provider.Limit {
 					errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
