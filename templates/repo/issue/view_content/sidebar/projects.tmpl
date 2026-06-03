@@ -1,4 +1,4 @@
-<div class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-project dropdown">
+<div id="project-dropdown" class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-project dropdown">
 	<a class="text muted flex-text-block">
 		<strong>{{ctx.Locale.Tr "repo.issues.new.projects"}}</strong>
 		{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}

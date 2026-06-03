@@ -1,5 +1,5 @@
 <input id="assignee_ids" name="assignee_ids" type="hidden" value="{{.assignee_ids}}">
-<div class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-assignees{{if .isExistingIssue}}-modify{{end}} dropdown">
+<div id="assignee-dropdown" class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-assignees{{if .isExistingIssue}}-modify{{end}} dropdown">
 	<a class="text muted flex-text-block">
 		<strong>{{ctx.Locale.Tr "repo.issues.new.assignees"}}</strong>
 		{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}

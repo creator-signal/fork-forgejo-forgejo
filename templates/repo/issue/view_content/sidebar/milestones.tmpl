@@ -1,5 +1,5 @@
 <div id="milestone-section" hx-swap="morph" hx-target="#selected-milestone" hx-indicator="this">
-	<div class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-milestone dropdown">
+	<div id="milestone-dropdown" class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-milestone dropdown">
 		<a class="text muted flex-text-block">
 			<strong>{{ctx.Locale.Tr "repo.issues.new.milestone"}}</strong>
 			{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}

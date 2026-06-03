@@ -10,6 +10,7 @@
 			<button type="button" class="item active" data-tab="global">{{ctx.Locale.Tr "shortcuts.button.global"}}</button>
 			<button type="button" class="item" data-tab="repo">{{ctx.Locale.Tr "shortcuts.button.repo"}}</button>
 			<button type="button" class="item" data-tab="code">{{ctx.Locale.Tr "shortcuts.button.code"}}</button>
+			<button type="button" class="item" data-tab="issue">{{ctx.Locale.Tr "shortcuts.button.issue"}}</button>
 		</div>
 		<div class="tw-mt-4 tw-flex tw-justify-center">
 			<kbd>{{svg "octicon-arrow-left" 16}}</kbd>
@@ -107,7 +108,7 @@
 					<div><kbd>w</kbd></div>
 				</li>
 			</ul>
-				<ul data-tab="code" style="visibility: hidden" aria-hidden="true">
+			<ul data-tab="code" style="visibility: hidden" aria-hidden="true">
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.code.blame"}}</div>
 					<div><kbd>b</kbd></div>
@@ -127,6 +128,36 @@
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.code.permalink"}}</div>
 					<div><kbd>y</kbd></div>
+				</li>
+			</ul>
+			<ul data-tab="issue" style="visibility: hidden" aria-hidden="true">
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.assignee"}}</div>
+					<div><kbd>a</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.label"}}</div>
+					<div><kbd>l</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.milestone"}}</div>
+					<div><kbd>m</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.project"}}</div>
+					<div><kbd>p</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.sort"}}</div>
+					<div><kbd>s</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.type"}}</div>
+					<div><kbd>t</kbd></div>
+				</li>
+				<li>
+					<div>{{ctx.Locale.Tr "shortcuts.issue.author"}}</div>
+					<div><kbd>u</kbd></div>
 				</li>
 			</ul>
 		</div>

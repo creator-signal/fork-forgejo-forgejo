@@ -14,8 +14,7 @@ test.beforeAll(async ({browser}, workerInfo) => {
 
 test('Code shortcuts', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
-  const resp = await page.goto('/user2/repo2');
-  expect(resp?.status()).toBe(200);
+  expect((await page.goto('/user2/repo2'))?.status()).toBe(200);
 
   await page.keyboard.press('j');
   await page.keyboard.press('j');
@@ -52,6 +51,62 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   );
 });
 
+test('Issue/pull request filter shortcuts', async ({browser}, workerInfo) => {
+  const page = await login({browser}, workerInfo);
+  for (const tab of ['issues', 'pulls']) {
+    const resp = await page.goto(`/user2/repo1/${tab}`);
+    expect(resp?.status()).toBe(200);
+
+    await page.keyboard.press('a');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/assignee=2/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('l');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/labels=1/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('m');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/milestone=1/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('p');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/project=1/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('s');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/sort=oldest/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('t');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/type=created_by/);
+    await page.locator('body').click();
+
+    await page.keyboard.press('u');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/poster=0/);
+  }
+});
+
 test('Navigate shortcuts', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
   await page.goto('/user2/repo1/pulls');
@@ -73,8 +128,7 @@ test('Navigate shortcuts', async ({browser}, workerInfo) => {
 
 test('Goto and create shortcuts', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
-  const resp1 = await page.goto('/');
-  expect(resp1?.status()).toBe(200);
+  expect((await page.goto('/'))?.status()).toBe(200);
 
   await page.keyboard.press('g');
   await page.keyboard.press('n');
@@ -91,8 +145,7 @@ test('Goto and create shortcuts', async ({browser}, workerInfo) => {
   await page.keyboard.press('p');
   await expect(page).toHaveURL('/pulls');
 
-  const resp2 = await page.goto('/user2/repo1');
-  expect(resp2?.status()).toBe(200);
+  expect((await page.goto('/user2/repo1'))?.status()).toBe(200);
 
   await page.keyboard.press('g');
   await page.keyboard.press('a');
@@ -168,7 +221,7 @@ test('Open dialog and persist enable setting', async ({
   );
 
   await page.keyboard.press('ArrowRight');
-  await expect(dialog.locator('button.active')).toHaveText('Repositories');
+  await expect(dialog.locator('button.active')).toHaveText('Repo');
   await page.keyboard.press('ArrowLeft');
   await expect(dialog.locator('button.active')).toHaveText('Global');
   await page.keyboard.press('Escape');

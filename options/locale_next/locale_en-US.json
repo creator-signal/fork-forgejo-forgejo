@@ -945,8 +945,9 @@
 		"enable": "Enable keyboard shortcuts",
 		"button": {
 			"global": "Global",
-			"repo": "Repositories",
-			"code": "Code View"
+			"repo": "Repo",
+			"code": "Code",
+			"issue": "Issue/Pull Request"
 		},
 		"global": {
 			"down": "Navigate down a list",
@@ -975,6 +976,15 @@
 			"line": "Go to line",
 			"raw": "View raw",
 			"permalink": "Get permalink"
+		},
+		"issue": {
+			"assignee": "Filter by assignee or edit assignees",
+			"author": "Filter by author",
+			"label": "Filter by label or edit labels",
+			"milestone": "Filter by milestone or edit milestones",
+			"project": "Filter by project or edit projects",
+			"sort": "Sort by",
+			"type": "Filter by type"
 		},
 		"line": {
 			"title": "Jump to line",

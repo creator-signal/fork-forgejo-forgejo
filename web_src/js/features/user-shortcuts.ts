@@ -14,6 +14,7 @@ const Page = Object.freeze({
 type PageType = (typeof Page)[keyof typeof Page];
 
 let goto_state = false;
+let where: PageType = Page.Homepage;
 const list = document.querySelector(`\
 #issue-list,\
 #notification_table,\
@@ -197,7 +198,16 @@ function onKeydown(e: KeyboardEvent) {
   }
   switch (e.key) {
     case 'a':
-      goto(Page.Actions);
+      if (goto(Page.Actions)) return;
+      switch (where) {
+        case Page.Issues:
+        case Page.Pulls:
+          document
+            .querySelector<HTMLAnchorElement>('#assignee-dropdown')
+            ?.click();
+          e.preventDefault();
+          break;
+      }
       break;
     case 'b':
       document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
@@ -232,15 +242,29 @@ function onKeydown(e: KeyboardEvent) {
       (e.target as HTMLInputElement).blur();
       keyboardSelector(true);
       break;
-    case 'l': {
-      const dialog = document.querySelector<HTMLDialogElement>('#line-jump');
-      if (dialog) {
-        dialog.showModal();
-        dialog.querySelector('input')?.focus();
-        e.preventDefault();
+    case 'l':
+      switch (where) {
+        case Page.Code: {
+          const dialog =
+            document.querySelector<HTMLDialogElement>('#line-jump');
+          if (dialog) {
+            dialog.showModal();
+            dialog.querySelector('input')?.focus();
+            e.preventDefault();
+          }
+          break;
+        }
+        case Page.Issues:
+        case Page.Pulls:
+          document.querySelector<HTMLAnchorElement>('#label-dropdown')?.click();
+          e.preventDefault();
+          break;
       }
       break;
-    }
+    case 'm':
+      document.querySelector<HTMLAnchorElement>('#milestone-dropdown')?.click();
+      e.preventDefault();
+      break;
     case 'n':
       goto(Page.Notifications);
       break;
@@ -248,11 +272,31 @@ function onKeydown(e: KeyboardEvent) {
       goto(Page.Projects);
       break;
     case 'p':
-      goto(Page.Pulls);
+      if (goto(Page.Pulls)) return;
+      switch (where) {
+        case Page.Issues:
+        case Page.Pulls:
+          document
+            .querySelector<HTMLAnchorElement>('#project-dropdown')
+            ?.click();
+          e.preventDefault();
+          break;
+      }
       break;
     case 'r':
       if (goto(Page.Releases)) return;
       document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
+      break;
+    case 's':
+      document.querySelector<HTMLAnchorElement>('#sort-dropdown')?.focus();
+      break;
+    case 't':
+      if (goto(Page.Releases)) return;
+      document.querySelector<HTMLAnchorElement>('#type-dropdown')?.focus();
+      break;
+    case 'u':
+      document.querySelector<HTMLAnchorElement>('#author-dropdown')?.click();
+      e.preventDefault();
       break;
     case 'w':
       if (goto(Page.Wiki)) return;
@@ -313,4 +357,11 @@ export function initUserShortcuts() {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
     }
   });
+  if (document.querySelector('#repo-code-tab.active')) {
+    where = Page.Code;
+  } else if (document.querySelector('#repo-issues-tab.active')) {
+    where = Page.Issues;
+  } else if (document.querySelector('#repo-pull-requests-tab.active')) {
+    where = Page.Pulls;
+  }
 }

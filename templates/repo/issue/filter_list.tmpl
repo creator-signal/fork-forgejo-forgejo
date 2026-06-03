@@ -3,7 +3,7 @@
 
 {{if not .Milestone}}
 <!-- Milestone -->
-<div class="list-header-milestone ui {{if not (or .OpenMilestones .ClosedMilestones)}}disabled{{end}} dropdown jump item">
+<div id="milestone-dropdown" class="list-header-milestone ui {{if not (or .OpenMilestones .ClosedMilestones)}}disabled{{end}} dropdown jump item">
 	<span class="text">
 		{{ctx.Locale.Tr "repo.issues.filter_milestone"}}
 	</span>
@@ -41,7 +41,7 @@
 {{end}}
 
 <!-- Project -->
-<div class="list-header-project ui{{if not (or .OpenProjects .ClosedProjects)}} disabled{{end}} dropdown jump item">
+<div id="project-dropdown" class="list-header-project ui{{if not (or .OpenProjects .ClosedProjects)}} disabled{{end}} dropdown jump item">
 	<span class="text">
 		{{ctx.Locale.Tr "repo.issues.filter_project"}}
 	</span>
@@ -80,6 +80,7 @@
 
 <!-- Author -->
 <div class="list-header-author ui dropdown jump item user-remote-search" data-tooltip-content="{{ctx.Locale.Tr "repo.author_search_tooltip"}}"
+	id="author-dropdown"
 	data-search-url="{{if .Milestone}}{{$.RepoLink}}/issues/posters{{else}}{{$.Link}}/posters{{end}}"
 	data-selected-user-id="{{$.PosterID}}"
 	data-action-jump-url="?q={{StringUtils.RemoveAllPrefix $.Keyword "author:"}}&type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&project={{$.ProjectID}}&assignee={{$.AssigneeID}}&poster={user_id}{{if $.ShowArchivedLabels}}&archived=true{{end}}"
@@ -98,7 +99,7 @@
 </div>
 
 <!-- Assignee -->
-<div class="list-header-assignee ui {{if not .Assignees}}disabled{{end}} dropdown jump item">
+<div id="assignee-dropdown" class="list-header-assignee ui {{if not .Assignees}}disabled{{end}} dropdown jump item">
 	<span class="text">
 		{{ctx.Locale.Tr "repo.issues.filter_assignee"}}
 	</span>
@@ -122,7 +123,7 @@
 
 {{if .IsSigned}}
 	<!-- Type -->
-	<div class="list-header-type ui dropdown type jump item">
+	<div id="type-dropdown" class="list-header-type ui dropdown type jump item">
 		<span class="text">
 			{{ctx.Locale.Tr "repo.issues.filter_type"}}
 		</span>
@@ -141,7 +142,7 @@
 {{end}}
 
 <!-- Sort -->
-<div class="list-header-sort ui dropdown downward type jump item">
+<div id="sort-dropdown" class="list-header-sort ui dropdown downward type jump item">
 	<span class="text">
 		{{ctx.Locale.Tr "repo.issues.filter_sort"}}
 	</span>

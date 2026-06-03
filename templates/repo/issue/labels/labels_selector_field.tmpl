@@ -1,4 +1,4 @@
-<div class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-label dropdown">
+<div id="label-dropdown" class="ui {{if or (not .HasIssuesOrPullsWritePermission) .Repository.IsArchived}}disabled{{end}} floating jump select-label dropdown">
 	<span class="text muted flex-text-block">
 		<strong>{{ctx.Locale.Tr "repo.issues.new.labels"}}</strong>
 		{{if and .HasIssuesOrPullsWritePermission (not .Repository.IsArchived)}}
