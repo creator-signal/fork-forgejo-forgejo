@@ -8,7 +8,6 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
-	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
@@ -42,7 +41,7 @@ func GetStarredRepos(ctx context.Context, userID int64, private bool, listOption
 func GetWatchedRepos(ctx context.Context, userID int64, private bool, listOptions db.ListOptions, reducer RepositoryAuthorizationReducer) ([]*Repository, int64, error) {
 	sess := db.GetEngine(ctx).
 		Where("watch.user_id=?", userID).
-		And(repo_model.BuilderWatchAnything()).
+		And(BuilderWatchAnything()).
 		Join("LEFT", "watch", "`repository`.id=`watch`.repo_id")
 	if !private {
 		sess = sess.And("is_private=?", false)
@@ -197,7 +196,7 @@ func GetWatchedRepoIDsOwnedBy(ctx context.Context, userID, ownedByUserID int64) 
 		Select("`repository`.id").
 		Join("LEFT", "watch", "`repository`.id=`watch`.repo_id").
 		Where("`watch`.user_id=?", userID).
-		And(repo_model.BuilderWatchAnything()).
+		And(BuilderWatchAnything()).
 		And("`repository`.owner_id=?", ownedByUserID).Find(&repoIDs)
 	return repoIDs, err
 }
