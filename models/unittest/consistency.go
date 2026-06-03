@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,13 +90,7 @@ func init() {
 		}
 
 		actual := GetCountByCond(t, "watch", builder.Eq{"repo_id": repo.int("ID")}.
-			And(
-				builder.Or(
-					builder.Eq{"`watch`.watch_selection_issues": true},
-					builder.Eq{"`watch`.watch_selection_pull_requests": true},
-					builder.Eq{"`watch`.watch_selection_releases": true},
-				),
-			))
+			And(repo_model.BuilderWatchAnything()))
 		assert.EqualValues(t, repo.int("NumWatches"), actual,
 			"Unexpected number of watches for repo id: %d", repo.int("ID"))
 

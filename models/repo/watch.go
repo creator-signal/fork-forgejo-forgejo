@@ -230,17 +230,19 @@ func GetSelectWatcherIDs(ctx context.Context, repoID int64, selection WatchSelec
 		Find(&ids)
 }
 
+func BuilderWatchAnything() builder.Or {
+	return builder.Or(
+		builder.Eq{"`watch`.watch_selection_issues": true},
+		builder.Eq{"`watch`.watch_selection_pull_requests": true},
+		builder.Eq{"`watch`.watch_selection_releases": true},
+	)
+}
+
 // GetRepoWatchers returns range of users watching given repository.
 func GetRepoWatchers(ctx context.Context, repoID int64, opts db.ListOptions) ([]*user_model.User, error) {
 	sess := db.GetEngine(ctx).Where("watch.repo_id=?", repoID).
 		Join("LEFT", "watch", "`user`.id=`watch`.user_id").
-		And(
-			builder.Or(
-				builder.Eq{"`watch`.watch_selection_issues": true},
-				builder.Eq{"`watch`.watch_selection_pull_requests": true},
-				builder.Eq{"`watch`.watch_selection_releases": true},
-			),
-		)
+		And(BuilderWatchAnything())
 	if opts.Page > 0 {
 		sess = db.SetSessionPagination(sess, &opts)
 		users := make([]*user_model.User, 0, opts.PageSize)
