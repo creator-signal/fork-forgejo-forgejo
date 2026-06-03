@@ -19,7 +19,12 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
   await page.goto('/admin');
 
   const relativeTime = page.locator('.admin-dl-horizontal > dd:nth-child(2) > relative-time');
-  await expect(relativeTime).toContainText('ago');
+  // The admin dashboard uses <relative-time format="duration"> for server
+  // uptime, which renders as a duration like "5 days, 3 hours" (no "ago").
+  // Check that the component produced a formatted duration rather than the
+  // raw datetime fallback.
+  const durationPattern = /\d+ (year|month|week|day|hour|minute|second)/;
+  await expect(relativeTime).toContainText(durationPattern);
 
   const body = page.locator('body');
   await body.evaluate(
@@ -31,5 +36,5 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
       ),
   );
 
-  await expect(relativeTime).toContainText('ago');
+  await expect(relativeTime).toContainText(durationPattern);
 });

@@ -288,6 +288,10 @@ window.customElements.define('relative-time', class extends HTMLElement {
       this.contentSpan = document.createElement('span');
       this.contentSpan.setAttribute('part', 'relative-time');
       this.shadowRoot.append(this.contentSpan);
+      // Remove light DOM children (the fallback datetime text from the
+      // template) so they don't leak into text extraction by Playwright
+      // or other tools that read both light and shadow DOM content.
+      this.replaceChildren();
     }
 
     const next = DoUpdateRelativeTime(this);
