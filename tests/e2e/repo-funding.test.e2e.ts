@@ -17,7 +17,7 @@
 import {expect, type Locator} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
-import { accessibilityCheck } from './shared/accessibility.ts';
+import {accessibilityCheck} from './shared/accessibility.ts';
 
 async function expectSponsorEntry(entry: Locator, expectedProvider: string, expectedText: string, expectedUrl: string) {
   await expect(entry.locator('a')).toHaveAttribute('href', expectedUrl);
@@ -47,21 +47,21 @@ test('Sponsor modal (repo)', async ({browser}) => {
   await expect(sponsorModal).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(13);
-  await expectSponsorEntry(items[0], 'community_bridge', 'funding.communitybridge.org/projects/example', 'https://funding.communitybridge.org/projects/example');
-  await expectSponsorEntry(items[1], 'github', 'github.com/sponsors/example', 'https://github.com/sponsors/example');
-  await expectSponsorEntry(items[2], 'github', 'github.com/sponsors/example2', 'https://github.com/sponsors/example2');
-  await expectSponsorEntry(items[3], 'issuehunt', 'issuehunt.io/r/example', 'https://issuehunt.io/r/example');
-  await expectSponsorEntry(items[4], 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
-  await expectSponsorEntry(items[5], 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
-  await expectSponsorEntry(items[6], 'patreon', 'patreon.com/example', 'https://patreon.com/example');
-  await expectSponsorEntry(items[7], 'open_collective', 'opencollective.com/example', 'https://opencollective.com/example');
-  await expectSponsorEntry(items[8], 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
-  await expectSponsorEntry(items[9], 'polar', 'polar.sh/example', 'https://polar.sh/example');
-  await expectSponsorEntry(items[10], 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
-  await expectSponsorEntry(items[11], 'custom', 'https://example.com', 'https://example.com');
-  await expectSponsorEntry(items[12], 'custom', 'example.com', 'http://example.com');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(13);
+  await expectSponsorEntry(items.nth(0), 'community_bridge', 'funding.communitybridge.org/projects/example', 'https://funding.communitybridge.org/projects/example');
+  await expectSponsorEntry(items.nth(1), 'github', 'github.com/sponsors/example', 'https://github.com/sponsors/example');
+  await expectSponsorEntry(items.nth(2), 'github', 'github.com/sponsors/example2', 'https://github.com/sponsors/example2');
+  await expectSponsorEntry(items.nth(3), 'issuehunt', 'issuehunt.io/r/example', 'https://issuehunt.io/r/example');
+  await expectSponsorEntry(items.nth(4), 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
+  await expectSponsorEntry(items.nth(5), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+  await expectSponsorEntry(items.nth(6), 'patreon', 'patreon.com/example', 'https://patreon.com/example');
+  await expectSponsorEntry(items.nth(7), 'open_collective', 'opencollective.com/example', 'https://opencollective.com/example');
+  await expectSponsorEntry(items.nth(8), 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
+  await expectSponsorEntry(items.nth(9), 'polar', 'polar.sh/example', 'https://polar.sh/example');
+  await expectSponsorEntry(items.nth(10), 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
+  await expectSponsorEntry(items.nth(11), 'custom', 'https://example.com', 'https://example.com');
+  await expectSponsorEntry(items.nth(12), 'custom', 'example.com', 'http://example.com');
 
   await screenshot(page);
 });
@@ -71,16 +71,16 @@ const urls = [
   '/funded_user/whoops_all_invalid_funding',
 ] as const;
 for (const url of urls) {
-  test(`Sponsor button (repo): hidden when the funding config is empty or invalid (${url})`, async ({ browser }) => {
+  test(`Sponsor button (repo): hidden when the funding config is empty or invalid (${url})`, async ({browser}) => {
     // this test doesn't need JS
     const context = await browser.newContext({javaScriptEnabled: false});
     const page = await context.newPage();
 
-    let response = await page.goto(url, {waitUntil: 'domcontentloaded'});
+    const response = await page.goto(url, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
     await expect(page.locator('#sponsor-modal')).toBeHidden();
     await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
-  })
+  });
 }
 
 test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {
@@ -105,11 +105,11 @@ test('Sponsor button (user): appears when a user profile has a valid funding con
   await expect(sponsorModal).toBeVisible();
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
 
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(3);
-  await expectSponsorEntry(items[0], 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
-  await expectSponsorEntry(items[1], 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
-  await expectSponsorEntry(items[2], 'custom', 'http://localhost:3003/', 'http://localhost:3003/');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(3);
+  await expectSponsorEntry(items.nth(0), 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
+  await expectSponsorEntry(items.nth(1), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+  await expectSponsorEntry(items.nth(2), 'custom', 'http://localhost:3003/', 'http://localhost:3003/');
 });
 
 test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
@@ -134,12 +134,11 @@ test('Sponsor button (org): appears when an org profile has a valid funding conf
   await expect(sponsorModal).toBeVisible();
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Org Six');
 
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(2);
-  await expectSponsorEntry(items[0], 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
-  await expectSponsorEntry(items[1], 'custom', 'example.com', 'http://example.com');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(2);
+  await expectSponsorEntry(items.nth(0), 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
+  await expectSponsorEntry(items.nth(1), 'custom', 'example.com', 'http://example.com');
 });
-
 
 test('Sponsor button (repo): accessibility', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
@@ -201,9 +200,9 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(1);
-  await expectSponsorEntry(items[0], 'custom', 'https://example.com', 'https://example.com');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(1);
+  await expectSponsorEntry(items.nth(0), 'custom', 'https://example.com', 'https://example.com');
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
@@ -244,7 +243,7 @@ for (const testCase of [
       const close = sponsorModal.getByLabel('Close');
       await expect(close).toBeInViewport({ratio: 1});
 
-      await accessibilityCheck({ page }, ['dialog#sponsor-modal'], [], []);
+      await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
     });
   }
 }
@@ -322,9 +321,9 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
 
   await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
 
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(1);
-  await expectSponsorEntry(items[0], 'custom', 'https://example.com', 'https://example.com');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(1);
+  await expectSponsorEntry(items.nth(0), 'custom', 'https://example.com', 'https://example.com');
 
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
   await page.getByText('funding config').click();
@@ -334,7 +333,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
   await expect(errors).toBeVisible();
   await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
-  await expect(errors).toContainText("Funding provider tidelift is not allowed"); // sad day, probably :(
+  await expect(errors).toContainText('Funding provider tidelift is not allowed'); // sad day, probably :(
 });
 
 test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
@@ -353,11 +352,11 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
 
   // list items should contain encoded strings as given in config; these strings should be interpreted as text, NOT as HTML markup
   // strings that don't produce valid URLs or whose value does not match the regex are omitted with error
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(3);
-  await expectSponsorEntry(items[0], 'custom', '#" style="background: url(localhost)', 'http://#%22%20style=%22background:%20url%28localhost%29');
-  await expectSponsorEntry(items[1], 'custom', 'https://example.com/" class="rogue injection', 'https://example.com/%22%20class=%22rogue%20injection');
-  await expectSponsorEntry(items[2], 'custom', '<script>alert`1`</script>', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
+  const items = sponsorModal.getByRole('listitem');
+  await expect(items).toHaveCount(3);
+  await expectSponsorEntry(items.nth(0), 'custom', '#" style="background: url(localhost)', 'http://#%22%20style=%22background:%20url%28localhost%29');
+  await expectSponsorEntry(items.nth(1), 'custom', 'https://example.com/" class="rogue injection', 'https://example.com/%22%20class=%22rogue%20injection');
+  await expectSponsorEntry(items.nth(2), 'custom', '<script>alert`1`</script>', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
 
   // no real injected <script>
   await expect(sponsorModal.locator('a *')).toBeHidden();
