@@ -226,6 +226,12 @@ custom: example.com
 		Versions: []string{`
 `},
 	}}, nil)
+	newRepo(t, 45, "whoops_all_invalid_funding", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+foo: bar
+`},
+	}}, nil)
 	newRepo(t, 2, "funding_evil", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
@@ -239,30 +245,20 @@ custom:
   - '<script>alert` + "`" + `1` + "`" + `</script>'
 `},
 	}}, nil)
-	newRepo(t, 45, ".profile", nil, []FileChanges{{
-		Filename: "FUNDING.yml",
+	newRepo(t, 6, ".profile", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`
 ko_fi: example
 liberapay: example
 custom: "http://localhost:3003/"
 `},
 	}}, nil)
-	newRepo(t, 45, "empty_funding", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
+	newRepo(t, 45, ".profile", nil, []FileChanges{{
+		Filename: "FUNDING.yml",
 		Versions: []string{`
-`},
-	}}, nil)
-	newRepo(t, 45, "whoops_all_invalid_funding", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-foo: bar
-`},
-	}}, nil)
-	newRepo(t, 6, ".profile", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-buy_me_a_coffee: example
-custom: example.com
+ko_fi: example
+liberapay: example
+custom: "http://localhost:3003/"
 `},
 	}}, nil)
 	// add your repo declarations here

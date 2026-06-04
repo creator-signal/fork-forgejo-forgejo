@@ -66,11 +66,11 @@ test('Sponsor modal (repo)', async ({browser}) => {
   await screenshot(page);
 });
 
-const urls = [
+const hiddenCases = [
   '/user2/funding_empty',
   '/funded_user/whoops_all_invalid_funding',
 ] as const;
-for (const url of urls) {
+for (const url of hiddenCases) {
   test(`Sponsor button (repo): hidden when the funding config is empty or invalid (${url})`, async ({browser}) => {
     // this test doesn't need JS
     const context = await browser.newContext({javaScriptEnabled: false});
@@ -83,98 +83,59 @@ for (const url of urls) {
   });
 }
 
-test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
+const appearanceCases = [
+  {kind: 'user', badUrl: '/user2', goodUrl: '/funded_user', heading: 'Sponsor Plz sponsor :3'},
+  {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Sponsor Org Six'},
+] as const;
+for (const testCase of appearanceCases) {
+  test(`Sponsor button (${testCase.kind}): appears when a profile has a valid funding config`, async ({browser}) => {
+    // this test doesn't need JS
+    const context = await browser.newContext({javaScriptEnabled: false});
+    const page = await context.newPage();
 
-  let response = await page.goto('/user2', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+    let response = await page.goto(testCase.badUrl, {waitUntil: 'domcontentloaded'});
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('#sponsor-modal')).toBeHidden();
+    await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
 
-  response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
+    response = await page.goto(testCase.goodUrl, {waitUntil: 'domcontentloaded'});
+    expect(response?.status()).toBe(200);
 
-  const sponsorModal = page.locator('#sponsor-modal');
-  await expect(sponsorModal).toBeHidden();
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await sponsorButton.click();
+    const sponsorModal = page.locator('#sponsor-modal');
+    await expect(sponsorModal).toBeHidden();
+    const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+    await expect(sponsorButton).toBeVisible();
+    await sponsorButton.click();
 
-  await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
+    await expect(sponsorModal).toBeVisible();
+    await expect(sponsorModal.getByRole('heading')).toHaveText(testCase.heading);
 
-  const items = sponsorModal.getByRole('listitem');
-  await expect(items).toHaveCount(3);
-  await expectSponsorEntry(items.nth(0), 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
-  await expectSponsorEntry(items.nth(1), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
-  await expectSponsorEntry(items.nth(2), 'custom', 'http://localhost:3003/', 'http://localhost:3003/');
-});
+    const items = sponsorModal.getByRole('listitem');
+    await expect(items).toHaveCount(3);
+    await expectSponsorEntry(items.nth(0), 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
+    await expectSponsorEntry(items.nth(1), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+    await expectSponsorEntry(items.nth(2), 'custom', 'http://localhost:3003/', 'http://localhost:3003/');
+  });
+}
 
-test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
+const accessibilityCases = [
+  {kind: 'repo', url: '/user2/funding_basic_complete', heading: 'Sponsor user2/funding_basic_complete'},
+  {kind: 'user', url: '/funded_user', heading: 'Sponsor Plz sponsor :3'},
+  {kind: 'org', url: '/org6', heading: 'Sponsor Org Six'},
+] as const;
+for (const testCase of accessibilityCases) {
+  test(`Sponsor button (${testCase.kind}): accessibility`, async ({page}) => {
+    const response = await page.goto(testCase.url, {waitUntil: 'domcontentloaded'});
+    expect(response?.status()).toBe(200);
 
-  let response = await page.goto('/org25', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+    const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+    await expect(sponsorButton).toBeVisible();
+    await expect(sponsorButton).toHaveAccessibleName(testCase.heading);
+    await expect(page.locator('#sponsor-modal')).toBeHidden();
 
-  response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorModal = page.locator('#sponsor-modal');
-  await expect(sponsorModal).toBeHidden();
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await sponsorButton.click();
-
-  await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Org Six');
-
-  const items = sponsorModal.getByRole('listitem');
-  await expect(items).toHaveCount(2);
-  await expectSponsorEntry(items.nth(0), 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
-  await expectSponsorEntry(items.nth(1), 'custom', 'example.com', 'http://example.com');
-});
-
-test('Sponsor button (repo): accessibility', async ({page}) => {
-  const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await expect(sponsorButton).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-
-  await accessibilityCheck({page}, ['button.sponsor'], [], []);
-});
-
-test('Sponsor button (user): accessibility', async ({page}) => {
-  const response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await expect(sponsorButton).toHaveAccessibleName('Sponsor Plz sponsor :3');
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-
-  await accessibilityCheck({page}, ['button.sponsor'], [], []);
-});
-
-test('Sponsor button (org): accessibility', async ({page}) => {
-  const response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await expect(sponsorButton).toHaveAccessibleName('Sponsor Org Six');
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-
-  await accessibilityCheck({page}, ['button.sponsor'], [], []);
-});
+    await accessibilityCheck({page}, ['button.sponsor'], [], []);
+  });
+}
 
 test('Sponsor modal: accessibility (valid config)', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
@@ -207,7 +168,7 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
 
-const widths = [208, 310, 400, 600] as const;
+const widthCases = [208, 310, 400, 600] as const;
 for (const testCase of [
   {
     kind: 'tall',
@@ -218,7 +179,7 @@ for (const testCase of [
     name: 'funding_with_a_really_ridiculously_long_title_that_doesnt_really_happen_all_that_often_normally_but_could_really_mess_with_things_if_not_handled_properly',
   },
 ] as const) {
-  for (const width of widths) {
+  for (const width of widthCases) {
     test(`Sponsor modal (${testCase.kind}): usable at ${width}px wide`, async ({browser}) => {
       const context = await browser.newContext({screen: {width, height: 600}});
       const page = await context.newPage();
