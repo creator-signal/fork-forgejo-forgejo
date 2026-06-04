@@ -15,7 +15,18 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestCreateTaskForRunnerNoMatchingJobFound(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestCreateTaskForRunner")()
+	defer tests.PrepareTestEnv(t)()
+
+	runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 1004})
+
+	_, err := actions_model.CreateTaskForRunner(t.Context(), runner, nil, nil)
+	require.ErrorIs(t, err, actions_model.ErrNoMatchingJobFound)
+}
 
 // We need to concurrently choose the same job with two requests to CreateTaskForRunner.  The second
 // request that tries to update the job in the database (that was already updated by the first
@@ -26,7 +37,7 @@ func TestCreateTaskForRunnerNoJobUpdated(t *testing.T) {
 		t.Skip()
 	}
 
-	defer unittest.OverrideFixtures("tests/integration/fixtures/TestCreateTaskForRunnerConcurrent")()
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestCreateTaskForRunner")()
 	defer tests.PrepareTestEnv(t)()
 
 	assert.Eventually(

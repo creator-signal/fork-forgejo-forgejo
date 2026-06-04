@@ -1,6 +1,0 @@
--
-  id: 1005
-  name: "create task - no job updated test runner"
-  owner_id: 0
-  repo_id: 0
-  agent_labels: '["ubuntu"]'
