@@ -104,8 +104,16 @@ func (l *Links) SrcLink() string {
 	return util.URLJoin(l.Base, "src", l.BranchPath, l.TreePath)
 }
 
+func (l *Links) SrcLinkBase() string {
+	return util.URLJoin(l.Base, "src", l.BranchPath)
+}
+
 func (l *Links) MediaLink() string {
 	return util.URLJoin(l.Base, "media", l.BranchPath, l.TreePath)
+}
+
+func (l *Links) MediaLinkBase() string {
+	return util.URLJoin(l.Base, "media", l.BranchPath)
 }
 
 func (l *Links) RawLink() string {

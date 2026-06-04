@@ -764,7 +764,15 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		}
 		if image {
 			if !absoluteLink {
-				link = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki), link)
+				isRootRelative := strings.HasPrefix(link, "/")
+				var base string
+				if isRootRelative && !ctx.IsWiki && ctx.Links.HasBranchInfo() {
+					base = ctx.Links.MediaLinkBase()
+					link = strings.TrimLeft(link, "/")
+				} else {
+					base = ctx.Links.ResolveMediaLink(ctx.IsWiki)
+				}
+				link = util.URLJoin(base, link)
 			}
 			title := props["title"]
 			if title == "" {
@@ -786,8 +794,14 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 			}
 		} else {
 			if !absoluteLink {
+				isRootRelative := strings.HasPrefix(link, "/")
+				if isRootRelative {
+					link = strings.TrimLeft(link, "/")
+				}
 				if ctx.IsWiki {
 					link = util.URLJoin(ctx.Links.WikiLink(), link)
+				} else if isRootRelative && ctx.Links.HasBranchInfo() {
+					link = util.URLJoin(ctx.Links.SrcLinkBase(), link)
 				} else {
 					link = util.URLJoin(ctx.Links.SrcLink(), link)
 				}

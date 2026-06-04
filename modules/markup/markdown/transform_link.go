@@ -28,16 +28,27 @@ func (g *ASTTransformer) transformLink(ctx *markup.RenderContext, v *ast.Link) {
 		})
 
 	if processLink {
+		linkStr := string(link)
+		isRootRelative := len(linkStr) > 0 && linkStr[0] == '/'
+
 		var base string
 		if ctx.IsWiki {
 			base = ctx.Links.WikiLink()
 		} else if ctx.Links.HasBranchInfo() {
-			base = ctx.Links.SrcLink()
+			if isRootRelative {
+				base = ctx.Links.SrcLinkBase()
+			} else {
+				base = ctx.Links.SrcLink()
+			}
 		} else {
 			base = ctx.Links.Base
 		}
 
-		link = []byte(giteautil.URLJoin(base, string(link)))
+		if isRootRelative {
+			linkStr = linkStr[1:]
+		}
+
+		link = []byte(giteautil.URLJoin(base, linkStr))
 	}
 	if len(link) > 0 && link[0] == '#' {
 		link = []byte("#user-content-" + string(link)[1:])
