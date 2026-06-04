@@ -30,7 +30,6 @@ import (
 	"forgejo.org/modules/setting"
 	issue_service "forgejo.org/services/issue"
 	notify_service "forgejo.org/services/notify"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var mergeMessageTemplates = make(map[repo_model.MergeStyle]string, len(repo_model.MergeStyles))
