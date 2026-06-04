@@ -23,6 +23,11 @@ async function expectSponsorEntry(entry: Locator, expectedProvider: string, expe
   await expect(entry.locator('a')).toHaveAttribute('href', expectedUrl);
   await expect(entry.locator('a')).toHaveText(expectedText);
   await expect(entry.locator('.icon')).toHaveAccessibleName(expectedProvider);
+  if (expectedProvider === 'custom') {
+    await expect(entry.locator('.icon > svg')).toContainClass('octicon-link');
+  } else {
+    await expect(entry.locator('.icon > svg')).toContainClass(`brand-${expectedProvider}`);
+  }
 }
 
 test('Sponsor modal (repo)', async ({browser}) => {
