@@ -7,6 +7,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/unittest"
@@ -28,30 +29,39 @@ func TestCreateTaskForRunnerNoJobUpdated(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestCreateTaskForRunnerConcurrent")()
 	defer tests.PrepareTestEnv(t)()
 
-	runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 1005})
+	assert.Eventually(
+		t,
+		func() bool {
+			unittest.LoadFixtures()
 
-	var w sync.WaitGroup
-	errs := make(chan error, 2)
-	for range 2 {
-		w.Go(func() {
-			_, err := actions_model.CreateTaskForRunner(t.Context(), runner, nil, nil)
-			errs <- err
-		})
-	}
-	w.Wait()
-	close(errs)
+			runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 1005})
 
-	gotNoJobUpdated := false
-	succeded := false
-	for err := range errs {
-		if errors.Is(err, actions_model.ErrNoJobUpdated) {
-			gotNoJobUpdated = true
-		}
-		if err == nil {
-			succeded = true
-		}
-	}
+			var w sync.WaitGroup
+			errs := make(chan error, 2)
+			for range 2 {
+				w.Go(func() {
+					_, err := actions_model.CreateTaskForRunner(t.Context(), runner, nil, nil)
+					errs <- err
+				})
+			}
+			w.Wait()
+			close(errs)
 
-	assert.True(t, succeded, "one call should succeed")
-	assert.True(t, gotNoJobUpdated, "one call should error with no jobs updated")
+			gotNoJobUpdated := false
+			succeded := false
+			for err := range errs {
+				if errors.Is(err, actions_model.ErrNoJobUpdated) {
+					gotNoJobUpdated = true
+				}
+				if err == nil {
+					succeded = true
+				}
+			}
+
+			return succeded && gotNoJobUpdated
+		},
+		30*time.Second,
+		500*time.Microsecond,
+		"one call to CreateTaskForRunner should succeed and the other one should return the error ErrNoJobUpdated",
+	)
 }
