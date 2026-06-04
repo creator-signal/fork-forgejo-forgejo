@@ -14,17 +14,30 @@
 // web_src/css/user.css
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Locator} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
-import {accessibilityCheck} from './shared/accessibility.ts';
+import { accessibilityCheck } from './shared/accessibility.ts';
 
-test('Sponsor modal', async ({browser}) => {
+async function expectSponsorEntry(entry: Locator, expectedProvider: string, expectedText: string, expectedUrl: string) {
+  await expect(entry.locator('a')).toHaveAttribute('href', expectedUrl);
+  await expect(entry.locator('a')).toHaveText(expectedText);
+  await expect(entry.locator('.icon')).toHaveAccessibleName(expectedProvider);
+}
+
+test('Sponsor modal (repo)', async ({browser}) => {
   // this test doesn't need JS
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();
 
-  const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
+  // hidden on repo without funding config
+  let response = await page.goto('/user2/long-diff-test', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+
+  // shown on repo with funding config
+  response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
   const sponsorModal = page.locator('#sponsor-modal');
@@ -36,74 +49,97 @@ test('Sponsor modal', async ({browser}) => {
 
   const items = await sponsorModal.getByRole('listitem').all();
   expect(items).toHaveLength(13);
-
-  const community_bridge = items[0];
-  await expect(community_bridge.locator('a')).toHaveAttribute('href', 'https://funding.communitybridge.org/projects/example');
-  await expect(community_bridge.locator('a')).toHaveText('funding.communitybridge.org/projects/example');
-  await expect(community_bridge.locator('.icon')).toHaveAccessibleName('community_bridge');
-
-  const github1 = items[1];
-  await expect(github1.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example');
-  await expect(github1.locator('a')).toHaveText('github.com/sponsors/example');
-  await expect(github1.locator('.icon')).toHaveAccessibleName('github');
-
-  const github2 = items[2];
-  await expect(github2.locator('a')).toHaveAttribute('href', 'https://github.com/sponsors/example2');
-  await expect(github2.locator('a')).toHaveText('github.com/sponsors/example2');
-  await expect(github2.locator('.icon')).toHaveAccessibleName('github');
-
-  const issuehunt = items[3];
-  await expect(issuehunt.locator('a')).toHaveAttribute('href', 'https://issuehunt.io/r/example');
-  await expect(issuehunt.locator('a')).toHaveText('issuehunt.io/r/example');
-  await expect(issuehunt.locator('.icon')).toHaveAccessibleName('issuehunt');
-
-  const ko_fi = items[4];
-  await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
-  await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
-  await expect(ko_fi.locator('.icon')).toHaveAccessibleName('ko_fi');
-
-  const liberapay = items[5];
-  await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
-  await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
-  await expect(liberapay.locator('.icon')).toHaveAccessibleName('liberapay');
-
-  const patreon = items[6];
-  await expect(patreon.locator('a')).toHaveAttribute('href', 'https://patreon.com/example');
-  await expect(patreon.locator('a')).toHaveText('patreon.com/example');
-  await expect(patreon.locator('.icon')).toHaveAccessibleName('patreon');
-
-  const open_collective = items[7];
-  await expect(open_collective.locator('a')).toHaveAttribute('href', 'https://opencollective.com/example');
-  await expect(open_collective.locator('a')).toHaveText('opencollective.com/example');
-  await expect(open_collective.locator('.icon')).toHaveAccessibleName('open_collective');
-
-  const buy_me_a_coffee = items[8];
-  await expect(buy_me_a_coffee.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
-  await expect(buy_me_a_coffee.locator('a')).toHaveText('buymeacoffee.com/example');
-  await expect(buy_me_a_coffee.locator('.icon')).toHaveAccessibleName('buy_me_a_coffee');
-
-  const polar = items[9];
-  await expect(polar.locator('a')).toHaveAttribute('href', 'https://polar.sh/example');
-  await expect(polar.locator('a')).toHaveText('polar.sh/example');
-  await expect(polar.locator('.icon')).toHaveAccessibleName('polar');
-
-  const thanks_dev = items[10];
-  await expect(thanks_dev.locator('a')).toHaveAttribute('href', 'https://thanks.dev/u/gh/example');
-  await expect(thanks_dev.locator('a')).toHaveText('thanks.dev/u/gh/example');
-  await expect(thanks_dev.locator('.icon')).toHaveAccessibleName('thanks_dev');
-
-  const custom1 = items[11];
-  await expect(custom1.locator('a')).toHaveAttribute('href', 'https://example.com');
-  await expect(custom1.locator('a')).toHaveText('https://example.com');
-  await expect(custom1.locator('.icon')).toHaveAccessibleName('custom');
-
-  const custom2 = items[12];
-  await expect(custom2.locator('a')).toHaveAttribute('href', 'http://example.com');
-  await expect(custom2.locator('a')).toHaveText('example.com');
-  await expect(custom2.locator('.icon')).toHaveAccessibleName('custom');
+  await expectSponsorEntry(items[0], 'community_bridge', 'funding.communitybridge.org/projects/example', 'https://funding.communitybridge.org/projects/example');
+  await expectSponsorEntry(items[1], 'github', 'github.com/sponsors/example', 'https://github.com/sponsors/example');
+  await expectSponsorEntry(items[2], 'github', 'github.com/sponsors/example2', 'https://github.com/sponsors/example2');
+  await expectSponsorEntry(items[3], 'issuehunt', 'issuehunt.io/r/example', 'https://issuehunt.io/r/example');
+  await expectSponsorEntry(items[4], 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
+  await expectSponsorEntry(items[5], 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+  await expectSponsorEntry(items[6], 'patreon', 'patreon.com/example', 'https://patreon.com/example');
+  await expectSponsorEntry(items[7], 'open_collective', 'opencollective.com/example', 'https://opencollective.com/example');
+  await expectSponsorEntry(items[8], 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
+  await expectSponsorEntry(items[9], 'polar', 'polar.sh/example', 'https://polar.sh/example');
+  await expectSponsorEntry(items[10], 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
+  await expectSponsorEntry(items[11], 'custom', 'https://example.com', 'https://example.com');
+  await expectSponsorEntry(items[12], 'custom', 'example.com', 'http://example.com');
 
   await screenshot(page);
 });
+
+const urls = [
+  '/user2/funding_empty',
+  '/funded_user/whoops_all_invalid_funding',
+] as const;
+for (const url of urls) {
+  test(`Sponsor button (repo): hidden when the funding config is empty or invalid (${url})`, async ({ browser }) => {
+    // this test doesn't need JS
+    const context = await browser.newContext({javaScriptEnabled: false});
+    const page = await context.newPage();
+
+    let response = await page.goto(url, {waitUntil: 'domcontentloaded'});
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('#sponsor-modal')).toBeHidden();
+    await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+  })
+}
+
+test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  let response = await page.goto('/user2', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+
+  response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorModal = page.locator('#sponsor-modal');
+  await expect(sponsorModal).toBeHidden();
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await sponsorButton.click();
+
+  await expect(sponsorModal).toBeVisible();
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
+
+  const items = await sponsorModal.getByRole('listitem').all();
+  expect(items).toHaveLength(3);
+  await expectSponsorEntry(items[0], 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
+  await expectSponsorEntry(items[1], 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+  await expectSponsorEntry(items[2], 'custom', 'http://localhost:3003/', 'http://localhost:3003/');
+});
+
+test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  let response = await page.goto('/org25', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('#sponsor-modal')).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+
+  response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const sponsorModal = page.locator('#sponsor-modal');
+  await expect(sponsorModal).toBeHidden();
+  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+  await expect(sponsorButton).toBeVisible();
+  await sponsorButton.click();
+
+  await expect(sponsorModal).toBeVisible();
+  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Org Six');
+
+  const items = await sponsorModal.getByRole('listitem').all();
+  expect(items).toHaveLength(2);
+  await expectSponsorEntry(items[0], 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
+  await expectSponsorEntry(items[1], 'custom', 'example.com', 'http://example.com');
+});
+
 
 test('Sponsor button (repo): accessibility', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
@@ -167,9 +203,7 @@ test('Sponsor modal: accessibility (config errors)', async ({page}) => {
 
   const items = await sponsorModal.getByRole('listitem').all();
   expect(items).toHaveLength(1);
-  await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
-  await expect(items[0].locator('a')).toHaveText('https://example.com');
-  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
+  await expectSponsorEntry(items[0], 'custom', 'https://example.com', 'https://example.com');
 
   await accessibilityCheck({page}, ['dialog#sponsor-modal'], [], []);
 });
@@ -290,9 +324,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
 
   const items = await sponsorModal.getByRole('listitem').all();
   expect(items).toHaveLength(1);
-  await expect(items[0].locator('a')).toHaveAttribute('href', 'https://example.com');
-  await expect(items[0].locator('a')).toHaveText('https://example.com');
-  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
+  await expectSponsorEntry(items[0], 'custom', 'https://example.com', 'https://example.com');
 
   await expect(sponsorModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
   await page.getByText('funding config').click();
@@ -323,95 +355,11 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   // strings that don't produce valid URLs or whose value does not match the regex are omitted with error
   const items = await sponsorModal.getByRole('listitem').all();
   expect(items).toHaveLength(3);
+  await expectSponsorEntry(items[0], 'custom', '#" style="background: url(localhost)', 'http://#%22%20style=%22background:%20url%28localhost%29');
+  await expectSponsorEntry(items[1], 'custom', 'https://example.com/" class="rogue injection', 'https://example.com/%22%20class=%22rogue%20injection');
+  await expectSponsorEntry(items[2], 'custom', '<script>alert`1`</script>', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
 
-  await expect(items[0].locator('a')).toHaveAttribute('href', 'http://#%22%20style=%22background:%20url%28localhost%29');
-  await expect(items[0].locator('a')).toHaveText('#" style="background: url(localhost)');
-  await expect(items[0].locator('.icon')).toHaveAccessibleName('custom');
-
-  await expect(items[1].locator('a')).toHaveAttribute('href', 'https://example.com/%22%20class=%22rogue%20injection');
-  await expect(items[1].locator('a')).toHaveText('https://example.com/" class="rogue injection');
-  await expect(items[1].locator('.icon')).toHaveAccessibleName('custom');
-
-  await expect(items[2].locator('a')).toHaveAttribute('href', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
-  await expect(items[2].locator('a')).toHaveText('<script>alert`1`</script>');
-  await expect(items[2].locator('.icon')).toHaveAccessibleName('custom');
-  await expect(items[2].locator('a *')).toBeHidden(); // no real injected <script>
+  // no real injected <script>
+  await expect(sponsorModal.locator('a *')).toBeHidden();
   await expect(sponsorModal.locator('script')).toBeHidden();
-});
-
-test('Sponsor button (user): appears when a user profile has a valid funding config', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
-  let response = await page.goto('/user2', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
-
-  response = await page.goto('/funded_user', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorModal = page.locator('#sponsor-modal');
-  await expect(sponsorModal).toBeHidden();
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await sponsorButton.click();
-
-  await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Plz sponsor :3');
-
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(3);
-
-  const ko_fi = items[0];
-  await expect(ko_fi.locator('a')).toHaveAttribute('href', 'https://ko-fi.com/example');
-  await expect(ko_fi.locator('a')).toHaveText('ko-fi.com/example');
-  await expect(ko_fi.locator('.icon')).toHaveAccessibleName('ko_fi');
-
-  const liberapay = items[1];
-  await expect(liberapay.locator('a')).toHaveAttribute('href', 'https://liberapay.com/example');
-  await expect(liberapay.locator('a')).toHaveText('liberapay.com/example');
-  await expect(liberapay.locator('.icon')).toHaveAccessibleName('liberapay');
-
-  const custom = items[2];
-  await expect(custom.locator('a')).toHaveAttribute('href', 'http://localhost:3003/');
-  await expect(custom.locator('a')).toHaveText('http://localhost:3003/');
-  await expect(custom.locator('.icon')).toHaveAccessibleName('custom');
-});
-
-test('Sponsor button (org): appears when an org profile has a valid funding config', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
-  let response = await page.goto('/org25', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-  await expect(page.locator('#sponsor-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
-
-  response = await page.goto('/org6', {waitUntil: 'domcontentloaded'});
-  expect(response?.status()).toBe(200);
-
-  const sponsorModal = page.locator('#sponsor-modal');
-  await expect(sponsorModal).toBeHidden();
-  const sponsorButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(sponsorButton).toBeVisible();
-  await sponsorButton.click();
-
-  await expect(sponsorModal).toBeVisible();
-  await expect(sponsorModal.getByRole('heading')).toHaveText('Sponsor Org Six');
-
-  const items = await sponsorModal.getByRole('listitem').all();
-  expect(items).toHaveLength(2);
-
-  const bmac = items[0];
-  await expect(bmac.locator('a')).toHaveAttribute('href', 'https://buymeacoffee.com/example');
-  await expect(bmac.locator('a')).toHaveText('buymeacoffee.com/example');
-  await expect(bmac.locator('.icon')).toHaveAccessibleName('buy_me_a_coffee');
-
-  const custom = items[1];
-  await expect(custom.locator('a')).toHaveAttribute('href', 'http://example.com');
-  await expect(custom.locator('a')).toHaveText('example.com');
-  await expect(custom.locator('.icon')).toHaveAccessibleName('custom');
 });

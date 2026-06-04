@@ -200,47 +200,34 @@ func (c *RawRepoFundingConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// GetFundingFromPath parses a funding config from the file at the given `path`
-// in the given commit on the repository.
-func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) (*RepoFunding, error) {
-	var err error
+type EntriesAndLineErrors struct {
+	EntryList []*api.RepoFundingEntry
+	Errs      []error
+}
 
-	treeEntry, err := commit.GetTreeEntryByFoldedPath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	configPath, err := treeEntry.Path()
-	if err != nil {
-		return nil, err
-	}
-
-	reader, err := treeEntry.Blob().DataAsync()
-	if err != nil {
-		log.Error("DataAsync: failed to read blob for funding config due to error: %v", err)
-		return nil, err
-	}
-	defer reader.Close()
-
-	configContent, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	// no need to sort these, they'll come in the order they were given
+// Parses the given file data for funding entries. Fails if the data could not
+// be understood for some reason.
+func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
 	config := make(RawRepoFundingConfig, 0)
-	if err := yaml.Unmarshal(configContent, &config); err != nil {
+	if err := yaml.Unmarshal(content, &config); err != nil {
 		return nil, err
 	}
 
 	entryList := make([]*api.RepoFundingEntry, 0)
 	var errs []error
+
+	// no need to sort these, they'll come in the order they were given
 	for _, entry := range config {
 		providerName := entry.Key
 		entryData := entry.Value
 		provider := setting.GetFundingProviderByName(providerName)
 		if provider == nil {
 			errs = append(errs, &ErrUnknownFundingProvider{Name: providerName})
+			continue
+		}
+
+		if entryData == nil {
+			errs = append(errs, &ErrInvalidYamlType{Name: providerName})
 			continue
 		}
 
@@ -258,6 +245,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 				continue
 			}
 			entryList = append(entryList, newEntry)
+
 		case reflect.Slice:
 			// no need to sort these either, they'll come in the order they were given
 			stringSlice := reflect.ValueOf(entryData)
@@ -290,9 +278,44 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		}
 	}
 
+	return &EntriesAndLineErrors{entryList, errs}, nil
+}
+
+// GetFundingFromPath parses a funding config from the file at the given `path`
+// in the given commit on the repository.
+func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commit) (*RepoFunding, error) {
+	var err error
+
+	treeEntry, err := commit.GetTreeEntryByFoldedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	configPath, err := treeEntry.Path()
+	if err != nil {
+		return nil, err
+	}
+
+	reader, err := treeEntry.Blob().DataAsync()
+	if err != nil {
+		log.Error("DataAsync: failed to read blob for funding config due to error: %v", err)
+		return nil, err
+	}
+	defer reader.Close()
+
+	configContent, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
 	configPath = fmt.Sprintf("/%s/src/branch/%s/%s", util.PathEscapeSegments(r.FullName()), util.PathEscapeSegments(r.DefaultBranch), configPath)
 
-	funding := &RepoFunding{Entries: entryList, ConfigPath: configPath, Errors: errs}
+	data, err := GetFundingFromBlob(configContent)
+	if err != nil {
+		return nil, err
+	}
+
+	funding := &RepoFunding{data.EntryList, configPath, data.Errs}
 	return funding, nil
 }
 

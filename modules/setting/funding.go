@@ -67,7 +67,7 @@ const (
 	anythingPattern      = `.+`                    // e.g. "http://a.com"
 )
 
-func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
+func LoadBuiltInFundingProviders() {
 	FundingProviders = make(map[string]*FundingProviderConfig)
 
 	singleSegmentRegex := regexp.MustCompile(singleSegmentPattern)
@@ -159,6 +159,10 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		URL:          "%[1]s",
 		InputPattern: anythingRegex, // matches anything; the final value is treated like a URL in any case
 	})
+}
+
+func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
+	LoadBuiltInFundingProviders()
 
 	const keyLimit = "LIMIT"
 	const keyText = "TEXT"
@@ -190,6 +194,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 
 		inputPattern, err := regexp.Compile(rawInputPattern)
 		if err != nil {
+			singleSegmentRegex := regexp.MustCompile(singleSegmentPattern)
 			log.Warn("%s.%s %v, using /%s/ instead", sec.Name(), keyInputPattern, err, singleSegmentRegex.String())
 			inputPattern = singleSegmentRegex
 		}
