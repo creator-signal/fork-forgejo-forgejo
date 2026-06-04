@@ -187,12 +187,11 @@ func TestAPIRepoFundingGone(t *testing.T) {
 		t.Run("Private repo", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
+			config := "ko_fi: example\n" +
+				"liberapay: example\n" +
+				"custom: example.com\n"
 			mfs := forgery.MapFS{}
-			mfs["FUNDING.yml"] = forgery.MapFile(`
-ko_fi: example
-liberapay: example
-custom: example.com
-	`)
+			mfs["FUNDING.yml"] = forgery.MapFile(config)
 			repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
 				Files:     mfs,
 				IsPrivate: true,
