@@ -47,7 +47,7 @@ func TestRepoSettingsUpdateWebsite(t *testing.T) {
 	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		// changing website should not work
+		// changing website should work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
 			"action": "update",
 			"repo_name": repo.Name,
@@ -60,7 +60,7 @@ func TestRepoSettingsUpdateWebsite(t *testing.T) {
 	t.Run("an H3 website under default schemes", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		// changing website should work
+		// changing website should not work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
 			"action": "update",
 			"repo_name": repo.Name,

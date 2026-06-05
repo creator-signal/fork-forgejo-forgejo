@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,7 +16,9 @@ import (
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/tests"
 
@@ -126,6 +129,63 @@ func TestAdminEditUserHideEmail(t *testing.T) {
 	resp = session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc = NewHTMLParser(t, resp.Body)
 	htmlDoc.AssertElement(t, `input[name="hide_email"][checked]`, true)
+}
+
+func TestAdminEditUserWebsite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	userID := int64(2) // user2 from fixtures // TODO: make new user for this instead
+	urlStr := fmt.Sprintf("/admin/users/%d/edit", userID)
+
+	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"user_name":  "user2",
+			"login_name": "user2",
+			"login_type": "0-0",
+			"email":      "user2@example.com",
+			"website": "https://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assertHasFlashMessages(t, resp, "success")
+	})
+
+	t.Run("an H3 website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should not work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"user_name":  "user2",
+			"login_name": "user2",
+			"login_type": "0-0",
+			"email":      "user2@example.com",
+			"website": "h3://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		doc := NewHTMLParser(t, resp.Body)
+		flash := doc.Find("#flash-message").Text()
+		assert.Equal(t, `Website"Url" is not a valid URL.`, strings.TrimSpace(flash))
+	})
+
+	t.Run("an H3 website under custom schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		// changing website should work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"user_name":  "user2",
+			"login_name": "user2",
+			"login_type": "0-0",
+			"email":      "user2@example.com",
+			"website": "h3://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assertHasFlashMessages(t, resp, "success")
+	})
 }
 
 func testSuccessfulEdit(t *testing.T, formData user_model.User) {
