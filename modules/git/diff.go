@@ -316,6 +316,7 @@ func PatchRightSideContent(patch string) map[int64]string {
 			rightLine++
 		case '-', '\\':
 			// '-' is left-only; '\' is the "no newline at end of file" marker
+			break
 		default:
 			// a non-hunk line (e.g. the next "diff --git" header); stop this hunk
 			inHunk = false
