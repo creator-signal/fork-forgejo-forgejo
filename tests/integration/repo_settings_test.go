@@ -49,9 +49,9 @@ func TestRepoSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"action": "update",
+			"action":    "update",
 			"repo_name": repo.Name,
-			"website": "https://codeberg.org",
+			"website":   "https://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)
 		assertHasFlashMessages(t, resp, "success")
@@ -62,9 +62,9 @@ func TestRepoSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should not work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"action": "update",
+			"action":    "update",
 			"repo_name": repo.Name,
-			"website": "h3://codeberg.org",
+			"website":   "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusOK)
 		doc := NewHTMLParser(t, resp.Body)
@@ -79,9 +79,9 @@ func TestRepoSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"action": "update",
+			"action":    "update",
 			"repo_name": repo.Name,
-			"website": "h3://codeberg.org",
+			"website":   "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)
 		assertHasFlashMessages(t, resp, "success")

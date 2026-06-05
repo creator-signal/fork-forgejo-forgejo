@@ -110,7 +110,7 @@ func TestOrgSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"name": orgName,
+			"name":    orgName,
 			"website": "https://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)
@@ -122,7 +122,7 @@ func TestOrgSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should not work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"name": orgName,
+			"name":    orgName,
 			"website": "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusOK)
@@ -138,7 +138,7 @@ func TestOrgSettingsUpdateWebsite(t *testing.T) {
 
 		// changing website should work
 		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
-			"name": orgName,
+			"name":    orgName,
 			"website": "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)

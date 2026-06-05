@@ -148,7 +148,7 @@ func TestAdminEditUserWebsite(t *testing.T) {
 			"login_name": user.LoginName,
 			"login_type": "0-0",
 			"email":      user.Email,
-			"website": "https://codeberg.org",
+			"website":    "https://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)
 		assertHasFlashMessages(t, resp, "success")
@@ -163,7 +163,7 @@ func TestAdminEditUserWebsite(t *testing.T) {
 			"login_name": user.LoginName,
 			"login_type": "0-0",
 			"email":      user.Email,
-			"website": "h3://codeberg.org",
+			"website":    "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusOK)
 		doc := NewHTMLParser(t, resp.Body)
@@ -182,7 +182,7 @@ func TestAdminEditUserWebsite(t *testing.T) {
 			"login_name": user.LoginName,
 			"login_type": "0-0",
 			"email":      user.Email,
-			"website": "h3://codeberg.org",
+			"website":    "h3://codeberg.org",
 		})
 		resp := session.MakeRequest(t, req, http.StatusSeeOther)
 		assertHasFlashMessages(t, resp, "success")

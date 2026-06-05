@@ -109,9 +109,9 @@ func TestAPIOrgCreateWithWebsite(t *testing.T) {
 
 		// setting website should work
 		org := api.CreateOrgOption{
-			UserName:    "user1_org",
-			FullName:    "User1's organization",
-			Website:     "https://codeberg.org",
+			UserName: "user1_org",
+			FullName: "User1's organization",
+			Website:  "https://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "POST", "/api/v1/orgs", &org).AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusCreated)
@@ -127,9 +127,9 @@ func TestAPIOrgCreateWithWebsite(t *testing.T) {
 
 		// setting website should not work
 		org := api.CreateOrgOption{
-			UserName:    "user1_org_2",
-			FullName:    "User1's second organization",
-			Website:     "h3://codeberg.org",
+			UserName: "user1_org_2",
+			FullName: "User1's second organization",
+			Website:  "h3://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "POST", "/api/v1/orgs", &org).AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
@@ -147,9 +147,9 @@ func TestAPIOrgCreateWithWebsite(t *testing.T) {
 
 		// setting website should work
 		org := api.CreateOrgOption{
-			UserName:    "user1_org_2",
-			FullName:    "User1's second organization",
-			Website:     "h3://codeberg.org",
+			UserName: "user1_org_2",
+			FullName: "User1's second organization",
+			Website:  "h3://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "POST", "/api/v1/orgs", &org).AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusCreated)
