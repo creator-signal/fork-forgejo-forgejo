@@ -573,7 +573,6 @@ func TestAPIUser_Website(t *testing.T) {
 	})
 }
 
-
 func TestAPIAdminListUserEmails(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
