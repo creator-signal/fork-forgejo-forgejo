@@ -352,7 +352,7 @@ func ActionWatchConst(watchSelection repo_model.WatchSelection) func(ctx *contex
 
 		ctx.Data["RepoWatchSelection"] = repo_model.GetWatchSelection(ctx, ctx.Doer.ID, ctx.Repo.Repository.ID)
 
-		// we have to reload the repository because NumStars or NumWatching (used in the templates) has just changed
+		// We have to reload the repository because NumWatching (used in the templates) might have just changed.
 		ctx.Data["Repository"], err = repo_model.GetRepositoryByName(ctx, ctx.Repo.Repository.OwnerID, ctx.Repo.Repository.Name)
 		if err != nil {
 			ctx.ServerError(fmt.Sprintf("Action (watch, %t)", watchSelection), err)
