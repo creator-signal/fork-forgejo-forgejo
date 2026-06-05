@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	actions_model "forgejo.org/models/actions"
-	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -39,18 +38,15 @@ var withRunner = connect.WithInterceptors(connect.UnaryInterceptorFunc(func(unar
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		ok, isLegacy := auth_model.VerifyHighEntropyToken(token, runner.TokenSalt, runner.TokenHash)
-		if !ok {
+		if !runner.VerifyToken(token) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unregistered runner"))
 		}
 
 		cols := []string{"last_online"}
 		runner.LastOnline = timeutil.TimeStampNow()
-		if isLegacy {
-			// Opportunistically upgrade to fast HMAC-SHA256 hash.
-			// Piggybacks on the UpdateRunner write that already happens every request.
-			runner.TokenHash = auth_model.HashHighEntropyToken(token, runner.TokenSalt)
-			cols = append(cols, "token_hash")
+		if runner.TokenSalt != "" {
+			runner.UpdateSecret(runner.Token)
+			cols = append(cols, "token_hash", "token_salt")
 		}
 		if methodName == "UpdateTask" || methodName == "UpdateLog" {
 			runner.LastActive = timeutil.TimeStampNow()
