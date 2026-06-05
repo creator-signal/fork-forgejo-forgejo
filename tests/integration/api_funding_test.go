@@ -23,25 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Creates a new repository whose contents consist of the given file at the
-// given path.
-func createRepoWithFile(t *testing.T, treePath, data string) *repo_model.Repository {
-	t.Helper()
-
-	mfs := forgery.MapFS{}
-	mfs[treePath] = forgery.MapFile(data)
-	return forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
-		Files: mfs,
-	})
-}
-
-func createFundingConfig(t *testing.T, user *user_model.User, repo *repo_model.Repository, treePath, config string) {
-	t.Helper()
-
-	err := createOrReplaceFileInBranch(user, repo, treePath, repo.DefaultBranch, config)
-	require.NoError(t, err)
-}
-
 func getRepoFundingConfig(t *testing.T, repo *repo_model.Repository, token string) []*api.RepoFundingEntry {
 	t.Helper()
 
@@ -145,7 +126,9 @@ func TestAPIRepoFundingConfigPaths(t *testing.T) {
 					acctName := StringWithCharset(5+rand.IntN(10), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 					config := fmt.Sprintf("ko_fi: %s", acctName)
-					repo := createRepoWithFile(t, treePath, config)
+					repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+						Files: forgery.MapFS{treePath: forgery.MapFile(config)},
+					})
 
 					fundingConfig := getRepoFundingConfig(t, repo, "")
 					validation := validateRepoFundingConfig(t, repo, "")
@@ -190,10 +173,8 @@ func TestAPIRepoFundingGone(t *testing.T) {
 			config := "ko_fi: example\n" +
 				"liberapay: example\n" +
 				"custom: example.com\n"
-			mfs := forgery.MapFS{}
-			mfs["FUNDING.yml"] = forgery.MapFile(config)
 			repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
-				Files:     mfs,
+				Files:     forgery.MapFS{"FUNDING.yml": forgery.MapFile(config)},
 				IsPrivate: true,
 			})
 
@@ -219,7 +200,9 @@ func TestAPIRepoFundingGone(t *testing.T) {
 		t.Run("Empty funding config", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			repo := createRepoWithFile(t, "Funding.yml", ``)
+			repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{"Funding.yml": forgery.MapFile("")},
+			})
 			funding := getRepoFundingConfig(t, repo, token)
 			validation := validateRepoFundingConfig(t, repo, token)
 
@@ -269,7 +252,8 @@ func TestAPIRepoFundingConfigBasics(t *testing.T) {
 			config := `custom: "https://example.com"` + "\n" +
 				"patreon: test\n" +
 				"ko_fi: test\n"
-			createFundingConfig(t, owner, repo, treePath, config)
+			err := createOrReplaceFileInBranch(owner, repo, treePath, repo.DefaultBranch, config)
+			require.NoError(t, err)
 			funding := getRepoFundingConfig(t, repo, token)
 			validation := validateRepoFundingConfig(t, repo, token)
 
@@ -294,7 +278,8 @@ func TestAPIRepoFundingConfigBasics(t *testing.T) {
 				`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
 				`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
 				"- \"<script>alert`1`</script>\""
-			createFundingConfig(t, owner, repo, treePath, config)
+			err := createOrReplaceFileInBranch(owner, repo, treePath, repo.DefaultBranch, config)
+			require.NoError(t, err)
 			funding := getRepoFundingConfig(t, repo, token)
 			validation := validateRepoFundingConfig(t, repo, token)
 

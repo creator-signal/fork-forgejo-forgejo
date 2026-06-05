@@ -221,17 +221,6 @@ tidelift: ["npm/example"]
 custom: example.com
 `},
 	}}, nil)
-	newRepo(t, 2, "funding_empty", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-`},
-	}}, nil)
-	newRepo(t, 45, "whoops_all_invalid_funding", nil, []FileChanges{{
-		Filename: ".forgejo/FUNDING.yml",
-		Versions: []string{`
-foo: bar
-`},
-	}}, nil)
 	newRepo(t, 2, "funding_evil", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`

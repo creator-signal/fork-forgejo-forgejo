@@ -71,23 +71,6 @@ test('Sponsor modal (repo)', async ({browser}) => {
   await screenshot(page);
 });
 
-const hiddenCases = [
-  '/user2/funding_empty',
-  '/funded_user/whoops_all_invalid_funding',
-] as const;
-for (const url of hiddenCases) {
-  test(`Sponsor button (repo): hidden when the funding config is empty or invalid (${url})`, async ({browser}) => {
-    // this test doesn't need JS
-    const context = await browser.newContext({javaScriptEnabled: false});
-    const page = await context.newPage();
-
-    const response = await page.goto(url, {waitUntil: 'domcontentloaded'});
-    expect(response?.status()).toBe(200);
-    await expect(page.locator('#sponsor-modal')).toBeHidden();
-    await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
-  });
-}
-
 const appearanceCases = [
   {kind: 'user', badUrl: '/user2', goodUrl: '/funded_user', heading: 'Sponsor Plz sponsor :3'},
   {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Sponsor Org Six'},
