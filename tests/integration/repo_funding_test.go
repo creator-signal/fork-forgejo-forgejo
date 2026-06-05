@@ -31,7 +31,7 @@ func TestRepoFundingConfigPrecedence(t *testing.T) {
 				repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
 					Files: forgery.MapFS{
 						".forgejo/FUNDING.yml": forgery.MapFile(preferredConfig),
-						fundingConfigFilename: forgery.MapFile(altConfig),
+						fundingConfigFilename:  forgery.MapFile(altConfig),
 					},
 				})
 
