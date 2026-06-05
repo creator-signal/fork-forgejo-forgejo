@@ -7,6 +7,13 @@ package repo
 import (
 	"reflect"
 	"testing"
+
+	"forgejo.org/models/unittest"
+	"forgejo.org/modules/git"
+	"forgejo.org/modules/util"
+	"forgejo.org/services/contexttest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_localizedExtensions(t *testing.T) {
@@ -59,4 +66,31 @@ func Test_localizedExtensions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_WhenViewingRepoWithTagsButNotBranchesPushed_DoesNotRedirect(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	ctx, _ := contexttest.MockContext(t, "user2/repo1")
+	contexttest.LoadUser(t, ctx, 2)
+	contexttest.LoadRepo(t, ctx, 1)
+	contexttest.LoadGitRepo(t, ctx)
+	defer ctx.Repo.GitRepo.Close()
+
+	// create a commit
+	_, _, err := git.NewCommand(ctx, "commit", "--allow-empty", "--allow-empty-message", "--message", "").RunStdString(&git.RunOpts{})
+	require.NoError(t, err)
+
+	// create a tag
+	tagName := util.CryptoRandomString(util.RandomStringLow)
+	_, _, err = git.NewCommand(ctx, "tag").AddDynamicArguments(tagName).RunStdString(&git.RunOpts{})
+	require.NoError(t, err)
+
+	renderHomeCode(ctx)
+
+	// delete the tag
+	_, _, err = git.NewCommand(ctx, "tag", "-d").AddDynamicArguments(tagName).RunStdString(&git.RunOpts{})
+	require.NoError(t, err)
+
+	assert.Equal(t, 200, ctx.Resp.Status())
 }
