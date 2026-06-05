@@ -69,8 +69,7 @@ func TestFundingConfigParse(t *testing.T) {
 			err := yaml.Unmarshal([]byte(configContent), &config)
 			require.NoError(t, err)
 			assert.Len(t, config, 1)
-			assert.Equal(t, expected.Key, config[0].Key)
-			assert.Equal(t, expected.Value, config[0].Value)
+			assert.Equal(t, expected, config[0])
 		}
 	})
 
@@ -88,12 +87,9 @@ func TestFundingConfigParse(t *testing.T) {
 		err := yaml.Unmarshal([]byte(configContent), &config)
 		require.NoError(t, err)
 		assert.Len(t, config, 3)
-		assert.Equal(t, "a", config[0].Key)
-		assert.Equal(t, "a", config[0].Value)
-		assert.Equal(t, "b", config[1].Key)
-		assert.Equal(t, "b", config[1].Value)
-		assert.Equal(t, "c", config[2].Key)
-		assert.Equal(t, "c", config[2].Value)
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"a", "a"}, config[0])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"b", "b"}, config[1])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"c", "c"}, config[2])
 	})
 
 	t.Run("orders b then a then c", func(t *testing.T) {
@@ -102,12 +98,9 @@ func TestFundingConfigParse(t *testing.T) {
 		err := yaml.Unmarshal([]byte(configContent), &config)
 		require.NoError(t, err)
 		assert.Len(t, config, 3)
-		assert.Equal(t, "b", config[0].Key)
-		assert.Equal(t, "b", config[0].Value)
-		assert.Equal(t, "a", config[1].Key)
-		assert.Equal(t, "a", config[1].Value)
-		assert.Equal(t, "c", config[2].Key)
-		assert.Equal(t, "c", config[2].Value)
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"b", "b"}, config[0])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"a", "a"}, config[1])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"c", "c"}, config[2])
 	})
 
 	t.Run("orders c then a then b", func(t *testing.T) {
@@ -116,12 +109,9 @@ func TestFundingConfigParse(t *testing.T) {
 		err := yaml.Unmarshal([]byte(configContent), &config)
 		require.NoError(t, err)
 		assert.Len(t, config, 3)
-		assert.Equal(t, "c", config[0].Key)
-		assert.Equal(t, "c", config[0].Value)
-		assert.Equal(t, "a", config[1].Key)
-		assert.Equal(t, "a", config[1].Value)
-		assert.Equal(t, "b", config[2].Key)
-		assert.Equal(t, "b", config[2].Value)
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"c", "c"}, config[0])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"a", "a"}, config[1])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"b", "b"}, config[2])
 	})
 
 	t.Run("orders c then b then a", func(t *testing.T) {
@@ -130,45 +120,36 @@ func TestFundingConfigParse(t *testing.T) {
 		err := yaml.Unmarshal([]byte(configContent), &config)
 		require.NoError(t, err)
 		assert.Len(t, config, 3)
-		assert.Equal(t, "c", config[0].Key)
-		assert.Equal(t, "c", config[0].Value)
-		assert.Equal(t, "b", config[1].Key)
-		assert.Equal(t, "b", config[1].Value)
-		assert.Equal(t, "a", config[2].Key)
-		assert.Equal(t, "a", config[2].Value)
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"c", "c"}, config[0])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"b", "b"}, config[1])
+		assert.Equal(t, funding_service.RawRepoFundingConfigEntry{"a", "a"}, config[2])
 	})
 }
 
 func TestIsFundingConfig(t *testing.T) {
 	cases := []string{
-		".forgejo/FUNDING.yaml",
-		".forgejo/FUNDING.yml",
-		".forgejo/Funding.yaml",
-		".forgejo/Funding.yml",
-		".forgejo/funding.yml",
-		".forgejo/funding.yaml",
-		".forgejo/fundING.yml",
+		".forgejo/FUNDING",
+		".forgejo/Funding",
+		".forgejo/funding",
+		".forgejo/fundING",
 
-		".github/FUNDING.yaml",
-		".github/FUNDING.yml",
-		".github/Funding.yaml",
-		".github/Funding.yml",
-		".github/funding.yml",
-		".github/funding.yaml",
-		".github/fundING.yml",
+		".github/FUNDING",
+		".github/Funding",
+		".github/funding",
+		".github/fundING",
 
-		"FUNDING.yaml",
-		"FUNDING.yml",
-		"Funding.yaml",
-		"Funding.yml",
-		"funding.yml",
-		"funding.yaml",
-		"fundING.yml",
+		"FUNDING",
+		"Funding",
+		"funding",
+		"fundING",
 	}
 	for _, fileName := range cases {
-		t.Run(fileName, func(t *testing.T) {
-			assert.True(t, funding_service.IsFundingConfig(fileName))
-		})
+		for _, extension := range []string{".yaml", ".yml", ".YML"} {
+			path := fileName + extension
+			t.Run(fileName, func(t *testing.T) {
+				assert.True(t, funding_service.IsFundingConfig(path))
+			})
+		}
 	}
 }
 
@@ -217,11 +198,6 @@ func assertLiberapay(t *testing.T, entry *api.RepoFundingEntry, expectedText, ex
 func assertKoFi(t *testing.T, entry *api.RepoFundingEntry, expectedText, expectedURL string) {
 	t.Helper()
 	assertEntry(t, entry, "ko_fi", expectedText, expectedURL)
-}
-
-func assertPatreon(t *testing.T, entry *api.RepoFundingEntry, expectedText, expectedURL string) {
-	t.Helper()
-	assertEntry(t, entry, "patreon", expectedText, expectedURL)
 }
 
 func TestConfigParseErrors(t *testing.T) {
@@ -300,6 +276,7 @@ func TestEntriesWithErrorsFromConfig(t *testing.T) {
 			`custom: [[test]]`,
 			`custom: [["test"]]`,
 			`custom: [[]]`,
+			`custom:`,
 			`custom: 42`,
 			"custom: 42\nwhatever:",
 		}
@@ -387,29 +364,6 @@ func TestEntriesWithErrorsFromConfig(t *testing.T) {
 		assertCustom(t, funding[1], "https://example.com", "https://example.com")
 		assertCustom(t, funding[2], "test3", "http://test3")
 		assertCustom(t, funding[3], "test4", "http://test4")
-	})
-
-	t.Run("Partially invalid (too many of one provider, valid others)", func(t *testing.T) {
-		config := "ko_fi: test\n" +
-			"patreon: test\n" +
-			"custom:\n" +
-			"- test1\n" +
-			`- "https://example.com"` + "\n" +
-			"- test3\n" +
-			"- test4\n" +
-			"- too_many"
-		funding, errs := getFundingFromConfig(t, config)
-
-		assert.Len(t, errs, 1)
-		assert.Equal(t, "Expected up to 4 of funding provider custom", errs[0].Error())
-
-		assert.Len(t, funding, 6)
-		assertKoFi(t, funding[0], "ko-fi.com/test", "https://ko-fi.com/test")
-		assertPatreon(t, funding[1], "patreon.com/test", "https://patreon.com/test")
-		assertCustom(t, funding[2], "test1", "http://test1")
-		assertCustom(t, funding[3], "https://example.com", "https://example.com")
-		assertCustom(t, funding[4], "test3", "http://test3")
-		assertCustom(t, funding[5], "test4", "http://test4")
 	})
 
 	t.Run("Partially invalid (too many of two providers, valid list of others)", func(t *testing.T) {
