@@ -72,7 +72,7 @@ test('Sponsor modal (repo)', async ({browser}) => {
 });
 
 const appearanceCases = [
-  {kind: 'user', badUrl: '/user2', goodUrl: '/funded_user', heading: 'Sponsor Plz sponsor :3'},
+  {kind: 'user', badUrl: '/user2', goodUrl: '/user39', heading: 'Sponsor User39'},
   {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Sponsor Org Six'},
 ] as const;
 for (const testCase of appearanceCases) {
@@ -108,7 +108,7 @@ for (const testCase of appearanceCases) {
 
 const accessibilityCases = [
   {kind: 'repo', url: '/user2/funding_basic_complete', heading: 'Sponsor user2/funding_basic_complete'},
-  {kind: 'user', url: '/funded_user', heading: 'Sponsor Plz sponsor :3'},
+  {kind: 'user', url: '/user39', heading: 'Sponsor User39'},
   {kind: 'org', url: '/org6', heading: 'Sponsor Org Six'},
 ] as const;
 for (const testCase of accessibilityCases) {

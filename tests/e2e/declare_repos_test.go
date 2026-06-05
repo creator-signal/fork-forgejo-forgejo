@@ -242,7 +242,7 @@ liberapay: example
 custom: "http://localhost:3003/"
 `},
 	}}, nil)
-	newRepo(t, 45, ".profile", nil, []FileChanges{{
+	newRepo(t, 39, ".profile", nil, []FileChanges{{
 		Filename: "FUNDING.yml",
 		Versions: []string{`
 ko_fi: example
