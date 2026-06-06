@@ -40,6 +40,7 @@ func TestGogsDownloadRepo(t *testing.T) {
 		CloneURL:      "https://try.gogs.io/lunnytest/TESTREPO.git",
 		OriginalURL:   "https://try.gogs.io/lunnytest/TESTREPO",
 		DefaultBranch: "master",
+		AvatarURL:     "",
 	}, repo)
 
 	milestones, err := downloader.GetMilestones()
