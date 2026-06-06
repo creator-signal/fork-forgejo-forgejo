@@ -1457,6 +1457,8 @@ func registerRoutes(m *web.Route) {
 			m.Get("/issues/posters", repo.IssuePosters) // it can't use {type:issues|pulls} because other routes like "/pulls/{index}" has higher priority
 			m.Get("/{type:^(issues|pulls)$}", repo.Issues)
 			m.Get("/{type:^(issues|pulls)$}/{index}", context.EnsureOrg(), repo.ViewIssue)
+			m.Get("/issues/{index}.atom", feedEnabled, repo.IssueFeedAtom)
+			m.Get("/issues/{index}.rss", feedEnabled, repo.IssueFeedRSS)
 			m.Group("/{type:^(issues|pulls)$}/{index}/content-history", func() {
 				m.Get("/overview", repo.GetContentHistoryOverview)
 				m.Get("/list", repo.GetContentHistoryList)

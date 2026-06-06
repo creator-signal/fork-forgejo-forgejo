@@ -50,6 +50,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/utils"
+	"forgejo.org/routers/web/feed"
 	asymkey_service "forgejo.org/services/asymkey"
 	"forgejo.org/services/context"
 	"forgejo.org/services/context/upload"
@@ -3863,4 +3864,30 @@ func getIssueParticipants(ctx *context.Context, issue *issues_model.Issue) []*us
 	}
 
 	return participants
+}
+
+func IssueFeedAtom(ctx *context.Context) {
+	issueFeed(ctx, "atom")
+}
+
+func IssueFeedRSS(ctx *context.Context) {
+	issueFeed(ctx, "rss")
+}
+
+func issueFeed(ctx *context.Context, formatType string) {
+	if _, err := ctx.Repo.Repository.GetUnit(ctx, unit.TypeIssues); err != nil {
+		ctx.NotFound("IssuesForRepository", err)
+		return
+	}
+
+	issue, err := issues_model.GetIssueWithAttrsByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if issues_model.IsErrIssueNotExist(err) {
+			ctx.NotFound("GetIssueByIndex", err)
+		} else {
+			ctx.ServerError("GetIssueByIndex", err)
+		}
+		return
+	}
+	feed.ShowIssueFeed(ctx, issue, formatType)
 }

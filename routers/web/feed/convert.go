@@ -16,6 +16,7 @@ import (
 	activities_model "forgejo.org/models/activities"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/markup/markdown"
@@ -297,6 +298,113 @@ func GetFeedType(name string, req *http.Request) (bool, string, string) {
 	}
 
 	return false, name, ""
+}
+
+func issueCommentsToFeedItems(ctx *context.Context, comments issues_model.CommentList) (items []*feeds.Item, err error) {
+	items = make([]*feeds.Item, 0, len(comments))
+	users := make(map[int64]*user_model.User)
+	for _, comment := range comments {
+		user, userCached := users[comment.PosterID]
+		if !userCached {
+			user, err = user_model.GetUserByID(ctx, comment.PosterID)
+			if err != nil {
+				return items, err
+			}
+			users[user.ID] = user
+		}
+		var title string
+		switch comment.Type {
+		case issues_model.CommentTypeComment:
+			title = ctx.Locale.TrString("repo.comment_type.comment")
+		case issues_model.CommentTypeReopen:
+			title = ctx.Locale.TrString("repo.comment_type.re_open")
+		case issues_model.CommentTypeClose:
+			title = ctx.Locale.TrString("repo.comment_type.closed")
+		case issues_model.CommentTypeIssueRef:
+			title = ctx.Locale.TrString("repo.comment_type.issue_reference")
+		case issues_model.CommentTypeCommitRef:
+			title = ctx.Locale.TrString("repo.comment_type.commit_reference")
+		case issues_model.CommentTypeCommentRef:
+			title = ctx.Locale.TrString("repo.comment_type.comment_reference")
+		case issues_model.CommentTypePullRef:
+			title = ctx.Locale.TrString("repo.comment_type.pr_reference")
+		case issues_model.CommentTypeLabel:
+			title = ctx.Locale.TrString("repo.comment_type.label_changed")
+		case issues_model.CommentTypeMilestone:
+			title = ctx.Locale.TrString("repo.comment_type.milestone_changed")
+		case issues_model.CommentTypeAssignees:
+			title = ctx.Locale.TrString("repo.comment_type.assignees_changed")
+		case issues_model.CommentTypeChangeTitle:
+			title = ctx.Locale.TrString("repo.comment_type.title_changed")
+		case issues_model.CommentTypeDeleteBranch:
+			title = ctx.Locale.TrString("repo.comment_type.branch_deleted")
+		case issues_model.CommentTypeStartTracking:
+			title = ctx.Locale.TrString("repo.comment_type.time_tracking_started")
+		case issues_model.CommentTypeStopTracking:
+			title = ctx.Locale.TrString("repo.comment_type.time_tracking_stopped")
+		case issues_model.CommentTypeAddTimeManual:
+			title = ctx.Locale.TrString("repo.comment_type.time_added_manually")
+		case issues_model.CommentTypeCancelTracking:
+			title = ctx.Locale.TrString("repo.comment_type.tracking_canceled")
+		case issues_model.CommentTypeAddedDeadline:
+			title = ctx.Locale.TrString("repo.comment_type.deadline_added")
+		case issues_model.CommentTypeModifiedDeadline:
+			title = ctx.Locale.TrString("repo.comment_type.deadline_modified")
+		case issues_model.CommentTypeRemovedDeadline:
+			title = ctx.Locale.TrString("repo.comment_type.deadline_removed")
+		case issues_model.CommentTypeAddDependency:
+			title = ctx.Locale.TrString("repo.comment_type.dependency_added")
+		case issues_model.CommentTypeRemoveDependency:
+			title = ctx.Locale.TrString("repo.comment_type.dependency_removed")
+		case issues_model.CommentTypeCode:
+			title = ctx.Locale.TrString("repo.comment_type.code_commented")
+		case issues_model.CommentTypeReview:
+			title = ctx.Locale.TrString("repo.comment_type.code_reviewed")
+		case issues_model.CommentTypeLock:
+			title = ctx.Locale.TrString("repo.comment_type.issue_locked")
+		case issues_model.CommentTypeUnlock:
+			title = ctx.Locale.TrString("repo.comment_type.issue_unlocked")
+		case issues_model.CommentTypeChangeTargetBranch:
+			title = ctx.Locale.TrString("repo.comment_type.change_target_branch")
+		case issues_model.CommentTypeDeleteTimeManual:
+			title = ctx.Locale.TrString("repo.comment_type.time_deleted_manually")
+		case issues_model.CommentTypeReviewRequest:
+			title = ctx.Locale.TrString("repo.comment_type.review_request")
+		case issues_model.CommentTypeMergePull:
+			title = ctx.Locale.TrString("repo.comment_type.pr_merged")
+		case issues_model.CommentTypePullRequestPush:
+			title = ctx.Locale.TrString("repo.comment_type.pr_pushed")
+		case issues_model.CommentTypeProject:
+			title = ctx.Locale.TrString("repo.comment_type.project_changed")
+		case issues_model.CommentTypeProjectColumn:
+			title = ctx.Locale.TrString("repo.comment_type.project_column_changed")
+		case issues_model.CommentTypeDismissReview:
+			title = ctx.Locale.TrString("repo.comment_type.review_dismissed")
+		case issues_model.CommentTypeChangeIssueRef:
+			title = ctx.Locale.TrString("repo.comment_type.change_issue_ref")
+		case issues_model.CommentTypePRScheduledToAutoMerge:
+			title = ctx.Locale.TrString("repo.comment_type.")
+		case issues_model.CommentTypePRUnScheduledToAutoMerge:
+			title = ctx.Locale.TrString("repo.comment_type.pr_scheduled_to_auto_merge")
+		case issues_model.CommentTypePin:
+			title = ctx.Locale.TrString("repo.comment_type.issue_pinned")
+		case issues_model.CommentTypeUnpin:
+			title = ctx.Locale.TrString("repo.comment_type.issue_unpinned")
+		case issues_model.CommentTypeAggregator:
+			title = ctx.Locale.TrString("repo.comment_type.aggregator")
+		}
+		item := &feeds.Item{
+			Id:          fmt.Sprintf("%v: %v", strconv.FormatInt(comment.ID, 10), comment.IssueURL(ctx)),
+			Title:       title,
+			Link:        &feeds.Link{Href: comment.IssueURL(ctx)},
+			Description: comment.Content,
+			Created:     comment.CreatedUnix.AsTime(),
+			Updated:     comment.UpdatedUnix.AsTime(),
+			Author:      &feeds.Author{Name: user.DisplayName(), Email: user.GetEmail()},
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 // feedActionsToFeedItems convert repository releases into feed items.
