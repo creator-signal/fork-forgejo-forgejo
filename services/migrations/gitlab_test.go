@@ -49,6 +49,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		CloneURL:      server.URL + "/forgejo/test_repo.git",
 		OriginalURL:   server.URL + "/forgejo/test_repo",
 		DefaultBranch: "master",
+		AvatarURL:     "",
 	}, repo)
 
 	topics, err := downloader.GetTopics()
