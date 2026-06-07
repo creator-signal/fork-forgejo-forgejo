@@ -288,7 +288,10 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 		}
 	}
 	Service.ValidSiteURLSchemes = schemes
-	_ = regexp.MustCompile(`^(?:` + ValidSiteURLPattern() + `)$`) // a pattern from these schemes must be valid for use in input pattern validation
+
+	// A pattern from ValidSiteURLSchemes must be valid for use in HTML <input pattern=""> validation
+	_ = regexp.MustCompile(`^(?:` + ValidSiteURLPattern() + `)$`)
+
 	Service.UsernameCooldownPeriod = sec.Key("USERNAME_COOLDOWN_PERIOD").MustInt64(0)
 
 	// Only set a default if USERNAME_COOLDOWN_PERIOD's feature is active.
