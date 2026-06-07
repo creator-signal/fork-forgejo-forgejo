@@ -57,7 +57,7 @@ export function initDropdowns() {
         // User pressed ArrowDown on a focused summary of a closed dropdown.
         // We'll open the dropdown and focus it's first item
         parentDropdown.setAttribute('open', 'true');
-        parentDropdown.querySelector<HTMLElement>('.content > ul > li > :is(a, button)').focus();
+        parentDropdown.querySelector<HTMLElement>('.content li > :is(a, button)').focus();
         event.preventDefault();
         return;
       }
@@ -77,11 +77,11 @@ export function initDropdowns() {
     }
 
     // Knowing document.activeElement, find the <li> that contains it
-    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content > ul > li');
+    const dropdownItems = dropdown.querySelectorAll<HTMLLIElement>('.content li');
     let activeLi: HTMLLIElement, activeLiIndex: number;
     for (let i = 0; i < dropdownItems.length; i++) {
       const li = dropdownItems[i] as HTMLLIElement;
-      if (!li.contains(document.activeElement)) continue;
+      if (li.querySelector(':is(a, button)') !== document.activeElement) continue;
       activeLi = li;
       activeLiIndex = i;
       break;

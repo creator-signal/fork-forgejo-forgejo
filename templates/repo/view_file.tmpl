@@ -25,6 +25,23 @@
 		</div>
 	{{end}}
 
+	{{if .IsMarkup}}
+		<div class="tw-sticky tw-z-50 tw-top-8">
+			<div class="tw-h-full tw-left-0 tw-absolute tw-top-16" style="transform:translateX(-50%);">
+				<div class="tw-relative">
+					<details class="dropdown"
+						data-tooltip-content="{{ctx.Locale.Tr "repo.files.table_of_contents"}}"
+						aria-label="{{ctx.Locale.Tr "repo.files.table_of_contents"}}"
+					>
+						<summary style="background: var(--color-button); border: 1px solid var(--color-light-border);">
+							{{svg "octicon-list-unordered" 16}}
+						</summary>
+						<div id="toc" class="content"/>
+					</details>
+				</div>
+			</div>
+		</div>
+	{{end}}
 	<h4 class="file-header ui top attached header tw-flex tw-items-center tw-justify-between tw-flex-wrap">
 		<div class="file-header-left tw-flex tw-items-center tw-pr-4 tw-flex-wrap {{if .IsCitationFile}}tw-gap-4{{else}}tw-gap-2{{end}}">
 			{{if .ReadmeInList}}

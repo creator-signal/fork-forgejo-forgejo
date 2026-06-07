@@ -167,3 +167,32 @@ test('Line menu styles', async ({page}) => {
   await expect(button).toHaveCSS('display', 'flex');
   await expect(button).toHaveCSS('padding', '9px 18px');
 });
+
+test('Table of contents', async ({page}) => {
+  expect((await page.goto('/user2/repo1'))?.status()).toBe(200);
+
+  const btn = page.locator('details.dropdown');
+  const toc = page.locator('#toc');
+
+  await expect(toc).toBeHidden();
+  btn.click();
+  await expect(toc).toBeVisible();
+
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL('/user2/repo1#repo1');
+
+  expect(
+    (await page.goto('/user2/repo1/src/branch/master/README.md'))?.status(),
+  ).toBe(200);
+
+  await expect(toc).toBeHidden();
+  btn.click();
+  await expect(toc).toBeVisible();
+
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(
+    '/user2/repo1/src/branch/master/README.md#repo1',
+  );
+});

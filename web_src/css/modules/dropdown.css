@@ -66,12 +66,12 @@ details.dropdown > summary {
 }
 
 details.dropdown > summary:hover,
-details.dropdown > .content > ul > li > :is(a, button):hover {
+details.dropdown > .content li > :is(a, button):hover {
   background: var(--color-hover);
 }
 
 details.dropdown[open] > summary,
-details.dropdown > .content > ul > li:focus-within > :is(a, button) {
+details.dropdown > .content li > :is(a, button):focus {
   background: var(--color-active);
 }
 
@@ -97,7 +97,6 @@ details.dropdown > .content > ul {
   /* Suppress default styling of <ul> */
   margin: 0;
   padding: 0;
-  list-style-type: none;
 
   /* Round first item of first list and last item of last list. Each of these
    * selectors should only resolve to one element in any .content */
@@ -113,8 +112,9 @@ details.dropdown > .content > ul {
 }
 
 /* General styling of list items */
-details.dropdown > .content > ul > li {
+details.dropdown > .content li {
   width: 100%;
+  list-style-type: none;
 
   > :is(a, button) {
     min-height: var(--dropdown-item-min-height);
