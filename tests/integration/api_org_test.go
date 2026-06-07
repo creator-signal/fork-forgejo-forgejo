@@ -222,7 +222,7 @@ func TestAPIOrgEditWebsite(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// changing website should work
-		org := api.CreateOrgOption{
+		org := api.EditOrgOption{
 			Website: "https://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "PATCH", urlStr, &org).AddTokenAuth(token)
@@ -238,7 +238,7 @@ func TestAPIOrgEditWebsite(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// changing website should not work
-		org := api.CreateOrgOption{
+		org := api.EditOrgOption{
 			Website: "h3://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "PATCH", urlStr, &org).AddTokenAuth(token)
@@ -256,7 +256,7 @@ func TestAPIOrgEditWebsite(t *testing.T) {
 		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
 
 		// changing website should work
-		org := api.CreateOrgOption{
+		org := api.EditOrgOption{
 			Website: "h3://codeberg.org",
 		}
 		req := NewRequestWithJSON(t, "PATCH", urlStr, &org).AddTokenAuth(token)
