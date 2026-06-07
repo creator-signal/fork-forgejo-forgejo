@@ -17,6 +17,9 @@ func AddEnableShortcutsToUser(x *xorm.Engine) error {
 		ID              int64 `xorm:"pk autoincr"`
 		EnableShortcuts bool  `xorm:"NOT NULL DEFAULT true"`
 	}
-
-	return x.Sync(&User{})
+	_, err := x.SyncWithOptions(
+		xorm.SyncOptions{IgnoreDropIndices: true},
+		new(User),
+	)
+	return err
 }
