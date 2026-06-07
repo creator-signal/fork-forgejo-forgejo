@@ -28,6 +28,7 @@ import (
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 
@@ -669,6 +670,8 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 
 func TestGiteaUploaderWithAvatar(t *testing.T) {
 	unittest.PrepareTestEnv(t)
+	defer test.MockVariableValue(&setting.Migrations.AvatarFetchTimeout, 1*time.Second)()
+
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 	fixturePath := "./testdata/github/full_download"
