@@ -28,6 +28,7 @@ import (
 	actions_router "forgejo.org/routers/api/actions"
 	forgejo "forgejo.org/routers/api/forgejo/v1"
 	packages_router "forgejo.org/routers/api/packages"
+	scim_router "forgejo.org/routers/api/scim/v2"
 	apiv1 "forgejo.org/routers/api/v1"
 	"forgejo.org/routers/common"
 	"forgejo.org/routers/private"
@@ -202,6 +203,8 @@ func NormalRoutes() *web.Route {
 		prefix = actions_router.ArtifactV4RouteBase
 		r.Mount(prefix, actions_router.ArtifactsV4Routes(prefix))
 	}
+
+	r.Any("/api/scim/*", scim_router.Handler())
 
 	return r
 }

@@ -404,6 +404,18 @@
 						<label>{{ctx.Locale.Tr "admin.auths.oauth2_quota_group_map_removal"}}</label>
 						<input name="oauth2_quota_group_map_removal" type="checkbox" {{if $cfg.QuotaGroupMapRemoval}}checked{{end}}>
 					</div>
+					<div class="field">
+						<div class="ui checkbox">
+							<label for="oauth2_scim_enabled"><strong>{{ctx.Locale.Tr "admin.auths.scim_enabled"}}</strong></label>
+							<input id="oauth2_scim_enabled" name="oauth2_scim_enabled" type="checkbox" {{if $cfg.ScimEnabled}}checked{{end}}>
+							<p class="help">{{ctx.Locale.Tr "admin.auths.scim_enabled_helper"}}</p>
+						</div>
+					</div>
+					<div class="field">
+						<label for="oauth2_scim_token">{{ctx.Locale.Tr "admin.auths.scim_token"}}</label>
+						<input id="oauth2_scim_token" name="oauth2_scim_token" value="{{$cfg.ScimToken}}">
+						<p class="help">{{ctx.Locale.Tr "admin.auths.scim_token_helper"}} <code>{{AppUrl}}api/scim/{{PathEscape .Source.Name}}/v2/</code></p>
+					</div>
 				{{end}}
 
 				{{if .Source.IsLDAP}}

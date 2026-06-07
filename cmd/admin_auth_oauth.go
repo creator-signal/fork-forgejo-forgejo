@@ -152,6 +152,15 @@ func oauthCLIFlags() []cli.Flag {
 			Name:  "quota-group-map-removal",
 			Usage: "Activate automatic quota group removal depending on groups",
 		},
+		&cli.BoolFlag{
+			Name:  "scim-enabled",
+			Usage: "Enable SCIM provisioning for this authentication source",
+		},
+		&cli.StringFlag{
+			Name:  "scim-token",
+			Value: "",
+			Usage: "Bearer token the identity provider must send to authenticate SCIM requests",
+		},
 	}
 }
 
@@ -211,6 +220,8 @@ func parseOAuth2Config(_ context.Context, c *cli.Command) *oauth2.Source {
 		QuotaGroupClaimName:           c.String("quota-group-claim-name"),
 		QuotaGroupMap:                 c.String("quota-group-map"),
 		QuotaGroupMapRemoval:          c.Bool("quota-group-map-removal"),
+		ScimEnabled:                   c.Bool("scim-enabled"),
+		ScimToken:                     c.String("scim-token"),
 	}
 }
 
@@ -329,6 +340,12 @@ func (a *authService) updateOauth(ctx context.Context, c *cli.Command) error {
 
 	if c.IsSet("allow-username-change") {
 		oAuth2Config.AllowUsernameChange = c.Bool("allow-username-change")
+	}
+	if c.IsSet("scim-enabled") {
+		oAuth2Config.ScimEnabled = c.Bool("scim-enabled")
+	}
+	if c.IsSet("scim-token") {
+		oAuth2Config.ScimToken = c.String("scim-token")
 	}
 
 	// update custom URL mapping

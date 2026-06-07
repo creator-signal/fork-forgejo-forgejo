@@ -196,6 +196,8 @@ func parseOAuth2Config(form forms.AuthenticationForm) *oauth2.Source {
 		QuotaGroupClaimName:           form.Oauth2QuotaGroupClaimName,
 		QuotaGroupMap:                 form.Oauth2QuotaGroupMap,
 		QuotaGroupMapRemoval:          form.Oauth2QuotaGroupMapRemoval,
+		ScimEnabled:                   form.Oauth2ScimEnabled,
+		ScimToken:                     form.Oauth2ScimToken,
 	}
 }
 

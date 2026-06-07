@@ -36,6 +36,9 @@ type Source struct {
 	SkipLocalTwoFA        bool `json:",omitempty"`
 	AllowUsernameChange   bool
 
+	ScimEnabled bool   `json:",omitempty"`
+	ScimToken   string `json:",omitempty"`
+
 	// reference to the authSource
 	authSource *auth.Source
 }

@@ -85,6 +85,8 @@ type AuthenticationForm struct {
 	GroupTeamMap                  string `binding:"ValidGroupTeamMap"`
 	GroupTeamMapRemoval           bool
 	AllowUsernameChange           bool
+	Oauth2ScimEnabled             bool
+	Oauth2ScimToken               string
 }
 
 // Validate validates fields
