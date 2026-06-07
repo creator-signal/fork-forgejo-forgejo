@@ -69,8 +69,8 @@ func Test_jobStatusResolver_Resolve(t *testing.T) {
 			},
 			want: map[int64]actions_model.Status{
 				// Resolve() does only one update pass and does not update jobs recursively. Therefore, job 3, which
-				// depends on 2, is not marked as skipped. It would only be marked as skipped if it depended on job 1.
-				2: actions_model.StatusSkipped,
+				// depends on 2, is not marked as waiting. It would only be marked as waiting if it depended on job 1.
+				2: actions_model.StatusWaiting,
 			},
 		},
 		{
@@ -136,7 +136,9 @@ jobs:
       - run: echo "should be skipped"
 `)},
 			},
-			want: map[int64]actions_model.Status{2: actions_model.StatusSkipped},
+			// Status goes to waiting for `prepareJobForEmitting` to evaluate `if`, even in default condition, so one
+			// codepath always handles this consistently.
+			want: map[int64]actions_model.Status{2: actions_model.StatusWaiting},
 		},
 		{
 			name: "unblocked workflow call outer job with success",
@@ -405,10 +407,6 @@ func Test_prepareJobForEmitting(t *testing.T) {
 		localReusableWorkflowCallArgs *localReusableWorkflowCallArgs
 		actionRunStatusChange         actions_model.Status
 	}{
-		{
-			name:     "not incomplete",
-			runJobID: 600,
-		},
 		{
 			name:        "matrix expanded to 3 new jobs",
 			runJobID:    601,

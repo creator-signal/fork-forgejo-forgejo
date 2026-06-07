@@ -411,10 +411,17 @@ func InsertRunJobs(ctx context.Context, run *ActionRun, jobs []*jobparser.Single
 
 			if len(needs) > 0 || run.NeedApproval || v.IncompleteMatrix || v.IncompleteRunsOn || v.IncompleteWith {
 				status = StatusBlocked
+			} else if ifPassed, err := job.EvaluateIf(); err == nil && !ifPassed {
+				log.Trace("job %q skipped by server-side 'if' evaluation", id)
+				status = StatusSkipped
 			} else {
+				if err != nil && !errors.Is(err, jobparser.ErrCannotEvaluateInJobParser) {
+					return fmt.Errorf("unable to evaluate job 'if' on server-side with unexpected error: %w", err)
+				}
 				status = StatusWaiting
 				hasWaiting = true
 			}
+
 			name, _ = util.SplitStringAtByteN(job.Name, 255)
 			runsOn = job.RunsOn()
 		}

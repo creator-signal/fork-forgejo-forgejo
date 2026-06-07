@@ -92,6 +92,10 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 					case behaviourIgnoreAllJobsInRun:
 						// Stop processing any other jobs in this run.
 						return nil
+
+					case behaviorSkipJob:
+						// "status" is already a column that we're updating, so we can just switch the target status to skipped.
+						job.Status = actions_model.StatusSkipped
 					}
 				} else if status.IsSuccess() || status.IsFailure() || status.IsSkipped() {
 					// Transition to these states can be triggered by workflow call outer jobs
@@ -176,14 +180,11 @@ func (r *jobStatusResolver) Resolve() map[int64]actions_model.Status {
 		if status != actions_model.StatusBlocked {
 			continue
 		}
-		allDone, allSucceed, allSucceedOrSkip, allSkip := true, true, true, true
+		allDone, allSucceedOrSkip, allSkip := true, true, true
 		for _, need := range r.needs[id] {
 			needStatus := r.statuses[need]
 			if !needStatus.IsDone() {
 				allDone = false
-			}
-			if needStatus.In(actions_model.StatusFailure, actions_model.StatusCancelled, actions_model.StatusSkipped) {
-				allSucceed = false
 			}
 			if needStatus.In(actions_model.StatusFailure, actions_model.StatusCancelled) {
 				allSucceedOrSkip = false
@@ -222,25 +223,10 @@ func (r *jobStatusResolver) Resolve() map[int64]actions_model.Status {
 					ret[id] = actions_model.StatusFailure
 				}
 			} else {
-				if allSucceed {
-					ret[id] = actions_model.StatusWaiting
-				} else {
-					// Check if the job has an "if" condition
-					hasIf := false
-					if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
-						_, wfJob := wfJobs[0].Job()
-						hasIf = len(wfJob.If.Value) > 0
-					}
-
-					if hasIf {
-						// act_runner will check the "if" condition
-						ret[id] = actions_model.StatusWaiting
-					} else {
-						// If the "if" condition is empty and not all dependent jobs completed successfully,
-						// the job should be skipped.
-						ret[id] = actions_model.StatusSkipped
-					}
-				}
+				// All the `needs` of this job are done.  We could now go to waiting or skipped, dependent on the `if`
+				// condition of the new job.  Don't evaluate that here -- set it to waiting, and `prepareJobForEmitting`
+				// will perform a full evaluation of the if clause to determine if it should be skipped.
+				ret[id] = actions_model.StatusWaiting
 			}
 		}
 	}
@@ -261,6 +247,9 @@ const (
 
 	// behaviourIgnoreAllJobsInRun indicates that something went wrong and all jobs in the run should now be ignored.
 	behaviourIgnoreAllJobsInRun
+
+	// behaviorSkipJob indicates that the job should be marked as skipped as the 'if' evaluation returned false.
+	behaviorSkipJob
 )
 
 // Invoked once a job has all its `needs` parameters met and is ready to transition to waiting. May expand the job's
@@ -281,11 +270,6 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 	incompleteWith, _, _, err := blockedJob.HasIncompleteWith()
 	if err != nil {
 		return behaviourError, fmt.Errorf("job HasIncompleteWith: %w", err)
-	}
-
-	if !incompleteMatrix && !incompleteRunsOn && !incompleteWith {
-		// Not relevant to attempt re-parsing the job if it wasn't marked as Incomplete[...] previously.
-		return behaviourExecuteJob, nil
 	}
 
 	if err := blockedJob.LoadRun(ctx); err != nil {
@@ -344,6 +328,31 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		}
 		// `FailRunPreExecutionError` will mark all the pending runs in the job failed; ignore all of them.
 		return behaviourIgnoreAllJobsInRun, nil
+	}
+
+	if !incompleteMatrix && !incompleteRunsOn && !incompleteWith {
+		// We did not need to reparse this job in order to expand it into new workflows.  But, as we've provided all the
+		// necessary parsing context to the job, we can use this opportunity to perform an evaluation of the job's 'if'
+		// clause within the server, and we might be able to skip this job.
+
+		if len(newJobWorkflows) != 1 {
+			// This case shouldn't happen, but we'll ignore our attempt to evaluate the if block:
+			return behaviourExecuteJob, nil
+		}
+
+		swf := newJobWorkflows[0]
+		_, job := swf.Job()
+
+		ifPassed, err := job.EvaluateIf()
+		if errors.Is(err, jobparser.ErrCannotEvaluateInJobParser) {
+			// Fallback to sending the job to a runner.
+			return behaviourExecuteJob, nil
+		} else if err != nil {
+			return behaviourError, err
+		} else if !ifPassed {
+			return behaviorSkipJob, nil
+		}
+		return behaviourExecuteJob, nil
 	}
 
 	// Even though every job in the `needs` list is done, perform a consistency check if the job was still unable to be

@@ -851,6 +851,16 @@ func InsertRun(ctx context.Context, run *actions_model.ActionRun, jobs []*jobpar
 			}
 		}
 
+		// Some jobs might have been been immediately set to Skipped when they were inserted.  Other jobs may be
+		// dependent on those skipped jobs.  While we're still in this transaction and before these jobs are visible,
+		// run the job emitter which can recursively evaluate this state and update dependent runs status to either
+		// skipped or waiting, depending on their 'if':
+		if !run.NeedApproval { // don't unblock jobs if the run needs approval
+			if err := checkJobsOfRun(ctx, run.ID, 0); err != nil {
+				return fmt.Errorf("check jobs of run: %w", err)
+			}
+		}
+
 		return nil
 	})
 }
