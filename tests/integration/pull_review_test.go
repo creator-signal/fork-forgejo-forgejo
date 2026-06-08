@@ -35,6 +35,7 @@ import (
 	"forgejo.org/modules/test"
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/services/mailer"
+	pull_service "forgejo.org/services/pull"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
@@ -2016,10 +2017,15 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			// Push a second commit that changes lines BEFORE the range (removing lines 1-10),
 			// which shifts the range but keeps it contiguous.
 			content = strings.Replace(content, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n", "", 1)
-			tester.changeFile("file1.md", content)
+			newSHA := tester.changeFile("file1.md", content)
 
-			// Wait a bit for async invalidation to run, then check the comment is still valid.
-			time.Sleep(2 * time.Second)
+			// Run the invalidation pass synchronously instead of waiting for the async
+			// goroutine, then check the comment is still valid.
+			pr, err := issues_model.GetPullRequestByIndex(t.Context(), tester.repo.ID, tester.pr.Index)
+			require.NoError(t, err)
+			require.NoError(t, pull_service.InvalidateCodeComments(t.Context(),
+				issues_model.PullRequestList{pr}, tester.user, tester.repo, newSHA))
+
 			commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
 			assert.False(t, commentReloaded.Invalidated)
 
@@ -2056,7 +2062,7 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 			assert.EqualValues(t, 2, comment.ExtraLinesCount)
 			assert.False(t, comment.Invalidated)
 
-			tester.changeFile("file1.md", secondCommit(content))
+			newSHA := tester.changeFile("file1.md", secondCommit(content))
 
 			if wantInvalidated {
 				assert.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -2064,8 +2070,13 @@ func TestPullRequestCommentPlacement(t *testing.T) {
 					assert.True(t, commentReloaded.Invalidated)
 				}, 5*time.Second, 50*time.Millisecond)
 			} else {
-				// Give async invalidation time to run, then assert the comment stayed valid.
-				time.Sleep(2 * time.Second)
+				// Run the invalidation pass synchronously instead of waiting for the async
+				// goroutine, then assert the comment stayed valid.
+				pr, err := issues_model.GetPullRequestByIndex(t.Context(), tester.repo.ID, tester.pr.Index)
+				require.NoError(t, err)
+				require.NoError(t, pull_service.InvalidateCodeComments(t.Context(),
+					issues_model.PullRequestList{pr}, tester.user, tester.repo, newSHA))
+
 				commentReloaded := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: comment.ID})
 				assert.False(t, commentReloaded.Invalidated)
 			}
