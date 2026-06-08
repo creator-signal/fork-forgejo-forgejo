@@ -919,3 +919,31 @@ func TestGitlabConfidential(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, comments)
 }
+
+func TestGitlabDownloaderAvatarURL(t *testing.T) {
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITLAB_READ_TOKEN_BIRDGOOSE")
+	liveMode := token != ""
+
+	fixturePath := "./testdata/gitlab/avatar"
+	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, liveMode)
+	defer server.Close()
+
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "birdgoose-group/forgejo-12921", "", "", token)
+	require.NoError(t, err)
+	require.NotNil(t, downloader)
+
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "forgejo-12921",
+		Description:   "An example repo for testing Forgejo migrations.",
+		CloneURL:      server.URL + "/birdgoose-group/forgejo-12921.git",
+		OriginalURL:   server.URL + "/birdgoose-group/forgejo-12921",
+		DefaultBranch: "master",
+		AvatarURL:     server.URL + "/uploads/-/system/project/avatar/82996997/birb.jpg",
+		IsPrivate:     true,
+	}, repo)
+}
