@@ -19,6 +19,7 @@
 @import "./modules/modal.css";
 @import "./modules/dimmer.css";
 @import "./modules/dialog.css";
+@import "./modules/skip-anchors.css";
 
 @import "./modules/button.css";
 @import "./modules/switch.css";

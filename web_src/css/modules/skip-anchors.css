@@ -1,0 +1,46 @@
+#skip-anchors {
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  box-sizing: border-box;
+  background: oklch(from var(--color-nav-bg) l c h / 0.6);
+  width: 100%;
+  justify-content: center;
+  top: -5rem;
+  min-block-size: 48px;
+  pointer-events: none;
+  opacity: 0;
+
+  @media not (prefers-reduced-motion: reduce) {
+    transition: 100ms ease-in-out top;
+  }
+
+  &:focus-within {
+    top: 0;
+    pointer-events: all;
+    opacity: 1;
+  }
+
+  a {
+    background: Canvas;
+    color: CanvasText;
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-secondary-dark-2);
+    text-align: center;
+    text-wrap-style: balance;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:focus {
+      outline: 2px solid CanvasText;
+      outline-offset: -5px;
+    }
+  }
+}
