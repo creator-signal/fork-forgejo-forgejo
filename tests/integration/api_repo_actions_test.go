@@ -844,6 +844,7 @@ func TestActionsAPICancelActionRun(t *testing.T) {
 		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 35011})
+		assert.Equal(t, actions_model.StatusRunning, run.Status)
 
 		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d/cancel", repo62.FullName(), run.ID)
 		request := NewRequest(t, "POST", requestURL)
@@ -881,6 +882,7 @@ func TestActionsAPICancelActionRun(t *testing.T) {
 		readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 35011})
+		assert.Equal(t, actions_model.StatusRunning, run.Status)
 
 		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d/cancel", repo1.FullName(), run.ID)
 		request := NewRequest(t, "POST", requestURL)
