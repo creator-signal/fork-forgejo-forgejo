@@ -41,7 +41,7 @@ func TestWebsitePattern(t *testing.T) {
 			doc := NewHTMLParser(t, resp.Body)
 			doc.AssertAttrEqual(t, "input[type=url][name=website]", "pattern", `(http|https)://.+`)
 			doc.AssertElementPredicate(t, "input[type=url][name=website] + .help", func(element *goquery.Selection) {
-				assert.Equal(t, "Note: Allowed URL schemes include: http, https", strings.TrimSpace(element.Text()))
+				assert.Equal(t, "Allowed URL schemes include: http, https", strings.TrimSpace(element.Text()))
 			})
 		})
 
@@ -56,7 +56,7 @@ func TestWebsitePattern(t *testing.T) {
 			doc := NewHTMLParser(t, resp.Body)
 			doc.AssertAttrEqual(t, "input[type=url][name=website]", "pattern", `(http|https|h3)://.+`)
 			doc.AssertElementPredicate(t, "input[type=url][name=website] + .help", func(element *goquery.Selection) {
-				assert.Equal(t, "Note: Allowed URL schemes include: http, https, h3", strings.TrimSpace(element.Text()))
+				assert.Equal(t, "Allowed URL schemes include: http, https, h3", strings.TrimSpace(element.Text()))
 			})
 		})
 	}
