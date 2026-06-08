@@ -462,3 +462,41 @@ func TestBreakConditions(t *testing.T) {
 	assert.False(t, downloader.isSinglePage(commentsFullList))
 	assert.False(t, downloader.isLastPage(commentsFullList, differentFullListResponse))
 }
+
+func TestGiteaDownloaderAvatarURL(t *testing.T) {
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITEA_READ_TOKEN_BIRDGOOSE")
+	liveMode := token != ""
+
+	fixturePath := "./testdata/gitea/avatar"
+	server := unittest.NewMockWebServer(t, "https://gitea.com", fixturePath, liveMode)
+	defer server.Close()
+
+	giteaClient, err := gitea_sdk.NewClient(
+		server.URL,
+		gitea_sdk.SetToken(token),
+		gitea_sdk.SetBasicAuth("", ""),
+		gitea_sdk.SetContext(t.Context()),
+		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+	)
+	require.NoError(t, err, "Could not create Client")
+
+	downloader, err := NewGiteaDownloader(t.Context(), giteaClient, server.URL, "birdgoose/forgejo-12921")
+	require.NoError(t, err, "Could not create Gitea Downloader")
+	require.NotNil(t, downloader, "Could not create Gitea Downloader")
+
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+	require.NotNil(t, repo)
+
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "forgejo-12921",
+		Owner:         "birdgoose",
+		Description:   "An example repo for testing Forgejo migrations.",
+		CloneURL:      server.URL + "/birdgoose/forgejo-12921.git",
+		OriginalURL:   server.URL + "/birdgoose/forgejo-12921",
+		DefaultBranch: "main",
+		AvatarURL:     server.URL + "/repo-avatars/51ab7a46776991a2a310607d81728804bf3d2d851eade664a6f13dc3370867e1",
+	}, repo)
+}
