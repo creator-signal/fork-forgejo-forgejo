@@ -1102,7 +1102,8 @@ func CancelActionRun(ctx *context.APIContext) {
 	// summary: Cancel a pending or running workflow run.
 	// description: >
 	//   Cancel a particular workflow run. Pending or running jobs of the run are cancelled. A run that has
-	//   already finished is left unchanged and still returns a success status.
+	//   already finished, whether cancelled, failed, skipped or succeeded, is left unchanged.
+	//   In both cases the endpoint responds with HTTP 204.
 	// produces:
 	// - application/json
 	// parameters:
@@ -1118,7 +1119,7 @@ func CancelActionRun(ctx *context.APIContext) {
 	//   required: true
 	// - name: run_id
 	//   in: path
-	//   description: id of the action run
+	//   description: ID of the workflow run
 	//   type: integer
 	//   format: int64
 	//   required: true
