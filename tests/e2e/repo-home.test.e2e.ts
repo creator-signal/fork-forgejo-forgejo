@@ -69,3 +69,33 @@ test('Star button focus retention', async ({page}) => {
     page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus'),
   ).toBeVisible();
 });
+
+test('Star/unstar button URL retention', async ({page}) => {
+  const response = await page.goto('/user2/repo1');
+  expect(response?.status()).toBe(200);
+
+  const button = page.locator('button[aria-label="Star"], button[aria-label="Unstar"]');
+
+  await button.click();
+  expect(page.url()).not.toContain('/star');
+  expect(page.url()).not.toContain('/unstar');
+
+  await button.click();
+  expect(page.url()).not.toContain('/star');
+  expect(page.url()).not.toContain('/unstar');
+});
+
+test('Watch/unwatch button URL retention', async ({page}) => {
+  const response = await page.goto('/user2/repo1');
+  expect(response?.status()).toBe(200);
+
+  const button = page.locator('button[aria-label="Watch"], button[aria-label="Unwatch"]');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
+});
