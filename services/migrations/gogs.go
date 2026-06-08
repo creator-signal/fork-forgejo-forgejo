@@ -143,7 +143,7 @@ func (g *GogsDownloader) GetRepoInfo() (*base.Repository, error) {
 		return nil, err
 	}
 
-	avatarURL := fmt.Sprintf("%srepo-avatars/%d", g.baseURL, gr.ID)
+	avatarURL := fmt.Sprintf("%s/repo-avatars/%d", strings.TrimRight(g.baseURL, "/"), gr.ID)
 
 	// convert gogs repo to stand Repo
 	return &base.Repository{
