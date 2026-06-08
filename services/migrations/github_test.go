@@ -546,3 +546,29 @@ func TestGithubIssuePagination(t *testing.T) {
 		}
 	}
 }
+
+func TestGithubAvatarDownload(t *testing.T) {
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITHUB_READ_TOKEN_BIRDGOOSE")
+	liveMode := token != ""
+
+	fixturePath := "./testdata/github/avatar"
+	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, liveMode)
+	defer server.Close()
+
+	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "birdgooseontheloose", "forgejo-12921")
+
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "forgejo-12921",
+		Owner:         "birdgooseontheloose",
+		Description:   "A simple repo that is used for testing forgejo avatar migrations",
+		CloneURL:      server.URL + "/birdgooseontheloose/forgejo-12921.git",
+		OriginalURL:   server.URL + "/birdgooseontheloose/forgejo-12921",
+		DefaultBranch: "main",
+		AvatarURL:     "",
+	}, repo)
+}
