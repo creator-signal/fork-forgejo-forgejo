@@ -129,8 +129,8 @@ export function initTextExpander(expander) {
   });
   expander.addEventListener('text-expander-value', ({detail}) => {
     if (detail?.item) {
-      // add a space after @mentions, #issue and !pr as it's likely the user wants one
-      const suffix = ['@', '#', '!'].includes(detail.key) ? ' ' : '';
+      // add a space after @mentions as it's likely the user wants one
+      const suffix = detail.key === '@' ? ' ' : '';
       detail.value = `${detail.item.getAttribute('data-value')}${suffix}`;
     }
   });
