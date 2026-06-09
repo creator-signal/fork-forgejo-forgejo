@@ -24,7 +24,6 @@
     pointer-events: none;
     background: var(--color-text);
     mask-size: cover;
-    -webkit-mask-size: cover;
   }
 
   input[type="checkbox"]:checked::after {
