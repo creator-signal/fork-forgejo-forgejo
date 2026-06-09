@@ -1730,6 +1730,7 @@ func registerRoutes(m *web.Route) {
 					m.Get("/new_comment", repo.RenderNewCodeCommentForm)
 					m.Post("/comments", web.Bind(forms.CodeCommentForm{}), repo.SetShowOutdatedComments, repo.CreateCodeComment)
 					m.Post("/submit", web.Bind(forms.SubmitReviewForm{}), repo.SubmitReview)
+					m.Post("/apply_suggestion", reqSignIn, repo.ApplySuggestion)
 				}, context.RepoMustNotBeArchived())
 			})
 		}, repo.MustAllowPulls)
