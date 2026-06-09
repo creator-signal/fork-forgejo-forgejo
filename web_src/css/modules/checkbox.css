@@ -31,7 +31,6 @@
   input[type="checkbox"]:checked::after {
     content: "";
     mask-image: var(--checkbox-mask-checked);
-    -webkit-mask-image: var(--checkbox-mask-checked);
     -webkit-print-color-adjust: exact;
     color-adjust: exact;
   }
@@ -39,7 +38,6 @@
   input[type="checkbox"]:indeterminate::after {
     content: "";
     mask-image: var(--checkbox-mask-indeterminate);
-    -webkit-mask-image: var(--checkbox-mask-indeterminate);
   }
 }
 
