@@ -13,6 +13,9 @@ export function renderCodeCopy() {
 
   for (const el of els) {
     if (!el.textContent) continue;
+    // suggestion blocks are replaced by a rendered before/after diff (see markup/suggestion.js),
+    // so they must not get a copy button.
+    if (/(?:^|\s)language-suggestion(?:\s|$)/i.test(el.className)) continue;
     const btn = makeCodeCopyButton();
     // remove final trailing newline introduced during HTML rendering
     btn.setAttribute('data-clipboard-text', el.textContent.replace(/\r?\n$/, ''));

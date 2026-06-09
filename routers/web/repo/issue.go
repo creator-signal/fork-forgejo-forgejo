@@ -3321,6 +3321,14 @@ func UpdateCommentContent(ctx *context.Context) {
 	newContent := ctx.FormString("content")
 	contentVersion := ctx.FormInt("content_version")
 
+	// a code comment may carry at most one suggestion
+	if comment.Type == issues_model.CommentTypeCode {
+		if err := pull_service.ValidateCodeCommentSuggestions(newContent); err != nil {
+			ctx.JSONError(err.Error())
+			return
+		}
+	}
+
 	comment.Content = newContent
 	if err = issue_service.UpdateComment(ctx, comment, contentVersion, ctx.Doer, oldContent); err != nil {
 		if errors.Is(err, issues_model.ErrCommentAlreadyChanged) {
@@ -3357,10 +3365,19 @@ func UpdateCommentContent(ctx *context.Context) {
 		return
 	}
 
+	var suggestions template.HTML
+	if comment.Type == issues_model.CommentTypeCode {
+		if suggestions, err = ctx.RenderToHTML("repo/diff/suggestion_diffs", map[string]any{"comment": comment}); err != nil {
+			ctx.ServerError("RenderToHTML", err)
+			return
+		}
+	}
+
 	ctx.JSON(http.StatusOK, map[string]any{
 		"content":        content,
 		"contentVersion": comment.ContentVersion,
 		"attachments":    attachmentsHTML(ctx, comment.Attachments, comment.Content),
+		"suggestions":    suggestions,
 	})
 }
 
