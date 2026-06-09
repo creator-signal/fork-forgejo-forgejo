@@ -1,24 +1,22 @@
-.markup {
-  input[type="checkbox"] {
-    appearance: none;
-    position: relative;
-    border: 1px solid var(--color-secondary-dark-4);
-    border-radius: var(--border-radius);
-    background: var(--color-input-background);
-    height: 14px;
-    width: 14px;
-    opacity: 1 !important; /* override fomantic on edit preview */
-    pointer-events: auto !important; /* override fomantic on edit preview */
-    vertical-align: middle !important; /* override fomantic on edit preview */
-    print-color-adjust: exact;
-  }
+.markup input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  border: 1px solid var(--color-secondary-dark-4);
+  border-radius: var(--border-radius);
+  background: var(--color-input-background);
+  height: 14px;
+  width: 14px;
+  opacity: 1 !important; /* override fomantic on edit preview */
+  pointer-events: auto !important; /* override fomantic on edit preview */
+  vertical-align: middle !important; /* override fomantic on edit preview */
+  print-color-adjust: exact;
 
-  input[type="checkbox"]:not([disabled]):hover,
-  input[type="checkbox"]:not([disabled]):active {
+  &:not([disabled]):hover,
+  &:not([disabled]):active {
     border-color: var(--color-primary);
   }
 
-  input[type="checkbox"]::after {
+  &::after {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -26,13 +24,13 @@
     mask-size: cover;
   }
 
-  input[type="checkbox"]:checked::after {
+  &:checked::after {
     content: "";
     mask-image: var(--checkbox-mask-checked);
     print-color-adjust: exact;
   }
 
-  input[type="checkbox"]:indeterminate::after {
+  &:indeterminate::after {
     content: "";
     mask-image: var(--checkbox-mask-indeterminate);
   }
