@@ -49,6 +49,9 @@ fieldset label > input[type="checkbox"],
 fieldset label > input[type="radio"] {
   margin-inline-end: 0.75em;
   margin-top: 0 !important;
+}
+
+fieldset label > input[type="radio"] {
   vertical-align: initial !important; /* overrides a semantic.css rule, remove when obsolete */
 }
 

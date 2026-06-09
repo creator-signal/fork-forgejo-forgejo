@@ -8,7 +8,6 @@
   width: var(--checkbox-size);
   opacity: 1 !important; /* override fomantic on edit preview */
   pointer-events: auto !important; /* override fomantic on edit preview */
-  vertical-align: middle !important; /* override fomantic on edit preview */
   print-color-adjust: exact;
 
   &:not([disabled]):hover,
@@ -36,6 +35,8 @@
 }
 
 form input[type="checkbox"] {
+  vertical-align: center !important; /* override fomantic */
+
   &:checked {
     background: var(--color-accent);
     border: none;
@@ -46,8 +47,12 @@ form input[type="checkbox"] {
   }
 }
 
-.markup input[type="checkbox"]:checked::after {
-  background: var(--color-text);
+.markup input[type="checkbox"] {
+  vertical-align: middle !important; /* override fomantic on edit preview */
+
+  &:checked::after {
+    background: var(--color-text);
+  }
 }
 
 /* Legacy part based on Fomantic UI checkbox module, with just the parts extracted that we use.
