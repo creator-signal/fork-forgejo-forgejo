@@ -2,7 +2,6 @@ package lfs
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"slices"
@@ -27,8 +26,25 @@ type PktAdapter struct {
 	w *bufio.Writer
 }
 
-func NewPktAdapter(r io.Reader, w io.Writer) *PktAdapter {
-	return &PktAdapter{r: bufio.NewReader(r), w: bufio.NewWriter(w)}
+type PktBinaryDataReader struct {
+	r              io.Reader
+	remainingBytes int64
+}
+
+func (r *PktBinaryDataReader) Read(d []byte) (int, error) {
+	if r.remainingBytes <= 0 {
+		pktLen, err := readPacketLen(r.r)
+		if err != nil {
+			return 0, err
+		}
+		if pktLen == 0 {
+			return 0, io.EOF
+		}
+		r.remainingBytes = pktLen - 4
+	}
+	bytes, err := io.LimitReader(r.r, r.remainingBytes).Read(d)
+	r.remainingBytes -= int64(bytes)
+	return bytes, err
 }
 
 func readPacketLen(r io.Reader) (int64, error) {
@@ -64,6 +80,14 @@ func readPacket(r io.Reader) ([]byte, int, error) {
 	return pkt, int(pktLen), err
 }
 
+func NewPktAdapter(r io.Reader, w io.Writer) *PktAdapter {
+	return &PktAdapter{r: bufio.NewReader(r), w: bufio.NewWriter(w)}
+}
+
+func (p *PktAdapter) GetBinaryReader() *PktBinaryDataReader {
+	return &PktBinaryDataReader{p.r, 0}
+}
+
 func (p *PktAdapter) Read() ([][]byte, error) {
 	var list [][]byte
 	for {
@@ -81,18 +105,6 @@ func (p *PktAdapter) Read() ([][]byte, error) {
 		list = append(list, pkt)
 	}
 	return list, nil
-}
-
-// Used for large data like binary-data in LFS put-object/get-object
-func (p *PktAdapter) GetNextPacket() (int64, io.Reader, error) {
-	pktLen, err := readPacketLen(p.r)
-	if err != nil {
-		return pktLen, nil, err
-	}
-	if pktLen == 0 {
-		return pktLen, bytes.NewReader([]byte("")), nil
-	}
-	return pktLen - 4, io.LimitReader(p.r, pktLen-4), nil
 }
 
 func NewPktLine(data []byte) (PktLine, error) {
@@ -189,10 +201,6 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 	if err != nil {
 		return fmt.Errorf("cannot get content stat: %v", err)
 	}
-	if stat.Size() > MaxPacketLength {
-		return fmt.Errorf("cannot send binary data with size=%d (max=%d)", stat.Size(), MaxPacketLength)
-	}
-
 	if err := p.WriteStr("status 200"); err != nil {
 		return fmt.Errorf("error writing OK status pkt-line: %v", err)
 	}
@@ -202,15 +210,30 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 	if err := p.WriteDelim(); err != nil {
 		return fmt.Errorf("error writing delim-pkt: %v", err)
 	}
-	if err := p.WriteRaw(fmt.Appendf(nil, "%04x", stat.Size()+4)); err != nil {
-		return fmt.Errorf("error writing data size: %04d", stat.Size()+4)
+	remainingBytes := stat.Size()
+	if remainingBytes > MaxPacketLength {
+		for remainingBytes >= MaxPacketLength-4 {
+			if err := p.WriteRaw(fmt.Appendf(nil, "%04x", MaxPacketLength)); err != nil {
+				return fmt.Errorf("error writing data size: %04d", MaxPacketLength)
+			}
+			written, err := io.CopyN(p.w, content, MaxPacketLength-4)
+			remainingBytes -= written
+			if err != nil {
+				return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", stat.Size()-remainingBytes, err)
+			}
+		}
 	}
-	written, err := io.CopyN(p.w, content, stat.Size())
-	if err != nil {
-		return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", written, err)
-	}
-	if written != stat.Size() {
-		return fmt.Errorf("error copying binary data: sent %d instead of %d", written, stat.Size())
+	if remainingBytes > 0 {
+		if err := p.WriteRaw(fmt.Appendf(nil, "%04x", remainingBytes+4)); err != nil {
+			return fmt.Errorf("error writing data size: %04d", remainingBytes+4)
+		}
+		written, err := io.CopyN(p.w, content, remainingBytes)
+		if err != nil {
+			return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", written, err)
+		}
+		if written != remainingBytes {
+			return fmt.Errorf("error copying binary data: sent %d instead of %d", written, stat.Size())
+		}
 	}
 	return p.WriteFlush()
 }

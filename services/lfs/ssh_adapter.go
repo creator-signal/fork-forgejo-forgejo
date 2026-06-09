@@ -73,8 +73,7 @@ func parseBatchRequest(req [][]byte) ([]OidLine, error) {
 		if packet == nil {
 			break
 		}
-		packetStr := string(packet[:len(packet)-1])
-		values := strings.Split(packetStr, " ")
+		values := strings.Split(strings.TrimRight(string(packet), "\n"), " ")
 		if len(values) < 2 {
 			return oidLines, fmt.Errorf("Error parsing batch request oid %q: expected \"oid size *[key=value]\"", string(packet))
 		}
@@ -114,17 +113,7 @@ func handlePutObjectRequest(
 		return http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", p.Oid, repository.Name)
 	}
 
-	dataLen, dataReader, err := a.GetNextPacket()
-	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Cannot get next binary packet: %v", err)
-	}
-	if dataReader == nil {
-		return http.StatusUnprocessableEntity, errors.New("Empty binary data")
-	}
-	if dataLen != p.Size {
-		return http.StatusInternalServerError, fmt.Errorf("Data size mistmach: expecetd %d, got %d", p.Size, dataLen)
-	}
-
+	binaryReader := a.GetBinaryReader()
 	contentStore := lfs_module.NewContentStore()
 	exists, err := contentStore.Exists(p)
 	if err != nil {
@@ -151,7 +140,7 @@ func handlePutObjectRequest(
 				// The file exists but the user has no access to it.
 				// The upload gets verified by hashing and size comparison to prove access to it.
 				hash := sha256.New()
-				written, err := io.Copy(hash, dataReader)
+				written, err := io.Copy(hash, binaryReader)
 				if err != nil {
 					return fmt.Errorf("Error creating hash. Error: %v", err)
 				}
@@ -163,20 +152,13 @@ func handlePutObjectRequest(
 					return lfs_module.ErrHashMismatch
 				}
 			} else {
-				_, err := io.Copy(io.Discard, dataReader) // Discarding data
+				_, err := io.Copy(io.Discard, binaryReader) // Discarding data
 				if err != nil {
 					return fmt.Errorf("Error discarding data: %v", err)
 				}
 			}
-		} else if err := contentStore.Put(p, dataReader); err != nil {
-			return err
-		}
-		dataLen, dataReader, err = a.GetNextPacket()
-		if err != nil {
-			return fmt.Errorf("Cannot get closing flush packet: %v", err)
-		}
-		if dataLen != 0 {
-			return errors.New("Unexpected packet after binary data (should be flush)")
+		} else if err := contentStore.Put(p, binaryReader); err != nil {
+			return fmt.Errorf("error copying data: %v", err)
 		}
 		_, err := git_model.NewLFSMetaObject(ctx, repository.ID, p)
 		return err
