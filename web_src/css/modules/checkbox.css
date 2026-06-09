@@ -9,6 +9,7 @@
   opacity: 1 !important; /* override fomantic on edit preview */
   pointer-events: auto !important; /* override fomantic on edit preview */
   print-color-adjust: exact;
+  margin-block-start: 0 !important; /* override form.css rule applying to all inputs */
   margin-inline-end: 0.5rem;
 
   &:not([disabled]):hover,
