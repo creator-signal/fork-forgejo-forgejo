@@ -11,10 +11,8 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/optional"
 	repo_service "forgejo.org/services/repository"
@@ -48,10 +46,6 @@ func TestChangeDefaultBranch(t *testing.T) {
 }
 
 func TestChangeDefaultBranchUpdatesSchedules(t *testing.T) {
-
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-
-	//create opts for the Repo
 
 	type expectedSpec struct {
 		cron     string
@@ -94,6 +88,9 @@ jobs:
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create repo
 		var sha string
 		repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
 			Files: forgery.MapFS{
@@ -101,51 +98,25 @@ jobs:
 			},
 			LatestSha: &sha,
 		})
-		forgery.EnableRepoUnits(t, repo, unit.TypeActions)
 
 		schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 		require.NoError(t, err)
 		require.Len(t, schedules, 1)
 
-		t.Logf("default branch before: %s", repo.DefaultBranch)
-
-		require.True(t, repo.UnitEnabled(t.Context(), unit.TypeActions))
-
-		t.Logf("path of the repo: %s", repo.RepoPath())
-
 		gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
 		require.NoError(t, err)
 		defer gitRepo.Close()
 
-		//create branch
+		//create new branch
 		err = repo_service.CreateNewBranch(t.Context(), user, repo, gitRepo, repo.DefaultBranch, "test")
 		require.NoError(t, err)
 
 		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "test")
 		require.NoError(t, err)
 
-		enabled := repo.UnitEnabled(t.Context(), unit.TypeActions)
-		require.True(t, enabled)
-
-		t.Logf("Actions unit: %t", enabled)
-		commit, err := gitRepo.GetBranchCommit(repo.DefaultBranch)
-		require.NoError(t, err)
-
-		branch, err := commit.GetBranchName()
-		require.NoError(t, err)
-		t.Logf("Branch name: %s from commit", branch)
-
-		workflows, err := actions_module.DetectScheduledWorkflows(gitRepo, commit)
-		require.NoError(t, err)
-
-		t.Logf("detected workflows: %d", len(workflows))
-		t.Logf("detected workflow: %s", workflows[0].EntryName)
-		t.Logf("default branch after: %s", repo.DefaultBranch)
-
-		// Implement check schedules
+		// Implement check schedules for test branch
 		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 
-		t.Logf("Schedules count from test branch: %d", len(schedules))
 		require.NoError(t, err)
 		require.Len(t, schedules, 0)
 
@@ -154,11 +125,10 @@ jobs:
 
 		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 
-		t.Logf("Schedules count from main branch: %d", len(schedules))
 		require.NoError(t, err)
 		require.Len(t, schedules, 1)
 
-		commit, err = gitRepo.GetBranchCommit("test")
+		commit, err := gitRepo.GetBranchCommit("test")
 		require.NoError(t, err)
 
 		_, err = files_service.ChangeRepoFiles(
@@ -183,13 +153,6 @@ jobs:
 
 		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "test")
 		require.NoError(t, err)
-
-		commit, err = gitRepo.GetBranchCommit(repo.DefaultBranch)
-		require.NoError(t, err)
-
-		branch, err = commit.GetBranchName()
-		require.NoError(t, err)
-		t.Logf("Branch name: %s from commit", branch)
 
 		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 
