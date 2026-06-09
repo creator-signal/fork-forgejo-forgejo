@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -22,8 +21,6 @@ import (
 	asymkey_model "forgejo.org/models/asymkey"
 	git_model "forgejo.org/models/git"
 	"forgejo.org/models/perm"
-	repo_model "forgejo.org/models/repo"
-	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
 	lfs_module "forgejo.org/modules/lfs"
@@ -33,7 +30,6 @@ import (
 	"forgejo.org/modules/process"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/storage"
 	"forgejo.org/services/lfs"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -125,11 +121,8 @@ func fail(ctx context.Context, userMessage, logMsgFmt string, args ...any) error
 }
 
 // LFS transfer should not print anything in stdout like fail
-func lfsTransferFail(ctx context.Context, msg string, args ...any) error {
-	if len(args) == 0 {
-		logFail(ctx, msg, msg)
-	}
-	logFail(ctx, msg[:len(msg)-4], fmt.Sprintf(msg, args...)) // Trimming final ": %X"
+func lfsTransferFail(ctx context.Context, msg string) error {
+	logFail(ctx, msg, msg)
 	return cli.Exit("", 1)
 }
 
@@ -302,7 +295,8 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	}
 
 	// LFS token authentication
-	if verb == lfsAuthenticateVerb {
+	switch verb {
+	case lfsAuthenticateVerb:
 		url := fmt.Sprintf("%s%s/%s.git/info/lfs", setting.AppURL, url.PathEscape(results.OwnerName), url.PathEscape(results.RepoName))
 
 		now := time.Now()
@@ -334,285 +328,17 @@ func runServ(ctx context.Context, c *cli.Command) error {
 			return fail(ctx, "Failed to encode LFS json response", "Failed to encode LFS json response: %v", err)
 		}
 		return nil
-	} else if verb == lfsTransferVerb { // LFS transfer
-		if len(words) < 3 {
-			return lfsTransferFail(ctx, "Too few arguments: %v", words)
-		}
+	case lfsTransferVerb: // LFS transfer
 		if lfsVerb != lfsTransferDownload && lfsVerb != lfsTransferUpload {
-			return lfsTransferFail(ctx, "Unexpected operation: %v", lfsVerb)
+			return lfsTransferFail(ctx, fmt.Sprintf("Unexpected operation: %v", lfsVerb))
 		}
-
 		if err := initDB(ctx); err != nil {
-			return lfsTransferFail(ctx, "Cannot initialize database: %v", err)
+			return lfsTransferFail(ctx, fmt.Sprintf("Cannot initialize database: %v", err))
 		}
-		if !setting.LFS.StartServer {
-			return lfsTransferFail(ctx, "LFS isn't enabled")
-		}
-		if err = storage.InitLFS(); err != nil {
-			return lfsTransferFail(ctx, "Cannot initialize LFS storage: %v", err)
-		}
-
-		user, err := user_model.GetUserByID(ctx, results.UserID)
-		if err != nil {
-			return lfsTransferFail(ctx, "Unable to GetUserById: %v", err)
-		}
-		repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, results.UserName, results.RepoName)
-		if err != nil {
-			log.Debug("Could not find repository: %s/%s - %s", results.UserName, results.RepoName, err)
-			return lfsTransferFail(ctx, "You must have pull access: %q", results.RepoName)
-		}
-		if !lfs.CheckAuthorization(ctx, user, repository, requestedMode) {
-			return lfsTransferFail(ctx, "Not authorized ro access repository")
-		}
-
 		pktAdapter := lfs.NewPktAdapter(os.Stdin, os.Stdout)
-
-		err = pktAdapter.WriteData(lfs.GetCapabilityAdvertisement())
+		err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb)
 		if err != nil {
-			return lfsTransferFail(ctx, "Failed to send capability advertisement: %v", err)
-		}
-		err = pktAdapter.WriteFlush()
-		if err != nil {
-			return lfsTransferFail(ctx, "Failed to flush capability advertisement: %v", err)
-		}
-
-		packets, err := pktAdapter.Read()
-		if err != nil {
-			return lfsTransferFail(ctx, "Failed to read capability response: %v", err)
-		} else if len(packets) != 1 {
-			return lfsTransferFail(ctx, "Unexpected capability response: more than 1 packet received")
-		}
-
-		quitExpected := false
-		var finalErr error
-		if !lfs.CheckVersionCommand(packets[0]) {
-			err = pktAdapter.WriteHTTPError(400, "Unexpected version received")
-			if err != nil {
-				return lfsTransferFail(ctx, "Failed to send version error: %v", err)
-			}
-			return lfsTransferFail(ctx, "Failed to match capability: %q", packets[0])
-		}
-		err = pktAdapter.WriteHTTPOK()
-		if err != nil {
-			return lfsTransferFail(ctx, "Failed to send version acknowledgment: %v", err)
-		}
-
-		for {
-			packets, err = pktAdapter.Read()
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(400, "Failed to read LFS command")
-				if statusErr != nil {
-					err = errors.Join(err, statusErr)
-				}
-				return lfsTransferFail(ctx, "Failed to read LFS command: %v", err)
-			} else if len(packets) == 0 {
-				statusErr := pktAdapter.WriteHTTPError(400, "Unexpected empty LFS command")
-				if statusErr != nil {
-					err = errors.Join(err, statusErr)
-				}
-				return lfsTransferFail(ctx, "Unexpected empty LFS command: %v", err)
-			}
-
-			command := strings.TrimRight(string(packets[0]), "\n")
-			if command == "quit" {
-				quitErr := pktAdapter.WriteHTTPOK()
-				if quitErr != nil {
-					if finalErr != nil {
-						finalErr = errors.Join(finalErr, quitErr)
-					} else {
-						finalErr = quitErr
-					}
-				}
-				break
-			} else if quitExpected {
-				return lfsTransferFail(ctx, "Unexpected LFS command waiting for quit: %q", packets)
-			}
-
-			if command == "batch" {
-				packets, err = pktAdapter.Read()
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(400, "Failed to read LFS command")
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed reporting error during batch request parsing: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-
-				oidLines, err := lfs.ParseBatchRequest(packets)
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing batch request: %v", err))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed reporting error during batch request parsing: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-
-				var batchOidLine lfs.PktLine
-				for _, oidLine := range oidLines {
-					batchLine, err := lfs.NewPktLine(fmt.Appendf(nil, "%s %d %s", oidLine.Oid, oidLine.Size, lfsVerb))
-					if err != nil {
-						statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error creating batch response: %v", err))
-						if statusErr != nil {
-							return lfsTransferFail(ctx, "Failed reporting error during batch response: %v", errors.Join(err, statusErr))
-						}
-						finalErr = err
-						quitExpected = true
-						break
-					}
-					batchOidLine = append(batchOidLine, batchLine...)
-				}
-				if quitExpected {
-					continue
-				}
-				statusPkt, err := lfs.NewPktLine(fmt.Appendf(nil, "status %d\n", 200))
-				if err != nil {
-					return lfsTransferFail(ctx, "Error creating status PktLine: %v", err)
-				}
-				if err := pktAdapter.WriteSplitPacket(statusPkt, batchOidLine); err != nil {
-					return lfsTransferFail(ctx, "Error sending batch response: %v", err)
-				}
-			} else if strings.HasPrefix(command, "put-object") {
-				_, oid, found := strings.Cut(command, " ")
-				if !found {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in put-object request: %q", command))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object missing oid: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-				if len(packets) <= 1 {
-					statusErr := pktAdapter.WriteHTTPError(400, "Put-object request must have more than 1 packets")
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object packets count: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-				args, err := lfs.ParseArguments(packets[1:])
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing put-object arguments: %v", err))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object argument parsing: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-				size, ok := args["size"]
-				if !ok {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Size argument not found in put-object: %q %q", packets, args))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object missing size argument: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-
-				status, err := lfs.HandlePutObjectRequest(ctx, oid, size, user, repository, pktAdapter)
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object request handling: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-				if err := pktAdapter.WriteHTTPOK(); err != nil {
-					return lfsTransferFail(ctx, "Error sending OK response to put-object: %v", err)
-				}
-			} else if strings.HasPrefix(command, "verify-object") {
-				_, oid, found := strings.Cut(command, " ")
-				if !found {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in verify-object request: %q", command))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for verify-object missing oid: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-				if len(packets) <= 1 {
-					statusErr := pktAdapter.WriteHTTPError(400, "Verify-object request must have more than 1 packets")
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for verify-object packets count: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-				args, err := lfs.ParseArguments(packets[1:])
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing verify-object arguments: %v", err))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for verify-object argument parsing: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-				size, ok := args["size"]
-				if !ok {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Size argument not found in verify-object: %q %q", packets, args))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for verify-object missing size argument: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-
-				status, err := lfs.VerifyObject(ctx, oid, size)
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Failed error reporting for put-object request handling: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					continue
-				}
-
-				if err := pktAdapter.WriteHTTPOK(); err != nil {
-					return lfsTransferFail(ctx, "Error sending OK response to put-object: %v", err)
-				}
-			} else if strings.HasPrefix(command, "get-object") {
-				_, oid, found := strings.Cut(command, " ")
-				if !found {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in get-object request: %q", command))
-					if statusErr != nil {
-						return lfsTransferFail(ctx, "Error sending error status: %v", statusErr)
-					}
-					quitExpected = true
-					continue
-				}
-
-				statusCode, err := lfs.HandleGetObjectRequest(ctx, oid, repository, pktAdapter)
-				if err != nil {
-					err := pktAdapter.WriteHTTPError(statusCode, err.Error())
-					if err != nil {
-						return lfsTransferFail(ctx, "Error sending error status: %v", err)
-					}
-					quitExpected = true
-					continue
-				}
-				// statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Not implemented: %q", oid))
-				// if statusErr != nil {
-				// 	return lfsTransferFail(ctx, "Failed reporting error during get-object parsing: %v", errors.Join(err, statusErr))
-				// }
-				// quitExpected = true
-				// continue
-			} else {
-				if err := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Unrecognized command: %q", command)); err != nil {
-					return lfsTransferFail(ctx, "Unrecognized LFS command: %v", err)
-				}
-				quitExpected = true
-			}
-		}
-		if finalErr != nil {
-			return lfsTransferFail(ctx, "Unexpected error during LFS transfer: %v", err)
+			return lfsTransferFail(ctx, err.Error())
 		}
 		return nil
 	}

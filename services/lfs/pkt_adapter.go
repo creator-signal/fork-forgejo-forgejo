@@ -106,6 +106,11 @@ func (p *PktAdapter) NewStrPktLine(msg string) (PktLine, error) {
 	return NewPktLine([]byte(msg + "\n"))
 }
 
+func (p *PktAdapter) WriteRaw(data []byte) error {
+	_, err := p.w.Write(data)
+	return err
+}
+
 func (p *PktAdapter) WriteData(data []byte) error {
 	packet, err := NewPktLine(data)
 	if err != nil {
@@ -184,6 +189,9 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 	if err != nil {
 		return fmt.Errorf("cannot get content stat: %v", err)
 	}
+	if stat.Size() > MaxPacketLength {
+		return fmt.Errorf("cannot send binary data with size=%d (max=%d)", stat.Size(), MaxPacketLength)
+	}
 
 	if err := p.WriteStr("status 200"); err != nil {
 		return fmt.Errorf("error writing OK status pkt-line: %v", err)
@@ -194,11 +202,15 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 	if err := p.WriteDelim(); err != nil {
 		return fmt.Errorf("error writing delim-pkt: %v", err)
 	}
-	if written, err := io.CopyN(p.w, content, stat.Size()); err != nil {
+	if err := p.WriteRaw(fmt.Appendf(nil, "%04x", stat.Size()+4)); err != nil {
+		return fmt.Errorf("error writing data size: %04d", stat.Size()+4)
+	}
+	written, err := io.CopyN(p.w, content, stat.Size())
+	if err != nil {
 		return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", written, err)
 	}
-	if err := p.WriteFlush(); err != nil {
-		return fmt.Errorf("Error writing flush-pkt: %v", err)
+	if written != stat.Size() {
+		return fmt.Errorf("error copying binary data: sent %d instead of %d", written, stat.Size())
 	}
-	return nil
+	return p.WriteFlush()
 }
