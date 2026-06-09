@@ -1,4 +1,4 @@
-.markup input[type="checkbox"] {
+:is(form, .markup) input[type="checkbox"] {
   appearance: none;
   position: relative;
   border: 1px solid var(--color-secondary-dark-4);
@@ -20,7 +20,6 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: var(--color-text);
     mask-size: cover;
   }
 
@@ -34,6 +33,21 @@
     content: "";
     mask-image: var(--checkbox-mask-indeterminate);
   }
+}
+
+form input[type="checkbox"] {
+  &:checked {
+    background: var(--color-accent);
+    border: none;
+
+    &::after {
+      background: var(--color-white);
+    }
+  }
+}
+
+.markup input[type="checkbox"]:checked::after {
+  background: var(--color-text);
 }
 
 /* Legacy part based on Fomantic UI checkbox module, with just the parts extracted that we use.
