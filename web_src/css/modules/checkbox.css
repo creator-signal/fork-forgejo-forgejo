@@ -9,6 +9,7 @@
   opacity: 1 !important; /* override fomantic on edit preview */
   pointer-events: auto !important; /* override fomantic on edit preview */
   print-color-adjust: exact;
+  margin-inline-end: 0.5rem;
 
   &:not([disabled]):hover,
   &:not([disabled]):active {
