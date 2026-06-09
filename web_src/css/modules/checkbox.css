@@ -10,7 +10,6 @@
     opacity: 1 !important; /* override fomantic on edit preview */
     pointer-events: auto !important; /* override fomantic on edit preview */
     vertical-align: middle !important; /* override fomantic on edit preview */
-    -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
@@ -31,7 +30,6 @@
   input[type="checkbox"]:checked::after {
     content: "";
     mask-image: var(--checkbox-mask-checked);
-    -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
