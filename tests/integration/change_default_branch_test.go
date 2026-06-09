@@ -19,6 +19,7 @@ import (
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"strings"
@@ -83,7 +84,10 @@ jobs:
       - run: echo updated
 `,
 		expectedWorkflowTitle: ".forgejo/workflows/scheduled.yml",
-		expectedCronSpecs:     []expectedSpec{{cron: "30 5,17 * * *", timeZone: optional.None[string]()}},
+		expectedCronSpecs: []expectedSpec{
+			{cron: "30 5,17 * * *", timeZone: optional.None[string]()},
+			{cron: "0 * * * *", timeZone: optional.None[string]()},
+		},
 	}
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
@@ -99,10 +103,6 @@ jobs:
 			LatestSha: &sha,
 		})
 
-		schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
-		require.NoError(t, err)
-		require.Len(t, schedules, 1)
-
 		gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
 		require.NoError(t, err)
 		defer gitRepo.Close()
@@ -110,23 +110,6 @@ jobs:
 		//create new branch
 		err = repo_service.CreateNewBranch(t.Context(), user, repo, gitRepo, repo.DefaultBranch, "test")
 		require.NoError(t, err)
-
-		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "test")
-		require.NoError(t, err)
-
-		// Implement check schedules for test branch
-		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
-
-		require.NoError(t, err)
-		require.Len(t, schedules, 0)
-
-		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "main")
-		require.NoError(t, err)
-
-		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
-
-		require.NoError(t, err)
-		require.Len(t, schedules, 1)
 
 		commit, err := gitRepo.GetBranchCommit("test")
 		require.NoError(t, err)
@@ -151,12 +134,55 @@ jobs:
 		)
 		require.NoError(t, err)
 
+		//change default branch to test
 		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "test")
+		require.NoError(t, err)
+
+		schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
+
+		require.NoError(t, err)
+		require.Len(t, schedules, 1)
+
+		assert.Equal(t, "test", schedules[0].Ref)
+		assert.Equal(t, testWorkflow.expectedWorkflowTitle, schedules[0].Title)
+		assert.Equal(t, repo.ID, schedules[0].RepoID)
+		assert.Equal(t, testWorkflow.workflowID, schedules[0].WorkflowID)
+		assert.Equal(t, testWorkflow.workflowDirectory, schedules[0].WorkflowDirectory)
+
+		specs, total, err := actions_model.FindSpecs(t.Context(), actions_model.FindSpecOptions{RepoID: repo.ID})
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), total)
+
+		assert.Equal(t, schedules[0].ID, specs[0].ScheduleID)
+		assert.Equal(t, testWorkflow.expectedCronSpecs[1].cron, specs[0].Spec)
+		assert.Equal(t, testWorkflow.expectedCronSpecs[1].timeZone, specs[0].TimeZone)
+		assert.Equal(t, []byte(testWorkflow.updatedWorkflowContent), schedules[0].Content)
+		
+		//change default branch to main
+		err = repo_service.SetRepoDefaultBranch(t.Context(), repo, gitRepo, "main")
 		require.NoError(t, err)
 
 		schedules, err = db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
 
 		require.NoError(t, err)
 		require.Len(t, schedules, 1)
+
+		assert.Equal(t, "main", schedules[0].Ref)
+		assert.Equal(t, testWorkflow.expectedWorkflowTitle, schedules[0].Title)
+		assert.Equal(t, repo.ID, schedules[0].RepoID)
+		assert.Equal(t, testWorkflow.workflowID, schedules[0].WorkflowID)
+		assert.Equal(t, testWorkflow.workflowDirectory, schedules[0].WorkflowDirectory)
+		assert.Equal(t, []byte(testWorkflow.workflowContent), schedules[0].Content)
+		
+		specs, total, err = actions_model.FindSpecs(t.Context(), actions_model.FindSpecOptions{RepoID: repo.ID})
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), total)
+
+		assert.Equal(t, schedules[0].ID, specs[0].ScheduleID)
+		assert.Equal(t, testWorkflow.expectedCronSpecs[0].cron, specs[0].Spec)
+		assert.Equal(t, testWorkflow.expectedCronSpecs[0].timeZone, specs[0].TimeZone)
+
 	})
 }
