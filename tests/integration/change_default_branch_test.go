@@ -58,19 +58,19 @@ func TestChangeDefaultBranchUpdatesSchedules(t *testing.T) {
 		timeZone optional.Option[string]
 	}
 
-	testWorkflow := []struct {
-		name                  string
-		workflowID            string
-		workflowDirectory     string
-		workflowContent       string
-		expectedWorkflowTitle string
-		expectedCronSpecs     []expectedSpec
+	testWorkflow := struct {
+		name                   string
+		workflowID             string
+		workflowDirectory      string
+		workflowContent        string
+		updatedWorkflowContent string
+		expectedWorkflowTitle  string
+		expectedCronSpecs      []expectedSpec
 	}{
-		{
-			name:              "GitHub",
-			workflowID:        "scheduled.yml",
-			workflowDirectory: ".forgejo/workflows",
-			workflowContent: `
+		name:              "Forgejo",
+		workflowID:        "scheduled.yml",
+		workflowDirectory: ".forgejo/workflows",
+		workflowContent: `
 on:
   schedule:
     - cron: "30 5,17 * * *"
@@ -79,9 +79,17 @@ jobs:
     steps:
       - run: echo OK
 `,
-			expectedWorkflowTitle: ".forgejo/workflows/scheduled.yml",
-			expectedCronSpecs:     []expectedSpec{{cron: "30 5,17 * * *", timeZone: optional.None[string]()}},
-		},
+		updatedWorkflowContent: `
+on:
+  schedule:
+    - cron: "0 * * * *"
+jobs:
+  test:
+    steps:
+      - run: echo updated
+`,
+		expectedWorkflowTitle: ".forgejo/workflows/scheduled.yml",
+		expectedCronSpecs:     []expectedSpec{{cron: "30 5,17 * * *", timeZone: optional.None[string]()}},
 	}
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
@@ -89,7 +97,7 @@ jobs:
 		var sha string
 		repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
 			Files: forgery.MapFS{
-				fmt.Sprintf("%s/%s", testWorkflow[0].workflowDirectory, testWorkflow[0].workflowID): forgery.MapFile(testWorkflow[0].workflowContent),
+				fmt.Sprintf("%s/%s", testWorkflow.workflowDirectory, testWorkflow.workflowID): forgery.MapFile(testWorkflow.workflowContent),
 			},
 			LatestSha: &sha,
 		})
@@ -164,17 +172,9 @@ jobs:
 				Message:      "update workflow",
 				Files: []*files_service.ChangeRepoFile{
 					{
-						Operation: "update",
-						TreePath:  testWorkflow[0].expectedWorkflowTitle,
-						ContentReader: strings.NewReader(`
-on:
-  schedule:
-    - cron: "0 * * * *"
-jobs:
-  test:
-    steps:
-      - run: echo updated
-`),
+						Operation:     "update",
+						TreePath:      testWorkflow.expectedWorkflowTitle,
+						ContentReader: strings.NewReader(testWorkflow.updatedWorkflowContent),
 					},
 				},
 			},
@@ -195,11 +195,5 @@ jobs:
 
 		require.NoError(t, err)
 		require.Len(t, schedules, 1)
-
-		//TODO
-		// - Create a push on test branch
-		// - Assrt all the schedules
-		// - chek the ref to test on ActionSchedule
-		// - chek the ref to main on ActionSchedule
 	})
 }
