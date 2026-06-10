@@ -14,12 +14,14 @@ import (
 )
 
 func TestGetCapability(t *testing.T) {
-	assert.Equal(t, "version=1\n", string(getCapabilityAdvertisement()))
+	s := SSHAdpater{}
+	assert.Equal(t, "version=1\n", string(s.getCapabilityAdvertisement()))
 }
 
 func TestCheckVersionCommand(t *testing.T) {
-	assert.False(t, checkVersionCommand([]byte("version 2\n")))
-	assert.True(t, checkVersionCommand([]byte("version 1\n")))
+	s := SSHAdpater{}
+	assert.False(t, s.checkVersionCommand([]byte("version 2\n")))
+	assert.True(t, s.checkVersionCommand([]byte("version 1\n")))
 }
 
 func TestHandleLFSTransfer(t *testing.T) {

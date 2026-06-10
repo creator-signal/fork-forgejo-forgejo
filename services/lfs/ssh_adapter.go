@@ -34,22 +34,12 @@ type OidLine struct {
 	Args map[string]string
 }
 
-func getCapabilityAdvertisement() []byte {
-	return []byte("version=1\n")
-}
-
-func checkVersionCommand(c []byte) bool {
-	return bytes.Equal(c, []byte("version 1\n"))
-}
-
-func checkAuthorization(ctx context.Context, user *user_model.User, repository *repo_model.Repository, accessMode perm.AccessMode) bool {
-	perm, err := access_model.GetUserRepoPermission(ctx, repository, user)
-	if err != nil {
-		log.Error("Unable to GetUserRepoPermission for user %-v in repo %-v Error: %v", user, repository, err)
-		return false
-	}
-
-	return perm.CanAccess(accessMode, unit.TypeCode)
+type SSHAdpater struct {
+	ctx           context.Context
+	user          *user_model.User
+	repository    *repo_model.Repository
+	requestedMode perm.AccessMode
+	pktAdapter    *PktAdapter
 }
 
 func parseArguments(req [][]byte) (map[string]string, error) {
@@ -101,19 +91,53 @@ func parseBatchRequest(req [][]byte) ([]OidLine, error) {
 	return oidLines, nil
 }
 
-func handlePutObjectRequest(
-	ctx context.Context, oid, size string, user *user_model.User, repository *repo_model.Repository, a *PktAdapter,
-) (int, error) {
+func (s *SSHAdpater) getCapabilityAdvertisement() []byte {
+	return []byte("version=1\n")
+}
+
+func (s *SSHAdpater) checkVersionCommand(c []byte) bool {
+	return bytes.Equal(c, []byte("version 1\n"))
+}
+
+func (s *SSHAdpater) CheckAuthorization() bool {
+	perm, err := access_model.GetUserRepoPermission(s.ctx, s.repository, s.user)
+	if err != nil {
+		log.Error("Unable to GetUserRepoPermission for user %-v in repo %-v Error: %v", s.user, s.repository, err)
+		return false
+	}
+
+	return perm.CanAccess(s.requestedMode, unit.TypeCode)
+}
+
+func (s *SSHAdpater) handlePutObjectRequest(command string, packets [][]byte) (int, error) {
+	if s.requestedMode < perm.AccessModeWrite {
+		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for put-object command", s.requestedMode)
+	}
+	_, oid, found := strings.Cut(command, " ")
+	if !found {
+		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in put-object request: %q", command)
+	}
+	if len(packets) <= 1 {
+		return http.StatusBadRequest, errors.New("Put-object request must have more than 1 packets")
+	}
+	args, err := parseArguments(packets[1:])
+	if err != nil {
+		return http.StatusBadRequest, fmt.Errorf("Error parsing put-object arguments: %v", err)
+	}
+	size, ok := args["size"]
+	if !ok {
+		return http.StatusBadRequest, fmt.Errorf("Size argument not found in put-object: %q %q", packets, args)
+	}
+
 	p := lfs_module.Pointer{Oid: oid}
-	var err error
 	if p.Size, err = strconv.ParseInt(size, 10, 64); err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("Invalid size: %q", size)
 	}
 	if !p.IsValid() {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", p.Oid, repository.Name)
+		return http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", p.Oid, s.repository.Name)
 	}
 
-	binaryReader := a.GetBinaryReader()
+	binaryReader := s.pktAdapter.GetBinaryReader()
 	contentStore := lfs_module.NewContentStore()
 	exists, err := contentStore.Exists(p)
 	if err != nil {
@@ -121,7 +145,7 @@ func handlePutObjectRequest(
 	}
 
 	if exists {
-		ok, err := quota_model.EvaluateForUser(ctx, user.ID, quota_model.LimitSubjectSizeGitLFS)
+		ok, err := quota_model.EvaluateForUser(s.ctx, s.user.ID, quota_model.LimitSubjectSizeGitLFS)
 		if err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("quota_model.EvaluateForUser: %v", err)
 		}
@@ -132,7 +156,7 @@ func handlePutObjectRequest(
 
 	uploadOrVerify := func() error {
 		if exists {
-			accessible, err := git_model.LFSObjectAccessible(ctx, user, p.Oid)
+			accessible, err := git_model.LFSObjectAccessible(s.ctx, s.user, p.Oid)
 			if err != nil {
 				return fmt.Errorf("Unable to check if LFS MetaObject [%s] is accessible. Error: %v", p.Oid, err)
 			}
@@ -160,13 +184,13 @@ func handlePutObjectRequest(
 		} else if err := contentStore.Put(p, binaryReader); err != nil {
 			return fmt.Errorf("error copying data: %v", err)
 		}
-		_, err := git_model.NewLFSMetaObject(ctx, repository.ID, p)
+		_, err := git_model.NewLFSMetaObject(s.ctx, s.repository.ID, p)
 		return err
 	}
 
 	if err := uploadOrVerify(); err != nil {
 		returnErr := fmt.Errorf("Error whilst uploadOrVerify LFS OID[%s]: %v", p.Oid, err)
-		if _, err = git_model.RemoveLFSMetaObjectByOid(ctx, repository.ID, p.Oid); err != nil {
+		if _, err = git_model.RemoveLFSMetaObjectByOid(s.ctx, s.repository.ID, p.Oid); err != nil {
 			returnErr = errors.Join(fmt.Errorf("Error whilst removing MetaObject for LFS OID[%s]: %v", p.Oid, err))
 		}
 		return http.StatusInternalServerError, returnErr
@@ -174,14 +198,32 @@ func handlePutObjectRequest(
 	return http.StatusOK, nil
 }
 
-func verifyObject(oid, size string) (int, error) {
+func (s *SSHAdpater) handleVerifyObject(command string, packets [][]byte) (int, error) {
+	if s.requestedMode < perm.AccessModeRead {
+		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for verify-object command", s.requestedMode)
+	}
+	_, oid, found := strings.Cut(command, " ")
+	if !found {
+		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in verify-object request: %q", command)
+	}
+	if len(packets) <= 1 {
+		return http.StatusBadRequest, errors.New("Verify-object request must have more than 1 packets")
+	}
+	args, err := parseArguments(packets[1:])
+	if err != nil {
+		return http.StatusBadRequest, fmt.Errorf("Error parsing verify-object arguments: %v", err)
+	}
+	size, ok := args["size"]
+	if !ok {
+		return http.StatusBadRequest, fmt.Errorf("Size argument not found in verify-object: %q %q", packets, args)
+	}
+
 	p := lfs_module.Pointer{Oid: oid}
-	var err error
 	if p.Size, err = strconv.ParseInt(size, 10, 64); err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("Invalid size: %q", size)
 	}
 	contentStore := lfs_module.NewContentStore()
-	ok, err := contentStore.Verify(p)
+	ok, err = contentStore.Verify(p)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Error whilst verifying LFS OID[%s]: %v", p.Oid, err)
 	} else if !ok {
@@ -190,12 +232,20 @@ func verifyObject(oid, size string) (int, error) {
 	return http.StatusOK, nil
 }
 
-func handleGetObjectRequest(ctx context.Context, oid string, repository *repo_model.Repository, a *PktAdapter) (int, error) {
+func (s *SSHAdpater) handleGetObjectRequest(command string) (int, error) {
+	if s.requestedMode < perm.AccessModeRead {
+		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for get-object command", s.requestedMode)
+	}
+	_, oid, found := strings.Cut(command, " ")
+	if !found {
+		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in get-object request: %q", command)
+	}
+
 	p := lfs_module.Pointer{Oid: oid}
 	if !p.IsValid() {
 		return http.StatusUnprocessableEntity, errors.New("Oid or size are invalid")
 	}
-	meta, err := git_model.GetLFSMetaObjectByOid(ctx, repository.ID, p.Oid)
+	meta, err := git_model.GetLFSMetaObjectByOid(s.ctx, s.repository.ID, p.Oid)
 	if err != nil {
 		return http.StatusNotFound, errors.New("Unable to get LFS oid")
 	}
@@ -206,7 +256,7 @@ func handleGetObjectRequest(ctx context.Context, oid string, repository *repo_mo
 		return http.StatusNotFound, errors.New("Content not found")
 	}
 	defer content.Close()
-	err = a.WriteBinaryData(content)
+	err = s.pktAdapter.WriteBinaryData(content)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Error whilst sending LFS OID[%s] data: %v", p.Oid, err)
 	}
@@ -214,7 +264,9 @@ func handleGetObjectRequest(ctx context.Context, oid string, repository *repo_mo
 	return http.StatusOK, nil
 }
 
-func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults, pktAdapter *PktAdapter, requestedMode perm.AccessMode, lfsVerb string) error {
+func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults, pktAdapter *PktAdapter,
+	requestedMode perm.AccessMode, lfsVerb string,
+) error {
 	if !setting.LFS.StartServer {
 		return fmt.Errorf("LFS isn't enabled")
 	}
@@ -230,11 +282,12 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	if err != nil {
 		return fmt.Errorf("You must have pull access to %s/%s: %v", results.OwnerName, results.RepoName, err)
 	}
-	if !checkAuthorization(ctx, user, repository, requestedMode) {
+	sshAdapter := SSHAdpater{ctx: ctx, user: user, repository: repository, requestedMode: requestedMode, pktAdapter: pktAdapter}
+	if !sshAdapter.CheckAuthorization() {
 		return fmt.Errorf("Not authorized ro access repository")
 	}
 
-	err = pktAdapter.WriteData(getCapabilityAdvertisement())
+	err = pktAdapter.WriteData(sshAdapter.getCapabilityAdvertisement())
 	if err != nil {
 		return fmt.Errorf("Failed to send capability advertisement: %v", err)
 	}
@@ -252,7 +305,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 
 	quitExpected := false
 	var finalErr error
-	if !checkVersionCommand(packets[0]) {
+	if !sshAdapter.checkVersionCommand(packets[0]) {
 		err = pktAdapter.WriteHTTPError(400, "Unexpected version received")
 		if err != nil {
 			return fmt.Errorf("Failed to send version error: %v", err)
@@ -343,53 +396,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 				return fmt.Errorf("Error sending batch response: %v", err)
 			}
 		} else if strings.HasPrefix(command, "put-object") {
-			if requestedMode < perm.AccessModeWrite {
-				statusErr := pktAdapter.WriteHTTPError(
-					http.StatusUnauthorized, fmt.Sprintf("Requested mode %s does not allow for put-object command", requestedMode))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object missing oid: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			_, oid, found := strings.Cut(command, " ")
-			if !found {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in put-object request: %q", command))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object missing oid: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			if len(packets) <= 1 {
-				statusErr := pktAdapter.WriteHTTPError(400, "Put-object request must have more than 1 packets")
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object packets count: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			args, err := parseArguments(packets[1:])
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing put-object arguments: %v", err))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object argument parsing: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			size, ok := args["size"]
-			if !ok {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Size argument not found in put-object: %q %q", packets, args))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object missing size argument: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-
-			status, err := handlePutObjectRequest(ctx, oid, size, user, repository, pktAdapter)
+			status, err := sshAdapter.handlePutObjectRequest(command, packets)
 			if err != nil {
 				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
 				if statusErr != nil {
@@ -403,53 +410,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 				return fmt.Errorf("Error sending OK response to put-object: %v", err)
 			}
 		} else if strings.HasPrefix(command, "verify-object") {
-			if requestedMode < perm.AccessModeRead {
-				statusErr := pktAdapter.WriteHTTPError(
-					http.StatusUnauthorized, fmt.Sprintf("Requested mode %s does not allow for verify-object command", requestedMode))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object missing oid: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			_, oid, found := strings.Cut(command, " ")
-			if !found {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in verify-object request: %q", command))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for verify-object missing oid: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			if len(packets) <= 1 {
-				statusErr := pktAdapter.WriteHTTPError(400, "Verify-object request must have more than 1 packets")
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for verify-object packets count: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			args, err := parseArguments(packets[1:])
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing verify-object arguments: %v", err))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for verify-object argument parsing: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			size, ok := args["size"]
-			if !ok {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Size argument not found in verify-object: %q %q", packets, args))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for verify-object missing size argument: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-
-			status, err := verifyObject(oid, size)
+			status, err := sshAdapter.handleVerifyObject(command, packets)
 			if err != nil {
 				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
 				if statusErr != nil {
@@ -459,31 +420,11 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 				quitExpected = true
 				continue
 			}
-
 			if err := pktAdapter.WriteHTTPOK(); err != nil {
 				return fmt.Errorf("Error sending OK response to put-object: %v", err)
 			}
 		} else if strings.HasPrefix(command, "get-object") {
-			if requestedMode < perm.AccessModeRead {
-				statusErr := pktAdapter.WriteHTTPError(
-					http.StatusUnauthorized, fmt.Sprintf("Requested mode %s does not allow for get-object command", requestedMode))
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object missing oid: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-			_, oid, found := strings.Cut(command, " ")
-			if !found {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Cannot find oid in get-object request: %q", command))
-				if statusErr != nil {
-					return fmt.Errorf("Error sending error status: %v", statusErr)
-				}
-				quitExpected = true
-				continue
-			}
-
-			statusCode, err := handleGetObjectRequest(ctx, oid, repository, pktAdapter)
+			statusCode, err := sshAdapter.handleGetObjectRequest(command)
 			if err != nil {
 				err := pktAdapter.WriteHTTPError(statusCode, err.Error())
 				if err != nil {
