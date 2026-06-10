@@ -13,6 +13,7 @@ import (
 	"forgejo.org/models/db"
 	secret_model "forgejo.org/models/secret"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/shared"
@@ -1095,4 +1096,156 @@ func ListActionRunJobs(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+// GetActionJobLogs serves plaintext logs for a single action job.
+func GetActionJobLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository repoGetActionJobLogs
+	// ---
+	// summary: Download the plaintext logs of an action job
+	// description: >
+	//   Returns the plaintext log for the job. By default the log for the
+	//   most recent attempt is returned (ActionRunJob.TaskID tracks the latest
+	//   task). Pass `?attempt=N` to fetch the log for a specific historical
+	//   attempt; the value matches the `attempt` field returned by the job
+	//   listing endpoints.
+	// produces:
+	// - text/plain
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: job_id
+	//   in: path
+	//   description: ID of the workflow job
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// - name: attempt
+	//   in: query
+	//   description: 1-based attempt number; omit to fetch the latest attempt
+	//   type: integer
+	//   format: int64
+	//   required: false
+	// responses:
+	//   "200":
+	//     description: Plaintext log content
+	//     schema:
+	//       type: string
+	//   "206":
+	//     description: Partial log content (Range request)
+	//     schema:
+	//       type: string
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	jobID := ctx.ParamsInt64(":job_id")
+
+	var attempt optional.Option[int64]
+	if ctx.FormString("attempt") != "" {
+		attempt = optional.Some(ctx.FormInt64("attempt"))
+	}
+
+	reader, filename, modtime, err := actions_service.OpenJobLogReader(ctx, ctx.Repo.Repository, jobID, attempt)
+	if err != nil {
+		switch {
+		case errors.Is(err, util.ErrNotExist),
+			errors.Is(err, actions_service.ErrJobNotExecuted),
+			errors.Is(err, actions_service.ErrLogsExpired):
+			ctx.Error(http.StatusNotFound, "OpenJobLogReader", err)
+		default:
+			ctx.Error(http.StatusInternalServerError, "OpenJobLogReader", err)
+		}
+		return
+	}
+	defer reader.Close()
+
+	ctx.Resp.Header().Set("Accept-Ranges", "bytes")
+	// Pin Content-Type explicitly so http.ServeContent doesn't extension-sniff.
+	ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeContent(ctx.Resp, ctx.Req, filename, modtime, reader)
+}
+
+// GetActionRunLogs streams a ZIP of plaintext logs for every job in the run.
+func GetActionRunLogs(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs repository repoGetActionRunLogs
+	// ---
+	// summary: Download a ZIP of plaintext logs for every job in an action run
+	// description: >
+	//   Returns a ZIP archive containing the latest log for each job in the
+	//   workflow run. Each entry is named
+	//   `{job-name}-{job-id}-attempt-{N}.log` (the job ID prevents collisions
+	//   when two jobs share a name; the attempt number records which run the
+	//   log came from). The run itself has no attempt number — jobs are
+	//   re-run independently, so use the per-job logs endpoint with `?attempt`
+	//   to fetch a specific historical attempt of one job.
+	// produces:
+	// - application/zip
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: run_id
+	//   in: path
+	//   description: ID of the workflow run
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     description: ZIP archive of per-job log files
+	//     schema:
+	//       type: string
+	//       format: binary
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	runID := ctx.ParamsInt64(":run_id")
+
+	run, err := actions_model.GetRunByID(ctx, runID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunByID", err)
+		}
+		return
+	}
+
+	if run.RepoID != ctx.Repo.Repository.ID {
+		ctx.Error(http.StatusNotFound, "GetRunByID", util.ErrNotExist)
+		return
+	}
+
+	zipFilename := fmt.Sprintf("run-%d-logs.zip", run.ID)
+
+	ctx.Resp.Header().Set("Content-Type", "application/zip")
+	ctx.Resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", zipFilename))
+
+	if err := actions_service.WriteRunLogsZip(ctx, ctx.Resp, run); err != nil {
+		ctx.Error(http.StatusInternalServerError, "WriteRunLogsZip", err)
+		return
+	}
 }

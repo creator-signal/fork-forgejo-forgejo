@@ -1234,10 +1234,12 @@ func Routes() *web.Route {
 				}, reqToken(), reqAdmin())
 				m.Group("/actions", func() {
 					m.Get("/tasks", repo.ListActionTasks)
+					m.Get("/jobs/{job_id}/logs", repo.GetActionJobLogs)
 					m.Group("/runs", func() {
 						m.Get("", repo.ListActionRuns)
 						m.Get("/{run_id}", repo.GetActionRun)
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
+						m.Get("/{run_id}/logs", repo.GetActionRunLogs)
 					})
 
 					m.Group("/workflows", func() {
