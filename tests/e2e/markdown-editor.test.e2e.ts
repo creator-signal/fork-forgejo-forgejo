@@ -518,7 +518,7 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
   await suggestionList.waitFor();
   await expect(suggestionList).toBeVisible();
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1`);
 
   // Test pull request completion via '#'
   await textarea.press('Enter');
@@ -526,7 +526,7 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
   await suggestionList.waitFor();
   await expect(suggestionList).toBeVisible();
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1\n* !5`);
 
   // Test pull request completion via '!'
   await textarea.press('Enter');
@@ -539,10 +539,10 @@ test('text expander has higher prio then prefix continuation', async ({page}) =>
   await expect(suggestionList.locator('[class*="octicon-git-pull-request"]')).not.toHaveCount(0);
 
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 \n* !2 `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1\n* !5\n* !2`);
 
   await textarea.press('Enter');
-  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1 \n* !5 \n* !2 \n* `);
+  await expect(textarea).toHaveValue(`* first\n* 😸\n* @user2 \n* #1\n* !5\n* !2\n* `);
 });
 
 test('Combo Markdown: preview mode switch', async ({page}) => {
