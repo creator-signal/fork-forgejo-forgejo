@@ -8,7 +8,6 @@
   gap: 0.5rem;
   padding: 0.25rem;
   box-sizing: border-box;
-  background: oklch(from var(--color-nav-bg) l c h / 0.6);
   width: 100%;
   justify-content: center;
   top: -5rem;
@@ -17,13 +16,21 @@
   opacity: 0;
 
   @media not (prefers-reduced-motion: reduce) {
-    transition: 100ms ease-in-out top;
+    transition: 100ms ease-in-out top, 100ms linear opacity;
+
+    & + #navbar > * {
+      transition: 100ms linear opacity;
+    }
   }
 
   &:focus-within {
     top: 0;
     pointer-events: all;
     opacity: 1;
+
+    & + #navbar > * {
+      opacity: 0.4;
+    }
   }
 
   a {
