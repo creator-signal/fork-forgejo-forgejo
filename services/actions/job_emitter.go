@@ -294,6 +294,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 
 	// Compute jobOutputs for all the other jobs required as needed by this job:
 	jobOutputs := make(map[string]map[string]string, len(jobsInRun))
+	jobResults := make(map[string]string, len(jobsInRun))
 	for _, job := range jobsInRun {
 		if !slices.Contains(blockedJob.Needs, job.JobID) {
 			// Only include jobs that are in the `needs` of the blocked job.
@@ -315,6 +316,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 			outputsMap[v.OutputKey] = v.OutputValue
 		}
 		jobOutputs[job.JobID] = outputsMap
+		jobResults[job.JobID] = job.Status.String()
 	}
 
 	// Re-parse the blocked job, providing all the other completed jobs' outputs, to turn this incomplete job into
@@ -323,6 +325,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 	defer expandCleanup()
 	newJobWorkflows, err := jobparser.Parse(blockedJob.WorkflowPayload, false,
 		jobparser.WithJobOutputs(jobOutputs),
+		jobparser.WithJobResults(jobResults),
 		jobparser.WithWorkflowNeeds(blockedJob.Needs),
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
