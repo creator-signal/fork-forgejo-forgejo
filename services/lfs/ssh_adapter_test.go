@@ -9,6 +9,7 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/private"
 	"forgejo.org/services/contexttest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

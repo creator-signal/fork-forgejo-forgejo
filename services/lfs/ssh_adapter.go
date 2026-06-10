@@ -109,6 +109,28 @@ func (s *SSHAdpater) CheckAuthorization() bool {
 	return perm.CanAccess(s.requestedMode, unit.TypeCode)
 }
 
+func (s *SSHAdpater) handleBatchRequest(lfsVerb string) (PktLine, int, error) {
+	var batchOidLine PktLine
+	packets, err := s.pktAdapter.Read()
+	if err != nil {
+		return batchOidLine, http.StatusBadRequest, errors.New("Failed to read LFS command")
+	}
+
+	oidLines, err := parseBatchRequest(packets)
+	if err != nil {
+		return batchOidLine, http.StatusBadRequest, fmt.Errorf("Error parsing batch request: %v", err)
+	}
+
+	for _, oidLine := range oidLines {
+		batchLine, err := NewPktLine(fmt.Appendf(nil, "%s %d %s", oidLine.Oid, oidLine.Size, lfsVerb))
+		if err != nil {
+			return batchOidLine, http.StatusInternalServerError, fmt.Errorf("Error creating batch response: %v", err)
+		}
+		batchOidLine = append(batchOidLine, batchLine...)
+	}
+	return batchOidLine, http.StatusOK, nil
+}
+
 func (s *SSHAdpater) handlePutObjectRequest(command string, packets [][]byte) (int, error) {
 	if s.requestedMode < perm.AccessModeWrite {
 		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for put-object command", s.requestedMode)
@@ -284,7 +306,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	}
 	sshAdapter := SSHAdpater{ctx: ctx, user: user, repository: repository, requestedMode: requestedMode, pktAdapter: pktAdapter}
 	if !sshAdapter.CheckAuthorization() {
-		return fmt.Errorf("Not authorized ro access repository")
+		return fmt.Errorf("Not authorized to access repository")
 	}
 
 	err = pktAdapter.WriteData(sshAdapter.getCapabilityAdvertisement())
@@ -349,43 +371,14 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 		}
 
 		if command == "batch" {
-			packets, err = pktAdapter.Read()
+			batchOidLine, status, err := sshAdapter.handleBatchRequest(lfsVerb)
 			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(400, "Failed to read LFS command")
+				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
 				if statusErr != nil {
-					return fmt.Errorf("Failed reporting error during batch request parsing: %v", errors.Join(err, statusErr))
+					return fmt.Errorf("Failed reporting error during batch request handling: %v", errors.Join(err, statusErr))
 				}
 				finalErr = err
 				quitExpected = true
-				continue
-			}
-
-			oidLines, err := parseBatchRequest(packets)
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error parsing batch request: %v", err))
-				if statusErr != nil {
-					return fmt.Errorf("Failed reporting error during batch request parsing: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-
-			var batchOidLine PktLine
-			for _, oidLine := range oidLines {
-				batchLine, err := NewPktLine(fmt.Appendf(nil, "%s %d %s", oidLine.Oid, oidLine.Size, lfsVerb))
-				if err != nil {
-					statusErr := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Error creating batch response: %v", err))
-					if statusErr != nil {
-						return fmt.Errorf("Failed reporting error during batch response: %v", errors.Join(err, statusErr))
-					}
-					finalErr = err
-					quitExpected = true
-					break
-				}
-				batchOidLine = append(batchOidLine, batchLine...)
-			}
-			if quitExpected {
 				continue
 			}
 			statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", 200))
