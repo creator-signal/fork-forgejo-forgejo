@@ -23,7 +23,7 @@ test('Buttons and other controls have consistent height', async ({page}) => {
   await page.goto('/notifications');
 
   // The height should also be consistent with the button on the previous page
-  const switchHeight = (await page.locator('.switch').boundingBox()).height;
+  const switchHeight = (await page.locator('.switch').first().boundingBox()).height;
   expect(buttonHeight).toBe(switchHeight);
 
   buttonHeight = (await page.locator('.button-row .button[href="/notifications/subscriptions"]').boundingBox()).height;

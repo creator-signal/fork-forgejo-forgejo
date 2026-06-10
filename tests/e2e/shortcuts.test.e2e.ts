@@ -32,13 +32,12 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#L2$/);
 
-  // Shortcuts that handle page navigation are flaky on Firefox using Playwright
-  if (browser.browserType() === firefox) return;
-
   await page.keyboard.press('b');
   await expect(page).toHaveURL('/user2/repo2/blame/branch/master/test.xml');
+  await page.waitForLoadState();
   await page.keyboard.press('b');
   await expect(page).toHaveURL('/user2/repo2/src/branch/master/test.xml');
+  await page.waitForLoadState();
   await page.keyboard.press('h');
   await expect(page).toHaveURL('/user2/repo2/commits/branch/master/test.xml');
   await page.goBack();
@@ -134,7 +133,7 @@ test('Goto and create shortcuts', async ({browser}, workerInfo) => {
   await page.keyboard.press('n');
   await expect(page).toHaveURL('/notifications');
 
-  // Goto shortcuts are flaky on Firefox using Playwright
+  // Goto shortcuts are flaky on Firefox using Playwright cli
   if (browser.browserType() === firefox) return;
 
   await page.keyboard.press('g');

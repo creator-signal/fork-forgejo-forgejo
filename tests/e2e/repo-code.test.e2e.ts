@@ -80,8 +80,8 @@ test('Readable diff', async ({page}, workerInfo) => {
       await expect(page.getByText(thisDiff.removed, {exact: true})).toHaveCSS('background-color', 'rgb(252, 165, 165)');
     }
     if (thisDiff.added) {
-      await expect(page.getByText(thisDiff.added, {exact: true})).toHaveClass(/added-code/);
-      await expect(page.getByText(thisDiff.added, {exact: true})).toHaveCSS('background-color', 'rgb(134, 239, 172)');
+      await expect(page.getByText(thisDiff.added, {exact: true}).first()).toHaveClass(/added-code/);
+      await expect(page.getByText(thisDiff.added, {exact: true}).first()).toHaveCSS('background-color', 'rgb(134, 239, 172)');
     }
   }
   await screenshot(page);
