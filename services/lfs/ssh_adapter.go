@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	git_model "forgejo.org/models/git"
 	"forgejo.org/models/perm"
@@ -167,7 +169,7 @@ func (s *SSHAdpater) handlePutObjectRequest(command string, packets [][]byte) (i
 	}
 
 	if exists {
-		ok, err := quota_model.EvaluateForUser(s.ctx, s.user.ID, quota_model.LimitSubjectSizeGitLFS)
+		ok, err := quota_model.EvaluateForUser(s.ctx, s.repository.OwnerID, quota_model.LimitSubjectSizeGitLFS)
 		if err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("quota_model.EvaluateForUser: %v", err)
 		}
@@ -286,6 +288,48 @@ func (s *SSHAdpater) handleGetObjectRequest(command string) (int, error) {
 	return http.StatusOK, nil
 }
 
+func (s *SSHAdpater) handleListLockRequest() (PktLine, int, error) {
+	var lockSpec PktLine
+	cursor := 0
+	limit := 100
+
+	lockList, err := git_model.GetLFSLockByRepoID(s.ctx, s.repository.ID, cursor, limit)
+	if err != nil {
+		return lockSpec, http.StatusUnprocessableEntity, fmt.Errorf(
+			"Unable to list locks for repository ID[%d]: Error: %v", s.repository.ID, err)
+	}
+	for _, lock := range lockList {
+		idLine, err := NewPktLine(fmt.Appendf(nil, "lock %d", lock.ID))
+		if err != nil {
+			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] id", lock.ID)
+		}
+		pathLine, err := NewPktLine(fmt.Appendf(nil, "path %d %s", lock.ID, lock.Path))
+		if err != nil {
+			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] patch", lock.ID)
+		}
+		atLine, err := NewPktLine(fmt.Appendf(nil, "locked-at %d %s", lock.ID, lock.Created.Format(time.RFC3339)))
+		if err != nil {
+			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] locked-at", lock.ID)
+		}
+		ownerNameLine, err := NewPktLine(fmt.Appendf(nil, "ownername %d %s", lock.ID, lock.Owner.Name))
+		if err != nil {
+			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] ownername", lock.ID)
+		}
+		var owning string
+		if lock.OwnerID == s.user.ID {
+			owning = "ours"
+		} else {
+			owning = "theirs"
+		}
+		ownerLine, err := NewPktLine(fmt.Appendf(nil, "owner %d %s", lock.ID, owning))
+		if err != nil {
+			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] owner", lock.ID)
+		}
+		lockSpec = slices.Concat(lockSpec, idLine, pathLine, atLine, ownerNameLine, ownerLine)
+	}
+	return lockSpec, http.StatusOK, nil
+}
+
 func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults, pktAdapter *PktAdapter,
 	requestedMode perm.AccessMode, lfsVerb string,
 ) error {
@@ -328,7 +372,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	quitExpected := false
 	var finalErr error
 	if !sshAdapter.checkVersionCommand(packets[0]) {
-		err = pktAdapter.WriteHTTPError(400, "Unexpected version received")
+		err = pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected version received")
 		if err != nil {
 			return fmt.Errorf("Failed to send version error: %v", err)
 		}
@@ -342,13 +386,13 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	for {
 		packets, err = pktAdapter.Read()
 		if err != nil {
-			statusErr := pktAdapter.WriteHTTPError(400, "Failed to read LFS command")
+			statusErr := pktAdapter.WriteHTTPError(http.StatusInternalServerError, "Failed to read LFS command")
 			if statusErr != nil {
 				err = errors.Join(err, statusErr)
 			}
 			return fmt.Errorf("Failed to read LFS command: %v", err)
 		} else if len(packets) == 0 {
-			statusErr := pktAdapter.WriteHTTPError(400, "Unexpected empty LFS command")
+			statusErr := pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected empty LFS command")
 			if statusErr != nil {
 				err = errors.Join(err, statusErr)
 			}
@@ -375,7 +419,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 			if err != nil {
 				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
 				if statusErr != nil {
-					return fmt.Errorf("Failed reporting error during batch request handling: %v", errors.Join(err, statusErr))
+					return fmt.Errorf("Failed reporting error during batch handling: %v", errors.Join(err, statusErr))
 				}
 				finalErr = err
 				quitExpected = true
@@ -387,6 +431,24 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 			}
 			if err := pktAdapter.WriteSplitPacket(statusPkt, batchOidLine); err != nil {
 				return fmt.Errorf("Error sending batch response: %v", err)
+			}
+		} else if command == "list-lock" {
+			lockSpec, status, err := sshAdapter.handleListLockRequest()
+			if err != nil {
+				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
+				if statusErr != nil {
+					return fmt.Errorf("Failed reporting error during list-lock handling: %v", errors.Join(err, statusErr))
+				}
+				finalErr = err
+				quitExpected = true
+				continue
+			}
+			statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", 200))
+			if err != nil {
+				return fmt.Errorf("Error creating status PktLine: %v", err)
+			}
+			if err := pktAdapter.WriteSplitPacket(statusPkt, lockSpec); err != nil {
+				return fmt.Errorf("Error sending list-lock response: %v", err)
 			}
 		} else if strings.HasPrefix(command, "put-object") {
 			status, err := sshAdapter.handlePutObjectRequest(command, packets)
@@ -427,7 +489,7 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 				continue
 			}
 		} else {
-			if err := pktAdapter.WriteHTTPError(400, fmt.Sprintf("Unrecognized command: %q", command)); err != nil {
+			if err := pktAdapter.WriteHTTPError(http.StatusBadRequest, fmt.Sprintf("Unrecognized command: %q", command)); err != nil {
 				return fmt.Errorf("Unrecognized LFS command: %v", err)
 			}
 			quitExpected = true

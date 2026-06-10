@@ -8,11 +8,17 @@ import (
 	"forgejo.org/models/perm"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/private"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/services/contexttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	unittest.MainTest(m)
+}
 
 func TestGetCapability(t *testing.T) {
 	s := SSHAdpater{}
@@ -51,6 +57,9 @@ func TestHandleLFSTransfer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer test.MockVariableValue(&setting.LFS, setting.LFS)()
+			setting.LFS.StartServer = true
+
 			unittest.PrepareTestEnv(t)
 			ctx, _ := contexttest.MockContext(t, "user2/repo1")
 			ctx.SetParams(":id", "1")
@@ -98,6 +107,9 @@ func TestHandleLFSTransferError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer test.MockVariableValue(&setting.LFS, setting.LFS)()
+			setting.LFS.StartServer = true
+
 			unittest.PrepareTestEnv(t)
 			ctx, _ := contexttest.MockContext(t, "user2/repo1")
 			ctx.SetParams(":id", "1")
