@@ -98,9 +98,12 @@
 			</p>
 			<form class="ui form" action="{{.Link}}/hidden_comments" method="post">
 				<fieldset>
-					<label data-tooltip-content="{{ctx.Locale.Tr "settings.hidden_comment_types.ref_tooltip"}}">
+					<label>
 						<input name="reference" type="checkbox" {{if(call .IsCommentTypeGroupChecked "reference")}}checked{{end}}>
 						{{ctx.Locale.Tr "settings.comment_type_group_reference"}}
+						<span class="help">
+							{{ctx.Locale.Tr "settings.hidden_comment_types.ref_tooltip"}}
+						</span>
 					</label>
 					<label>
 						<input name="label" type="checkbox" {{if (call .IsCommentTypeGroupChecked "label")}}checked{{end}}>
@@ -150,9 +153,12 @@
 						<input name="project" type="checkbox" {{if (call .IsCommentTypeGroupChecked "project")}}checked{{end}}>
 						{{ctx.Locale.Tr "settings.comment_type_group_project"}}
 					</label>
-					<label data-tooltip-content="{{ctx.Locale.Tr "settings.hidden_comment_types.issue_ref_tooltip"}}">
+					<label>
 						<input name="issue_ref" type="checkbox" {{if (call .IsCommentTypeGroupChecked "issue_ref")}}checked{{end}}>
 						{{ctx.Locale.Tr "settings.comment_type_group_issue_ref"}}
+						<span class="help">
+							{{ctx.Locale.Tr "settings.hidden_comment_types.issue_ref_tooltip"}}
+						</span>
 					</label>
 				</fieldset>
 				<div class="field">
