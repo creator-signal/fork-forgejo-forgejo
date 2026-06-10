@@ -6,13 +6,17 @@ package integration
 import (
 	"crypto/rsa"
 	"encoding/base64"
+	"fmt"
 	"math/big"
 	"net/http"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 	actions_service "forgejo.org/services/actions"
 	"forgejo.org/tests"
 
@@ -45,7 +49,9 @@ func TestActionsIDToken(t *testing.T) {
 	gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 	require.NoError(t, err)
 
-	token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+	token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
+	require.NoError(t, err)
+	tokenWithoutOIDCAccess, err := actions_service.CreateAuthorizationToken(task, gitCtx, false, &repo_model.ActionsConfig{})
 	require.NoError(t, err)
 
 	// get JWKs information
@@ -85,7 +91,7 @@ func TestActionsIDToken(t *testing.T) {
 			assert.Equal(t, "792", claims["run_id"])
 			assert.Equal(t, "188", claims["run_number"])
 			assert.Equal(t, "c2d72f548424103f01ee1dc02889c1e2bff816b0", claims["sha"])
-			assert.Equal(t, "repo:user5/repo4:ref:refs/heads/master", claims["sub"])
+			assert.Equal(t, "repo:user5-5/repo4-4:ref:refs/heads/master", claims["sub"])
 			assert.Equal(t, "artifact.yaml", claims["workflow"])
 			assert.Equal(t, "user5/repo4/.forgejo/workflows/artifact.yaml@refs/heads/master", claims["workflow_ref"])
 		}
@@ -118,6 +124,13 @@ func TestActionsIDToken(t *testing.T) {
 		doAssertions("testingAud", claims)
 	})
 
+	t.Run("with token that doesn't support OIDC", func(t *testing.T) {
+		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true").AddTokenAuth(tokenWithoutOIDCAccess)
+		resp = MakeRequest(t, req, http.StatusInternalServerError)
+		assert.Contains(t, resp.Body.String(), "Error runner api parsing custom claims")
+		assert.NotContains(t, resp.Body.String(), "value") // must not leak an actual `getTokenResponse`
+	})
+
 	t.Run("with no auth header", func(t *testing.T) {
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true&audience=testingAud")
 		resp = MakeRequest(t, req, http.StatusUnauthorized)
@@ -145,7 +158,7 @@ func TestActionsIDToken(t *testing.T) {
 		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 		require.NoError(t, err)
 
-		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
@@ -166,7 +179,7 @@ func TestActionsIDToken(t *testing.T) {
 		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
 		require.NoError(t, err)
 
-		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true)
+		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/abcde/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
@@ -178,5 +191,38 @@ func TestActionsIDToken(t *testing.T) {
 		req = NewRequest(t, "GET", "/api/actions/_apis/pipelines/workflows/123/idtoken?placeholder=true&audience=testingAud").AddTokenAuth(token)
 		resp = MakeRequest(t, req, http.StatusBadRequest)
 		assert.Contains(t, resp.Body.String(), "run-id does not match")
+	})
+
+	t.Run("authorized integration internal issuer", func(t *testing.T) {
+		// Create an Authorized Integration which is set-up to be validated with the in-memory Actions' JWT signing key:
+		ai := &auth.AuthorizedIntegration{
+			UserID: 2,
+			Scope:  auth.AccessTokenScopeAll,
+			Issuer: "urn:forgejo:authorized-integrations:actions",
+			ClaimRules: &auth.ClaimRules{
+				Rules: []auth.ClaimRule{
+					{
+						Claim:      "sub",
+						Comparison: auth.ClaimEqual,
+						Value:      "repo:user5-5/repo4-4:ref:refs/heads/master",
+					},
+				},
+			},
+			ResourceAllRepos: true,
+		}
+		require.NoError(t, auth.InsertAuthorizedIntegration(t.Context(), ai))
+
+		// Create a JWT from the Actions system:
+		var getResponse getTokenResponse
+		req = NewRequest(t, "GET", fmt.Sprintf("/api/actions/_apis/pipelines/workflows/792/idtoken?placeholder=true&audience=%s", ai.Audience)).AddTokenAuth(token)
+		resp = MakeRequest(t, req, http.StatusOK)
+		DecodeJSON(t, resp, &getResponse)
+
+		// Should be able to make a Forgejo API call with the JWT, authenticated by the Authorized Integration:
+		req := NewRequest(t, "GET", "/api/v1/user").AddTokenAuth(getResponse.Value)
+		resp := MakeRequest(t, req, http.StatusOK)
+		var user api.User
+		DecodeJSON(t, resp, &user)
+		assert.Equal(t, "user2", user.LoginName)
 	})
 }

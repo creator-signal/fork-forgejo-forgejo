@@ -62,6 +62,13 @@ type (
 	}
 )
 
+var dingtalkPayloadFormatter = webhookPayloadFormatter{
+	linkFormatter: noneLinkFormatter,
+	nameFormatter: noneNameFormatter,
+	withSender:    true,
+	withRepoName:  true,
+}
+
 // Create implements PayloadConvertor Create method
 func (dc dingtalkConvertor) Create(p *api.CreatePayload) (DingtalkPayload, error) {
 	// created tag/branch
@@ -110,34 +117,34 @@ func (dc dingtalkConvertor) Push(p *api.PushPayload) (DingtalkPayload, error) {
 
 	title := fmt.Sprintf("[%s:%s] %s", p.Repo.FullName, branchName, commitDesc)
 
-	var text string
+	var text strings.Builder
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
 		var authorName string
 		if commit.Author != nil {
 			authorName = " - " + commit.Author.Name
 		}
-		text += fmt.Sprintf("[%s](%s) %s", commit.ID[:7], commit.URL,
-			strings.TrimRight(commit.Message, "\r\n")) + authorName
+		text.WriteString(fmt.Sprintf("[%s](%s) %s", commit.ID[:7], commit.URL,
+			strings.TrimRight(commit.Message, "\r\n")) + authorName)
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
-			text += "\r\n"
+			text.WriteString("\r\n")
 		}
 	}
 
-	return createDingtalkPayload(title, text, linkText, titleLink), nil
+	return createDingtalkPayload(title, text.String(), linkText, titleLink), nil
 }
 
 // Issue implements PayloadConvertor Issue method
 func (dc dingtalkConvertor) Issue(p *api.IssuePayload) (DingtalkPayload, error) {
-	text, issueTitle, attachmentText, _ := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, attachmentText, _ := dingtalkPayloadFormatter.getIssuesPayloadInfo(p)
 
 	return createDingtalkPayload(issueTitle, text+"\r\n\r\n"+attachmentText, "view issue", p.Issue.HTMLURL), nil
 }
 
 // Wiki implements PayloadConvertor Wiki method
 func (dc dingtalkConvertor) Wiki(p *api.WikiPayload) (DingtalkPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _, _ := dingtalkPayloadFormatter.getWikiPayloadInfo(p, true)
 	url := p.Repository.HTMLURL + "/wiki/" + url.PathEscape(p.Page)
 
 	return createDingtalkPayload(text, text, "view wiki", url), nil
@@ -145,14 +152,14 @@ func (dc dingtalkConvertor) Wiki(p *api.WikiPayload) (DingtalkPayload, error) {
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (dc dingtalkConvertor) IssueComment(p *api.IssueCommentPayload) (DingtalkPayload, error) {
-	text, issueTitle, _ := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, _ := dingtalkPayloadFormatter.getIssueCommentPayloadInfo(p)
 
 	return createDingtalkPayload(issueTitle, text+"\r\n\r\n"+p.Comment.Body, "view issue comment", p.Comment.HTMLURL), nil
 }
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (dc dingtalkConvertor) PullRequest(p *api.PullRequestPayload) (DingtalkPayload, error) {
-	text, issueTitle, attachmentText, _ := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, attachmentText, _ := dingtalkPayloadFormatter.getPullRequestPayloadInfo(p)
 
 	return createDingtalkPayload(issueTitle, text+"\r\n\r\n"+attachmentText, "view pull request", p.PullRequest.HTMLURL), nil
 }
@@ -196,19 +203,19 @@ func (dc dingtalkConvertor) Repository(p *api.RepositoryPayload) (DingtalkPayloa
 
 // Release implements PayloadConvertor Release method
 func (dc dingtalkConvertor) Release(p *api.ReleasePayload) (DingtalkPayload, error) {
-	text, _ := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _ := dingtalkPayloadFormatter.getReleasePayloadInfo(p)
 
 	return createDingtalkPayload(text, text, "view release", p.Release.HTMLURL), nil
 }
 
 func (dc dingtalkConvertor) Package(p *api.PackagePayload) (DingtalkPayload, error) {
-	text, _ := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _ := dingtalkPayloadFormatter.getPackagePayloadInfo(p)
 
 	return createDingtalkPayload(text, text, "view package", p.Package.HTMLURL), nil
 }
 
 func (dc dingtalkConvertor) Action(p *api.ActionPayload) (DingtalkPayload, error) {
-	text, _ := getActionPayloadInfo(p, noneLinkFormatter)
+	text, _ := dingtalkPayloadFormatter.getActionPayloadInfo(p)
 
 	return createDingtalkPayload(text, text, "view action", p.Run.HTMLURL), nil
 }

@@ -532,6 +532,11 @@ func PrepareMergedViewPullInfo(ctx *context.Context, issue *issues_model.Issue) 
 		}
 	}
 
+	PrepareViewPullInfoActions(ctx, pull)
+	if ctx.Written() {
+		return nil
+	}
+
 	return compareInfo
 }
 
@@ -1027,7 +1032,11 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		}
 
 		endCommitID = commitID
-		startCommitID = prInfo.MergeBase
+		if prevCommit != nil {
+			startCommitID = prevCommit.ID.String()
+		} else {
+			startCommitID = prInfo.MergeBase
+		}
 		ctx.Data["IsShowingAllCommits"] = false
 	} else if willShowSpecifiedCommitRange {
 		if len(specifiedEndCommit) > 0 {
@@ -1099,24 +1108,9 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		"numberOfViewedFiles": diff.NumViewedFiles,
 	}
 
-	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool)); err != nil {
+	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool), endCommitID); err != nil {
 		ctx.ServerError("LoadComments", err)
 		return
-	}
-
-	for _, file := range diff.Files {
-		for _, section := range file.Sections {
-			for _, line := range section.Lines {
-				for _, comments := range line.Conversations {
-					for _, comment := range comments {
-						if err := comment.LoadAttachments(ctx); err != nil {
-							ctx.ServerError("LoadAttachments", err)
-							return
-						}
-					}
-				}
-			}
-		}
 	}
 
 	pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pull.BaseRepoID, pull.BaseBranch)
@@ -1332,7 +1326,8 @@ func MergePullRequest(ctx *context.Context) {
 	pr.Issue = issue
 	pr.Issue.Repo = ctx.Repo.Repository
 
-	manuallyMerged := repo_model.MergeStyle(form.Do) == repo_model.MergeStyleManuallyMerged
+	mergeStyle := repo_model.MergeStyle(form.Do)
+	manuallyMerged := mergeStyle == repo_model.MergeStyleManuallyMerged
 
 	mergeCheckType := pull_service.MergeCheckTypeGeneral
 	if form.MergeWhenChecksSucceed {
@@ -1343,7 +1338,7 @@ func MergePullRequest(ctx *context.Context) {
 	}
 
 	// start with merging by checking
-	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge); err != nil {
+	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge, mergeStyle); err != nil {
 		switch {
 		case errors.Is(err, pull_service.ErrIsClosed):
 			if issue.IsPull {

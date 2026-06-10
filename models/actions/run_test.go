@@ -13,14 +13,12 @@ import (
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetRunBefore(t *testing.T) {
-}
 
 func TestSetConcurrencyGroup(t *testing.T) {
 	run := ActionRun{}
@@ -94,6 +92,86 @@ func TestIsManualRun(t *testing.T) {
 
 	assert.True(t, manualRunRun.IsDispatchedRun())
 	assert.False(t, pushRun.IsDispatchedRun())
+}
+
+func TestActionRun_IsValid(t *testing.T) {
+	testCases := []struct {
+		name    string
+		run     ActionRun
+		isValid bool
+	}{
+		{
+			name:    "valid run",
+			run:     ActionRun{},
+			isValid: true,
+		},
+		{
+			name:    "with pre-execution error",
+			run:     ActionRun{PreExecutionErrorCode: ErrorCodeIncompleteRunsOnMissingOutput},
+			isValid: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.isValid, testCase.run.IsValid())
+		})
+	}
+}
+
+func TestActionRun_CanBeRerun(t *testing.T) {
+	testCases := []struct {
+		name       string
+		run        ActionRun
+		canBeRerun bool
+	}{
+		{
+			name:       "run with unknown status",
+			run:        ActionRun{Status: StatusUnknown},
+			canBeRerun: false,
+		},
+		{
+			name:       "successful run",
+			run:        ActionRun{Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name:       "failed run",
+			run:        ActionRun{Status: StatusFailure},
+			canBeRerun: true,
+		},
+		{
+			name:       "cancelled run",
+			run:        ActionRun{Status: StatusCancelled},
+			canBeRerun: true,
+		},
+		{
+			name:       "skipped run",
+			run:        ActionRun{Status: StatusSkipped},
+			canBeRerun: true,
+		},
+		{
+			name:       "waiting run",
+			run:        ActionRun{Status: StatusWaiting},
+			canBeRerun: false,
+		},
+		{
+			name:       "blocked run",
+			run:        ActionRun{Status: StatusBlocked},
+			canBeRerun: false,
+		},
+		{
+			name:       "with pre-execution error",
+			run:        ActionRun{PreExecutionErrorCode: ErrorCodeIncompleteRunsOnMissingOutput, Status: StatusSuccess},
+			canBeRerun: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.canBeRerun, testCase.run.CanBeRerun())
+		})
+	}
 }
 
 func TestRepoNumOpenActions(t *testing.T) {
@@ -605,4 +683,39 @@ jobs:
 	assert.Zero(t, insertedJobs[1].Stopped)
 	assert.Zero(t, insertedJobs[1].TaskID)
 	assert.Equal(t, StatusWaiting, insertedJobs[1].Status)
+}
+
+func TestActionRunLoadAttributes(t *testing.T) {
+	run := &ActionRun{
+		RepoID:        10,
+		TriggerUserID: 1000,
+	}
+	require.NoError(t, run.LoadAttributes(t.Context()))
+	assert.Equal(t, "ghost", run.TriggerUser.LowerName)
+}
+
+func TestGetRunByID(t *testing.T) {
+	const (
+		existingRunID    = 0xdeadbeef
+		nonexistingRunID = 0xffffffff
+	)
+
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	_, err := db.GetEngine(t.Context()).Insert(ActionRun{
+		ID: existingRunID,
+	})
+	require.NoError(t, err)
+
+	// ActionRun exists
+
+	run, err := GetRunByID(t.Context(), existingRunID)
+	require.NoError(t, err)
+	assert.NotNil(t, run)
+
+	// ActionRun does not exist
+
+	run, err = GetRunByID(t.Context(), nonexistingRunID)
+	require.ErrorIs(t, err, util.ErrNotExist)
+	assert.Nil(t, run)
 }

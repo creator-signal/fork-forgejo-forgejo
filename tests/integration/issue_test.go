@@ -19,21 +19,22 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/indexer/issues"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/references"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	files_service "forgejo.org/services/repository/files"
+	repo_service "forgejo.org/services/repository"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -114,14 +115,11 @@ func TestViewIssuesSortByType(t *testing.T) {
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		issuesSelection := getIssuesSelection(t, htmlDoc)
-		expectedNumIssues := unittest.GetCount(t,
+		expectedNumIssues := min(unittest.GetCount(t,
 			&issues_model.Issue{RepoID: repo.ID, PosterID: user.ID},
 			unittest.Cond("is_closed=?", false),
 			unittest.Cond("is_pull=?", false),
-		)
-		if expectedNumIssues > setting.UI.IssuePagingNum {
-			expectedNumIssues = setting.UI.IssuePagingNum
-		}
+		), setting.UI.IssuePagingNum)
 		assert.Equal(t, expectedNumIssues, issuesSelection.Length())
 
 		issuesSelection.Each(func(_ int, selection *goquery.Selection) {
@@ -490,8 +488,7 @@ func TestIssueDependencies(t *testing.T) {
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
 
-	repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, owner, tests.DeclarativeRepoOptions{})
-	defer f()
+	repo := forgery.CreateRepository(t, owner, nil)
 
 	createIssue := func(t *testing.T, title string) api.Issue {
 		t.Helper()
@@ -891,10 +888,9 @@ func TestSearchIssues(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	expectedIssueCount := 20 // from the fixtures
-	if expectedIssueCount > setting.UI.IssuePagingNum {
-		expectedIssueCount = setting.UI.IssuePagingNum
-	}
+	expectedIssueCount := min(
+		// from the fixtures
+		20, setting.UI.IssuePagingNum)
 
 	req := NewRequest(t, "GET", "/issues/search")
 	resp := session.MakeRequest(t, req, http.StatusOK)
@@ -1017,10 +1013,9 @@ func TestSearchIssues(t *testing.T) {
 func TestSearchIssuesWithLabels(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	expectedIssueCount := 20 // from the fixtures
-	if expectedIssueCount > setting.UI.IssuePagingNum {
-		expectedIssueCount = setting.UI.IssuePagingNum
-	}
+	expectedIssueCount := min(
+		// from the fixtures
+		20, setting.UI.IssuePagingNum)
 
 	session := loginUser(t, "user1")
 	link, _ := url.Parse("/issues/search")
@@ -1362,13 +1357,9 @@ func TestIssueForm(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "",
-			[]unit_model.Type{unit_model.TypeCode, unit_model.TypeIssues}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/issue_template/test.yaml",
-					ContentReader: strings.NewReader(`name: Test
+		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Files: forgery.MapFS{
+				".forgejo/issue_template/test.yaml": forgery.MapFile(`name: Test
 about: Hello World
 body:
   - type: checkboxes
@@ -1378,10 +1369,8 @@ body:
       options:
         - label: This is a label
 `),
-				},
 			},
-		)
-		defer f()
+		})
 
 		t.Run("Choose list", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -1410,10 +1399,7 @@ body:
 func TestIssueUnsubscription(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			AutoInit: optional.Some(false),
-		})
-		defer f()
+		repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 		session := loginUser(t, user.Name)
 
 		issueURL := testNewIssue(t, session, user.Name, repo.Name, "Issue title", "Description")
@@ -1440,6 +1426,31 @@ func TestIssueLabelList(t *testing.T) {
 		htmlDoc.AssertElement(t, labelListSelector, true)
 		htmlDoc.AssertElement(t, ".labels.list .no-select."+hiddenClass, true)
 	})
+}
+
+func TestIssueNoLabel(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user.Name)
+	testFn := func(t *testing.T, route string) {
+		req := NewRequest(t, "GET", route)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#issue-list .labels-list .label", false)
+	}
+
+	for pathTitle, path := range map[string]string{
+		"User Issues": "/issues",
+		"Repo Issues": "/user2/repo1/issues",
+		"Repo Pulls":  "/user2/repo1/pulls",
+	} {
+		for _, issuesQuery := range []string{"0", "0,1", "1,0"} {
+			t.Run(fmt.Sprintf("%s (%s)", pathTitle, issuesQuery), func(t *testing.T) {
+				testFn(t, path+"?labels="+issuesQuery)
+			})
+		}
+	}
 }
 
 func TestIssueUserDashboard(t *testing.T) {
@@ -1474,6 +1485,40 @@ func TestIssueOrgDashboard(t *testing.T) {
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		htmlDoc.AssertElement(t, sel, true)
 	}
+}
+
+func TestIssueDashboardProjects(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3, Type: user_model.UserTypeOrganization})
+	session := loginUser(t, user.Name)
+
+	testFn := func(t *testing.T, req *RequestWrapper, projectID int64) {
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		projectFilterHref, ok := htmlDoc.Find("[data-test-tag=filter-project] a.active").Attr("href")
+		assert.True(t, ok)
+		assert.Contains(t, projectFilterHref, fmt.Sprintf("project=%d", projectID))
+
+		issues := htmlDoc.Find("#issue-list .issue-meta")
+		assert.NotZero(t, issues.Length())
+
+		issues.Each(func(i int, s *goquery.Selection) {
+			issueProjectHref, ok := s.Find("a.project").Attr("href")
+			assert.True(t, ok)
+			assert.Contains(t, issueProjectHref, fmt.Sprintf("projects/%d", projectID))
+		})
+	}
+
+	t.Run("User", func(t *testing.T) {
+		testFn(t, NewRequest(t, "GET", "/issues?project=4"), 4)
+	})
+
+	t.Run("Org", func(t *testing.T) {
+		testFn(t, NewRequestf(t, "GET", "/org/%s/issues?project=7", org.Name), 7)
+	})
 }
 
 func TestIssueCount(t *testing.T) {
@@ -1664,5 +1709,115 @@ func TestIssueUrlHandling(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 		req := NewRequest(t, "GET", "/user2/repo1/issues_extra_text/5")
 		MakeRequest(t, req, http.StatusNotFound)
+	})
+}
+
+func TestIssueProjectSidebarMissing(t *testing.T) {
+	const (
+		repoID = 4
+		userID = 5
+	)
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAssignProject/")()
+	defer tests.PrepareTestEnv(t)()
+
+	ctx := t.Context()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
+	session := loginUser(t, user.Name)
+
+	issueURL := testNewIssue(t, session, user.Name, repo.Name, "Hello", "World")
+	t.Run("Sidebar showing - user project available", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", true)
+	})
+
+	// Enable repository's project unit
+	projectUnit := repo_model.RepoUnit{
+		RepoID: repo.ID,
+		Type:   unit_model.TypeProjects,
+	}
+	require.NoError(t, repo_service.UpdateRepositoryUnits(db.DefaultContext, repo, []repo_model.RepoUnit{projectUnit}, nil))
+
+	t.Run("Sidebar showing - repository project unit on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", true)
+	})
+
+	project_model.DeleteProjectByID(ctx, 1003)
+	// Disable repository's project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(db.DefaultContext, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("Sidebar missing", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", false)
+	})
+
+	// Team with project available
+	team := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1001})
+	require.NoError(t, team.LoadMembers(ctx))
+	require.NoError(t, team.LoadRepositories(ctx))
+
+	user = team.Members[0]
+	repo = team.Repos[0]
+	org := team.GetOrg(ctx)
+	session = loginUser(t, user.Name)
+
+	issueURL = testNewIssue(t, session, org.Name, repo.Name, "Hello", "World")
+	t.Run("Sidebar showing - org on & repo on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", true)
+	})
+
+	// Disable repository project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(ctx, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("Sidebar showing - org on & repo off", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", true)
+	})
+
+	// Team with project disabled
+	team = unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1002})
+	require.NoError(t, team.LoadMembers(ctx))
+	require.NoError(t, team.LoadRepositories(ctx))
+
+	user = team.Members[0]
+	repo = team.Repos[0]
+	org = team.GetOrg(ctx)
+	session = loginUser(t, user.Name)
+
+	require.NoError(t, project_model.DeleteProjectByID(db.DefaultContext, 1004))
+
+	issueURL = testNewIssue(t, session, org.Name, repo.Name, "Hello", "World")
+	t.Run("Sidebar showing - org off & repo on", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", true)
+	})
+
+	// Disable repository project unit
+	require.NoError(t, repo_service.UpdateRepositoryUnits(ctx, repo, nil, []unit_model.Type{unit_model.TypeProjects}))
+	t.Run("Sidebar missing - org off & repo off", func(tt *testing.T) {
+		defer tests.PrintCurrentTest(tt)()
+		req := NewRequest(t, "GET", issueURL)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, ".select-project.dropdown", false)
 	})
 }

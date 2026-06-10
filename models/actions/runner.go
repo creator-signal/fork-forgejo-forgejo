@@ -152,6 +152,7 @@ func (r *ActionRunner) Editable(ownerID, repoID int64) bool {
 
 // LoadAttributes loads the attributes of the runner
 func (r *ActionRunner) LoadAttributes(ctx context.Context) error {
+	// nosemgrep: forgejo-logic-suspicious-OwnerID-check (system users are not stored in the database)
 	if r.OwnerID > 0 {
 		var user user_model.User
 		has, err := db.GetEngine(ctx).ID(r.OwnerID).Get(&user)
@@ -214,7 +215,7 @@ func (opts FindRunnerOptions) ToConds() builder.Cond {
 			c = c.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
 		}
 		cond = cond.And(c)
-	} else if opts.OwnerID > 0 { // OwnerID is ignored if RepoID is set
+	} else if opts.OwnerID != 0 { // OwnerID is ignored if RepoID is set
 		c := builder.NewCond().And(builder.Eq{"owner_id": opts.OwnerID})
 		if opts.WithVisible {
 			c = c.Or(builder.Eq{"repo_id": 0, "owner_id": 0})
@@ -393,6 +394,13 @@ func FixRunnersWithoutBelongingRepo(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// DeleteEphemeralRunner removes the ephemeral runner with the given ID. If the runner with the given ID is not an
+// ephemeral runner, nothing happens.
+func DeleteEphemeralRunner(ctx context.Context, id int64) error {
+	_, err := db.GetEngine(ctx).Where(builder.Eq{"id": id, "ephemeral": true}).Delete(&ActionRunner{})
+	return err
 }
 
 func DeleteOfflineRunners(ctx context.Context, olderThan timeutil.TimeStamp, globalOnly bool) error {

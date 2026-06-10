@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -120,6 +121,7 @@ func testGit(t *testing.T, u *url.URL) {
 			t.Run("PushForkRemoteMessages", doTestForkPushMessages(httpContext, dstPath))
 			t.Run("CreateAgitFlowPull", doCreateAgitFlowPull(dstPath, &httpContext, "test/head"))
 			t.Run("InternalReferences", doInternalReferences(&httpContext, dstPath))
+			t.Run("FsckConsistencyChecks", doFsckConsistencyChecks(dstPath))
 			t.Run("BranchProtect", doBranchProtect(&httpContext, dstPath))
 			t.Run("AutoMerge", doAutoPRMerge(&httpContext, dstPath))
 			t.Run("CreatePRAndSetManuallyMerged", doCreatePRAndSetManuallyMerged(httpContext, httpContext, dstPath, "master", "test-manually-merge"))
@@ -169,6 +171,7 @@ func testGit(t *testing.T, u *url.URL) {
 				t.Run("PushForkRemoteMessages", doTestForkPushMessages(sshContext, dstPath))
 				t.Run("CreateAgitFlowPull", doCreateAgitFlowPull(dstPath, &sshContext, "test/head2"))
 				t.Run("InternalReferences", doInternalReferences(&sshContext, dstPath))
+				t.Run("FsckConsistencyChecks", doFsckConsistencyChecks(dstPath))
 				t.Run("BranchProtect", doBranchProtect(&sshContext, dstPath))
 				t.Run("MergeFork", func(t *testing.T) {
 					defer tests.PrintCurrentTest(t)()
@@ -200,8 +203,12 @@ func standardCommitAndPushTest(t *testing.T, dstPath string) (little, big string
 func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS string) {
 	t.Run("LFS", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
+
+		err := git.NewCommand(git.DefaultContext, "config", "core.hooksPath", "$GIT/.hooks").AddArguments("--local").Run(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+
 		prefix := "lfs-data-file-"
-		err := git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
+		err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("install").Run(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
 		_, _, err = git.NewCommand(git.DefaultContext, "lfs").AddArguments("track").AddDynamicArguments(prefix + "*").RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
@@ -230,6 +237,7 @@ func lfsCommitAndPushTest(t *testing.T, dstPath string) (littleLFS, bigLFS strin
 			lockTest(t, dstPath)
 		})
 	})
+
 	return littleLFS, bigLFS
 }
 
@@ -487,9 +495,7 @@ func doProtectBranch(ctx APITestContext, branch string, addParameter ...paramete
 			"rule_name": branch,
 		}
 		if len(addParameter) > 0 {
-			for k, v := range addParameter[0] {
-				parameter[k] = v
-			}
+			maps.Copy(parameter, addParameter[0])
 		}
 
 		// Change branch to protected
@@ -856,6 +862,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			assert.False(t, prMsg.HasMerged)
 			assert.Contains(t, "Testing commit 1", prMsg.Body)
 			assert.Equal(t, commit, prMsg.Head.Sha)
+			assert.Equal(t, "user2/"+headBranch, prMsg.Head.Name)
 
 			_, _, err = git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments("HEAD:refs/for/master/test/" + headBranch).RunStdString(&git.RunOpts{Dir: dstPath})
 			require.NoError(t, err)
@@ -874,6 +881,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			prMsg = doAPIGetPullRequest(*ctx, ctx.Username, ctx.Reponame, pr2.Index)(t)
 
 			assert.Equal(t, "user2/test/"+headBranch, pr2.HeadBranch)
+			assert.Equal(t, "user2/test/"+headBranch, prMsg.Head.Name)
 			assert.False(t, prMsg.HasMerged)
 		})
 
@@ -1162,15 +1170,15 @@ func doLFSNoAccess(ctx APITestContext, publicKeyID int64, objectFormat git.Objec
 }
 
 func extractRemoteMessages(stderr string) string {
-	var remoteMsg string
+	var remoteMsg strings.Builder
 	for line := range strings.SplitSeq(stderr, "\n") {
 		msg, found := strings.CutPrefix(line, "remote: ")
 		if found {
-			remoteMsg += msg
-			remoteMsg += "\n"
+			remoteMsg.WriteString(msg)
+			remoteMsg.WriteString("\n")
 		}
 	}
-	return remoteMsg
+	return remoteMsg.String()
 }
 
 func doTestForkPushMessages(apictx APITestContext, dstPath string) func(*testing.T) {
@@ -1328,6 +1336,102 @@ func TestCloneAccessTokenResources(t *testing.T) {
 				u.Path = "/user2/repo16.git"
 				doGitCloneFail(u)(t)
 			})
+		})
+	})
+}
+
+func doFsckConsistencyChecks(dstPath string) func(t *testing.T) {
+	return func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		tree, _, err := git.NewCommand(git.DefaultContext, "rev-parse", "HEAD^{tree}").RunStdString(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+		head, _, err := git.NewCommand(git.DefaultContext, "rev-parse", "HEAD^{commit}").RunStdString(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+
+		// Is checked for and should error.
+		t.Run("badName", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			var buf bytes.Buffer
+			buf.WriteString("tree ")
+			buf.WriteString(tree)
+			buf.WriteString("parent ")
+			buf.WriteString(head)
+			buf.WriteString("author  @>\n")
+			buf.WriteString("committer  @>\n")
+			buf.WriteString("\n")
+
+			commitID, _, err := git.NewCommand(git.DefaultContext, "hash-object", "-t", "commit", "--literally", "--stdin", "-w").RunStdString(&git.RunOpts{Dir: dstPath, Stdin: &buf})
+			require.NoError(t, err)
+			commitID = strings.TrimSpace(commitID)
+
+			_, stdErr, gitErr := git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(commitID + ":refs/heads/consistency-check").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.Error(t, gitErr)
+			assert.Contains(t, stdErr, "badName: invalid author/committer line - bad name")
+		})
+
+		t.Run("missingSpaceBeforeEmail", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			var buf bytes.Buffer
+			buf.WriteString("tree ")
+			buf.WriteString(tree)
+			buf.WriteString("parent ")
+			buf.WriteString(head)
+			buf.WriteString(`author Gusted<script class="evil">alert('Oh no!');</script> <valid@example.org> 1706659200 +0000`)
+			buf.WriteRune('\n')
+			buf.WriteString(`committer Gusted<script class="evil">alert('Oh no!');</script> <valid@example.org> 1706659200 +0000`)
+			buf.WriteString("\n\n")
+
+			commitID, _, err := git.NewCommand(git.DefaultContext, "hash-object", "-t", "commit", "--literally", "--stdin", "-w").RunStdString(&git.RunOpts{Dir: dstPath, Stdin: &buf})
+			require.NoError(t, err)
+			commitID = strings.TrimSpace(commitID)
+
+			_, stdErr, gitErr := git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(commitID + ":refs/heads/consistency-check").RunStdString(&git.RunOpts{Dir: dstPath})
+			require.Error(t, gitErr)
+			assert.Contains(t, stdErr, "missingSpaceBeforeEmail: invalid author/committer line - missing space before email")
+		})
+
+		// Is set to be ignored.
+		t.Run("badTimezone", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			var buf bytes.Buffer
+			buf.WriteString("tree ")
+			buf.WriteString(tree)
+			buf.WriteString("parent ")
+			buf.WriteString(head)
+			buf.WriteString("author name <email> 1234 +\n")
+			buf.WriteString("committer name <email> 1234 +\n")
+			buf.WriteString("\n")
+
+			commitID, _, err := git.NewCommand(git.DefaultContext, "hash-object", "-t", "commit", "--literally", "--stdin", "-w").RunStdString(&git.RunOpts{Dir: dstPath, Stdin: &buf})
+			require.NoError(t, err)
+			commitID = strings.TrimSpace(commitID)
+
+			require.NoError(t, git.NewCommand(git.DefaultContext, "push", "origin").AddDynamicArguments(commitID+":refs/heads/consistency-check").Run(&git.RunOpts{Dir: dstPath}))
+		})
+	}
+}
+
+func TestGitAuthorizedIntegration(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ait := newAITester(t)
+		defer ait.close()
+		token := ait.signedJWT()
+		u.User = url.UserPassword("token", token)
+
+		t.Run("clone private repo of user", func(t *testing.T) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
+			u.Path = fmt.Sprintf("/%s/%s.git", repo.OwnerName, repo.Name)
+			doGitClone(t.TempDir(), u)(t)
+		})
+
+		t.Run("cannot clone private repo of another user", func(t *testing.T) {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 52})
+			u.Path = fmt.Sprintf("/%s/%s.git", repo.OwnerName, repo.Name)
+			doGitCloneFail(u)(t)
 		})
 	})
 }

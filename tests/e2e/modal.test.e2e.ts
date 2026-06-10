@@ -28,6 +28,7 @@ test('Dialog modal', async ({page}) => {
 
   await page.locator('.quick-pull-choice input[value="direct"]').click();
   await page.getByRole('button', {name: 'Commit changes'}).click();
+  await expect(page).toHaveURL(`/user2/repo1/src/branch/master/${filename}`);
 
   response = await page.goto(`/user2/repo1/_edit/master/${filename}`, {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
@@ -102,28 +103,4 @@ test('Dialog modal: width', async ({page, isMobile}) => {
     // Bound by max-width
     expect(width).toBe(800);
   }
-});
-
-test('Dialog modal: short viewport', async ({page, isMobile}) => {
-  test.skip(isMobile);
-
-  // Small height for viewport.
-  await page.setViewportSize({
-    width: 1000,
-    height: 200,
-  });
-
-  await page.goto('/user2/repo1/settings');
-
-  // Open modal with long content
-  const deleteModal = page.locator('#delete-repo-modal');
-  await expect(deleteModal).toBeHidden();
-  await page.getByRole('button', {name: 'Delete this repository'}).click();
-  await expect(deleteModal).toBeVisible();
-
-  // Scroll to the bottom.
-  const scrollY = await page.evaluate(() => document.querySelector('.ui.dimmer').scrollHeight);
-  await page.mouse.wheel(0, scrollY);
-  const scrollTop = await page.evaluate(() => document.querySelector('.ui.dimmer').scrollTop);
-  expect(scrollTop).toBeGreaterThan(0);
 });

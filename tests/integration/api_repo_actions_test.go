@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,6 +52,7 @@ func TestActionsAPISearchActionJobs_RepoRunner(t *testing.T) {
 
 	job393 := api.ActionRunJob{
 		ID:      393,
+		RunID:   891,
 		Attempt: 1,
 		Handle:  "18e9cf40-c2f6-409f-b832-b945ea7dc79b",
 		RepoID:  1,
@@ -666,5 +668,228 @@ func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 		request = NewRequest(t, "GET", requestURL)
 		request.AddTokenAuth(readToken)
 		MakeRequest(t, request, http.StatusNotFound)
+	})
+}
+
+func TestActionsAPIDeleteActionRun(t *testing.T) {
+	t.Run("Run removed", func(t *testing.T) {
+		defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionsAPIDeleteActionRun")()
+		defer tests.PrepareTestEnv(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user2.ID})
+		session := loginUser(t, user2.Name)
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{RunID: run.ID}, 2)
+		runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 41601})
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d", repo1.FullName(), run.ID)
+		request := NewRequest(t, "DELETE", requestURL)
+		request.AddTokenAuth(writeToken)
+		MakeRequest(t, request, http.StatusNoContent)
+
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRun{ID: run.ID})
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRunJob{ID: job.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{
+			RunID:  run.ID,
+			Status: int64(actions_model.ArtifactStatusPendingDeletion),
+		}, 2)
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRunner{ID: runner.ID})
+	})
+
+	t.Run("Error if run has not completed", func(t *testing.T) {
+		defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionsAPIDeleteActionRun")()
+		defer tests.PrepareTestEnv(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user2.ID})
+		session := loginUser(t, user2.Name)
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34902})
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d", repo1.FullName(), run.ID)
+		request := NewRequest(t, "DELETE", requestURL)
+		request.AddTokenAuth(writeToken)
+		MakeRequest(t, request, http.StatusInternalServerError)
+
+		// Verify that the run still exists.
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+	})
+
+	t.Run("Not found if run does not belong to repository", func(t *testing.T) {
+		defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionsAPIDeleteActionRun")()
+		defer tests.PrepareTestEnv(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo62 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 62, OwnerID: user2.ID})
+		session := loginUser(t, user2.Name)
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d", repo62.FullName(), run.ID)
+		request := NewRequest(t, "DELETE", requestURL)
+		request.AddTokenAuth(writeToken)
+		MakeRequest(t, request, http.StatusNotFound)
+
+		// Verify that the run still exists.
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+	})
+
+	t.Run("No found if run does not exist", func(t *testing.T) {
+		defer tests.PrepareTestEnv(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user2.ID})
+		session := loginUser(t, user2.Name)
+		writeToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRun{ID: 260871})
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/260871", repo1.FullName())
+		request := NewRequest(t, "DELETE", requestURL)
+		request.AddTokenAuth(writeToken)
+		MakeRequest(t, request, http.StatusNotFound)
+	})
+
+	t.Run("Run removal requires write token", func(t *testing.T) {
+		defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionsAPIDeleteActionRun")()
+		defer tests.PrepareTestEnv(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user2.ID})
+		session := loginUser(t, user2.Name)
+		readToken := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeReadRepository)
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
+
+		requestURL := fmt.Sprintf("/api/v1/repos/%s/actions/runs/%d", repo1.FullName(), run.ID)
+		request := NewRequest(t, "DELETE", requestURL)
+		request.AddTokenAuth(readToken)
+		response := MakeRequest(t, request, http.StatusForbidden)
+
+		type errorResponse struct {
+			Message string `json:"message"`
+		}
+
+		var errorMessage *errorResponse
+		DecodeJSON(t, response, &errorMessage)
+
+		assert.Equal(t, "token does not have at least one of required scope(s): [write:repository]", errorMessage.Message)
+
+		// Verify that the run still exists.
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+	})
+}
+
+func TestActionsAPIListActionRunJobs(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	t.Run("Jobs", func(t *testing.T) {
+		for _, setup := range []struct {
+			runID, repoID int64
+		}{
+			{793, 4},
+			{895, 4},
+		} {
+			repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: setup.repoID})
+			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+			token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeReadRepository)
+			req := NewRequest(t, http.MethodGet,
+				fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+					repo.OwnerName, repo.Name, setup.runID,
+				),
+			).AddTokenAuth(token)
+			res := MakeRequest(t, req, http.StatusOK)
+			var jobList []*api.ActionRunJob
+			DecodeJSON(t, res, &jobList)
+
+			correctJobList, err := actions_model.GetRunJobsByRunID(context.Background(), setup.runID)
+			require.NoError(t, err, "GetRunJobsByRunID")
+			assert.Len(t, jobList, len(correctJobList))
+
+			for i := range jobList {
+				expected := correctJobList[i]
+				actual := jobList[i]
+				assert.Equal(t, expected.ID, actual.ID)
+				assert.Equal(t, expected.Attempt, actual.Attempt)
+				assert.Equal(t, expected.Handle, actual.Handle)
+				assert.Equal(t, expected.RepoID, actual.RepoID)
+				assert.Equal(t, expected.OwnerID, actual.OwnerID)
+				assert.Equal(t, expected.Name, actual.Name)
+				assert.Equal(t, expected.Needs, actual.Needs)
+				assert.Equal(t, expected.RunsOn, actual.RunsOn)
+				assert.Equal(t, expected.TaskID, actual.TaskID)
+				assert.Equal(t, expected.Status.String(), actual.Status)
+
+				if expected.ID == 195 {
+					assert.Equal(t, &api.ActionRunJob{
+						ID:      195,
+						RunID:   793,
+						Attempt: 1,
+						Handle:  "",
+						RepoID:  4,
+						OwnerID: 1,
+						Name:    "job1 (2)",
+						Needs:   nil,
+						RunsOn:  nil,
+						TaskID:  50,
+						Status:  "success",
+					}, actual)
+				} else if expected.ID == 197 {
+					assert.Equal(t, &api.ActionRunJob{
+						ID:      197,
+						RunID:   895,
+						Attempt: 0,
+						Handle:  "",
+						RepoID:  4,
+						OwnerID: 1,
+						Name:    "job1 (1)",
+						Needs:   nil,
+						RunsOn:  []string{"postmarketOS"},
+						TaskID:  54,
+						Status:  "failure",
+					}, actual)
+				}
+			}
+		}
+	})
+
+	repoID := int64(4)
+	runID := int64(793)
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	token := getUserToken(t, user.LowerName, auth_model.AccessTokenScopeReadRepository)
+
+	t.Run("Wrong Run ID", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name, runID+9999,
+			),
+		).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Wrong Repo Name", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName, repo.Name+"_wrong_repo", runID,
+			),
+		).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Wrong Owner", func(t *testing.T) {
+		req := NewRequest(t, http.MethodGet,
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/runs/%d/jobs",
+				repo.OwnerName+"_wrong_owner", repo.Name, runID,
+			),
+		).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
 	})
 }

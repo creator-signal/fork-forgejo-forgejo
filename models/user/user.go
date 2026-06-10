@@ -362,7 +362,7 @@ func (u *User) OrganisationLink() string {
 // GenerateEmailAuthorizationCode generates an activation code based for the user for the specified purpose.
 // The standard expiry is ActiveCodeLives minutes.
 func (u *User) GenerateEmailAuthorizationCode(ctx context.Context, purpose auth.AuthorizationPurpose) (string, error) {
-	lookup, validator, err := auth.GenerateAuthToken(ctx, u.ID, timeutil.TimeStampNow().Add(int64(setting.Service.ActiveCodeLives)*60), purpose)
+	lookup, validator, err := auth.GenerateAuthToken(ctx, u.ID, optional.None[int64](), timeutil.TimeStampNow().Add(int64(setting.Service.ActiveCodeLives)*60), purpose)
 	if err != nil {
 		return "", err
 	}
@@ -761,6 +761,7 @@ func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefa
 	u.Theme = setting.UI.DefaultTheme
 	u.IsRestricted = setting.Service.DefaultUserIsRestricted
 	u.IsActive = !setting.Service.RegisterEmailConfirm && !setting.Service.RegisterManualConfirm
+	u.EnableRepoUnitHints = true
 
 	// Ensure consistency of the dates.
 	if u.UpdatedUnix < u.CreatedUnix {
@@ -923,46 +924,46 @@ func countUsers(ctx context.Context, opts *CountUserFilter) int64 {
 
 // VerifyUserActiveCode verifies that the code is valid for the given purpose for this user.
 // If delete is specified, the token will be deleted.
-func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth.AuthorizationPurpose) (user *User, deleteToken func() error, err error) {
+func VerifyUserAuthorizationToken(ctx context.Context, code string, purpose auth.AuthorizationPurpose) (user *User, authToken *auth.AuthorizationToken, deleteToken func() error, err error) {
 	lookupKey, validator, found := strings.Cut(code, ":")
 	if !found {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
-	authToken, err := auth.FindAuthToken(ctx, lookupKey, purpose)
+	authToken, err = auth.FindAuthToken(ctx, lookupKey, purpose)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			return nil, nil, nil
+			return nil, nil, nil, nil
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if authToken.IsExpired() {
-		return nil, nil, auth.DeleteAuthToken(ctx, authToken)
+		return nil, nil, nil, auth.DeleteAuthToken(ctx, authToken)
 	}
 
 	rawValidator, err := hex.DecodeString(validator)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if subtle.ConstantTimeCompare([]byte(authToken.HashedValidator), []byte(auth.HashValidator(rawValidator))) == 0 {
-		return nil, nil, errors.New("validator doesn't match")
+		return nil, nil, nil, errors.New("validator doesn't match")
 	}
 
 	u, err := GetUserByID(ctx, authToken.UID)
 	if err != nil {
 		if IsErrUserNotExist(err) {
-			return nil, nil, nil
+			return nil, nil, nil, nil
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	deleteToken = func() error {
 		return auth.DeleteAuthToken(ctx, authToken)
 	}
 
-	return u, deleteToken, nil
+	return u, authToken, deleteToken, nil
 }
 
 // ValidateUser check if user is valid to insert / update into database
@@ -1243,8 +1244,8 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	}
 
 	// Finally, if email address is the protected email address:
-	if strings.HasSuffix(email, fmt.Sprintf("@%s", setting.Service.NoReplyAddress)) {
-		username := strings.TrimSuffix(email, fmt.Sprintf("@%s", setting.Service.NoReplyAddress))
+	if before, ok := strings.CutSuffix(email, fmt.Sprintf("@%s", setting.Service.NoReplyAddress)); ok {
+		username := before
 		user := &User{}
 		has, err := db.GetEngine(ctx).Where("lower_name=?", username).Get(user)
 		if err != nil {

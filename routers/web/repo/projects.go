@@ -57,10 +57,7 @@ func Projects(ctx *context.Context) {
 	isShowClosed := strings.ToLower(ctx.FormTrim("state")) == "closed"
 	keyword := ctx.FormTrim("q")
 	repo := ctx.Repo.Repository
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	ctx.Data["OpenCount"] = repo.NumOpenProjects
 	ctx.Data["ClosedCount"] = repo.NumClosedProjects
@@ -403,7 +400,7 @@ func UpdateIssueProject(ctx *context.Context) {
 		return
 	}
 	if _, err := issues.LoadRepositories(ctx); err != nil {
-		ctx.ServerError("LoadProjects", err)
+		ctx.ServerError("LoadRepositories", err)
 		return
 	}
 

@@ -18,6 +18,7 @@ import (
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
+	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
@@ -191,7 +192,7 @@ func Milestones(ctx *context.Context) {
 			reposQuery = reposQuery[1 : len(reposQuery)-1]
 			// for each ID (delimiter ",") add to int to repoIDs
 
-			for _, rID := range strings.Split(reposQuery, ",") {
+			for rID := range strings.SplitSeq(reposQuery, ",") {
 				// Ensure nonempty string entries
 				if rID != "" && rID != "0" {
 					rIDint64, err := strconv.ParseInt(rID, 10, 64)
@@ -532,24 +533,59 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	opts.IsClosed = optional.Some(isShowClosed)
 
 	// Make sure page number is at least 1. Will be posted to ctx.Data.
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	opts.Paginator = &db.ListOptions{
 		Page:     page,
 		PageSize: setting.UI.IssuePagingNum,
 	}
 
+	// Projects
+	//
+	// We do not consider listing projects for the individual repos.
+	// Instead, we only support listing the projects under the scope of an individual/organisation.
+	// However, this limitation does not affect filtering with a project ID.
+	{
+		projOpts := project_model.SearchOptions{
+			ListOptions: db.ListOptionsAll,
+			OwnerID:     ctxUser.ID,
+			IsClosed:    optional.None[bool](),
+			Type:        project_model.TypeIndividual,
+		}
+		if org != nil {
+			projOpts.OwnerID = org.ID
+			projOpts.Type = project_model.TypeOrganization
+		}
+
+		projects, err := db.Find[project_model.Project](ctx, projOpts)
+		if err != nil {
+			ctx.ServerError("GetProjects", err)
+			return
+		}
+
+		if projectID := ctx.FormInt64("project"); projectID != 0 {
+			opts.ProjectID = projectID
+			ctx.Data["ProjectID"] = projectID
+		}
+
+		ctx.Data["Projects"] = projects
+	}
+
 	// Get IDs for labels (a filter option for issues/pulls).
 	// Required for IssuesOptions.
 	selectedLabels := ctx.FormString("labels")
-	if len(selectedLabels) > 0 && selectedLabels != "0" {
+	if len(selectedLabels) > 0 {
 		var err error
 		opts.LabelIDs, err = base.StringsToInt64s(strings.Split(selectedLabels, ","))
 		if err != nil {
 			ctx.Flash.Error(ctx.Tr("invalid_data", selectedLabels), true)
 		}
+		if slices.Contains(opts.LabelIDs, 0) {
+			opts.LabelIDs = []int64{0}
+			ctx.Data["NoLabel"] = true
+		}
+	}
+	if len(opts.LabelIDs) == 0 {
+		ctx.Data["AllLabels"] = true
 	}
 
 	if org != nil {
@@ -691,6 +727,7 @@ func buildIssueOverview(ctx *context.Context, unitType unit.Type) {
 	pager.AddParam(ctx, "labels", "SelectLabels")
 	pager.AddParam(ctx, "milestone", "MilestoneID")
 	pager.AddParam(ctx, "assignee", "AssigneeID")
+	pager.AddParam(ctx, "project", "ProjectID")
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplIssues)
@@ -708,6 +745,9 @@ func ShowSSHKeys(ctx *context.Context) {
 
 	var buf bytes.Buffer
 	for i := range keys {
+		if keys[i].Type == asymkey_model.KeyTypePrincipal {
+			continue // Don't display SSH principals, only public keys
+		}
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}

@@ -58,7 +58,6 @@ forgejo.org/models/user
 	IsErrUserSettingIsNotExist
 	GetUserAllSettings
 	DeleteUserSetting
-	GetFederatedUser
 
 forgejo.org/modules/activitypub
 	NewContext
@@ -88,7 +87,6 @@ forgejo.org/modules/eventsource
 	Event.String
 
 forgejo.org/modules/forgefed
-	NewForgeFollow
 	NewForgeUndoLike
 	ForgeUndoLike.UnmarshalJSON
 	ForgeUndoLike.Validate
@@ -134,6 +132,9 @@ forgejo.org/modules/json
 	StdJSON.Indent
 
 forgejo.org/modules/log
+	eventWriterBuffer.Close
+	eventWriterBuffer.Write
+	eventWriterBuffer.GetString
 	NewEventWriterBuffer
 
 forgejo.org/modules/markup
@@ -221,11 +222,11 @@ forgejo.org/modules/zstd
 forgejo.org/routers/web/org
 	MustEnableProjects
 
+forgejo.org/services/auth
+	RegisterInternalIssuerForTesting
+
 forgejo.org/services/context
 	GetPrivateContext
-
-forgejo.org/services/federation
-	FollowRemoteActor
 
 forgejo.org/services/notify
 	UnregisterNotifier

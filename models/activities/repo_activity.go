@@ -16,7 +16,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 
-	"xorm.io/xorm"
+	"code.forgejo.org/xorm/xorm"
 )
 
 // ActivityAuthorData represents statistical git commit count data
@@ -138,10 +138,7 @@ func GetActivityStatsTopAuthors(ctx context.Context, repo *repo_model.Repository
 		return v[i].Commits > v[j].Commits
 	})
 
-	cnt := count
-	if cnt > len(v) {
-		cnt = len(v)
-	}
+	cnt := min(count, len(v))
 
 	return v[:cnt], nil
 }

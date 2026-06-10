@@ -24,8 +24,8 @@ import (
 	"forgejo.org/modules/testlogger"
 	"forgejo.org/modules/util"
 
+	"code.forgejo.org/xorm/xorm"
 	"github.com/stretchr/testify/require"
-	"xorm.io/xorm"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 )
@@ -265,7 +265,7 @@ func deleteDB() error {
 
 func removeAllWithRetry(dir string) error {
 	var err error
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		err = os.RemoveAll(dir)
 		if err == nil {
 			break

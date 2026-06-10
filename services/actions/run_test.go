@@ -137,6 +137,12 @@ func TestActions_consistencyCheckRun(t *testing.T) {
 			name:  "consistent: matrix missing dimension but matrix is dynamic",
 			runID: 904,
 		},
+		{
+			name:                     "unknown job in needs",
+			runID:                    905,
+			preExecutionError:        actions_model.ErrorCodeUnknownJobInNeeds,
+			preExecutionErrorDetails: []any{"job_2", "unknown, Job_1"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -153,4 +159,43 @@ func TestActions_consistencyCheckRun(t *testing.T) {
 			assert.Equal(t, tt.preExecutionErrorDetails, run.PreExecutionErrorDetails)
 		})
 	}
+}
+
+func TestDeleteRun(t *testing.T) {
+	t.Run("Removes run and its dependencies", func(t *testing.T) {
+		defer unittest.OverrideFixtures("services/actions/TestDeleteRun")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{RunID: run.ID}, 2)
+
+		require.NoError(t, DeleteRun(t.Context(), run.ID))
+
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRun{ID: run.ID})
+		unittest.AssertNotExistsBean(t, &actions_model.ActionRunJob{ID: job.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{
+			RunID:  run.ID,
+			Status: int64(actions_model.ArtifactStatusPendingDeletion),
+		}, 2)
+	})
+
+	t.Run("Error if run not done", func(t *testing.T) {
+		defer unittest.OverrideFixtures("services/actions/TestDeleteRun")()
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34902})
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{RunID: run.ID}, 1)
+
+		err := DeleteRun(t.Context(), run.ID)
+		require.ErrorContains(t, err, "cannot delete run 34902 because it has not completed yet")
+
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: job.ID})
+		unittest.AssertCount(t, &actions_model.ActionArtifact{
+			RunID:  run.ID,
+			Status: int64(actions_model.ArtifactStatusUploadConfirmed),
+		}, 1)
+	})
 }

@@ -13,7 +13,7 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/timeutil"
 
-	"xorm.io/xorm/names"
+	"code.forgejo.org/xorm/xorm/names"
 )
 
 // UserData represents a trimmed down user that is used for preserving
@@ -87,10 +87,10 @@ func newUserData(user *User) UserData {
 // (e.g. FieldName -> field_name) corresponding to UserData struct fields.
 var userDataColumnNames = sync.OnceValue(func() []string {
 	mapper := new(names.GonicMapper)
-	udType := reflect.TypeOf(UserData{})
+	udType := reflect.TypeFor[UserData]()
 	columnNames := make([]string, 0, udType.NumField())
-	for i := 0; i < udType.NumField(); i++ {
-		columnNames = append(columnNames, mapper.Obj2Table(udType.Field(i).Name))
+	for field := range udType.Fields() {
+		columnNames = append(columnNames, mapper.Obj2Table(field.Name))
 	}
 	return columnNames
 })

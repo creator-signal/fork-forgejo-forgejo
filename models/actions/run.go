@@ -153,7 +153,9 @@ func (run *ActionRun) LoadAttributes(ctx context.Context) error {
 
 	if run.TriggerUser == nil {
 		u, err := user_model.GetPossibleUserByID(ctx, run.TriggerUserID)
-		if err != nil {
+		if user_model.IsErrUserNotExist(err) {
+			u = user_model.NewGhostUser()
+		} else if err != nil {
 			return err
 		}
 		run.TriggerUser = u
@@ -255,6 +257,33 @@ func (run *ActionRun) IsDispatchedRun() bool {
 	return run.TriggerEvent == "workflow_dispatch"
 }
 
+// IsValid indicates whether this ActionRun is valid and can be run.
+func (run *ActionRun) IsValid() bool {
+	return run.PreExecutionErrorCode == 0 && run.PreExecutionError == ""
+}
+
+// CanBeRerun indicates whether this ActionRun can be rerun.
+func (run *ActionRun) CanBeRerun() bool {
+	if !run.IsValid() {
+		return false
+	}
+	return run.Status.IsDone()
+}
+
+func (run *ActionRun) PrepareNextAttempt() error {
+	if run.Status != StatusUnknown && !run.Status.IsDone() {
+		return fmt.Errorf("cannot prepare next attempt because run %d is active: %s", run.ID, run.Status.String())
+	}
+
+	run.PreviousDuration = run.Duration()
+
+	run.Status = StatusWaiting
+	run.Started = 0
+	run.Stopped = 0
+
+	return nil
+}
+
 func actionsCountOpenCacheKey(repoID int64) string {
 	return fmt.Sprintf("Actions:CountOpenActionRuns:%d", repoID)
 }
@@ -318,7 +347,7 @@ func UpdateRunApprovalByID(ctx context.Context, id int64, approval ApprovalType,
 func GetRunsNotDoneByRepoIDAndPullRequestPosterID(ctx context.Context, repoID, pullRequestPosterID int64) ([]*ActionRun, error) {
 	var runs []*ActionRun
 	// performance relies on indexes on repo_id and status
-	if err := db.GetEngine(ctx).Where("repo_id=? AND pull_request_poster_id=?", repoID, pullRequestPosterID).And(builder.In("status", []Status{StatusUnknown, StatusWaiting, StatusRunning, StatusBlocked})).Find(&runs); err != nil {
+	if err := db.GetEngine(ctx).Where("repo_id=? AND pull_request_poster_id=?", repoID, pullRequestPosterID).And(builder.In("status", PendingStatuses())).Find(&runs); err != nil {
 		return nil, err
 	}
 	return runs, nil
@@ -327,7 +356,7 @@ func GetRunsNotDoneByRepoIDAndPullRequestPosterID(ctx context.Context, repoID, p
 func GetRunsNotDoneByRepoIDAndPullRequestID(ctx context.Context, repoID, pullRequestID int64) ([]*ActionRun, error) {
 	var runs []*ActionRun
 	// performance relies on indexes on repo_id and status
-	if err := db.GetEngine(ctx).Where("repo_id=? AND pull_request_id=?", repoID, pullRequestID).And(builder.In("status", []Status{StatusUnknown, StatusWaiting, StatusRunning, StatusBlocked})).Find(&runs); err != nil {
+	if err := db.GetEngine(ctx).Where("repo_id=? AND pull_request_id=?", repoID, pullRequestID).And(builder.In("status", PendingStatuses())).Find(&runs); err != nil {
 		return nil, err
 	}
 	return runs, nil
@@ -448,7 +477,7 @@ func GetLatestRun(ctx context.Context, repoID int64) (*ActionRun, error) {
 func GetRunBefore(ctx context.Context, _ *ActionRun) (*ActionRun, error) {
 	// TODO return the most recent run related to the run given in argument
 	// see https://codeberg.org/forgejo/user-research/issues/63 for context
-	return nil, nil
+	return nil, util.ErrNotExist
 }
 
 func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch, workflowFile, event string) (*ActionRun, error) {
@@ -470,26 +499,16 @@ func GetLatestRunForBranchAndWorkflow(ctx context.Context, repoID int64, branch,
 }
 
 func GetRunByID(ctx context.Context, id int64) (*ActionRun, error) {
-	run, has, err := GetRunByIDWithHas(ctx, id)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, fmt.Errorf("run with id %d: %w", id, util.ErrNotExist)
-	}
-
-	return run, nil
-}
-
-func GetRunByIDWithHas(ctx context.Context, id int64) (*ActionRun, bool, error) {
 	var run ActionRun
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&run)
 	if err != nil {
-		return nil, false, err
-	} else if !has {
-		return nil, false, nil
+		return nil, err
+	}
+	if !has {
+		return nil, fmt.Errorf("run with id %d: %w", id, util.ErrNotExist)
 	}
 
-	return &run, true, nil
+	return &run, nil
 }
 
 func GetRunByIndex(ctx context.Context, repoID, index int64) (*ActionRun, error) {
@@ -581,6 +600,13 @@ func ComputeRunStatus(ctx context.Context, runID int64) (run *ActionRun, columns
 	}
 
 	return run, columns, nil
+}
+
+// DeleteRun removes the given run. It is the caller's responsibility to handle the run's dependencies like artifacts or
+// jobs. Nothing happens if the run does not exist.
+func DeleteRun(ctx context.Context, runID int64) error {
+	_, err := db.GetEngine(ctx).Delete(&ActionRun{ID: runID})
+	return err
 }
 
 type ActionRunIndex db.ResourceIndex

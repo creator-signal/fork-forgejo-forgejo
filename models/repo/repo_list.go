@@ -191,6 +191,8 @@ type SearchRepoOptions struct {
 	// Retrieve multiple repositories by their owner name & repository name, similar to [GetRepositoryByOwnerAndName]
 	// but in bulk.
 	OwnerAndName [][2]string
+	// Filter to repositories with this unit enabled.
+	EnabledUnit optional.Option[unit.Type]
 }
 
 // UserOwnedRepoCond returns user ownered repositories
@@ -361,7 +363,7 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 	}
 
 	// Restrict repositories to those the OwnerID owns or contributes to as per opts.Collaborate
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != 0 {
 		accessCond := builder.NewCond()
 		if !opts.Collaborate.ValueOrZeroValue() {
 			accessCond = builder.Eq{"owner_id": opts.OwnerID}
@@ -401,7 +403,7 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 	if opts.Keyword != "" {
 		// separate keyword
 		subQueryCond := builder.NewCond()
-		for _, v := range strings.Split(opts.Keyword, ",") {
+		for v := range strings.SplitSeq(opts.Keyword, ",") {
 			if opts.TopicOnly {
 				subQueryCond = subQueryCond.Or(builder.Eq{"topic.name": strings.ToLower(v)})
 			} else {
@@ -416,7 +418,7 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 		keywordCond := builder.In("id", subQuery)
 		if !opts.TopicOnly {
 			likes := builder.NewCond()
-			for _, v := range strings.Split(opts.Keyword, ",") {
+			for v := range strings.SplitSeq(opts.Keyword, ",") {
 				likes = likes.Or(builder.Like{"lower_name", strings.ToLower(v)})
 
 				// If the string looks like "org/repo", match against that pattern too
@@ -516,6 +518,10 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 			// build the `Eq` conditions wouldn't occur, so we would have no filtering if this wasn't special-case'd.
 			cond = cond.And(builder.Eq{"1": "2"})
 		}
+	}
+
+	if has, unit := opts.EnabledUnit.Get(); has {
+		cond = cond.And(builder.In("`repository`.id", builder.Select("`repo_unit`.repo_id").From("repo_unit").Where(builder.Eq{"`repo_unit`.type": unit})))
 	}
 
 	return cond

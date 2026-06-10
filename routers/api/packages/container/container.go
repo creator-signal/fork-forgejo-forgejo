@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strconv"
 
-	auth_model "forgejo.org/models/auth"
 	packages_model "forgejo.org/models/packages"
 	container_model "forgejo.org/models/packages/container"
 	user_model "forgejo.org/models/user"
@@ -118,8 +117,7 @@ func apiErrorDefined(ctx *context.Context, err *container_service.NamedError) {
 func APIUnauthorizedError(ctx *context.Context) {
 	// Do not include more than one challenge in the same header field. That breaks clients even though the HTTP RFC
 	// allows it.
-	ctx.Resp.Header().Add("WWW-Authenticate", `Bearer realm="`+setting.AppURL+`v2/token",service="container_registry",scope="*"`)
-	ctx.Resp.Header().Add("WWW-Authenticate", `Basic realm="Forgejo Container Registry"`)
+	ctx.Resp.Header().Set("WWW-Authenticate", `Bearer realm="`+setting.AppURL+`v2/token",service="container_registry",scope="*"`)
 	apiErrorDefined(ctx, container_service.ErrUnauthorized)
 }
 
@@ -159,9 +157,10 @@ func Authenticate(ctx *context.Context) {
 	}
 
 	// If there's an API scope, ensure it propagates.
-	scope, _ := ctx.Data["ApiTokenScope"].(auth_model.AccessTokenScope)
+	scope := ctx.Authentication.Scope().ValueOrZeroValue()
+	exp := ctx.Authentication.ExpiresAt()
 
-	token, err := packages_service.CreateAuthorizationToken(u, scope)
+	token, err := packages_service.CreateAuthorizationToken(u, scope, exp)
 	if err != nil {
 		apiError(ctx, http.StatusInternalServerError, err)
 		return

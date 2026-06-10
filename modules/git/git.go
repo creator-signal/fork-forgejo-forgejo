@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -110,15 +111,7 @@ func VersionInfo() string {
 	if GitVersion == nil {
 		return "(git not found)"
 	}
-	format := "%s"
-	args := []any{GitVersion.Original()}
-	// Since git wire protocol has been released from git v2.18
-	if setting.Git.EnableAutoGitWireProtocol {
-		format += ", Wire Protocol %s Enabled"
-		args = append(args, "Version 2") // for focus color
-	}
-
-	return fmt.Sprintf(format, args...)
+	return GitVersion.Original()
 }
 
 func checkInit() error {
@@ -172,10 +165,6 @@ func InitFull(ctx context.Context) (err error) {
 		_ = os.Setenv("GNUPGHOME", filepath.Join(HomeDir(), ".gnupg"))
 	}
 
-	if setting.Git.EnableAutoGitWireProtocol {
-		globalCommandArgs = append(globalCommandArgs, "-c", "protocol.version=2")
-	}
-
 	// Explicitly disable credential helper, otherwise Git credentials might leak
 	globalCommandArgs = append(globalCommandArgs, "-c", "credential.helper=")
 
@@ -199,6 +188,11 @@ func InitFull(ctx context.Context) (err error) {
 	// Detect the presence of the ssh executable in $PATH.
 	_, err = exec.LookPath("ssh")
 	HasSSHExecutable = err == nil
+
+	err = InitDelegateHooks(HomeDir())
+	if err != nil {
+		return err
+	}
 
 	return syncGitConfig()
 }
@@ -227,6 +221,10 @@ func syncGitConfig() (err error) {
 		if err := configSetNonExist(configKey, defaultValue); err != nil {
 			return err
 		}
+	}
+
+	if err := configSet("core.hooksPath", path.Join(HomeDir(), "hooks")); err != nil {
+		return err
 	}
 
 	// Set git some configurations - these must be set to these values for forgejo to work correctly

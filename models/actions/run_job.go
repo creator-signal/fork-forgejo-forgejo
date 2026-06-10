@@ -140,6 +140,19 @@ func (job *ActionRunJob) PrepareNextAttempt(initialStatus Status) error {
 	return nil
 }
 
+// CanBeRerun answers whether this ActionRunJob can be rerun. Returns true if it is done and the Run it belongs to
+// is valid. Returns false in all other cases.
+func (job *ActionRunJob) CanBeRerun(ctx context.Context) (bool, error) {
+	if err := job.LoadRun(ctx); err != nil {
+		return false, fmt.Errorf("cannot load run %d of job %d: %w", job.RunID, job.ID, err)
+	}
+
+	if !job.Run.IsValid() {
+		return false, nil
+	}
+	return job.Status.IsDone(), nil
+}
+
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
 	var job ActionRunJob
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&job)
@@ -337,4 +350,25 @@ func (job *ActionRunJob) EnableOpenIDConnect() (bool, error) {
 		return false, fmt.Errorf("failure decoding workflow payload: %w", err)
 	}
 	return jobWorkflow.EnableOpenIDConnect, nil
+}
+
+// AllNeedsExist checks whether this ActionRunJob's Needs can theoretically be met by comparing them with the supplied
+// list of all job IDs that part of a particular workflow run. Returns the list of unknown job IDs found in Needs
+// alongside an indicator whether the check was successful.
+func (job *ActionRunJob) AllNeedsExist(allExistingJobIDs container.Set[string]) ([]string, bool) {
+	unknownJobIDs := []string{}
+	for _, need := range job.Needs {
+		if !allExistingJobIDs.Contains(need) {
+			unknownJobIDs = append(unknownJobIDs, need)
+		}
+	}
+
+	return unknownJobIDs, len(unknownJobIDs) == 0
+}
+
+// DeleteJob removes the given job. Removing all associated tasks is up to the caller. If the given job does not exist,
+// nothing happens.
+func DeleteJob(ctx context.Context, jobID int64) error {
+	_, err := db.GetEngine(ctx).Delete(&ActionRunJob{ID: jobID})
+	return err
 }

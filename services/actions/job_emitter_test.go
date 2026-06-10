@@ -68,8 +68,9 @@ func Test_jobStatusResolver_Resolve(t *testing.T) {
 				{ID: 3, JobID: "3", Status: actions_model.StatusBlocked, Needs: []string{"2"}},
 			},
 			want: map[int64]actions_model.Status{
+				// Resolve() does only one update pass and does not update jobs recursively. Therefore, job 3, which
+				// depends on 2, is not marked as skipped. It would only be marked as skipped if it depended on job 1.
 				2: actions_model.StatusSkipped,
-				3: actions_model.StatusSkipped,
 			},
 		},
 		{
@@ -159,6 +160,48 @@ __metadata:
 			},
 		},
 		{
+			name: "unblocked workflow call outer job with success and skip",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusSuccess,
+			},
+		},
+		{
+			name: "unblocked workflow call outer job with only skip",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusSkipped,
+			},
+		},
+		{
 			name: "unblocked workflow call outer job, incomplete `with`",
 			jobs: actions_model.ActionJobList{
 				{ID: 1, JobID: "job0", Status: actions_model.StatusSuccess, Needs: []string{}},
@@ -230,6 +273,51 @@ __metadata:
 			want: map[int64]actions_model.Status{
 				3: actions_model.StatusFailure,
 			},
+		},
+		{
+			name: "unblocked workflow call outer job with internal failure",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "job1.innerjob1", Status: actions_model.StatusSkipped, Needs: []string{}},
+				{ID: 2, JobID: "job1.innerjob2", Status: actions_model.StatusFailure, Needs: []string{}},
+				{ID: 3, JobID: "job1", Status: actions_model.StatusBlocked, Needs: []string{"job1.innerjob1", "job1.innerjob2"}, WorkflowPayload: []byte(
+					`
+name: test
+on: push
+jobs:
+  job2:
+    if: false
+    uses: ./.forgejo/workflows/reusable.yml
+__metadata:
+  workflow_call_id: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed
+`)},
+			},
+			want: map[int64]actions_model.Status{
+				3: actions_model.StatusFailure,
+			},
+		},
+		{
+			name: "blocked if needs are unknown",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "build", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 2, JobID: "test", Status: actions_model.StatusBlocked, Needs: []string{"build", "unknown"}},
+			},
+			want: map[int64]actions_model.Status{},
+		},
+		{
+			name: "blocked if needs are unknown despite always()",
+			jobs: actions_model.ActionJobList{
+				{ID: 1, JobID: "build", Status: actions_model.StatusSuccess, Needs: []string{}},
+				{ID: 45, JobID: "test", Needs: []string{"build", "unknown"}, Status: actions_model.StatusBlocked, WorkflowPayload: []byte(`
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    needs: [build, unknown]
+    if: always()
+    steps: []
+`)},
+			},
+			want: map[int64]actions_model.Status{},
 		},
 	}
 	for _, tt := range tests {
@@ -787,6 +875,61 @@ func Test_tryHandleWorkflowCallOuterJob(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_checkJobsOfRun(t *testing.T) {
+	defer unittest.OverrideFixtures("services/actions/Test_checkJobsOfRun")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	reusableWorkflow := `
+on:
+  workflow_call:
+    inputs:
+      argument:
+        type: string
+        
+jobs:
+  reusable:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Argument: ${{ inputs.argument }}"
+`
+
+	defer test.MockVariableValue(&lazyRepoExpandLocalReusableWorkflow,
+		func(ctx context.Context, repoID int64, commitSHA string) (jobparser.LocalWorkflowFetcher, CleanupFunc) {
+			fetcher := func(job *jobparser.Job, path string) ([]byte, error) {
+				return []byte(reusableWorkflow), nil
+			}
+			cleanup := func() {
+			}
+			return fetcher, cleanup
+		})()
+
+	jobs, err := actions_model.GetRunJobsByRunID(t.Context(), 901)
+	require.NoError(t, err)
+	require.Len(t, jobs, 4)
+
+	require.NoError(t, checkJobsOfRun(t.Context(), 901, 0))
+
+	jobs, err = actions_model.GetRunJobsByRunID(t.Context(), 901)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 5)
+
+	assert.Equal(t, "a", jobs[0].JobID)
+	assert.Equal(t, actions_model.StatusSuccess, jobs[0].Status)
+
+	assert.Equal(t, "b", jobs[1].JobID)
+	assert.Equal(t, actions_model.StatusSuccess, jobs[1].Status)
+
+	assert.Equal(t, "b.reusable", jobs[2].JobID)
+	assert.Equal(t, actions_model.StatusSuccess, jobs[2].Status)
+
+	assert.Equal(t, "c", jobs[3].JobID)
+	assert.Equal(t, actions_model.StatusBlocked, jobs[3].Status)
+
+	assert.Equal(t, "c.reusable", jobs[4].JobID)
+	assert.Equal(t, actions_model.StatusWaiting, jobs[4].Status)
 }
 
 func Test_checkJobsOfRun_ExpandsMatrixWithCorrectOutputJobStatuses(t *testing.T) {

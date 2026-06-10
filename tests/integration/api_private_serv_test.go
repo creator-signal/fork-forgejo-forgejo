@@ -17,7 +17,7 @@ import (
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
-	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,12 +114,12 @@ func TestAPIPrivateServ(t *testing.T) {
 		assert.Empty(t, results)
 
 		// Cannot pull from a private repo we're not associated with
-		results, extra = private.ServCommand(ctx, deployKey.ID, "user15", "big_test_private_2", perm.AccessModeRead, "git-upload-pack", "")
+		results, extra = private.ServCommand(ctx, deployKey.KeyID, "user15", "big_test_private_2", perm.AccessModeRead, "git-upload-pack", "")
 		require.Error(t, extra.Error)
 		assert.Empty(t, results)
 
 		// Cannot pull from a public repo we're not associated with
-		results, extra = private.ServCommand(ctx, deployKey.ID, "user15", "big_test_public_1", perm.AccessModeRead, "git-upload-pack", "")
+		results, extra = private.ServCommand(ctx, deployKey.KeyID, "user15", "big_test_public_1", perm.AccessModeRead, "git-upload-pack", "")
 		require.Error(t, extra.Error)
 		assert.Empty(t, results)
 
@@ -167,8 +167,7 @@ func TestAPIPrivateServAndNoServWithRequiredTwoFactor(t *testing.T) {
 
 		runTest := func(t *testing.T, user *user_model.User, useTOTP, servAllowed bool) {
 			t.Helper()
-			repo, _, reset := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{})
-			defer reset()
+			repo := forgery.CreateRepository(t, user, nil)
 
 			pubKey, err := asymkey_model.AddPublicKey(ctx, user.ID, "tmp-key-"+user.Name, "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBGXEEzWmm1dxb+57RoK5KVCL0w2eNv9cqJX2AGGVlkFsVDhOXHzsadS3LTK4VlEbbrDMJdoti9yM8vclA8IeRacAAAAEc3NoOg== nocomment", 0)
 			require.NoError(t, err)

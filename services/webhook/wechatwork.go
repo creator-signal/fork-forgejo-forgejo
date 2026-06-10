@@ -70,6 +70,13 @@ func newWechatworkMarkdownPayload(title string) WechatworkPayload {
 	}
 }
 
+var wechatworkPayloadFormatter = webhookPayloadFormatter{
+	linkFormatter: noneLinkFormatter,
+	nameFormatter: noneNameFormatter,
+	withSender:    true,
+	withRepoName:  true,
+}
+
 // Create implements PayloadConvertor Create method
 func (wc wechatworkConvertor) Create(p *api.CreatePayload) (WechatworkPayload, error) {
 	// created tag/branch
@@ -104,7 +111,7 @@ func (wc wechatworkConvertor) Push(p *api.PushPayload) (WechatworkPayload, error
 
 	title := fmt.Sprintf("# %s:%s <font color=\"warning\">  %s  </font>", p.Repo.FullName, branchName, commitDesc)
 
-	var text string
+	var text strings.Builder
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
 		var authorName string
@@ -113,20 +120,20 @@ func (wc wechatworkConvertor) Push(p *api.PushPayload) (WechatworkPayload, error
 		}
 
 		message := strings.ReplaceAll(commit.Message, "\n\n", "\r\n")
-		text += fmt.Sprintf(" > [%s](%s) \r\n ><font color=\"info\">%s</font> \n ><font color=\"warning\">%s</font>", commit.ID[:7], commit.URL,
+		fmt.Fprintf(&text, " > [%s](%s) \r\n ><font color=\"info\">%s</font> \n ><font color=\"warning\">%s</font>", commit.ID[:7], commit.URL,
 			message, authorName)
 
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
-			text += "\n"
+			text.WriteString("\n")
 		}
 	}
-	return newWechatworkMarkdownPayload(title + "\r\n\r\n" + text), nil
+	return newWechatworkMarkdownPayload(title + "\r\n\r\n" + text.String()), nil
 }
 
 // Issue implements PayloadConvertor Issue method
 func (wc wechatworkConvertor) Issue(p *api.IssuePayload) (WechatworkPayload, error) {
-	text, issueTitle, attachmentText, _ := getIssuesPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, attachmentText, _ := wechatworkPayloadFormatter.getIssuesPayloadInfo(p)
 	var content string
 	content += fmt.Sprintf(" ><font color=\"info\">%s</font>\n >%s \n ><font color=\"warning\"> %s</font> \n [%s](%s)", text, attachmentText, issueTitle, p.Issue.HTMLURL, p.Issue.HTMLURL)
 
@@ -135,7 +142,7 @@ func (wc wechatworkConvertor) Issue(p *api.IssuePayload) (WechatworkPayload, err
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (wc wechatworkConvertor) IssueComment(p *api.IssueCommentPayload) (WechatworkPayload, error) {
-	text, issueTitle, _ := getIssueCommentPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, _ := wechatworkPayloadFormatter.getIssueCommentPayloadInfo(p)
 	var content string
 	content += fmt.Sprintf(" ><font color=\"info\">%s</font>\n >%s \n ><font color=\"warning\">%s</font> \n [%s](%s)", text, p.Comment.Body, issueTitle, p.Comment.HTMLURL, p.Comment.HTMLURL)
 
@@ -144,7 +151,7 @@ func (wc wechatworkConvertor) IssueComment(p *api.IssueCommentPayload) (Wechatwo
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (wc wechatworkConvertor) PullRequest(p *api.PullRequestPayload) (WechatworkPayload, error) {
-	text, issueTitle, attachmentText, _ := getPullRequestPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, issueTitle, attachmentText, _ := wechatworkPayloadFormatter.getPullRequestPayloadInfo(p)
 	pr := fmt.Sprintf("> <font color=\"info\"> %s </font> \r\n > <font color=\"comment\">%s </font> \r\n > <font color=\"comment\">%s </font> \r\n",
 		text, issueTitle, attachmentText)
 
@@ -183,26 +190,26 @@ func (wc wechatworkConvertor) Repository(p *api.RepositoryPayload) (WechatworkPa
 
 // Wiki implements PayloadConvertor Wiki method
 func (wc wechatworkConvertor) Wiki(p *api.WikiPayload) (WechatworkPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _, _ := wechatworkPayloadFormatter.getWikiPayloadInfo(p, true)
 
 	return newWechatworkMarkdownPayload(text), nil
 }
 
 // Release implements PayloadConvertor Release method
 func (wc wechatworkConvertor) Release(p *api.ReleasePayload) (WechatworkPayload, error) {
-	text, _ := getReleasePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _ := wechatworkPayloadFormatter.getReleasePayloadInfo(p)
 
 	return newWechatworkMarkdownPayload(text), nil
 }
 
 func (wc wechatworkConvertor) Package(p *api.PackagePayload) (WechatworkPayload, error) {
-	text, _ := getPackagePayloadInfo(p, noneLinkFormatter, noneNameFormatter, true)
+	text, _ := wechatworkPayloadFormatter.getPackagePayloadInfo(p)
 
 	return newWechatworkMarkdownPayload(text), nil
 }
 
 func (wc wechatworkConvertor) Action(p *api.ActionPayload) (WechatworkPayload, error) {
-	text, _ := getActionPayloadInfo(p, noneLinkFormatter)
+	text, _ := wechatworkPayloadFormatter.getActionPayloadInfo(p)
 
 	return newWechatworkMarkdownPayload(text), nil
 }

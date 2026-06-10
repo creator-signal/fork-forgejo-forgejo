@@ -75,6 +75,13 @@ func (telegramHandler) Metadata(w *webhook_model.Webhook) any {
 	return s
 }
 
+var telegramPayloadFormatter = webhookPayloadFormatter{
+	linkFormatter: htmlLinkFormatter,
+	nameFormatter: noneNameFormatter,
+	withSender:    true,
+	withRepoName:  true,
+}
+
 // Create implements PayloadConvertor Create method
 func (t telegramConvertor) Create(p *api.CreatePayload) (TelegramPayload, error) {
 	// created tag/branch
@@ -116,41 +123,41 @@ func (t telegramConvertor) Push(p *api.PushPayload) (TelegramPayload, error) {
 
 	title := fmt.Sprintf(`[%s:%s] %s`, p.Repo.FullName, branchName, commitDesc)
 
-	var text string
+	var text strings.Builder
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
 		var authorName string
 		if commit.Author != nil {
 			authorName = " - " + commit.Author.Name
 		}
-		text += fmt.Sprintf(`[<a href="%s">%s</a>] %s`, commit.URL, commit.ID[:7],
-			strings.TrimRight(commit.Message, "\r\n")) + authorName
+		text.WriteString(fmt.Sprintf(`[<a href="%s">%s</a>] %s`, commit.URL, commit.ID[:7],
+			strings.TrimRight(commit.Message, "\r\n")) + authorName)
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
-			text += "\n"
+			text.WriteString("\n")
 		}
 	}
 
-	return createTelegramPayload(title + "\n" + text), nil
+	return createTelegramPayload(title + "\n" + text.String()), nil
 }
 
 // Issue implements PayloadConvertor Issue method
 func (t telegramConvertor) Issue(p *api.IssuePayload) (TelegramPayload, error) {
-	text, _, attachmentText, _ := getIssuesPayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _, attachmentText, _ := telegramPayloadFormatter.getIssuesPayloadInfo(p)
 
 	return createTelegramPayload(text + "\n\n" + attachmentText), nil
 }
 
 // IssueComment implements PayloadConvertor IssueComment method
 func (t telegramConvertor) IssueComment(p *api.IssueCommentPayload) (TelegramPayload, error) {
-	text, _, _ := getIssueCommentPayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _, _ := telegramPayloadFormatter.getIssueCommentPayloadInfo(p)
 
 	return createTelegramPayload(text + "\n" + p.Comment.Body), nil
 }
 
 // PullRequest implements PayloadConvertor PullRequest method
 func (t telegramConvertor) PullRequest(p *api.PullRequestPayload) (TelegramPayload, error) {
-	text, _, attachmentText, _ := getPullRequestPayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _, attachmentText, _ := telegramPayloadFormatter.getPullRequestPayloadInfo(p)
 
 	return createTelegramPayload(text + "\n" + attachmentText), nil
 }
@@ -187,26 +194,26 @@ func (t telegramConvertor) Repository(p *api.RepositoryPayload) (TelegramPayload
 
 // Wiki implements PayloadConvertor Wiki method
 func (t telegramConvertor) Wiki(p *api.WikiPayload) (TelegramPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _, _ := telegramPayloadFormatter.getWikiPayloadInfo(p, true)
 
 	return createTelegramPayload(text), nil
 }
 
 // Release implements PayloadConvertor Release method
 func (t telegramConvertor) Release(p *api.ReleasePayload) (TelegramPayload, error) {
-	text, _ := getReleasePayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _ := telegramPayloadFormatter.getReleasePayloadInfo(p)
 
 	return createTelegramPayload(text), nil
 }
 
 func (t telegramConvertor) Package(p *api.PackagePayload) (TelegramPayload, error) {
-	text, _ := getPackagePayloadInfo(p, htmlLinkFormatter, noneNameFormatter, true)
+	text, _ := telegramPayloadFormatter.getPackagePayloadInfo(p)
 
 	return createTelegramPayload(text), nil
 }
 
 func (telegramConvertor) Action(p *api.ActionPayload) (TelegramPayload, error) {
-	text, _ := getActionPayloadInfo(p, htmlLinkFormatter)
+	text, _ := telegramPayloadFormatter.getActionPayloadInfo(p)
 
 	return createTelegramPayload(text), nil
 }

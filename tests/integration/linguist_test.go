@@ -156,8 +156,8 @@ func TestLinguistSupport(t *testing.T) {
 
 			langs := getFreshLanguageStats(t, repo, sha)
 			assert.Len(t, langs, 2)
-			assert.Equal(t, "C", langs[0].Language)
-			assert.Equal(t, "Markdown", langs[1].Language)
+			assert.Equal(t, "Markdown", langs[0].Language)
+			assert.Equal(t, "C", langs[1].Language)
 		})
 
 		// 4. Marking foo.c as documentation
@@ -242,13 +242,13 @@ func TestLinguistSupport(t *testing.T) {
 			t.Run("file source view", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				assertFileLanguage(t, "/src/branch/main/foo.c?display=source", "Bash")
+				assertFileLanguage(t, "/src/branch/main/foo.c?display=source", "Shell")
 			})
 
 			t.Run("file blame view", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				assertFileLanguage(t, "/blame/branch/main/foo.c", "Bash")
+				assertFileLanguage(t, "/blame/branch/main/foo.c", "Shell")
 			})
 		})
 

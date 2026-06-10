@@ -90,6 +90,14 @@ func ListPullRequests(ctx *context.APIContext) {
 	//   in: query
 	//   description: Filter by pull request author
 	//   type: string
+	// - name: base
+	//   in: query
+	//   description: Filter by base branch name
+	//   type: string
+	// - name: head
+	//   in: query
+	//   description: Filter by head branch name
+	//   type: string
 	// - name: page
 	//   in: query
 	//   description: Page number of results to return (1-based)
@@ -137,6 +145,8 @@ func ListPullRequests(ctx *context.APIContext) {
 		Labels:      labelIDs,
 		MilestoneID: ctx.FormInt64("milestone"),
 		PosterID:    posterID,
+		BaseBranch:  ctx.FormTrim("base"),
+		HeadBranch:  ctx.FormTrim("head"),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "PullRequests", err)
@@ -922,7 +932,8 @@ func MergePullRequest(ctx *context.APIContext) {
 		}
 	}
 
-	manuallyMerged := repo_model.MergeStyle(form.Do) == repo_model.MergeStyleManuallyMerged
+	mergeStyle := repo_model.MergeStyle(form.Do)
+	manuallyMerged := mergeStyle == repo_model.MergeStyleManuallyMerged
 
 	mergeCheckType := pull_service.MergeCheckTypeGeneral
 	if form.MergeWhenChecksSucceed {
@@ -933,7 +944,7 @@ func MergePullRequest(ctx *context.APIContext) {
 	}
 
 	// start with merging by checking
-	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge); err != nil {
+	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge, mergeStyle); err != nil {
 		if errors.Is(err, pull_service.ErrIsClosed) {
 			ctx.NotFound()
 		} else if errors.Is(err, pull_service.ErrUserNotAllowedToMerge) {

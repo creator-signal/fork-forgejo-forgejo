@@ -91,10 +91,7 @@ func TestPackageContainer(t *testing.T) {
 			Token string `json:"token"`
 		}
 
-		authenticate := []string{
-			`Bearer realm="` + setting.AppURL + `v2/token",service="container_registry",scope="*"`,
-			`Basic realm="Forgejo Container Registry"`,
-		}
+		authenticate := []string{`Bearer realm="` + setting.AppURL + `v2/token",service="container_registry",scope="*"`}
 
 		t.Run("Anonymous", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -200,6 +197,28 @@ func TestPackageContainer(t *testing.T) {
 			resp = MakeRequest(t, req, http.StatusOK)
 
 			assert.Empty(t, resp.Header().Get("WWW-Authenticate"))
+		})
+
+		t.Run("Basic authentication w/ Authorized Integration", func(t *testing.T) {
+			ait := newAITester(t, func(ai *auth_model.AuthorizedIntegration) {
+				ai.Scope = auth_model.AccessTokenScopeReadPackage
+			})
+			defer ait.close()
+			token := ait.signedJWT()
+
+			req := NewRequest(t, "GET", fmt.Sprintf("%sv2/token", setting.AppURL))
+			req.SetBasicAuth(user.Name, token)
+
+			resp := MakeRequest(t, req, http.StatusOK)
+
+			tokenResponse := &TokenResponse{}
+			DecodeJSON(t, resp, &tokenResponse)
+
+			assert.NotEmpty(t, tokenResponse.Token)
+
+			req = NewRequest(t, "GET", fmt.Sprintf("%sv2", setting.AppURL)).
+				AddTokenAuth(fmt.Sprintf("Bearer %s", tokenResponse.Token))
+			MakeRequest(t, req, http.StatusOK)
 		})
 	})
 
@@ -873,7 +892,7 @@ func TestPackageContainer(t *testing.T) {
 		url := fmt.Sprintf("%sv2/%s/parallel", setting.AppURL, user.Name)
 
 		var wg sync.WaitGroup
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			wg.Add(1)
 
 			content := []byte{byte(i)}

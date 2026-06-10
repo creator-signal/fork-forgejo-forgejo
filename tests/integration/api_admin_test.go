@@ -169,6 +169,38 @@ func TestAPIListUsers(t *testing.T) {
 	assert.Len(t, users, numberOfUsers)
 }
 
+func TestAPIListUsersNo2FA(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUsername := "user1"
+	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeReadAdmin)
+
+	req := NewRequest(t, "GET", "/api/v1/admin/users?is_2fa_enabled=0").
+		AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	total := resp.Header().Get("X-Total-Count")
+
+	numberOfUsers := "28"
+
+	assert.Equal(t, numberOfUsers, total)
+}
+
+func TestAPIListUsers2FA(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	adminUsername := "user1"
+	token := getUserToken(t, adminUsername, auth_model.AccessTokenScopeReadAdmin)
+
+	req := NewRequest(t, "GET", "/api/v1/admin/users?is_2fa_enabled=1").
+		AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	total := resp.Header().Get("X-Total-Count")
+
+	numberOfUsers := "2"
+
+	assert.Equal(t, numberOfUsers, total)
+}
+
 func TestAPIListUsersNotLoggedIn(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	req := NewRequest(t, "GET", "/api/v1/admin/users")
@@ -394,11 +426,11 @@ func TestAPICron(t *testing.T) {
 			AddTokenAuth(token)
 		resp := MakeRequest(t, req, http.StatusOK)
 
-		assert.Equal(t, "31", resp.Header().Get("X-Total-Count"))
+		assert.Equal(t, "30", resp.Header().Get("X-Total-Count"))
 
 		var crons []api.Cron
 		DecodeJSON(t, resp, &crons)
-		assert.Len(t, crons, 31)
+		assert.Len(t, crons, 30)
 	})
 
 	t.Run("Execute", func(t *testing.T) {

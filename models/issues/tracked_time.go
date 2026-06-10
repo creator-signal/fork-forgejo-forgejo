@@ -15,8 +15,8 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 
+	"code.forgejo.org/xorm/xorm"
 	"xorm.io/builder"
-	"xorm.io/xorm"
 )
 
 // TrackedTime represents a time that was spent for a specific issue.
@@ -350,10 +350,7 @@ func GetIssueTotalTrackedTime(ctx context.Context, opts *IssuesOptions, isClosed
 	// we get the statistics in smaller chunks and get accumulates
 	var accum int64
 	for i := 0; i < len(opts.IssueIDs); {
-		chunk := i + MaxQueryParameters
-		if chunk > len(opts.IssueIDs) {
-			chunk = len(opts.IssueIDs)
-		}
+		chunk := min(i+MaxQueryParameters, len(opts.IssueIDs))
 		time, err := getIssueTotalTrackedTimeChunk(ctx, opts, isClosed, opts.IssueIDs[i:chunk])
 		if err != nil {
 			return 0, err
