@@ -147,6 +147,10 @@ func TestInitRepositoryWithNoTemplates(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		if !SupportHashSha256 && tt.objectFormatName == Sha256ObjectFormat.Name() {
+			continue
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
 			if !IsValidObjectFormat(tt.objectFormatName) {
 				t.Skip("not supported")
