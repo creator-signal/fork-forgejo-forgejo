@@ -379,7 +379,7 @@ func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.
 	m.calls = append(m.calls, &callArgsActionRunNowDone{run, priorStatus, lastRun})
 }
 
-func Test_tryHandleIncompleteMatrix(t *testing.T) {
+func Test_prepareJobForEmitting(t *testing.T) {
 	// Shouldn't get any decoding errors during this test -- pop them up from a log warning to a test fatal error.
 	defer test.MockVariableValue(&model.OnDecodeNodeError, func(node yaml.Node, out any, err error) {
 		t.Fatalf("Failed to decode node %v into %T: %v", node, out, err)
@@ -424,7 +424,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 		{
 			name:        "needs an incomplete job",
 			runJobID:    603,
-			errContains: "jobStatusResolver attempted to tryHandleIncompleteMatrix for a job (id=603) with an incomplete 'needs' job (id=604)",
+			errContains: "jobStatusResolver attempted to prepareJobForEmitting for a job (id=603) with an incomplete 'needs' job (id=604)",
 		},
 		{
 			name:                     "missing needs for strategy.matrix evaluation",
@@ -665,7 +665,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer unittest.OverrideFixtures("services/actions/Test_tryHandleIncompleteMatrix")()
+			defer unittest.OverrideFixtures("services/actions/Test_prepareJobForEmitting")()
 			require.NoError(t, unittest.PrepareTestDatabase())
 
 			notifier := &mockNotifier{}
@@ -706,7 +706,7 @@ func Test_tryHandleIncompleteMatrix(t *testing.T) {
 			jobsInRun, err := db.Find[actions_model.ActionRunJob](t.Context(), actions_model.FindRunJobOptions{RunID: blockedJob.RunID})
 			require.NoError(t, err)
 
-			behaviour, err := tryHandleIncompleteMatrix(t.Context(), blockedJob, jobsInRun)
+			behaviour, err := prepareJobForEmitting(t.Context(), blockedJob, jobsInRun)
 
 			if tt.errContains != "" {
 				require.ErrorContains(t, err, tt.errContains)
@@ -887,7 +887,7 @@ on:
     inputs:
       argument:
         type: string
-        
+
 jobs:
   reusable:
     runs-on: ubuntu-latest

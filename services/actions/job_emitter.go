@@ -76,10 +76,10 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 				updateColumns := []string{"status"}
 
 				if status.IsWaiting() {
-					behaviour, err := tryHandleIncompleteMatrix(ctx, job, jobs)
+					behaviour, err := prepareJobForEmitting(ctx, job, jobs)
 					switch behaviour {
 					case behaviourError:
-						return fmt.Errorf("error in tryHandleIncompleteMatrix: %w", err)
+						return fmt.Errorf("error in prepareJobForEmitting: %w", err)
 
 					case behaviourExecuteJob:
 						// Intentional blank case -- proceed with updating the status of the job to waiting.
@@ -116,7 +116,7 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 
 	CreateCommitStatus(ctx, jobs...)
 
-	// tryHandleIncompleteMatrix can create new jobs in this run which may initially be persisted in the DB as blocked
+	// prepareJobForEmitting can create new jobs in this run which may initially be persisted in the DB as blocked
 	// because they have non-empty `needs`. In that case, we need to recursively run the job emitter so that new jobs
 	// are recognized as having their `needs` completed and be set as unblocked. Check if any new jobs were created and
 	// rerun the job emitter if so. The same is necessary if updates completed jobs that unblocked other jobs.
@@ -205,8 +205,8 @@ func (r *jobStatusResolver) Resolve() map[int64]actions_model.Status {
 						// inner jobs are done.  But if the job is incomplete, that means that the `needs` that were
 						// required to define the job are done, and now the job can be expanded with the missing values
 						// that come from `${{ needs... }}`.  By putting this job into `Waiting` state, it will go into
-						// `tryHandleIncompleteMatrix` to be reparsed, replaced with a full job definition, with new
-						// `needs` that contain its inner jobs:
+						// `prepareJobForEmitting` to be reparsed, replaced with a full job definition, with new `needs`
+						// that contain its inner jobs:
 						ret[id] = actions_model.StatusWaiting
 					} else if allSkip {
 						// All of the inner jobs are skipped -- this most likely occurs because an outer job's `if:`
@@ -263,9 +263,11 @@ const (
 	behaviourIgnoreAllJobsInRun
 )
 
-// Invoked once a job has all its `needs` parameters met and is ready to transition to waiting, this may expand the
-// job's `strategy.matrix` into multiple new jobs.
-func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.ActionRunJob, jobsInRun []*actions_model.ActionRunJob) (behaviour, error) {
+// Invoked once a job has all its `needs` parameters met and is ready to transition to waiting. May expand the job's
+// `strategy.matrix` into multiple new jobs, may compute a calculated `runs-on` field, may expand reusable workflows,
+// and may evaluate `if` to see if the job should be skipped -- all things that could change based upon `${{ needs...
+// }}` outputs and results, which are now available.
+func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.ActionRunJob, jobsInRun []*actions_model.ActionRunJob) (behaviour, error) {
 	incompleteMatrix, _, err := blockedJob.HasIncompleteMatrix()
 	if err != nil {
 		return behaviourError, fmt.Errorf("job HasIncompleteMatrix: %w", err)
@@ -287,7 +289,7 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 	}
 
 	if err := blockedJob.LoadRun(ctx); err != nil {
-		return behaviourError, fmt.Errorf("failure LoadRun in tryHandleIncompleteMatrix: %w", err)
+		return behaviourError, fmt.Errorf("failure LoadRun in prepareJobForEmitting: %w", err)
 	}
 
 	// Compute jobOutputs for all the other jobs required as needed by this job:
@@ -298,9 +300,9 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 			continue
 		} else if !job.Status.IsDone() {
 			// Unexpected: `job` is needed by `blockedJob` but it isn't done; `jobStatusResolver` shouldn't be calling
-			// `tryHandleIncompleteMatrix` in this case.
+			// `prepareJobForEmitting` in this case.
 			return behaviourError, fmt.Errorf(
-				"jobStatusResolver attempted to tryHandleIncompleteMatrix for a job (id=%d) with an incomplete 'needs' job (id=%d)", blockedJob.ID, job.ID)
+				"jobStatusResolver attempted to prepareJobForEmitting for a job (id=%d) with an incomplete 'needs' job (id=%d)", blockedJob.ID, job.ID)
 		}
 
 		outputs, err := actions_model.FindTaskOutputByTaskID(ctx, job.TaskID)
