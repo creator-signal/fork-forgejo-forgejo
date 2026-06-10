@@ -636,6 +636,33 @@ func TestPagureDownloadRepoWithPrivateIssues(t *testing.T) {
 	}, comments)
 }
 
+func TestPagureSkipNullCommitStartPR(t *testing.T) {
+	fixtPath := "./testdata/pagure/null_commit_start"
+	server := unittest.NewMockWebServer(t, "https://pagure.io", fixtPath, false)
+	defer server.Close()
+
+	serverURL, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	serverURL.Path = "test-repo.git"
+	cloneAddr := serverURL.String()
+
+	factory := &PagureDownloaderFactory{}
+	downloader, err := factory.New(t.Context(), base.MigrateOptions{
+		CloneAddr: cloneAddr,
+	})
+	require.NoError(t, err)
+
+	_, err = downloader.GetRepoInfo()
+	require.NoError(t, err)
+
+	prs, _, err := downloader.GetPullRequests(1, 20)
+	require.NoError(t, err)
+
+	assert.Len(t, prs, 1)
+	assert.Equal(t, int64(2), prs[0].Number)
+	assert.Equal(t, "Valid merged PR", prs[0].Title)
+}
+
 func TestProcessDate(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -6,6 +6,7 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -303,6 +304,11 @@ func (d *PagureDownloader) callAPI(endpoint string, parameter map[string]string,
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		return fmt.Errorf("Pagure API returned HTTP %d for %s: %s", resp.StatusCode, u.String(), string(body))
+	}
+
 	decoder := json.NewDecoder(resp.Body)
 	return decoder.Decode(&result)
 }
@@ -552,6 +558,11 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 	pullRequests := make([]*base.PullRequest, 0, len(rawPullRequests.Requests))
 
 	for _, pr := range rawPullRequests.Requests {
+		if pr.CommitStart == "" {
+			log.Warn("Skipping PR #%d in %s: commit_start is empty", pr.ID, d.repoName)
+			continue
+		}
+
 		var state, baseSHA string
 		var merged bool
 		labels := []*base.Label{}
@@ -563,7 +574,13 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 
 		err = d.callAPI("/api/0/"+d.repoName+"/c/"+pr.CommitStart+"/info", nil, &commit)
 		if err != nil {
-			return nil, false, err
+			log.Warn("Skipping PR #%d in %s: could not get commit info for %s: %v", pr.ID, d.repoName, pr.CommitStart, err)
+			continue
+		}
+
+		if len(commit.ParentIDs) == 0 {
+			log.Warn("Skipping PR #%d in %s: commit %s has no parent IDs", pr.ID, d.repoName, pr.CommitStart)
+			continue
 		}
 
 		if util.ASCIIEqualFold(pr.Status, "merged") {
@@ -572,6 +589,11 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 			state, merged, baseSHA = "open", false, commit.ParentIDs[0]
 		} else {
 			state, merged, baseSHA = "closed", false, commit.ParentIDs[0]
+		}
+
+		headCloneURL := pr.RepoFrom.FullURL
+		if headCloneURL == "" {
+			headCloneURL = d.baseURL.String() + "/" + d.repoName
 		}
 
 		pullRequests = append(pullRequests, &base.PullRequest{
@@ -591,7 +613,7 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 				Ref:      pr.BranchFrom,
 				SHA:      pr.CommitStop,
 				RepoName: d.repoName,
-				CloneURL: pr.RepoFrom.FullURL + ".git",
+				CloneURL: headCloneURL + ".git",
 			},
 			Base: base.PullRequestBranch{
 				Ref:      pr.Branch,

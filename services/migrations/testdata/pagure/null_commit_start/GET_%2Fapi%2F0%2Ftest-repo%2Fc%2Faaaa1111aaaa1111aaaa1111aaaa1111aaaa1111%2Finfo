@@ -1,0 +1,14 @@
+Content-Type: application/json
+
+{
+  "author": "Test User",
+  "commit_time": 1699990000,
+  "commit_time_offset": 0,
+  "committer": "Test User",
+  "hash": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+  "message": "Valid commit\n",
+  "parent_ids": [
+    "cccc3333cccc3333cccc3333cccc3333cccc3333"
+  ],
+  "tree_id": "dddd4444dddd4444dddd4444dddd4444dddd4444"
+}

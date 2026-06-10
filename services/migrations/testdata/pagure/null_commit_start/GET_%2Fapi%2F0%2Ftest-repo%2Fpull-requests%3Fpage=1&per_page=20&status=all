@@ -1,0 +1,70 @@
+Content-Type: application/json
+
+{
+  "pagination": {
+    "next": null
+  },
+  "requests": [
+    {
+      "branch": "main",
+      "branch_from": "feature-valid",
+      "closed_at": "1700000000",
+      "closed_by": {
+        "full_url": "https://pagure.io/user/testuser",
+        "fullname": "Test User",
+        "name": "testuser",
+        "url_path": "user/testuser"
+      },
+      "commit_start": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+      "commit_stop": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+      "date_created": "1699990000",
+      "full_url": "https://pagure.io/test-repo/pull-request/2",
+      "id": 2,
+      "initial_comment": "A valid merged PR",
+      "last_updated": "1700000000",
+      "status": "Merged",
+      "tags": [],
+      "title": "Valid merged PR",
+      "user": {
+        "full_url": "https://pagure.io/user/testuser",
+        "fullname": "Test User",
+        "name": "testuser",
+        "url_path": "user/testuser"
+      },
+      "repo_from": {
+        "full_url": "https://pagure.io/test-repo"
+      }
+    },
+    {
+      "branch": "main",
+      "branch_from": "feature-null",
+      "closed_at": "1700000100",
+      "closed_by": {
+        "full_url": "https://pagure.io/user/testuser",
+        "fullname": "Test User",
+        "name": "testuser",
+        "url_path": "user/testuser"
+      },
+      "commit_start": null,
+      "commit_stop": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222",
+      "date_created": "1699990100",
+      "full_url": "https://pagure.io/test-repo/pull-request/1",
+      "id": 1,
+      "initial_comment": "This PR has null commit_start",
+      "last_updated": "1700000100",
+      "status": "Closed",
+      "tags": [],
+      "title": "PR with null commit_start",
+      "user": {
+        "full_url": "https://pagure.io/user/testuser",
+        "fullname": "Test User",
+        "name": "testuser",
+        "url_path": "user/testuser"
+      },
+      "repo_from": {
+        "full_url": "https://pagure.io/test-repo"
+      }
+    }
+  ],
+  "total_requests": 2
+}
