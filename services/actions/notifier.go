@@ -587,7 +587,7 @@ func (n *actionsNotifier) ChangeDefaultBranch(ctx context.Context, repo *repo_mo
 	// since schedules are registered from workflows in the default branch.
 	if repo.UnitEnabled(ctx, unit.TypeActions) {
 		if err := DetectAndHandleSchedules(ctx, repo); err != nil {
-			log.Error("DetectAndHandleSchedules for change default branch repo %s/%s: %v", repo.Owner.Name, repo.Name, err)
+			log.Error("DetectAndHandleSchedules failed for change default branch repo %s/%s: %v", repo.Owner.Name, repo.Name, err)
 		}
 	}
 }
