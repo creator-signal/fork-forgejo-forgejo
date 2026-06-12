@@ -165,6 +165,9 @@ linters:
           - forbidigo
         path: cmd
       - linters:
+          - forbidigo
+        path: build/lint-single-response
+      - linters:
           - dupl
         text: (?i)webhook
       - linters:

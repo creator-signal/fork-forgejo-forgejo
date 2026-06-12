@@ -1522,6 +1522,7 @@ func MergePullRequest(ctx *context.Context) {
 				ctx.Flash.Error(ctx.Tr("repo.pulls.delete_after_merge.head_branch.insufficient_branch"))
 			default:
 				ctx.ServerError("DeleteBranchAfterMerge", err)
+				return
 			}
 
 			ctx.JSONRedirect(issue.Link())
@@ -1671,7 +1672,6 @@ func CompareAndPullRequestPost(ctx *context.Context) {
 			log.Error("Unexpected error of NewPullRequest: %T %s", err, err)
 			ctx.ServerError("CompareAndPullRequest", err)
 		}
-		ctx.ServerError("NewPullRequest", err)
 		return
 	}
 
@@ -1983,6 +1983,7 @@ func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.Pu
 	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
 	if err != nil {
 		ctx.ServerError("HasRunThatNeedApproval", err)
+		return
 	}
 	ctx.Data["SomePullRequestRunsNeedApproval"] = someRunsNeedApproval
 

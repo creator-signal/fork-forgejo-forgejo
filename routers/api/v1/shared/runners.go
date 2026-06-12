@@ -154,6 +154,7 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 	actionRunner, err := convert.ToActionRunner(runner)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+		return
 	}
 	ctx.JSON(http.StatusOK, actionRunner)
 }
@@ -176,6 +177,7 @@ func RegisterRunner(ctx *context.APIContext, ownerID, repoID int64) {
 	runner.GenerateToken()
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRunner", err)
+		return
 	}
 
 	response := &structs.RegisterRunnerResponse{
