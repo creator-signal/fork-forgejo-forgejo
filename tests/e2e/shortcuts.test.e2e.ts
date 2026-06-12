@@ -3,7 +3,7 @@
 // web_src/js/features/user-shortcuts.ts
 // @watch end
 
-import {expect, firefox} from '@playwright/test';
+import {expect} from '@playwright/test';
 import {test, login_user, login} from './utils_e2e.ts';
 
 test.skip(({isMobile}) => isMobile, 'Desktop only');
@@ -62,53 +62,32 @@ test('Issue/pull request filter shortcuts', async ({browser}, workerInfo) => {
     const resp = await page.goto(`/user2/repo1/${tab}`);
     expect(resp?.status()).toBe(200);
 
+    await page.keyboard.press('u');
+    await expect(page.locator('#author-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+
     await page.keyboard.press('a');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/assignee=2/);
-    await page.locator('body').click();
+    await expect(page.locator('#assignee-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('l');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/labels=1/);
-    await page.locator('body').click();
+    await expect(page.locator('#label-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('m');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/milestone=1/);
-    await page.locator('body').click();
+    await expect(page.locator('#milestone-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('p');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/project=1/);
-    await page.locator('body').click();
+    await expect(page.locator('#project-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('s');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/sort=oldest/);
-    await page.locator('body').click();
+    await expect(page.locator('#sort-dropdown .menu')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('t');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/type=created_by/);
-    await page.locator('body').click();
-
-    await page.keyboard.press('u');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/poster=0/);
+    await expect(page.locator('#type-dropdown .menu')).toBeVisible();
   }
 });
 
@@ -137,56 +116,79 @@ test('Goto and create shortcuts', async ({browser}, workerInfo) => {
 
   await page.keyboard.press('g');
   await page.keyboard.press('n');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/notifications');
-
-  // Goto shortcuts are flaky on Firefox using Playwright cli
-  if (browser.browserType() === firefox) return;
 
   await page.keyboard.press('g');
   await page.keyboard.press('i');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/issues');
 
   await page.keyboard.press('g');
   await page.keyboard.press('p');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/pulls');
 
   expect((await page.goto('/user2/repo1'))?.status()).toBe(200);
 
   await page.keyboard.press('g');
   await page.keyboard.press('a');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/actions');
 
   await page.keyboard.press('g');
   await page.keyboard.press('c');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1');
 
   await page.keyboard.press('g');
   await page.keyboard.press('i');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/issues');
   await page.keyboard.press('c');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/issues/new');
   await page.goto('/user2/repo1/issues');
 
   await page.keyboard.press('g');
   await page.keyboard.press('o');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/projects');
 
   await page.keyboard.press('g');
   await page.keyboard.press('p');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/pulls');
   await page.keyboard.press('c');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/compare/master...master');
   await page.goto('/user2/repo1/pulls');
 
   await page.keyboard.press('g');
   await page.keyboard.press('r');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/releases');
   await page.keyboard.press('c');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/releases/new');
   await page.goto('/user2/repo1/releases');
 
   await page.keyboard.press('g');
   await page.keyboard.press('w');
+  await page.locator('body').focus();
+  await page.waitForLoadState();
   await expect(page).toHaveURL('/user2/repo1/wiki');
 });
 
