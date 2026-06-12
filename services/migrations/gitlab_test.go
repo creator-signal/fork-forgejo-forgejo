@@ -930,7 +930,7 @@ func TestGitlabDownloaderAvatarURL(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, liveMode)
 	defer server.Close()
 
-	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "birdgoose-group/forgejo-12921", "", "", token)
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/forgejo-12921", "", "", token)
 	require.NoError(t, err)
 	require.NotNil(t, downloader)
 
@@ -940,8 +940,8 @@ func TestGitlabDownloaderAvatarURL(t *testing.T) {
 	assertRepositoryEqual(t, &base.Repository{
 		Name:          "forgejo-12921",
 		Description:   "An example repo for testing Forgejo migrations.",
-		CloneURL:      server.URL + "/birdgoose-group/forgejo-12921.git",
-		OriginalURL:   server.URL + "/birdgoose-group/forgejo-12921",
+		CloneURL:      server.URL + "/forgejo/forgejo-12921.git",
+		OriginalURL:   server.URL + "/forgejo/forgejo-12921",
 		DefaultBranch: "master",
 		AvatarURL:     server.URL + "/uploads/-/system/project/avatar/82996997/birb.jpg",
 		IsPrivate:     true,
