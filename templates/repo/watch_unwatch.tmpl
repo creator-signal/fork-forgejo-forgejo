@@ -6,7 +6,7 @@
 				<span class="text not-mobile">{{if $.RepoWatchSelection.IsWatching}}{{ctx.Locale.Tr "repo.watching"}}{{else}}{{ctx.Locale.Tr "repo.watch"}}{{end}}</span>
 				{{svg "octicon-triangle-down" 14}}
 			</div>
-			<a hx-boost="false" class="ui basic label" href="{{.RepoLink}}/watchers"
+			<a class="ui basic label" href="{{.RepoLink}}/watchers"
 				aria-label="{{ctx.Locale.TrPluralString .Repository.NumWatches "watch.n_watchers" (printf "%d" .Repository.NumWatches)}}"
 				>
 				{{CountFmt .Repository.NumWatches}}
@@ -49,7 +49,7 @@
 		<div class="ui compact small basic button">
 			{{svg "octicon-eye"}}<span class="text not-mobile">{{ctx.Locale.Tr "repo.watch"}}</span>
 		</div>
-		<a hx-boost="false" class="ui basic label" href="{{.RepoLink}}/watchers"
+		<a class="ui basic label" href="{{.RepoLink}}/watchers"
 			aria-label="{{ctx.Locale.TrPluralString .Repository.NumWatches "watch.n_watchers" (printf "%d" .Repository.NumWatches)}}"
 			>
 			{{CountFmt .Repository.NumWatches}}
