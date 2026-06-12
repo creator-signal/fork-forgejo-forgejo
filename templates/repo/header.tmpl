@@ -107,7 +107,7 @@
 				{{end}}
 
 				{{if .Permission.CanRead $.UnitTypeExternalTracker}}
-					<a class="{{if .PageIsIssueList}}active {{end}}item" href="{{.RepoExternalIssuesLink}}" target="_blank" rel="noopener noreferrer">
+					<a id="repo-issues-tab" class="{{if .PageIsIssueList}}active {{end}}item" href="{{.RepoExternalIssuesLink}}" target="_blank" rel="noopener noreferrer">
 						{{svg "octicon-link-external"}} {{ctx.Locale.Tr "repo.issues"}}
 					</a>
 				{{end}}
@@ -155,7 +155,7 @@
 				{{end}}
 
 				{{if .Permission.CanRead $.UnitTypeExternalWiki}}
-					<a class="item" href="{{(.Repository.MustGetUnit $.Context $.UnitTypeExternalWiki).ExternalWikiConfig.ExternalWikiURL}}" target="_blank" rel="noopener noreferrer">
+					<a id="repo-wiki-tab" class="item" href="{{(.Repository.MustGetUnit $.Context $.UnitTypeExternalWiki).ExternalWikiConfig.ExternalWikiURL}}" target="_blank" rel="noopener noreferrer">
 						{{svg "octicon-link-external"}} {{ctx.Locale.Tr "repo.wiki"}}
 					</a>
 				{{end}}

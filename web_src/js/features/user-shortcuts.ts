@@ -153,9 +153,8 @@ function goto(page: PageType): boolean {
       window.location.pathname = '/';
       break;
     case Page.Issues: {
-      const el = document.querySelector<HTMLAnchorElement>('#repo-issues-tab');
-      if (el) {
-        el.click();
+      if (document.querySelector('.repo-header')) {
+        document.querySelector<HTMLAnchorElement>('#repo-issues-tab')?.click();
       } else window.location.pathname = '/issues';
       break;
     }
@@ -166,11 +165,10 @@ function goto(page: PageType): boolean {
       document.querySelector<HTMLAnchorElement>('#repo-projects-tab')?.click();
       break;
     case Page.Pulls: {
-      const el = document.querySelector<HTMLAnchorElement>(
-        '#repo-pull-requests-tab',
-      );
-      if (el) {
-        el.click();
+      if (document.querySelector('.repo-header')) {
+        document
+          .querySelector<HTMLAnchorElement>('#repo-pull-requests-tab')
+          ?.click();
       } else window.location.pathname = '/pulls';
       break;
     }
