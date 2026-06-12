@@ -196,7 +196,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+	if err := InsertRun(ctx, run, jobs); err != nil {
 		return run, jobNames, err
 	}
 

@@ -449,11 +449,13 @@ func handleWorkflows(
 		err = db.WithTx(ctx, func(ctx context.Context) error {
 			// Transaction avoids any chance of a run being picked up in a Waiting state when we're about to put it into
 			// a PreExecutionError a millisecond later.
-			if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
-				return err
+			if err := InsertRun(ctx, run, jobs); err != nil {
+				return fmt.Errorf("InsertRun: %w", err)
 			}
 			if errorCode != 0 {
-				return FailRunPreExecutionError(ctx, run, errorCode, errorDetails)
+				if err := FailRunPreExecutionError(ctx, run, errorCode, errorDetails); err != nil {
+					return fmt.Errorf("FailRunPreExecutionError: %w", err)
+				}
 			}
 			return nil
 		})

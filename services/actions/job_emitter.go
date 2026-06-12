@@ -397,8 +397,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 	}
 
 	err = db.WithTx(ctx, func(ctx context.Context) error {
-		err := actions_model.InsertRunJobs(ctx, blockedJob.Run, newJobWorkflows)
-		if err != nil {
+		if err := actions_model.InsertRunJobs(ctx, blockedJob.Run, newJobWorkflows); err != nil {
 			return fmt.Errorf("failure in InsertRunJobs: %w", err)
 		}
 
