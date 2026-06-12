@@ -16,8 +16,10 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   const page = await login({browser}, workerInfo);
   expect((await page.goto('/user2/repo2'))?.status()).toBe(200);
 
+  await page.keyboard.press('k');
   await page.keyboard.press('j');
   await page.keyboard.press('j');
+  await page.keyboard.press('k');
   await page.keyboard.press('j');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/user2/repo2/src/branch/master/test.xml');
