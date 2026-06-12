@@ -222,7 +222,7 @@ test('Open dialog and persist enable setting', async ({
   );
 
   await page.keyboard.press('ArrowRight');
-  await expect(dialog.locator('button.active')).toHaveText('Repo');
+  await expect(dialog.locator('button.active')).toHaveText('Repository');
   await page.keyboard.press('ArrowLeft');
   await expect(dialog.locator('button.active')).toHaveText('Global');
   await page.keyboard.press('Escape');

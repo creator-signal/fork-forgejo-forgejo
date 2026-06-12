@@ -936,19 +936,19 @@
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
 	"shortcuts": {
-		"title": "Keyboard Shortcuts",
+		"title": "Keyboard shortcuts",
 		"hint": "Navigate with arrow keys",
 		"enable": "Enable keyboard shortcuts",
 		"button": {
 			"global": "Global",
-			"repo": "Repo",
+			"repo": "Repository",
 			"code": "Code",
-			"issue": "Issue/Pull Request"
+			"issue": "Issue/pull request"
 		},
 		"global": {
 			"down": "Navigate down a list",
 			"up": "Navigate up a list",
-			"home": "Go to Homepage",
+			"home": "Go to homepage",
 			"notifications": "Go to Notifications",
 			"toggle": "Toggle checkbox on list",
 			"search": "Focus on searchbar",
