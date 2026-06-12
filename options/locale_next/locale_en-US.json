@@ -971,7 +971,7 @@
 			"history": "Go to history",
 			"line": "Go to line",
 			"raw": "View raw",
-			"permalink": "Get permalink"
+			"permalink": "Copy permalink to clipboard"
 		},
 		"issue": {
 			"assignee": "Filter by assignee or edit assignees",

@@ -310,9 +310,12 @@ function onKeydown(e: KeyboardEvent) {
         )
         ?.click();
       break;
-    case 'y':
-      document.querySelector<HTMLAnchorElement>('#permalink-btn')?.click();
+    case 'y': {
+      const sha = document.querySelector<HTMLAnchorElement>('.sha');
+      if (!sha) return;
+      navigator.clipboard.writeText(sha.href);
       break;
+    }
     case '/':
       document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       e.preventDefault();

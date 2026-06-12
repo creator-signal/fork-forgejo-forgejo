@@ -47,8 +47,12 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   await expect(page).toHaveURL('/user2/repo2/raw/branch/master/test.xml');
   await page.goBack();
   await page.keyboard.press('y');
-  await expect(page).toHaveURL(
-    '/user2/repo2/src/commit/1032bbf17fbc0d9c95bb5418dabe8f8c99278700/test.xml',
+  expect(
+    await page.evaluate(async () => {
+      return await navigator.clipboard.readText();
+    }),
+  ).toBe(
+    'http://localhost:3003/user2/repo2/commit/1032bbf17fbc0d9c95bb5418dabe8f8c99278700',
   );
 });
 
