@@ -1,4 +1,5 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package packages
@@ -117,14 +118,21 @@ func GetPackageDescriptor(ctx context.Context, pv *PackageVersion) (*PackageDesc
 			return nil, err
 		}
 	}
-	creator, err := user_model.GetUserByID(ctx, pv.CreatorID)
-	if err != nil {
-		if errors.Is(err, util.ErrNotExist) {
-			creator = user_model.NewGhostUser()
-		} else {
-			return nil, err
+
+	var creator *user_model.User
+	if pv.CreatorID == user_model.ActionsUserID {
+		creator = user_model.NewActionsUser()
+	} else {
+		creator, err = user_model.GetUserByID(ctx, pv.CreatorID)
+		if err != nil {
+			if errors.Is(err, util.ErrNotExist) {
+				creator = user_model.NewGhostUser()
+			} else {
+				return nil, err
+			}
 		}
 	}
+
 	var semVer *version.Version
 	if p.SemverCompatible {
 		semVer, err = version.NewVersion(pv.Version)

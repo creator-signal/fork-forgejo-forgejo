@@ -43,7 +43,11 @@ func (a *ActionTaskToken) Verify(req *http.Request, w http.ResponseWriter, _ aut
 	}
 
 	log.Trace("Basic Authorization: Valid AccessToken for task[%d]", task.ID)
-	return &auth.AuthenticationSuccess{Result: &actionsTaskTokenAuthenticationResult{user: user_model.NewActionsUser(), taskID: task.ID}}
+	return &auth.AuthenticationSuccess{Result: &actionsTaskTokenAuthenticationResult{
+		user:   user_model.NewActionsUser(),
+		taskID: task.ID,
+		scope:  task.TokenScope,
+	}}
 }
 
 func (a *ActionTaskToken) getTokenFromRequest(req *http.Request) optional.Option[string] {

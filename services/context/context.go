@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2020 The Gitea Authors. All rights reserved.
-// Copyright 2024 The Forgejo Authors.
+// Copyright 2026 The Forgejo Authors.
 // SPDX-License-Identifier: MIT
 
 package context
@@ -58,9 +58,10 @@ type Context struct {
 
 	ContextUser *user_model.User // the user which is being visited, in most cases it differs from Doer
 
-	Repo    *Repository
-	Org     *Organization
-	Package *Package
+	Repo       *Repository
+	Org        *Organization
+	Package    *Package
+	ActionTask *ActionTask
 }
 
 func init() {

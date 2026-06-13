@@ -1,4 +1,5 @@
 // Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package packages
@@ -833,7 +834,7 @@ func CommonRoutes() *web.Route {
 				})
 			})
 		}, reqPackageAccess(perm.AccessModeRead))
-	}, context.UserAssignmentWeb(), context.PackageAssignment())
+	}, context.UserAssignmentWeb(), context.ActionTaskAssignment(), context.PackageAssignment())
 
 	return r
 }

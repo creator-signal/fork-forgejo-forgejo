@@ -1,4 +1,5 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package context
@@ -28,6 +29,7 @@ type packageAssignmentCtx struct {
 	*Base
 	Doer        *user_model.User
 	ContextUser *user_model.User
+	ActionTask  *ActionTask
 }
 
 // PackageAssignment returns a middleware to handle Context.Package assignment
@@ -44,7 +46,12 @@ func PackageAssignment() func(ctx *Context) {
 				ctx.ServerError(title, err)
 			}
 		}
-		paCtx := &packageAssignmentCtx{Base: ctx.Base, Doer: ctx.Doer, ContextUser: ctx.ContextUser}
+		paCtx := &packageAssignmentCtx{
+			Base:        ctx.Base,
+			Doer:        ctx.Doer,
+			ContextUser: ctx.ContextUser,
+			ActionTask:  ctx.ActionTask,
+		}
 		ctx.Package = packageAssignment(paCtx, errorFn)
 	}
 }
@@ -62,7 +69,7 @@ func packageAssignment(ctx *packageAssignmentCtx, errCb func(int, string, any)) 
 		Owner: ctx.ContextUser,
 	}
 	var err error
-	pkg.AccessMode, err = determineAccessMode(ctx.Base, pkg, ctx.Doer)
+	pkg.AccessMode, err = determineAccessMode(ctx.Base, pkg, ctx.Doer, ctx.ActionTask)
 	if err != nil {
 		errCb(http.StatusInternalServerError, "determineAccessMode", err)
 		return pkg
@@ -92,8 +99,15 @@ func packageAssignment(ctx *packageAssignmentCtx, errCb func(int, string, any)) 
 	return pkg
 }
 
-func determineAccessMode(ctx *Base, pkg *Package, doer *user_model.User) (perm.AccessMode, error) {
+func determineAccessMode(ctx *Base, pkg *Package, doer *user_model.User, actionTask *ActionTask) (perm.AccessMode, error) {
 	if setting.Service.RequireSignInView && (doer == nil || doer.IsGhost()) {
+		return perm.AccessModeNone, nil
+	}
+
+	if doer != nil && doer.IsActions() {
+		if actionTask != nil && actionTask.AllowsOwnerAccess(pkg.Owner.ID) {
+			return actionTask.GetPackageAccessMode()
+		}
 		return perm.AccessModeNone, nil
 	}
 

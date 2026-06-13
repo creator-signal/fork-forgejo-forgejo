@@ -1,4 +1,5 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package npm
@@ -166,6 +167,13 @@ func UploadPackage(ctx *context.Context) {
 	repo, err := repo_model.GetRepositoryByURL(ctx, npmPackage.Metadata.Repository.URL)
 	if err == nil {
 		canWrite := repo.OwnerID == ctx.Doer.ID
+
+		if !canWrite && ctx.Doer.IsActions() && ctx.ActionTask != nil {
+			if canWrite, err = ctx.ActionTask.CanWritePackageToRepo(repo.ID); err != nil {
+				apiError(ctx, http.StatusInternalServerError, err)
+				return
+			}
+		}
 
 		if !canWrite {
 			// GetUserRepoPermission is used, which doesn't take into account any `AuthorizationReducer` from access

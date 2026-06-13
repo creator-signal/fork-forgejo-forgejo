@@ -16,10 +16,11 @@ type actionsTaskTokenAuthenticationResult struct {
 	*auth.BaseAuthenticationResult
 	user   *user_model.User
 	taskID int64
+	scope  auth_model.AccessTokenScope
 }
 
 func (r *actionsTaskTokenAuthenticationResult) Scope() optional.Option[auth_model.AccessTokenScope] {
-	return optional.None[auth_model.AccessTokenScope]()
+	return optional.Some(r.scope)
 }
 
 func (r *actionsTaskTokenAuthenticationResult) User() *user_model.User {

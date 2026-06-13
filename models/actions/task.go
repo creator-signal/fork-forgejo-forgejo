@@ -1,4 +1,5 @@
 // Copyright 2022 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package actions
@@ -44,6 +45,7 @@ type ActionTask struct {
 	TokenHash      string `xorm:"UNIQUE"` // sha256 of token
 	TokenSalt      string
 	TokenLastEight string `xorm:"index token_last_eight"`
+	TokenScope     auth_model.AccessTokenScope
 
 	LogFilename  string     // file name of log
 	LogInStorage bool       // read log from database or from storage
@@ -401,14 +403,20 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 	}
 	task.GenerateToken()
 
-	var workflowJob *jobparser.Job
+	var workflow *jobparser.SingleWorkflow
 	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
 		return nil, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
 	} else if len(gots) != 1 {
 		return nil, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
 	} else { //nolint:revive
-		_, workflowJob = gots[0].Job()
+		workflow = gots[0]
 	}
+
+	var scope auth_model.AccessTokenScope
+	if scope, err = createTokenScope(workflow); err != nil {
+		return nil, err
+	}
+	task.TokenScope = scope
 
 	if _, err := e.Insert(task); err != nil {
 		return nil, err
@@ -419,6 +427,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 		return nil, err
 	}
 
+	_, workflowJob := workflow.Job()
 	if len(workflowJob.Steps) > 0 {
 		steps := make([]*ActionTaskStep, len(workflowJob.Steps))
 		for i, v := range workflowJob.Steps {

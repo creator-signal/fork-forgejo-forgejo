@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Copyright 2019 The Gitea Authors. All rights reserved.
-// Copyright 2024, 2025 The Forgejo Authors. All rights reserved.
+// Copyright 2024-2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -337,7 +337,7 @@ func (u *User) DashboardLink() string {
 
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
-	if u.IsGhost() {
+	if u.IsGhost() || u.IsActions() {
 		return ""
 	}
 	return setting.AppSubURL + "/" + url.PathEscape(u.Name)
