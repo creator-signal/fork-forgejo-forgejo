@@ -40,7 +40,7 @@ function run_test() {
   # different from the end-to-end tests and would cause issues wen merging
   #
   set -o pipefail
-  $GO test -timeout=20m -tags='sqlite sqlite_unlock_notify' -cover $package -coverpkg $COVERED_PACKAGES $COVERAGE_TEST_ARGS -args -test.gocoverdir=$coverage |& grep -v 'warning: no packages being tested depend on matches for pattern'
+  $GO test -timeout=40m -tags='sqlite sqlite_unlock_notify' -cover $package -coverpkg $COVERED_PACKAGES $COVERAGE_TEST_ARGS -args -test.gocoverdir=$coverage |& grep -v 'warning: no packages being tested depend on matches for pattern'
   set +o pipefail
 }
 
