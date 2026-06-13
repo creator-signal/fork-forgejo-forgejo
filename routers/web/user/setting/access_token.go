@@ -79,6 +79,7 @@ func loadAccessTokenCreateData(ctx *context.Context) {
 	ctx.Data["AccessTokenScopePublicOnly"] = string(auth_model.AccessTokenScopePublicOnly) // note: SliceUtils.Contains won't work in the template if this is a `auth_model.AccessTokenScope`, so it's cast to a string here
 
 	categories := []string{
+		"actions",
 		"activitypub",
 		"issue",
 		"misc",

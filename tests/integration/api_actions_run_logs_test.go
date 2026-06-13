@@ -191,8 +191,8 @@ jobs:
 			MakeRequest(t, req, http.StatusNotFound)
 		})
 
-		t.Run("wrong scope: 403 without read:repository", func(t *testing.T) {
-			// Token with only user scope, no repository access.
+		t.Run("wrong scope: 403 without read:actions", func(t *testing.T) {
+			// Token with only user scope, no actions access.
 			weakToken := getTokenForLoggedInUser(t, session,
 				auth_model.AccessTokenScopeReadUser,
 			)

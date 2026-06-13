@@ -23,9 +23,13 @@ func TestAccessTokenScope_Normalize(t *testing.T) {
 		{"all,sudo", "all", nil},
 		{"write:activitypub,write:admin,write:misc,write:notification,write:organization,write:package,write:issue,write:repository,write:user", "all", nil},
 		{"write:activitypub,write:admin,write:misc,write:notification,write:organization,write:package,write:issue,write:repository,write:user,public-only", "public-only,all", nil},
+		// actions is a child of repository, so a parent repository scope subsumes the actions scope
+		{"write:repository,write:actions", "write:repository", nil},
+		{"read:repository,read:actions", "read:repository", nil},
+		{"write:repository,read:actions", "write:repository", nil},
 	}
 
-	for _, scope := range []string{"activitypub", "admin", "misc", "notification", "organization", "package", "issue", "repository", "user"} {
+	for _, scope := range []string{"actions", "activitypub", "admin", "misc", "notification", "organization", "package", "issue", "repository", "user"} {
 		tests = append(tests,
 			scopeTestNormalize{AccessTokenScope(fmt.Sprintf("read:%s", scope)), AccessTokenScope(fmt.Sprintf("read:%s", scope)), nil},
 			scopeTestNormalize{AccessTokenScope(fmt.Sprintf("write:%s", scope)), AccessTokenScope(fmt.Sprintf("write:%s", scope)), nil},
@@ -57,9 +61,16 @@ func TestAccessTokenScope_HasScope(t *testing.T) {
 		{"all", "write:package", true, nil},
 		{"write:package", "all", false, nil},
 		{"public-only", "read:issue", false, nil},
+		// actions is a child of repository: the parent scope implies the child, but not vice versa
+		{"write:repository", "write:actions", true, nil},
+		{"read:repository", "read:actions", true, nil},
+		{"write:repository", "read:actions", true, nil},
+		{"all", "write:actions", true, nil},
+		{"write:actions", "write:repository", false, nil},
+		{"read:actions", "read:repository", false, nil},
 	}
 
-	for _, scope := range []string{"activitypub", "admin", "misc", "notification", "organization", "package", "issue", "repository", "user"} {
+	for _, scope := range []string{"actions", "activitypub", "admin", "misc", "notification", "organization", "package", "issue", "repository", "user"} {
 		tests = append(tests,
 			scopeTestHasScope{
 				AccessTokenScope(fmt.Sprintf("read:%s", scope)),

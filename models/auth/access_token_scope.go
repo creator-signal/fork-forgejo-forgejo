@@ -24,6 +24,7 @@ const (
 	AccessTokenScopeCategoryIssue
 	AccessTokenScopeCategoryRepository
 	AccessTokenScopeCategoryUser
+	AccessTokenScopeCategoryActions
 )
 
 // AllAccessTokenScopeCategories contains all access token scope categories
@@ -37,6 +38,7 @@ var AllAccessTokenScopeCategories = []AccessTokenScopeCategory{
 	AccessTokenScopeCategoryIssue,
 	AccessTokenScopeCategoryRepository,
 	AccessTokenScopeCategoryUser,
+	AccessTokenScopeCategoryActions,
 }
 
 // AccessTokenScopeLevel represents the access levels without a given scope category
@@ -80,6 +82,10 @@ const (
 	AccessTokenScopeReadRepository  AccessTokenScope = "read:repository"
 	AccessTokenScopeWriteRepository AccessTokenScope = "write:repository"
 
+	// actions is a child scope of repository: read/write:repository imply read/write:actions
+	AccessTokenScopeReadActions  AccessTokenScope = "read:actions"
+	AccessTokenScopeWriteActions AccessTokenScope = "write:actions"
+
 	AccessTokenScopeReadUser  AccessTokenScope = "read:user"
 	AccessTokenScopeWriteUser AccessTokenScope = "write:user"
 )
@@ -118,8 +124,12 @@ const (
 	accessTokenScopeReadIssueBits  accessTokenScopeBitmap = 1 << iota
 	accessTokenScopeWriteIssueBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadIssueBits
 
-	accessTokenScopeReadRepositoryBits  accessTokenScopeBitmap = 1 << iota
-	accessTokenScopeWriteRepositoryBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadRepositoryBits
+	accessTokenScopeReadActionsBits  accessTokenScopeBitmap = 1 << iota
+	accessTokenScopeWriteActionsBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadActionsBits
+
+	// repository is a parent scope of actions, so its bitmap includes the actions bits
+	accessTokenScopeReadRepositoryBits  accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadActionsBits
+	accessTokenScopeWriteRepositoryBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadRepositoryBits | accessTokenScopeWriteActionsBits
 
 	accessTokenScopeReadUserBits  accessTokenScopeBitmap = 1 << iota
 	accessTokenScopeWriteUserBits accessTokenScopeBitmap = 1<<iota | accessTokenScopeReadUserBits
@@ -141,6 +151,7 @@ var allAccessTokenScopes = []AccessTokenScope{
 	AccessTokenScopeWritePackage, AccessTokenScopeReadPackage,
 	AccessTokenScopeWriteIssue, AccessTokenScopeReadIssue,
 	AccessTokenScopeWriteRepository, AccessTokenScopeReadRepository,
+	AccessTokenScopeWriteActions, AccessTokenScopeReadActions,
 	AccessTokenScopeWriteUser, AccessTokenScopeReadUser,
 }
 
@@ -164,6 +175,8 @@ var allAccessTokenScopeBits = map[AccessTokenScope]accessTokenScopeBitmap{
 	AccessTokenScopeWriteIssue:        accessTokenScopeWriteIssueBits,
 	AccessTokenScopeReadRepository:    accessTokenScopeReadRepositoryBits,
 	AccessTokenScopeWriteRepository:   accessTokenScopeWriteRepositoryBits,
+	AccessTokenScopeReadActions:       accessTokenScopeReadActionsBits,
+	AccessTokenScopeWriteActions:      accessTokenScopeWriteActionsBits,
 	AccessTokenScopeReadUser:          accessTokenScopeReadUserBits,
 	AccessTokenScopeWriteUser:         accessTokenScopeWriteUserBits,
 }
@@ -179,6 +192,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 		AccessTokenScopeCategoryPackage:      AccessTokenScopeReadPackage,
 		AccessTokenScopeCategoryIssue:        AccessTokenScopeReadIssue,
 		AccessTokenScopeCategoryRepository:   AccessTokenScopeReadRepository,
+		AccessTokenScopeCategoryActions:      AccessTokenScopeReadActions,
 		AccessTokenScopeCategoryUser:         AccessTokenScopeReadUser,
 	},
 	Write: {
@@ -190,6 +204,7 @@ var accessTokenScopes = map[AccessTokenScopeLevel]map[AccessTokenScopeCategory]A
 		AccessTokenScopeCategoryPackage:      AccessTokenScopeWritePackage,
 		AccessTokenScopeCategoryIssue:        AccessTokenScopeWriteIssue,
 		AccessTokenScopeCategoryRepository:   AccessTokenScopeWriteRepository,
+		AccessTokenScopeCategoryActions:      AccessTokenScopeWriteActions,
 		AccessTokenScopeCategoryUser:         AccessTokenScopeWriteUser,
 	},
 }

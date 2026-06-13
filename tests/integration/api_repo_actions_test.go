@@ -779,7 +779,7 @@ func TestActionsAPIDeleteActionRun(t *testing.T) {
 		var errorMessage *errorResponse
 		DecodeJSON(t, response, &errorMessage)
 
-		assert.Equal(t, "token does not have at least one of required scope(s): [write:repository]", errorMessage.Message)
+		assert.Equal(t, "token does not have at least one of required scope(s): [write:actions]", errorMessage.Message)
 
 		// Verify that the run still exists.
 		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})
@@ -896,7 +896,7 @@ func TestActionsAPICancelActionRun(t *testing.T) {
 		var errorMessage *errorResponse
 		DecodeJSON(t, response, &errorMessage)
 
-		assert.Equal(t, "token does not have at least one of required scope(s): [write:repository]", errorMessage.Message)
+		assert.Equal(t, "token does not have at least one of required scope(s): [write:actions]", errorMessage.Message)
 
 		// Verify that the run was not cancelled.
 		run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: run.ID})

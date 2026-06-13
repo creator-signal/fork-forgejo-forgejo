@@ -319,6 +319,7 @@ func EditAuthorizedIntegrationRenderCommon(ctx *context.Context) {
 	ctx.Data["PageIsSettingsAuthorizedIntegrations"] = true
 
 	categories := []string{
+		"actions",
 		"activitypub",
 		"issue",
 		"misc",

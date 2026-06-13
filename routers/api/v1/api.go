@@ -281,6 +281,11 @@ func checkTokenPublicOnly() func(ctx *context.APIContext) {
 				ctx.Error(http.StatusForbidden, "reqToken", "token scope is limited to public repos")
 				return
 			}
+		case auth_model.ContainsCategory(requiredScopeCategories, auth_model.AccessTokenScopeCategoryActions):
+			if ctx.Repo.Repository != nil && ctx.Repo.Repository.IsPrivate {
+				ctx.Error(http.StatusForbidden, "reqToken", "token scope is limited to public actions")
+				return
+			}
 		case auth_model.ContainsCategory(requiredScopeCategories, auth_model.AccessTokenScopeCategoryIssue):
 			if ctx.Repo.Repository != nil && ctx.Repo.Repository.IsPrivate {
 				ctx.Error(http.StatusForbidden, "reqToken", "token scope is limited to public issues")
@@ -1243,31 +1248,6 @@ func Routes() *web.Route {
 							Delete(repo.DeleteTagProtection)
 					})
 				}, reqToken(), reqAdmin())
-				m.Group("/actions", func() {
-					m.Get("/tasks", repo.ListActionTasks)
-					m.Group("/artifacts", func() {
-						m.Get("", repo.ListActionArtifacts)
-						m.Get("/{artifact_id}", repo.GetActionArtifact)
-						m.Delete("/{artifact_id}", reqToken(), reqRepoWriter(unit.TypeActions), repo.DeleteActionArtifact)
-						m.Get("/{artifact_id}/zip", repo.DownloadActionArtifact)
-					})
-					m.Get("/jobs/{job_id}/logs", repo.GetActionJobLogs)
-					m.Group("/runs", func() {
-						m.Get("", repo.ListActionRuns)
-						m.Get("/{run_id}", repo.GetActionRun)
-						m.Delete("/{run_id}", reqToken(), reqAdmin(unit.TypeActions), repo.DeleteActionRun)
-						m.Post("/{run_id}/cancel", reqToken(), reqRepoWriter(unit.TypeActions), repo.CancelActionRun)
-						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
-						m.Get("/{run_id}/logs", repo.GetActionRunLogs)
-						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
-					})
-
-					m.Group("/workflows", func() {
-						m.Group("/{workflowfilename}", func() {
-							m.Post("/dispatches", reqToken(), reqRepoWriter(unit.TypeActions), mustNotBeArchived, bind(api.DispatchWorkflowOption{}), repo.DispatchWorkflow)
-						})
-					})
-				}, reqRepoReader(unit.TypeActions), context.ReferencesGitRepo(true))
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
@@ -1567,6 +1547,37 @@ func Routes() *web.Route {
 				})
 			}, repoAssignment(), checkTokenPublicOnly())
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryIssue))
+
+		// Actions (requires actions scope)
+		m.Group("/repos", func() {
+			m.Group("/{username}/{reponame}", func() {
+				m.Group("/actions", func() {
+					m.Get("/tasks", repo.ListActionTasks)
+					m.Group("/artifacts", func() {
+						m.Get("", repo.ListActionArtifacts)
+						m.Get("/{artifact_id}", repo.GetActionArtifact)
+						m.Delete("/{artifact_id}", reqToken(), reqRepoWriter(unit.TypeActions), repo.DeleteActionArtifact)
+						m.Get("/{artifact_id}/zip", repo.DownloadActionArtifact)
+					})
+					m.Get("/jobs/{job_id}/logs", repo.GetActionJobLogs)
+					m.Group("/runs", func() {
+						m.Get("", repo.ListActionRuns)
+						m.Get("/{run_id}", repo.GetActionRun)
+						m.Delete("/{run_id}", reqToken(), reqAdmin(unit.TypeActions), repo.DeleteActionRun)
+						m.Post("/{run_id}/cancel", reqToken(), reqRepoWriter(unit.TypeActions), repo.CancelActionRun)
+						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
+						m.Get("/{run_id}/logs", repo.GetActionRunLogs)
+						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
+					})
+
+					m.Group("/workflows", func() {
+						m.Group("/{workflowfilename}", func() {
+							m.Post("/dispatches", reqToken(), reqRepoWriter(unit.TypeActions), mustNotBeArchived, bind(api.DispatchWorkflowOption{}), repo.DispatchWorkflow)
+						})
+					})
+				}, reqRepoReader(unit.TypeActions), context.ReferencesGitRepo(true))
+			}, repoAssignment(), checkTokenPublicOnly())
+		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryActions))
 
 		// NOTE: these are Gitea package management API - see packages.CommonRoutes and packages.DockerContainerRoutes for endpoints that implement package manager APIs
 		m.Group("/packages/{username}", func() {
