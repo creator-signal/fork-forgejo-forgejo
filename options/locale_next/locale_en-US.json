@@ -62,6 +62,7 @@
 	"repo.issues.filter_mention.hint": "Filter by mentioned user",
 	"repo.issues.filter_modified.hint": "Filter by last modified date",
 	"repo.issues.filter_sort.hint_with_placeholder": "Sort by: %s",
+	"repo.issues.context.copy_markdown": "Copy Markdown",
 	"issues.updated": "updated %s",
 	"issues.filters.labels.exclude": "Exclude label",
 	"issues.filters.labels.unexclude": "Clear exclusion",
