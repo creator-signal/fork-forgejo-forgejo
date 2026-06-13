@@ -557,17 +557,17 @@ func TestGithubAvatarDownload(t *testing.T) {
 	server := unittest.NewMockWebServer(t, "https://api.github.com", fixturePath, liveMode)
 	defer server.Close()
 
-	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "birdgooseontheloose", "forgejo-12921")
+	downloader := NewGithubDownloaderV3(t.Context(), server.URL, true, true, "", "", token, "forgejo", "forgejo-12921")
 
 	repo, err := downloader.GetRepoInfo()
 	require.NoError(t, err)
 
 	assertRepositoryEqual(t, &base.Repository{
 		Name:          "forgejo-12921",
-		Owner:         "birdgooseontheloose",
+		Owner:         "forgejo",
 		Description:   "A simple repo that is used for testing forgejo avatar migrations",
-		CloneURL:      server.URL + "/birdgooseontheloose/forgejo-12921.git",
-		OriginalURL:   server.URL + "/birdgooseontheloose/forgejo-12921",
+		CloneURL:      server.URL + "/forgejo/forgejo-12921.git",
+		OriginalURL:   server.URL + "/forgejo/forgejo-12921",
 		DefaultBranch: "main",
 		AvatarURL:     "",
 	}, repo)
