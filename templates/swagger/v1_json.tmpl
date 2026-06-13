@@ -5810,6 +5810,73 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs": {
+      "get": {
+        "description": "Returns the plaintext log for the job. By default the log for the most recent attempt is returned (ActionRunJob.TaskID tracks the latest task). Pass `?attempt=N` to fetch the log for a specific historical attempt; the value matches the `attempt` field returned by the job listing endpoints.\n",
+        "produces": [
+          "text/plain"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Download the plaintext logs of an action job",
+        "operationId": "repoGetActionJobLogs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow job",
+            "name": "job_id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "1-based attempt number matching the value of `attempt` in the job listing; omit to fetch the latest attempt of the job",
+            "name": "attempt",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plaintext log content",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "206": {
+            "description": "Partial log content (Range request)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/runners": {
       "get": {
         "produces": [
@@ -6355,6 +6422,54 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/cancel": {
+      "post": {
+        "description": "Cancel a particular workflow run. Pending or running jobs of the run are cancelled. A run that has already finished, whether cancelled, failed, skipped or succeeded, is left unchanged. In both cases the endpoint responds with HTTP 204.\n",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Cancel a pending or running workflow run.",
+        "operationId": "CancelActionRun",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Workflow run has been cancelled"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/runs/{run_id}/jobs": {
       "get": {
         "produces": [
@@ -6395,6 +6510,60 @@
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/logs": {
+      "get": {
+        "produces": [
+          "application/zip"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Download a ZIP of plaintext logs for every job in an action run",
+        "operationId": "repoGetActionRunLogs",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow run. The ZIP contains the latest attempt of each job in the run, with each entry named `{job-name}-{job-id}-attempt-{N}.log` (the job ID prevents collisions when two jobs share a name; the attempt number records which run the log came from). The run itself has no attempt number — jobs are re-run independently, so use the per-job logs endpoint with `?attempt` to fetch a specific historical attempt of one job.\n",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP archive of per-job log files",
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -23800,6 +23969,11 @@
           },
           "x-go-name": "Files"
         },
+        "force_overwrite_new_branch": {
+          "description": "(optional) will do a force-push if the new branch already exists",
+          "type": "boolean",
+          "x-go-name": "ForceOverwriteNewBranch"
+        },
         "message": {
           "description": "message (optional) for the commit of this file. if not supplied, a default message will be used",
           "type": "string",
@@ -24503,6 +24677,11 @@
         "dates": {
           "$ref": "#/definitions/CommitDateOptions"
         },
+        "force_overwrite_new_branch": {
+          "description": "(optional) will do a force-push if the new branch already exists",
+          "type": "boolean",
+          "x-go-name": "ForceOverwriteNewBranch"
+        },
         "message": {
           "description": "message (optional) for the commit of this file. if not supplied, a default message will be used",
           "type": "string",
@@ -24930,6 +25109,12 @@
         "body": {
           "type": "string",
           "x-go-name": "Body"
+        },
+        "extra_lines_count": {
+          "description": "number of additional lines after the commented line (0 = single line comment)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ExtraLinesCount"
         },
         "new_position": {
           "description": "if comment to new file line or 0",
@@ -25482,6 +25667,11 @@
         },
         "dates": {
           "$ref": "#/definitions/CommitDateOptions"
+        },
+        "force_overwrite_new_branch": {
+          "description": "(optional) will do a force-push if the new branch already exists",
+          "type": "boolean",
+          "x-go-name": "ForceOverwriteNewBranch"
         },
         "message": {
           "description": "message (optional) for the commit of this file. if not supplied, a default message will be used",
@@ -27643,19 +27833,19 @@
       "type": "object",
       "properties": {
         "Context": {
-          "description": "Context to render\n\nin: body",
+          "description": "Context to render",
           "type": "string"
         },
         "Mode": {
-          "description": "Mode to render (comment, gfm, markdown)\n\nin: body",
+          "description": "Mode to render (comment, gfm, markdown)",
           "type": "string"
         },
         "Text": {
-          "description": "Text markdown to render\n\nin: body",
+          "description": "Text markdown to render",
           "type": "string"
         },
         "Wiki": {
-          "description": "Is it a wiki page ?\n\nin: body",
+          "description": "Is it a wiki page ?",
           "type": "boolean"
         }
       },
@@ -27666,27 +27856,27 @@
       "type": "object",
       "properties": {
         "BranchPath": {
-          "description": "The current branch path where the form gets posted\n\nin: body",
+          "description": "The current branch path where the form gets posted",
           "type": "string"
         },
         "Context": {
-          "description": "Context to render\n\nin: body",
+          "description": "Context to render",
           "type": "string"
         },
         "FilePath": {
-          "description": "File path for detecting extension in file mode\n\nin: body",
+          "description": "File path for detecting extension in file mode",
           "type": "string"
         },
         "Mode": {
-          "description": "Mode to render (comment, gfm, markdown, file)\n\nin: body",
+          "description": "Mode to render (comment, gfm, markdown, file)",
           "type": "string"
         },
         "Text": {
-          "description": "Text markup to render\n\nin: body",
+          "description": "Text markup to render",
           "type": "string"
         },
         "Wiki": {
-          "description": "Is it a wiki page ?\n\nin: body",
+          "description": "Is it a wiki page ?",
           "type": "boolean"
         }
       },
@@ -28188,6 +28378,11 @@
         "avatar_url": {
           "type": "string",
           "x-go-name": "AvatarURL"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
         },
         "description": {
           "type": "string",
@@ -28827,6 +29022,12 @@
         "diff_hunk": {
           "type": "string",
           "x-go-name": "DiffHunk"
+        },
+        "extra_lines_count": {
+          "description": "number of additional lines after the commented line (0 = single line comment)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ExtraLinesCount"
         },
         "html_url": {
           "type": "string",
@@ -30471,6 +30672,11 @@
         },
         "dates": {
           "$ref": "#/definitions/CommitDateOptions"
+        },
+        "force_overwrite_new_branch": {
+          "description": "(optional) will do a force-push if the new branch already exists",
+          "type": "boolean",
+          "x-go-name": "ForceOverwriteNewBranch"
         },
         "from_path": {
           "description": "from_path (optional) is the path of the original file which will be moved/renamed to the path in the URL",

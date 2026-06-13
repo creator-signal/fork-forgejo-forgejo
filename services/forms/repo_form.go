@@ -130,7 +130,7 @@ func ParseRemoteAddr(remoteAddr, authUsername, authPassword string) (string, err
 type RepoSettingForm struct {
 	RepoName               string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Description            string `binding:"MaxSize(2048)"`
-	Website                string `binding:"ValidUrl;MaxSize(1024)"`
+	Website                string `binding:"ValidSiteUrl;MaxSize(1024)"`
 	FollowingRepos         string
 	Interval               string
 	MirrorAddress          string
@@ -465,16 +465,17 @@ func (f *MergePullRequestForm) Validate(req *http.Request, errs binding.Errors) 
 
 // CodeCommentForm form for adding code comments for PRs
 type CodeCommentForm struct {
-	Origin         string `binding:"Required;In(timeline,diff)"`
-	Content        string `binding:"Required"`
-	Side           string `binding:"Required;In(previous,proposed)"`
-	Line           int64
-	TreePath       string `form:"path" binding:"Required"`
-	SingleReview   bool   `form:"single_review"`
-	Reply          int64  `form:"reply"`
-	BeforeCommitID string
-	LatestCommitID string
-	Files          []string
+	Origin          string `binding:"Required;In(timeline,diff)"`
+	Content         string `binding:"Required"`
+	Side            string `binding:"Required;In(previous,proposed)"`
+	Line            int64
+	ExtraLinesCount int64  `form:"extra_lines_count"`
+	TreePath        string `form:"path" binding:"Required"`
+	SingleReview    bool   `form:"single_review"`
+	Reply           int64  `form:"reply"`
+	BeforeCommitID  string
+	LatestCommitID  string
+	Files           []string
 }
 
 // Validate validates the fields

@@ -3,18 +3,21 @@
 
 package structs
 
+import "time"
+
 // Organization represents an organization
 type Organization struct {
-	ID                        int64  `json:"id"`
-	Name                      string `json:"name"`
-	FullName                  string `json:"full_name"`
-	Email                     string `json:"email"`
-	AvatarURL                 string `json:"avatar_url"`
-	Description               string `json:"description"`
-	Website                   string `json:"website"`
-	Location                  string `json:"location"`
-	Visibility                string `json:"visibility"`
-	RepoAdminChangeTeamAccess bool   `json:"repo_admin_change_team_access"`
+	ID                        int64     `json:"id"`
+	Name                      string    `json:"name"`
+	FullName                  string    `json:"full_name"`
+	Email                     string    `json:"email"`
+	AvatarURL                 string    `json:"avatar_url"`
+	Description               string    `json:"description"`
+	Website                   string    `json:"website"`
+	Location                  string    `json:"location"`
+	Visibility                string    `json:"visibility"`
+	RepoAdminChangeTeamAccess bool      `json:"repo_admin_change_team_access"`
+	Created                   time.Time `json:"created"`
 	// deprecated
 	UserName string `json:"username"`
 }
@@ -35,7 +38,7 @@ type CreateOrgOption struct {
 	FullName    string `json:"full_name" binding:"MaxSize(100)"`
 	Email       string `json:"email" binding:"MaxSize(255)"`
 	Description string `json:"description" binding:"MaxSize(255)"`
-	Website     string `json:"website" binding:"ValidUrl;MaxSize(255)"`
+	Website     string `json:"website" binding:"ValidSiteUrl;MaxSize(255)"`
 	Location    string `json:"location" binding:"MaxSize(50)"`
 	// possible values are `public` (default), `limited` or `private`
 	// enum: ["public", "limited", "private"]
@@ -50,7 +53,7 @@ type EditOrgOption struct {
 	FullName    string  `json:"full_name" binding:"MaxSize(100)"`
 	Email       *string `json:"email" binding:"MaxSize(255)"`
 	Description string  `json:"description" binding:"MaxSize(255)"`
-	Website     string  `json:"website" binding:"ValidUrl;MaxSize(255)"`
+	Website     string  `json:"website" binding:"ValidSiteUrl;MaxSize(255)"`
 	Location    string  `json:"location" binding:"MaxSize(50)"`
 	// possible values are `public`, `limited` or `private`
 	// enum: ["public", "limited", "private"]
