@@ -14,8 +14,10 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/queue"
+	"forgejo.org/modules/structs"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"xorm.io/builder"
@@ -320,6 +322,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 		jobparser.WithVars(vars),
+		jobparser.WithInputs(getRunInputs(blockedJob.Run)),
 	)
 	if err != nil {
 		// Reparsing errors are quite rare here since we were already able to parse this workflow in the past to
@@ -631,4 +634,19 @@ func tryHandleWorkflowCallOuterJob(ctx context.Context, job *actions_model.Actio
 	// Update previously incremented attempt field as well.
 	job.TaskID = actionTask.ID
 	return []string{"task_id", "attempt"}, nil
+}
+
+func getRunInputs(run *actions_model.ActionRun) map[string]any {
+	// workflow_dispatch inputs are stored in the event payload
+	var dispatchPayload *structs.WorkflowDispatchPayload
+	err := json.Unmarshal([]byte(run.EventPayload), &dispatchPayload)
+	if err != nil {
+		return nil
+	}
+	// transition from map[string]string to map[string]any...
+	inputs := make(map[string]any, len(dispatchPayload.Inputs))
+	for k, v := range dispatchPayload.Inputs {
+		inputs[k] = v
+	}
+	return inputs
 }

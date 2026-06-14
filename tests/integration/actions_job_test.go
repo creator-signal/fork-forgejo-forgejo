@@ -1087,6 +1087,26 @@ func TestActionsRunsEvaluateIf(t *testing.T) {
 			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
 			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
 		})
+
+		t.Run("access input during evaluation", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			arif := newActionsRunIfTester(t)
+			runID := arif.dispatchInputConditional().ID
+
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+
+			for _, expected := range []string{"test-1", "test-2"} {
+				task := arif.mockRunTask()
+				dbTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+				assert.Equal(t, expected, dbTask.Job.Name)
+			}
+
+			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
+		})
 	})
 }
 
@@ -1136,6 +1156,9 @@ func (tester *ActionsRunIfTester) dispatch(workflow string) *api.DispatchWorkflo
 		&api.DispatchWorkflowOption{
 			Ref:           tester.apiRepo.DefaultBranch,
 			ReturnRunInfo: true,
+			Inputs: map[string]string{
+				"input_1": "input_1 value",
+			},
 		}).
 		AddTokenAuth(tester.apiToken)
 	resp := MakeRequest(tester.t, dispatchRequest, http.StatusCreated)
@@ -1347,6 +1370,28 @@ jobs:
     runs-on: ubuntu
     steps:
       - run: echo "semgrep job"
+`)
+}
+
+func (tester *ActionsRunIfTester) dispatchInputConditional() *api.DispatchWorkflowRun {
+	return tester.dispatch(`
+on:
+  workflow_dispatch:
+    inputs:
+      input_1:
+        type: string
+jobs:
+  test-1:
+    if: ${{ inputs.input_1 == 'input_1 value' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+  test-2:
+    needs: [test-1]
+    if: ${{ inputs.input_1 == 'input_1 value' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
 `)
 }
 
