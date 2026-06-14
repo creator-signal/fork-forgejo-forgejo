@@ -276,3 +276,59 @@ jobs:
 		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job1")
 	})
 }
+
+func TestActionFetchTask_EphemeralRunnerAssignedAlready(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mock repo runner only supported on SQLite testing
+		t.Skip()
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo := createFetchTaskTestRepository(t, user2, "simple.yml", `
+on:
+  push:
+jobs:
+  job1:
+    runs-on: debian
+    steps:
+      - run: echo OK
+  job2:
+    runs-on: debian
+    steps:
+      - run: echo OK
+  job3:
+    runs-on: debian
+    steps:
+      - run: echo OK
+`)
+
+		ephemeralDebianRunner := newMockRunner()
+		ephemeralDebianRunner.registerAsEphemeralRepoRunner(t, user2.Name, repo.Name, "debian-runner-ephemeral", []string{"debian"})
+
+		normalDebianRunner := newMockRunner()
+		normalDebianRunner.registerAsRepoRunner(t, user2.Name, repo.Name, "debian-runner-normal", []string{"debian"})
+
+		job1 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job1"})
+		job2 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job2"})
+		job3 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job3"})
+
+		assert.NotEmpty(t, job1.Handle)
+		assert.NotEmpty(t, job2.Handle)
+		assert.NotEmpty(t, job3.Handle)
+
+		// Fetch a task for the ephemeral runner. This will only create one task even tho we have three waiting jobs
+		task, additionalTasks := ephemeralDebianRunner.maybeFetchTaskWithTaskCapacity(t, 3)
+		require.NotNil(t, task)
+		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job1")
+		require.Empty(t, additionalTasks)
+
+		// Fetch a task for the normal runner. This will only create two tasks even tho we set the capacity to three
+		task, additionalTasks = normalDebianRunner.maybeFetchTaskWithTaskCapacity(t, 3)
+		require.NotNil(t, task)
+		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job2")
+		require.Len(t, additionalTasks, 1)
+	})
+}
