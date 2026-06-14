@@ -1765,10 +1765,13 @@ details.repo-search-result summary::marker {
   border-bottom: 1px solid var(--color-warning-border);
 }
 
-.repository .segment.reactions.dropdown .menu,
 .repository .select-reaction.dropdown .menu {
   inset-inline: auto 0 !important;
   min-width: 170px;
+}
+
+.repository .segment.reactions .select-reaction.left.dropdown .menu {
+  inset-inline: 0 auto !important;
 }
 
 .repository .segment.reactions.dropdown .menu > .header,

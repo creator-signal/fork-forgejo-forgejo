@@ -21,6 +21,6 @@
 	</a>
 {{end}}
 {{if AllowedReactions}}
-	{{template "repo/issue/view_content/add_reaction" dict "ctxData" $.ctxData "ActionURL" .ActionURL}}
+	{{template "repo/issue/view_content/add_reaction" dict "ctxData" $.ctxData "ActionURL" .ActionURL "IsBottomReactionPicker" true}}
 {{end}}
 </div>
