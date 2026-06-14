@@ -303,6 +303,11 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		jobResults[job.JobID] = job.Status.String()
 	}
 
+	vars, err := actions_model.GetVariablesOfRun(ctx, blockedJob.Run)
+	if err != nil {
+		return behaviourError, fmt.Errorf("failure GetVariablesOfRun in prepareJobForEmitting: %w", err)
+	}
+
 	// Re-parse the blocked job, providing all the other completed jobs' outputs, to turn this incomplete job into
 	// one-or-more new jobs:
 	expandLocalReusableWorkflow, expandCleanup := lazyRepoExpandLocalReusableWorkflow(ctx, blockedJob.RepoID, blockedJob.CommitSHA)
@@ -314,6 +319,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+		jobparser.WithVars(vars),
 	)
 	if err != nil {
 		// Reparsing errors are quite rare here since we were already able to parse this workflow in the past to

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -1059,6 +1060,33 @@ func TestActionsRunsEvaluateIf(t *testing.T) {
 			job3 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID, Name: "test-3"})
 			assert.Equal(t, actions_model.StatusSkipped, job3.Status)
 		})
+
+		t.Run("access var during evaluation", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			arif := newActionsRunIfTester(t)
+			runID := arif.dispatchForgejoTesting().ID
+
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+
+			// Theoretically these are the exact right order for these to be executed, but it's possible they get
+			// inserted into the database with identical creation times and therefore could have indeterminate sorting.
+			// So the test case here is order-flexible.
+			expectedJobs := []string{"backend-checks", "frontend-checks", "test-unit", "test-pgsql", "test-sqlite", "security-check", "semgrep"}
+			for len(expectedJobs) > 0 {
+				task := arif.mockRunTask()
+				dbTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+
+				idx := slices.Index(expectedJobs, dbTask.Job.Name)
+				require.NotEqual(t, -1, idx, "could not find job %s in expectedJobs", dbTask.Job.Name)
+				expectedJobs = append(expectedJobs[:idx], expectedJobs[idx+1:]...)
+			}
+
+			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
+		})
 	})
 }
 
@@ -1077,6 +1105,12 @@ func newActionsRunIfTester(t *testing.T) *ActionsRunIfTester {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
 
 	testRepository := createActionsTestRepo(t, token, fmt.Sprintf("actions-runs-on-vars-%s", gouuid.New().String()), false)
+
+	MakeRequest(t,
+		NewRequestWithJSON(t, "POST",
+			fmt.Sprintf("/api/v1/repos/%s/%s/actions/variables/ROLE", user2.Name, testRepository.Name),
+			api.CreateVariableOption{Value: "forgejo-coding"}).AddTokenAuth(token),
+		http.StatusNoContent)
 
 	runner := newMockRunner()
 	runner.registerAsRepoRunner(t, user2.Name, testRepository.Name, "ubuntu-runner", []string{"ubuntu"})
@@ -1260,6 +1294,59 @@ jobs:
     runs-on: ubuntu
     steps:
       - run: echo "Job contents go here."
+`)
+}
+
+func (tester *ActionsRunIfTester) dispatchForgejoTesting() *api.DispatchWorkflowRun {
+	// Trimmed down copy of `.forgejo/workflows/testing.yml` to create a more complex & realistic `needs` tree with `if`
+	// conditions on every job:
+	return tester.dispatch(`
+name: testing
+enable-email-notifications: true
+on:
+  workflow_dispatch:
+jobs:
+  backend-checks:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    steps:
+      - run: echo "backend-checks job"
+  frontend-checks:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    steps:
+      - run: echo "frontend-checks job"
+  test-unit:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    needs: [backend-checks, frontend-checks]
+    steps:
+      - run: echo "test-unit job"
+  test-pgsql:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    needs: [backend-checks, frontend-checks]
+    steps:
+      - run: echo "test-pgsql job"
+  test-sqlite:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    needs: [backend-checks, frontend-checks]
+    steps:
+      - run: echo "test-sqlite job"
+  security-check:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    needs:
+      - test-sqlite
+      - test-unit
+    steps:
+      - run: echo "security-check job"
+  semgrep:
+    if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
+    runs-on: ubuntu
+    steps:
+      - run: echo "semgrep job"
 `)
 }
 
