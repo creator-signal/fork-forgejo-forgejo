@@ -466,11 +466,11 @@ func TestBreakConditions(t *testing.T) {
 func TestGiteaDownloaderAvatarURL(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
-	token := os.Getenv("GITEA_READ_TOKEN_BIRDGOOSE")
+	token := os.Getenv("GITEA_READ_TOKEN")
 	liveMode := token != ""
 
 	fixturePath := "./testdata/gitea/avatar"
-	server := unittest.NewMockWebServer(t, "https://gitea.com", fixturePath, liveMode)
+	server := unittest.NewMockWebServer(t, "https://code.forgejo.org", fixturePath, liveMode)
 	defer server.Close()
 
 	giteaClient, err := gitea_sdk.NewClient(
@@ -497,6 +497,6 @@ func TestGiteaDownloaderAvatarURL(t *testing.T) {
 		CloneURL:      server.URL + "/birdgoose/forgejo-12921.git",
 		OriginalURL:   server.URL + "/birdgoose/forgejo-12921",
 		DefaultBranch: "main",
-		AvatarURL:     server.URL + "/repo-avatars/51ab7a46776991a2a310607d81728804bf3d2d851eade664a6f13dc3370867e1",
+		AvatarURL:     server.URL + "/repo-avatars/8b50ec8eccaf97b0a1bed6d9e7bd771173d69b213122e82c98d7d301e3fa60f0",
 	}, repo)
 }

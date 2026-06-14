@@ -550,7 +550,7 @@ func TestGithubIssuePagination(t *testing.T) {
 func TestGithubAvatarDownload(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
-	token := os.Getenv("GITHUB_READ_TOKEN_BIRDGOOSE")
+	token := os.Getenv("GITHUB_READ_TOKEN")
 	liveMode := token != ""
 
 	fixturePath := "./testdata/github/avatar"

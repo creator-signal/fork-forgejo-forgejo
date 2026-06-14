@@ -923,7 +923,7 @@ func TestGitlabConfidential(t *testing.T) {
 func TestGitlabDownloaderAvatarURL(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
-	token := os.Getenv("GITLAB_READ_TOKEN_BIRDGOOSE")
+	token := os.Getenv("GITLAB_READ_TOKEN")
 	liveMode := token != ""
 
 	fixturePath := "./testdata/gitlab/avatar"
