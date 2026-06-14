@@ -24,6 +24,7 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/webhook"
 	actions_service "forgejo.org/services/actions"
 	notify_service "forgejo.org/services/notify"
 	"forgejo.org/tests"
@@ -1107,6 +1108,66 @@ func TestActionsRunsEvaluateIf(t *testing.T) {
 			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
 			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
 		})
+
+		t.Run("access forgejo context during workflow_dispatch evaluation", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			arif := newActionsRunIfTester(t)
+			runID := arif.dispatchForgejoConditional().ID
+
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+
+			for _, expected := range []string{"test-1", "test-2"} {
+				task := arif.mockRunTask()
+				dbTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+				assert.Equal(t, expected, dbTask.Job.Name)
+			}
+
+			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
+		})
+
+		t.Run("access forgejo context during scheduled evaluation", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			arif := newActionsRunIfTester(t)
+			runID := arif.scheduleForgejoConditional().ID
+
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+
+			for _, expected := range []string{"test-1", "test-2"} {
+				task := arif.mockRunTask()
+				dbTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+				assert.Equal(t, expected, dbTask.Job.Name)
+			}
+
+			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
+		})
+
+		t.Run("access forgejo context during event evaluation", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			arif := newActionsRunIfTester(t)
+			runID := arif.eventForgejoConditional().ID
+
+			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusWaiting.String(), run.Status.String())
+
+			for _, expected := range []string{"test-1", "test-2"} {
+				task := arif.mockRunTask()
+				dbTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: task.Id})
+				require.NoError(t, dbTask.LoadJob(t.Context()))
+				assert.Equal(t, expected, dbTask.Job.Name)
+			}
+
+			run = unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: runID})
+			assert.Equal(t, actions_model.StatusSuccess.String(), run.Status.String())
+		})
 	})
 }
 
@@ -1165,6 +1226,38 @@ func (tester *ActionsRunIfTester) dispatch(workflow string) *api.DispatchWorkflo
 	run := &api.DispatchWorkflowRun{}
 	DecodeJSON(tester.t, resp, run)
 	return run
+}
+
+func (tester *ActionsRunIfTester) pushEvent(workflow string) *actions_model.ActionRun {
+	workflowPath := ".forgejo/workflows/serverside_if.yml"
+	options := getWorkflowCreateFileOptions(tester.user, tester.apiRepo.DefaultBranch, fmt.Sprintf("create %s", workflowPath), workflow)
+	resp := createWorkflowFile(tester.t, tester.apiToken, tester.user.Name, tester.apiRepo.Name, workflowPath, options)
+	return unittest.AssertExistsAndLoadBean(tester.t, &actions_model.ActionRun{CommitSHA: resp.Commit.SHA})
+}
+
+func (tester *ActionsRunIfTester) forceSchedule(workflow string) *actions_model.ActionRun {
+	workflowPath := ".forgejo/workflows/serverside_if.yml"
+	options := getWorkflowCreateFileOptions(tester.user, tester.apiRepo.DefaultBranch, fmt.Sprintf("create %s", workflowPath), workflow)
+	resp := createWorkflowFile(tester.t, tester.apiToken, tester.user.Name, tester.apiRepo.Name, workflowPath, options)
+	payload := &api.SchedulePayload{
+		Action: api.HookScheduleCreated,
+	}
+	p, err := json.Marshal(payload)
+	require.NoError(tester.t, err)
+	require.NoError(tester.t, actions_service.CreateScheduleTask(tester.t.Context(),
+		&actions_model.ActionSchedule{
+			RepoID:            tester.apiRepo.ID,
+			OwnerID:           tester.user.ID,
+			WorkflowID:        "serverside_if.yml",
+			WorkflowDirectory: ".forgejo/workflows",
+			TriggerUserID:     tester.user.ID,
+			Ref:               "refs/heads/main",
+			CommitSHA:         resp.Commit.SHA,
+			Event:             webhook.HookEventSchedule,
+			EventPayload:      string(p),
+			Content:           []byte(workflow),
+		}))
+	return unittest.AssertExistsAndLoadBean(tester.t, &actions_model.ActionRun{CommitSHA: resp.Commit.SHA})
 }
 
 func (tester *ActionsRunIfTester) dispatchSingleJob(ifClause string) *api.DispatchWorkflowRun {
@@ -1389,6 +1482,63 @@ jobs:
   test-2:
     needs: [test-1]
     if: ${{ inputs.input_1 == 'input_1 value' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+`)
+}
+
+func (tester *ActionsRunIfTester) dispatchForgejoConditional() *api.DispatchWorkflowRun {
+	return tester.dispatch(`
+on:
+  workflow_dispatch:
+jobs:
+  test-1:
+    if: ${{ forgejo.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+  test-2:
+    needs: [test-1]
+    if: ${{ forgejo.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+`)
+}
+
+func (tester *ActionsRunIfTester) eventForgejoConditional() *actions_model.ActionRun {
+	return tester.pushEvent(`
+on:
+  push:
+jobs:
+  test-1:
+    if: ${{ forgejo.event_name == 'push' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+  test-2:
+    needs: [test-1]
+    if: ${{ forgejo.event_name == 'push' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+`)
+}
+
+func (tester *ActionsRunIfTester) scheduleForgejoConditional() *actions_model.ActionRun {
+	return tester.forceSchedule(`
+on:
+  schedule:
+jobs:
+  test-1:
+    if: ${{ forgejo.repository_owner == 'user2' }}
+    runs-on: ubuntu
+    steps:
+      - run: echo "Job contents go here."
+  test-2:
+    needs: [test-1]
+    if: ${{ forgejo.repository_owner == 'user2' }}
     runs-on: ubuntu
     steps:
       - run: echo "Job contents go here."

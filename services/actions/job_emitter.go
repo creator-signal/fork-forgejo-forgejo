@@ -323,6 +323,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 		jobparser.WithVars(vars),
 		jobparser.WithInputs(getRunInputs(blockedJob.Run)),
+		jobparser.WithGitContext(generateGiteaContextForRun(blockedJob.Run)),
 	)
 	if err != nil {
 		// Reparsing errors are quite rare here since we were already able to parse this workflow in the past to
