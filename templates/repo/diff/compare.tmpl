@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository diff {{if .PageIsComparePull}}compare pull{{end}}">
-	{{template "repo/header" .}}
+<div class="page-content repository diff {{if .PageIsComparePull}}compare pull{{end}}">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	{{$showDiffBox := false}}
 	{{$canReadPullRequests := .Permission.CanRead $.UnitTypePullRequests}}
 	<div class="ui container fluid padded">
@@ -227,5 +228,6 @@
 		{{template "repo/diff/box" .}}
 	</div>
 	{{end}}
+</main>
 </div>
 {{template "base/footer" .}}

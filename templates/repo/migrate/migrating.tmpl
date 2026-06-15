@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository">
-	{{template "repo/header" .}}
+<div class="page-content repository">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		<div class="ui grid">
 			<div class="sixteen wide column content">
@@ -49,6 +50,7 @@
 			</div>
 		</div>
 	</div>
+</main>
 </div>
 
 <dialog id="delete-repo-modal">

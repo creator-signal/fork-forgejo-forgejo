@@ -1,7 +1,8 @@
 {{template "base/head" .}}
 
 <div class="page-content repository">
-	{{template "repo/header" .}}
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div id="repo-action-view"
 		data-run-index="{{.RunIndex}}"
 		data-run-id="{{.RunID}}"
@@ -40,6 +41,7 @@
 		data-locale-pre-execution-error="{{ctx.Locale.Tr "actions.workflow.pre_execution_error"}}"
 	>
 	</div>
+</main>
 </div>
 
 {{template "base/footer" .}}

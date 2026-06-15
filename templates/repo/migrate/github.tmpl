@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository new migrate">
+<div class="page-content repository new migrate">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
@@ -135,5 +136,6 @@
 			</form>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

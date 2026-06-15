@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository projects view-project">
-	{{template "repo/header" .}}
+<div class="page-content repository projects view-project">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container padded">
 		<div class="tw-flex tw-justify-between tw-items-center tw-mb-4">
 			{{template "repo/issue/navbar" .}}
@@ -12,6 +13,7 @@
 	<div class="ui container fluid padded">
 		{{template "projects/view" .}}
 	</div>
+</main>
 </div>
 
 {{template "base/footer" .}}

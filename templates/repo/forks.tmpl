@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository forks">
-	{{template "repo/header" .}}
+<div class="page-content repository forks">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		<h2 class="ui dividing header">
 			{{ctx.Locale.Tr "repo.forks"}}
@@ -14,5 +15,6 @@
 	</div>
 
 	{{template "base/paginate" .}}
+</main>
 </div>
 {{template "base/footer" .}}

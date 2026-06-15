@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository commits">
-	{{template "repo/header" .}}
+<div class="page-content repository commits">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container flex-container">
 		{{if and (not .IsEmptyRepo) (.Permission.CanRead $.UnitTypeCode)}}
 			<div class="flex-container-nav">
@@ -14,6 +15,7 @@
 			{{if .PageIsRecentCommits}}{{template "repo/recent_commits" .}}{{end}}
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}
 

@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository file editor upload">
-	{{template "repo/header" .}}
+<div class="page-content repository file editor upload">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui comment form" method="post">
@@ -28,5 +29,6 @@
 			{{template "repo/editor/commit_form" .}}
 		</form>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

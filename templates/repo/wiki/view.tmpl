@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository wiki view">
-	{{template "repo/header" .}}
+<div class="page-content repository wiki view">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	{{$title := .title}}
 	<div class="ui container file-content">
 		<div class="repo-button-row">
@@ -108,6 +109,7 @@
 			{{end}}
 		</div>
 	</div>
+</main>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="delete-wiki-page">

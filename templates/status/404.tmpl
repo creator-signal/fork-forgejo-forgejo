@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content ui {{if .IsRepo}}repository{{end}}">
-	{{if .IsRepo}}{{template "repo/header" .}}{{end}}
+<div class="page-content ui {{if .IsRepo}}repository{{end}}">
+{{if .IsRepo}}{{template "repo/header" .}}{{end}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container center">
 		<h1 style="margin-top: 100px" class="error-code">404</h1>
 		<p>{{if .NotFoundPrompt}}{{.NotFoundPrompt}}{{else}}{{ctx.Locale.Tr "error404"}}{{end}}</p>
@@ -10,5 +11,6 @@
 		<br>
 		{{if .ShowFooterVersion}}<p>{{ctx.Locale.Tr "admin.config.app_ver"}}: {{AppVerNoMetadata}}</p>{{end}}
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

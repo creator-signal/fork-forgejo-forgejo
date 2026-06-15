@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository packages">
-	{{template "repo/header" .}}
+<div class="page-content repository packages">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{if (and .Repository.IsPrivate .Repository.Owner.Visibility.IsPublic)}}
 			<div class="ui warning message flash-message flash-warning">
@@ -10,5 +11,6 @@
 		{{end}}
 		{{template "package/shared/list" .}}
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

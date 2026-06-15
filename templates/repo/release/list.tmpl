@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository releases">
-	{{template "repo/header" .}}
+<div class="page-content repository releases">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		{{template "repo/release_tag_header" .}}
@@ -129,6 +130,7 @@
 
 		{{template "base/paginate" .}}
 	</div>
+</main>
 </div>
 
 {{template "base/footer" .}}

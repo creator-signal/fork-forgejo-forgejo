@@ -1,6 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository actions">
-	{{template "repo/header" .}}
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 
@@ -15,6 +16,7 @@
 			{{template "repo/actions/list_inner" .}}
 		</div>
 	</div>
+</main>
 </div>
 
 <script type="text/javascript">

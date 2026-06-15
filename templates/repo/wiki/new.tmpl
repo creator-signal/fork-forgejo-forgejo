@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository wiki new">
-	{{template "repo/header" .}}
+<div class="page-content repository wiki new">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<div class="ui header flex-text-block tw-justify-between">
@@ -43,5 +44,6 @@
 			</div>
 		</form>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

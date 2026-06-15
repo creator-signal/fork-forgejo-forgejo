@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository quickstart">
-	{{template "repo/header" .}}
+<div class="page-content repository quickstart">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		<div class="ui grid">
 			<div class="sixteen wide column content">
@@ -78,5 +79,6 @@ git push -u origin {{.Repository.DefaultBranch}}</code></pre>
 			</div>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

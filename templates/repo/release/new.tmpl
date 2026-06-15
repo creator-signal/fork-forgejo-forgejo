@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository new release">
-	{{template "repo/header" .}}
+<div class="page-content repository new release">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		<h2 class="ui dividing header">
 			{{if .PageIsEditRelease}}
@@ -173,6 +174,7 @@
 			</div>
 		</form>
 	</div>
+</main>
 </div>
 
 {{if .PageIsEditRelease}}

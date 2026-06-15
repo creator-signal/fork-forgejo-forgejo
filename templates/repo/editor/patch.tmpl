@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository file editor edit">
-	{{template "repo/header" .}}
+<div class="page-content repository file editor edit">
+{{template "repo/header" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui edit form" method="post" action="{{.RepoLink}}/_diffpatch/{{.BranchName | PathEscapeSegments}}">
@@ -57,5 +58,6 @@
 			</div>
 		</article>
 	</dialog>
+</main>
 </div>
 {{template "base/footer" .}}
