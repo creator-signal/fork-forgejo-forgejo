@@ -68,10 +68,14 @@ func TestFileNameSanitize(t *testing.T) {
 
 func TestExpandTemplateVars(t *testing.T) {
 	expansionMap := map[string]string{
-		"REPO_NAME":       "my-repo",
-		"REPO_NAME_SNAKE": "my_repo",
-		"REPO_OWNER":      "alice",
+		"REPO_NAME":           "my-repo",
+		"REPO_NAME_SNAKE":     "my_repo",
+		"REPO_OWNER":          "alice",
+		"REPO_OWNER_NOT_SANE": "../alice/..",
 	}
+
+	perlBareVariable := "perl -e '$REPO_NAME::suffix=value ; print $REPO_NAME::suffix=value'"
+	perlBracedVariable := "perl -e '${REPO_NAME::suffix=value} ; print ${REPO_NAME::suffix=value}'"
 
 	tests := []struct {
 		name             string
@@ -89,8 +93,13 @@ func TestExpandTemplateVars(t *testing.T) {
 		{"known prefix of unknown token", "$REPO_NAMEX", false, "$REPO_NAMEX"},
 		{"double dollar unknown", "$$UNKNOWN_VAR", false, "$$UNKNOWN_VAR"},
 		{"double dollar known", "$$REPO_NAME", false, "$my-repo"},
-		{"lone dollar", "cost is $5", false, "cost is $5"},
-		{"sanitize known var", "${REPO_OWNER}", true, "alice"},
+		{"one letter variable", "cost is $5", false, "cost is $5"},
+		{"lone dollar", "lonely $", false, "lonely $"},
+		{"sanitize sane filename in known var", "${REPO_OWNER}", true, "alice"},
+		{"sanitize not sane filename in known var", "${REPO_OWNER_NOT_SANE}", true, "__alice__"},
+		{"bare perl variables may be replaced", perlBareVariable, false, "perl -e 'my-repo::suffix=value ; print my-repo::suffix=value'"},
+		{"braced perl variables will not be replaced", perlBracedVariable, false, perlBracedVariable},
+		{"multiline", "line0\nline1 $REPO_OWNER \nline2 ${REPO_NAME}\n", false, "line0\nline1 alice \nline2 my-repo\n"},
 	}
 
 	for _, tt := range tests {
