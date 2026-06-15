@@ -80,7 +80,7 @@ func generateExpansion(src string, templateRepo, generateRepo *repo_model.Reposi
 	return expandTemplateVars(src, expansionMap, sanitizeFileName)
 }
 
-var templateVarPattern = regexp.MustCompile(`\$\w+|\$\{\w+\}`)
+var templateVarPattern = regexp.MustCompile(`\$\w+|\${\w+}`)
 
 // expandTemplateVars substitutes recognized $VAR and ${VAR} references
 // but leaves unknown variables alone.
