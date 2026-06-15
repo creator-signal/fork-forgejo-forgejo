@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content dashboard feeds">
-	{{template "user/dashboard/navbar" .}}
+<div class="page-content dashboard feeds">
+{{template "user/dashboard/navbar" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container flex-container">
 		<div class="flex-container-main">
 			{{template "base/alert" .}}
@@ -13,5 +14,6 @@
 		</div>
 		{{template "user/dashboard/repolist" .}}
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

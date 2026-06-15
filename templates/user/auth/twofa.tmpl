@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user signin">
+<div class="page-content user signin">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form tw-max-w-2xl tw-m-auto" action="{{.Link}}" method="post">
@@ -21,5 +22,6 @@
 			</form>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

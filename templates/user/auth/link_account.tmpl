@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user link-account">
+<div class="page-content user link-account">
+<main id="main" aria-label="{{.Title}}">
 	<overflow-menu class="ui secondary pointing tabular top attached borderless menu secondary-nav">
 		<div class="overflow-menu-items tw-justify-center">
 			<!-- TODO handle .ShowRegistrationButton once other login bugs are fixed -->
@@ -29,6 +30,7 @@
 			</div>
 		</div>
 	</div>
+</main>
 </div>
 
 {{template "base/footer" .}}

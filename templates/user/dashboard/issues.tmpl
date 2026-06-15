@@ -1,6 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content dashboard issues">
-	{{template "user/dashboard/navbar" .}}
+<div class="page-content dashboard issues">
+{{template "user/dashboard/navbar" .}}
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<div class="list-header">
@@ -114,5 +115,6 @@
 		</div>
 		{{template "shared/issuelist" dict "." . "listType" "dashboard"}}
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

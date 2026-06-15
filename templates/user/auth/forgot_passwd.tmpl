@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user forgot password">
+<div class="page-content user forgot password">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form ignore-dirty" action="{{.Link}}" method="post">
@@ -34,5 +35,6 @@
 			</form>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

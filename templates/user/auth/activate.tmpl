@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user activate">
+<div class="page-content user activate">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form ignore-dirty tw-max-w-2xl tw-m-auto" action="{{AppSubUrl}}/user/activate" method="post">
@@ -56,5 +57,6 @@
 			</form>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

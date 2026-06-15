@@ -1,4 +1,5 @@
-<div role="main" aria-label="{{.Title}}" class="page-content user notification" id="notification_div" data-sequence-number="{{.SequenceNumber}}">
+<div class="page-content user notification" id="notification_div" data-sequence-number="{{.SequenceNumber}}">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{$notificationUnreadCount := call .NotificationUnreadCount}}
 		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-gap-2">
@@ -123,4 +124,5 @@
 		</div>
 		{{template "base/paginate" .}}
 	</div>
+</main>
 </div>

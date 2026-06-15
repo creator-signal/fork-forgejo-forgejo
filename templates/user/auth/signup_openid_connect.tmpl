@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user signup">
+<div class="page-content user signup">
+<main id="main" aria-label="{{.Title}}">
 	{{template "user/auth/signup_openid_navbar" .}}
 	<div class="ui container">
 				{{template "base/alert" .}}
@@ -31,5 +32,6 @@
 					</form>
 				</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

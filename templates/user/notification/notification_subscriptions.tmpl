@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user notification">
+<div class="page-content user notification">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-gap-2">
 			<div class="switch">
@@ -78,5 +79,6 @@
 			{{end}}
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

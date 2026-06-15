@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user signin openid">
+<div class="page-content user signin openid">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui middle very relaxed page grid">
 		<div class="column tw-flex tw-flex-col tw-gap-4 tw-max-w-2xl tw-m-auto">
 			<a href="{{AppSubUrl}}/user/login" class="tw-mx-auto">
@@ -46,5 +47,6 @@
 			</div>
 		</div>
 	</div>
+</main>
 </div>
 {{template "base/footer" .}}

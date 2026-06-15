@@ -1,5 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content user profile">
+<div class="page-content user profile">
+<main id="main" aria-label="{{.Title}}">
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<div class="ui stackable grid">
@@ -74,6 +75,7 @@
 			</div>
 		</div>
 	</div>
+</main>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="block-user">
