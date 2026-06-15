@@ -26,6 +26,7 @@ import (
 
 func TestActivityPubRepository(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	mock := test.NewFederationServerMock()
@@ -60,6 +61,7 @@ func TestActivityPubRepository(t *testing.T) {
 func TestActivityPubMissingRepository(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	repositoryID := 9999999
@@ -70,6 +72,8 @@ func TestActivityPubMissingRepository(t *testing.T) {
 
 func TestActivityPubRepositoryInboxValid(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	mock := test.NewFederationServerMock()
@@ -154,6 +158,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 func TestActivityPubRepositoryInboxInvalid(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {

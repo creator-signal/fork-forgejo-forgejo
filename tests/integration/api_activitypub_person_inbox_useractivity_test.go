@@ -30,6 +30,7 @@ import (
 
 func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	federation.Init()
@@ -102,6 +103,8 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 
 func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	federation.Init()

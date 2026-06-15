@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
@@ -92,9 +94,44 @@ func NewClientFactoryWithTimeout(timeout time.Duration) (c *ClientFactory, err e
 	return c, err
 }
 
+// SetHostMatcher sets the HTTP dialer that ensures the `to` host matches the set federation host.
+//
+// This prevents specially crafted key IDs or other IRIs from triggering a SSRF
+// against hosts that do not match the host of the originating request.
+//
+// If no host is set, it checks that the host matches an external address.
+func (cf *ClientFactory) SetHostMatcher(host string) error {
+	if cf == nil {
+		return errors.New("nil client factory")
+	}
+
+	var hostMatchAllow, hostMatchBlock string
+	if setting.Federation.InsecureAllowInvalidHosts {
+		hostMatchAllow = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
+		if host != "" {
+			hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host)
+		}
+	} else {
+		hostMatchAllow = host
+		hostMatchBlock = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
+	}
+
+	allowMatcher := hostmatcher.ParseHostMatchList("", hostMatchAllow)
+	blockMatcher := hostmatcher.ParseHostMatchList("", hostMatchBlock)
+	dialCtx := hostmatcher.NewDialContext("activitypub", allowMatcher, blockMatcher, nil)
+
+	cf.client.Transport = &http.Transport{
+		Proxy:       proxy.Proxy(),
+		DialContext: dialCtx,
+	}
+
+	return nil
+}
+
 type APClientFactory interface {
 	WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error)
 	WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error)
+	SetHostMatcher(host string) error
 }
 
 // Client struct
@@ -136,7 +173,7 @@ func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pu
 	return cf.WithKeysDirect(ctx, priv, pubID)
 }
 
-// NewRequest function
+// NewRequest function creates a new signed request to an external federation host.
 func (c *Client) newRequest(method string, b []byte, to string) (req *http.Request, err error) {
 	buf := bytes.NewBuffer(b)
 	req, err = http.NewRequest(method, to, buf)

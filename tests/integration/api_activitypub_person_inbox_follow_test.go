@@ -27,6 +27,8 @@ import (
 // Flow of this test is documented at: https://codeberg.org/forgejo-contrib/federation/src/branch/main/doc/user-activity-following.md
 func TestActivityPubPersonInboxFollow(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	federation.Init()
@@ -59,6 +61,11 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
+
+		distantURI, err := url.Parse(distantURL)
+		require.NoError(t, err)
+
+		cf.SetHostMatcher(distantURI.Host)
 
 		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL))
 		require.NoError(t, err)
@@ -120,6 +127,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 func TestActivityPubFollowRefollow(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, false)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
 
 	require.NoError(t, federation.Init())
