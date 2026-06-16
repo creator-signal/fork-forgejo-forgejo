@@ -2340,7 +2340,6 @@ tbody.commit-list {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  overflow-inline: auto;
   padding: 6px 12px !important;
   font-size: 13px !important;
   min-height: 46px;
@@ -2748,4 +2747,8 @@ tbody.commit-list {
 
 #repo-activity-top-authors-chart {
   height: 150px; /* Pre-allocate the height that will be taken up by the chart, to avoid the container 'jumping'. */
+}
+
+#toc {
+  transform: translateX(-90%);
 }
