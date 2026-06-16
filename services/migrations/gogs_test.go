@@ -227,7 +227,7 @@ func TestGogsDownloaderFactory_New(t *testing.T) {
 func TestGogsDownloaderAvatarDownload(t *testing.T) {
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
-	token := os.Getenv("GOGS_READ_TOKEN_BIRDGOOSE")
+	token := os.Getenv("GOGS_READ_TOKEN")
 	liveMode := token != ""
 
 	fixturePath := "./testdata/gogs/avatar"
