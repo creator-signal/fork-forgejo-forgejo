@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/git"
+	giturl "forgejo.org/modules/git/url"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
@@ -178,6 +179,13 @@ func SyncPushMirror(ctx context.Context, mirrorID int64) bool {
 	return err == nil
 }
 
+func recheckPushPermitted(ctx context.Context, m *repo_model.PushMirror, remoteURL *giturl.GitURL) error {
+	if err := m.Repo.LoadOwner(ctx); err != nil {
+		return err
+	}
+	return migrations_allowlist.IsPushMirrorURLAllowed(remoteURL.String(), m.Repo.Owner)
+}
+
 func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 	timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
 
@@ -193,6 +201,14 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 		}
 
 		useSSHAuthentication := len(m.PublicKey) != 0
+
+		// Recheck that the remote address is still permitted before pushing. The address passed IsPushMirrorURLAllowed
+		// at creation time, but the allow/block lists may have changed since, or DNS for the remote host may now
+		// resolve to an internal address (DNS rebinding).
+		if err := recheckPushPermitted(ctx, m, remoteURL); err != nil {
+			log.Error("SyncPushMirror [repo: %-v]: push mirror failed to meet migration URL requirements: %v", m.Repo, err)
+			return util.SanitizeErrorCredentialURLs(err)
+		}
 
 		if setting.LFS.StartServer && !useSSHAuthentication {
 			log.Trace("SyncMirrors [repo: %-v]: syncing LFS objects...", m.Repo)
