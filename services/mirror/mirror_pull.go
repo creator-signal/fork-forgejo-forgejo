@@ -274,6 +274,33 @@ func DecryptOrRecoverRemoteAddress(ctx context.Context, m *repo_model.Mirror) (*
 	return remoteURL, nil
 }
 
+// Ensure that an on-disk pull mirror is in a modern expected configuration state, in case those expectations have
+// changed since the time the mirror was created on-disk.
+func ModernizePullMirrorConfig(ctx context.Context, m *repo_model.Mirror) error {
+	repoPath := m.GetRepository(ctx).RepoPath()
+
+	// New pull mirrors are created with http.followRedirects=false to mitigate SSRF risks, as redirection URLs may not
+	// meet Forgejo's configured migration allow/deny host lists. Migrate to that setting if it is not present:
+	followRedirects, _, err := git.
+		NewCommand(ctx, "config", "--get", "http.followRedirects").
+		RunStdString(&git.RunOpts{Dir: repoPath})
+		// git will return a non-zero exit code if the config isn't set, so we'll treat an error the same as missing
+	if err != nil {
+		followRedirects = ""
+	}
+	followRedirects = strings.TrimSpace(followRedirects)
+	if followRedirects != "false" {
+		_, _, err = git.
+			NewCommand(ctx, "config", "--replace-all", "http.followRedirects", "false").
+			RunStdString(&git.RunOpts{Dir: repoPath})
+		if err != nil {
+			return fmt.Errorf("failed to set http.followRedirects config: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // runSync returns true if sync finished without error.
 func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bool) {
 	repoPath := m.Repo.RepoPath()
@@ -281,6 +308,11 @@ func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bo
 	timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
 
 	log.Trace("SyncMirrors [repo: %-v]: running git remote update...", m.Repo)
+
+	if err := ModernizePullMirrorConfig(ctx, m); err != nil {
+		log.Error("SyncMirrors [repo: %-v]: failed to modernize pull mirror configuration: %v", m.Repo, err)
+		return nil, false
+	}
 
 	remoteURL, err := DecryptOrRecoverRemoteAddress(ctx, m)
 	if err != nil {

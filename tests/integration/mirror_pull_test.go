@@ -301,6 +301,26 @@ func TestMirrorPull(t *testing.T) {
 	mirror = true
 	fetch = +refs/tags/*:refs/tags/*
 `, string(config))
+
+		t.Run("modernize", func(t *testing.T) {
+			require.NoError(t, mirror_service.ModernizePullMirrorConfig(t.Context(), mirror))
+			config, err = os.ReadFile(path.Join(repoPath, "config"))
+			require.NoError(t, err)
+			assert.Equal(t, `
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = https://user@example.com/org/repo.git
+	tagOpt = --no-tags
+	fetch = +refs/*:refs/*
+	mirror = true
+	fetch = +refs/tags/*:refs/tags/*
+[http]
+	followRedirects = false
+`, string(config))
+		})
 	})
 }
 
