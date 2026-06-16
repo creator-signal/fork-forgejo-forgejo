@@ -27,7 +27,7 @@ import (
 	"forgejo.org/modules/structs"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	mirror_service "forgejo.org/services/mirror"
 	release_service "forgejo.org/services/release"
 	repo_service "forgejo.org/services/repository"
@@ -165,13 +165,13 @@ func TestMirrorPull(t *testing.T) {
 		},
 	}
 
-	// Not using MockVariableValue due to need to undo `migrations.Init()`
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
 	prev := setting.Migrations.AllowedDomains
 	setting.Migrations.AllowedDomains = "localhost"
-	migrations.Init() // reinitialize for changed allowList
+	migrations_allowlist.Init() // reinitialize for changed allowList
 	defer func() {
 		setting.Migrations.AllowedDomains = prev
-		migrations.Init() // reinitialize for changed allowList
+		migrations_allowlist.Init() // reinitialize for changed allowList
 	}()
 
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
