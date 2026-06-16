@@ -5,6 +5,7 @@
 package integration
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,6 +26,7 @@ import (
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
@@ -440,6 +442,7 @@ func createPullMirrorViaAPI(t *testing.T, sourceRepo *repo_model.Repository, aut
 		RepoOwner: "user2",
 		RepoName:  mirrorName,
 		Mirror:    true,
+		LFS:       true,
 	}
 	if authenticate {
 		form.AuthUsername = "user2"
@@ -644,4 +647,61 @@ func TestPullMirrorRedactCredentials(t *testing.T) {
 	flashCookie := session.GetCookie(app_context.CookieNameFlash)
 	assert.NotNil(t, flashCookie)
 	assert.Equal(t, "info%3DPulling%2Bchanges%2Bfrom%2Bthe%2Bremote%2Bhttps%253A%252F%252Fexample.com%252Fexample%252Fexample.git%2Bat%2Bthe%2Bmoment.", flashCookie.Value)
+}
+
+func TestMirrorPullLFS(t *testing.T) {
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "localhost"
+	migrations_allowlist.Init() // reinitialize for changed allowList
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init() // reinitialize for changed allowList
+	}()
+
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user2.LoginName)
+		apiToken := getTokenForLoggedInUser(t, session, auth.AccessTokenScopeWriteRepository)
+
+		// Create the source repository that will be mirrored.
+		var sourceRepoSha string
+		sourceRepo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Files: forgery.MapFS{
+				"docs.md":        forgery.MapFile("hello, world"),
+				".gitattributes": forgery.MapFile("*.txt filter=lfs diff=lfs merge=lfs -text"),
+			},
+			LatestSha: &sourceRepoSha,
+		})
+		require.NotEmpty(t, sourceRepoSha)
+
+		// Push a ".txt" file, which the .gitattributes should cause to be treated as an LFS file.
+		req := NewRequestWithJSON(t,
+			"POST",
+			fmt.Sprintf("/api/v1/repos/%s/%s/contents/my-lfs-file.txt", sourceRepo.OwnerName, sourceRepo.Name),
+			&api.CreateFileOptions{
+				FileOptions: api.FileOptions{
+					BranchName: sourceRepo.DefaultBranch,
+				},
+				ContentBase64: base64.StdEncoding.EncodeToString([]byte("Hello!")),
+			}).AddTokenAuth(apiToken)
+		MakeRequest(t, req, http.StatusCreated)
+
+		// Create pull mirror
+		mirror := createPullMirrorViaAPI(t, sourceRepo, false)
+
+		// raw file will be an LFS pointer
+		resp := session.MakeRequest(t,
+			NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/user2/%s/raw/%s/my-lfs-file.txt", mirror, sourceRepo.DefaultBranch)).AddTokenAuth(apiToken),
+			http.StatusOK)
+		assert.True(t, strings.HasPrefix(resp.Body.String(), "version https://git-lfs.github.com/spec/v1"), "my-lfs-file.txt should be stored as an LFS pointer")
+
+		// /media file will be the original correct contents
+		resp = session.MakeRequest(t,
+			NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/user2/%s/media/%s/my-lfs-file.txt", mirror, sourceRepo.DefaultBranch)).AddTokenAuth(apiToken),
+			http.StatusOK)
+		assert.Equal(t, "Hello!", resp.Body.String())
+	})
 }
