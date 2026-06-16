@@ -502,6 +502,7 @@ func verifyPullMirrorConfig(t *testing.T, mirrorName string, sourceRepo *repo_mo
 	assert.Equal(t, expectedURL, getGitConfig(t, configPath, "remote.origin.url"))
 	assert.Equal(t, "true", getGitConfig(t, configPath, "remote.origin.mirror"))
 	assert.Equal(t, "+refs/tags/*:refs/tags/*", getGitConfig(t, configPath, "remote.origin.fetch"))
+	assert.Equal(t, "false", getGitConfig(t, configPath, "http.followRedirects"))
 }
 
 func changePullMirrorSource(t *testing.T, sourceRepo *repo_model.Repository, sourceRepoSha string) string {

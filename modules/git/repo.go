@@ -111,16 +111,17 @@ func (repo *Repository) IsEmpty() (bool, error) {
 
 // CloneRepoOptions options when clone a repository
 type CloneRepoOptions struct {
-	Timeout       time.Duration
-	Mirror        bool
-	Bare          bool
-	Quiet         bool
-	Branch        string
-	Shared        bool
-	NoCheckout    bool
-	Depth         int
-	Filter        string
-	SkipTLSVerify bool
+	Timeout              time.Duration
+	Mirror               bool
+	Bare                 bool
+	Quiet                bool
+	Branch               string
+	Shared               bool
+	NoCheckout           bool
+	Depth                int
+	Filter               string
+	SkipTLSVerify        bool
+	ProhibitHTTPRedirect bool
 }
 
 // Clone clones original repository to target path.
@@ -179,6 +180,9 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 	}
 	if len(opts.Branch) > 0 {
 		cmd.AddArguments("-b").AddDynamicArguments(opts.Branch)
+	}
+	if opts.ProhibitHTTPRedirect {
+		cmd.AddArguments("-c", "http.followRedirects=false")
 	}
 
 	cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, sanitizedFrom, to, opts.Shared, opts.Mirror, opts.Depth))
