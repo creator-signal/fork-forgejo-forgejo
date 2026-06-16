@@ -144,6 +144,9 @@ func TestRender_CrossReferences(t *testing.T) {
 	test(
 		util.URLJoin(markup.TestAppURL, "gogitea", "some-repo-name", "issues", "12345"),
 		`<p><a href="`+util.URLJoin(markup.TestAppURL, "gogitea", "some-repo-name", "issues", "12345")+`" class="ref-issue" rel="nofollow">gogitea/some-repo-name#12345</a></p>`)
+	test(
+		util.URLJoin(markup.TestAppURL, "testOrg", "testRepo", "pulls", "5"),
+		`<p><a href="`+util.URLJoin(markup.TestAppURL, "testOrg", "testRepo", "pulls", "5")+`" class="ref-issue" rel="nofollow">testOrg/testRepo!5</a></p>`)
 
 	sha := "65f1bf27bc3bf70f64657658635e66094edbcb4d"
 	urlWithQuery := util.URLJoin(markup.TestAppURL, "forgejo", "some-repo-name", "commit", sha, "README.md") + "?display=source#L1-L5"

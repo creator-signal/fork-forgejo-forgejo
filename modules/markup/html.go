@@ -111,7 +111,7 @@ func getIssueFullPattern() *regexp.Regexp {
 	issueFullPatternOnce.Do(func() {
 		// example: https://domain/org/repo/pulls/27#hash
 		issueFullPattern = regexp.MustCompile(regexp.QuoteMeta(setting.AppURL) +
-			`(?P<user>[\w_.-]+)\/(?P<repo>[\w_.-]+)\/(?:issues|pulls)\/(?P<num>(?:\w{1,10}-)?[1-9][0-9]*)(?P<subpath>\/[\w_.-]+)?(?:(?P<comment>#(?:issue|issuecomment)-\d+)|(?:[\?#](?:\S+)?))?\b`)
+			`(?P<user>[\w_.-]+)\/(?P<repo>[\w_.-]+)\/(?P<type>issues|pulls)\/(?P<num>(?:\w{1,10}-)?[1-9][0-9]*)(?P<subpath>\/[\w_.-]+)?(?:(?P<comment>#(?:issue|issuecomment)-\d+)|(?:[\?#](?:\S+)?))?\b`)
 	})
 	return issueFullPattern
 }
@@ -869,7 +869,11 @@ func fullIssuePatternProcessor(ctx *RenderContext, node *html.Node) {
 		}
 
 		link := node.Data[linkIndex[0]:linkIndex[1]]
-		text := "#" + m[re.SubexpIndex("num")] + m[re.SubexpIndex("subpath")]
+		refSymbol := "#"
+		if (m[re.SubexpIndex("type")] == "pulls") {
+			refSymbol = "!"
+		}
+		text := refSymbol + m[re.SubexpIndex("num")] + m[re.SubexpIndex("subpath")]
 
 		if len(m[re.SubexpIndex("comment")]) > 0 {
 			if locale, ok := ctx.Ctx.Value(translation.ContextKey).(translation.Locale); ok {

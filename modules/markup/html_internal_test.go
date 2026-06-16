@@ -466,9 +466,9 @@ func TestRender_FullIssueURLs(t *testing.T) {
 	test("http://localhost:3000/gogits/gogs/issues/4?a=1&b=2#comment-form test",
 		`<a href="http://localhost:3000/gogits/gogs/issues/4?a=1&amp;b=2#comment-form" class="ref-issue">#4</a> test`)
 	test("http://localhost:3000/testOrg/testOrgRepo/pulls/2/files#issuecomment-24",
-		`<a href="http://localhost:3000/testOrg/testOrgRepo/pulls/2/files#issuecomment-24" class="ref-issue">testOrg/testOrgRepo#2/files (comment)</a>`)
+		`<a href="http://localhost:3000/testOrg/testOrgRepo/pulls/2/files#issuecomment-24" class="ref-issue">testOrg/testOrgRepo!2/files (comment)</a>`)
 	test("http://localhost:3000/testOrg/testOrgRepo/pulls/2/commits",
-		`<a href="http://localhost:3000/testOrg/testOrgRepo/pulls/2/commits" class="ref-issue">testOrg/testOrgRepo#2/commits</a>`)
+		`<a href="http://localhost:3000/testOrg/testOrgRepo/pulls/2/commits" class="ref-issue">testOrg/testOrgRepo!2/commits</a>`)
 }
 
 func TestRegExp_hashCurrentPattern(t *testing.T) {
