@@ -289,7 +289,6 @@ function onKeydown(e: KeyboardEvent) {
       document.querySelector<HTMLAnchorElement>('#sort-dropdown')?.focus();
       break;
     case 't':
-      if (goto(Page.Releases)) return;
       document.querySelector<HTMLAnchorElement>('#type-dropdown')?.focus();
       break;
     case 'u':
