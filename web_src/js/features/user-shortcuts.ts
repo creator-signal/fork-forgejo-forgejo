@@ -125,6 +125,7 @@ function initLineJump() {
   clearErrors(dialog);
   const input = dialog.querySelector('input');
   if (!input) return;
+  input.max = document.querySelectorAll('.code-view tr').length.toString();
   dialog.addEventListener('close', () => {
     input.value = '';
     clearErrors(dialog);
