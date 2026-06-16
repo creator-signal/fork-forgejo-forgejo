@@ -22,11 +22,12 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/lfs"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/migration"
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
-	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
@@ -661,8 +662,8 @@ func TestMirrorPullLFS(t *testing.T) {
 		req := NewRequestWithJSON(t,
 			"POST",
 			fmt.Sprintf("/api/v1/repos/%s/%s/contents/my-lfs-file.txt", sourceRepo.OwnerName, sourceRepo.Name),
-			&api.CreateFileOptions{
-				FileOptions: api.FileOptions{
+			&structs.CreateFileOptions{
+				FileOptions: structs.FileOptions{
 					BranchName: sourceRepo.DefaultBranch,
 				},
 				ContentBase64: base64.StdEncoding.EncodeToString([]byte("Hello!")),
@@ -683,5 +684,58 @@ func TestMirrorPullLFS(t *testing.T) {
 			NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/user2/%s/media/%s/my-lfs-file.txt", mirror, sourceRepo.DefaultBranch)).AddTokenAuth(apiToken),
 			http.StatusOK)
 		assert.Equal(t, "Hello!", resp.Body.String())
+
+		t.Run("verify http.Transport secure", func(t *testing.T) {
+			prevBlocked := setting.Migrations.BlockedDomains
+			setting.Migrations.BlockedDomains = "example.com"
+			migrations_allowlist.Init() // reinitialize for changed allowList
+			defer func() {
+				setting.Migrations.BlockedDomains = prevBlocked
+				migrations_allowlist.Init() // reinitialize for changed allowList
+			}()
+
+			// Push a new LFS object to the source repo so that it is found during the next sync:
+			req := NewRequestWithJSON(t,
+				"POST",
+				fmt.Sprintf("/api/v1/repos/%s/%s/contents/my-second-lfs-file.txt", sourceRepo.OwnerName, sourceRepo.Name),
+				&structs.CreateFileOptions{
+					FileOptions: structs.FileOptions{
+						BranchName: sourceRepo.DefaultBranch,
+					},
+					ContentBase64: base64.StdEncoding.EncodeToString([]byte("Hello, this is a new file!")),
+				}).AddTokenAuth(apiToken)
+			MakeRequest(t, req, http.StatusCreated)
+			resp := session.MakeRequest(t,
+				NewRequest(t, "GET", fmt.Sprintf("/api/v1/repos/user2/%s/raw/%s/my-second-lfs-file.txt", sourceRepo.Name, sourceRepo.DefaultBranch)).AddTokenAuth(apiToken),
+				http.StatusOK)
+
+			// Awkwardly this test won't try to download the LFS object because we're syncing between two local
+			// repositories and the LFS content store will be shared between them, so the content pointer is already
+			// present.  To ensure the LFS client is triggered, delete the content... of course it won't be available to
+			// be synced then, but we're expecting an error in this test case.
+			pointer, err := lfs.ReadPointerFromBuffer(resp.Body.Bytes())
+			require.NoError(t, err)
+			contentStore := lfs.NewContentStore()
+			contentStore.Delete(pointer.RelativePath())
+
+			// In order to pass the migration URL check, but fail on the LFS endpoint access, we'll reconfigure the LFS
+			// endpoint to a different domain name which is prohibited:
+			mirrorRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{Name: mirror})
+			mirrorObj := unittest.AssertExistsAndLoadBean(t, &repo_model.Mirror{RepoID: mirrorRepo.ID})
+			mirrorObj.LFSEndpoint = "https://example.com/something"
+			_, err = db.GetEngine(t.Context()).ID(mirrorObj.ID).Update(mirrorObj)
+			require.NoError(t, err)
+
+			lc, cleanup := test.NewLogChecker(log.DEFAULT, log.ERROR)
+			lc.Filter("migration can only call allowed HTTP servers (check your migrations.ALLOWED_DOMAINS/ALLOW_LOCALNETWORKS setting)")
+			lc.StopMark("SyncMirrors")
+			defer cleanup()
+
+			ok := mirror_service.SyncPullMirror(t.Context(), mirrorRepo.ID)
+			assert.True(t, ok) // LFS failure doesn't output a migration failure
+
+			logFiltered, _ := lc.Check(5 * time.Second)
+			assert.True(t, logFiltered[0], "expected migration error output")
+		})
 	})
 }
