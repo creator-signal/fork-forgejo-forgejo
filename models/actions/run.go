@@ -132,7 +132,7 @@ func (run *ActionRun) RefLink() string {
 func (run *ActionRun) PrettyRef() string {
 	refName := git.RefName(run.Ref)
 	if refName.IsPull() {
-		return "#" + strings.TrimSuffix(strings.TrimPrefix(run.Ref, git.PullPrefix), "/head")
+		return "!" + strings.TrimSuffix(strings.TrimPrefix(run.Ref, git.PullPrefix), "/head")
 	}
 	return refName.ShortName()
 }

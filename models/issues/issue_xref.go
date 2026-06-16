@@ -323,15 +323,12 @@ func (c *Comment) RefIssueIdent(ctx context.Context) string {
 		return ""
 	}
 	// FIXME: check this name for cross-repository references (#7901 if it gets merged)
-	return fmt.Sprintf("#%d", c.RefIssue.Index)
+	if c.RefIssue.IsPull {
+		return fmt.Sprintf("!%d", c.RefIssue.Index)
+	} else {
+		return fmt.Sprintf("#%d", c.RefIssue.Index)
+	}
 }
-
-// __________      .__  .__ __________                                     __
-// \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
-//  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
-//  |    |   |  |  /  |_|  |_|    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
-//  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
-//                                  \/     \/   |__|           \/     \/
 
 // ResolveCrossReferences will return the list of references to close/reopen by this PR
 func (pr *PullRequest) ResolveCrossReferences(ctx context.Context) ([]*Comment, error) {

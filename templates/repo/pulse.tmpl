@@ -153,7 +153,7 @@
 		{{range .Activity.MergedPRs}}
 			<p class="desc">
 				<span class="ui purple label">{{ctx.Locale.Tr "repo.activity.merged_prs_label"}}</span>
-				#{{.Index}} <a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Issue.Title}}</a>
+				!{{.Index}} <a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Issue.Title}}</a>
 				{{DateUtils.TimeSince .MergedUnix}}
 			</p>
 		{{end}}
@@ -172,7 +172,7 @@
 		{{range .Activity.OpenedPRs}}
 			<p class="desc">
 				<span class="ui green label">{{ctx.Locale.Tr "repo.activity.opened_prs_label"}}</span>
-				#{{.Index}} <a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Issue.Title}}</a>
+				!{{.Index}} <a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Issue.Title}}</a>
 				{{DateUtils.TimeSince .Issue.CreatedUnix}}
 			</p>
 		{{end}}
@@ -226,11 +226,10 @@
 		{{range .Activity.UnresolvedIssues}}
 			<p class="desc">
 				<span class="ui green label">{{ctx.Locale.Tr "repo.activity.unresolved_conv_label"}}</span>
-				#{{.Index}}
 				{{if .IsPull}}
-				<a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Title}}</a>
+				!{{.Index}} <a class="title" href="{{$.RepoLink}}/pulls/{{.Index}}">{{RenderRefIssueTitle $.Context .Title}}</a>
 				{{else}}
-				<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{RenderRefIssueTitle $.Context .Title}}</a>
+				#{{.Index}} <a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{RenderRefIssueTitle $.Context .Title}}</a>
 				{{end}}
 				{{DateUtils.TimeSince .UpdatedUnix}}
 			</p>

@@ -20,6 +20,14 @@ export default {
       return new Date(this.issue.created_at).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'});
     },
 
+    symbol() {
+      if (this.issue.pull_request !== null) {
+        return '!'
+      } else {
+        return '#'
+      }
+    },
+
     body() {
       const body = this.issue.body.replace(/\n+/g, ' ');
       if (body.length > 85) {
@@ -115,7 +123,7 @@ export default {
     <div v-if="loading" class="tw-h-12 tw-w-12 is-loading"/>
     <div v-if="!loading && issue !== null" id="issue-info-popup">
       <p><small>{{ issue.repository.full_name }} on {{ createdAt }}</small></p>
-      <p><svg-icon :name="icon" :class="['text', color]"/> <strong>{{ issue.title }}</strong> #{{ issue.number }}</p>
+      <p><svg-icon :name="icon" :class="['text', color]"/> <strong>{{ issue.title }}</strong> {{symbol}}{{ issue.number }}</p>
       <p>{{ body }}</p>
       <div class="labels-list">
         <!-- eslint-disable-next-line vue/no-v-html -->

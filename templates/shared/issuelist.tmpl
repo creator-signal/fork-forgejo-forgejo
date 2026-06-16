@@ -56,9 +56,9 @@
 					<span>
 						<a class="index" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">
 							{{- if eq $.listType "dashboard" -}}
-								{{.Repo.FullName}}#{{.Index}}
+								{{.Repo.FullName}}{{if .IsPull}}!{{else}}#{{end}}{{.Index}}
 							{{- else -}}
-								#{{.Index}}
+								{{if .IsPull}}!{{else}}#{{end}}{{.Index}}
 							{{- end -}}
 						</a>
 						{{$timeStr := DateUtils.TimeSince .GetLastEventTimestamp}}

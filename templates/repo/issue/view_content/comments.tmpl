@@ -362,9 +362,9 @@
 							<a href="{{.DependentIssue.Link}}">
 								{{$strTitle := RenderRefIssueTitle $.Context .DependentIssue.Title}}
 								{{if eq .DependentIssue.RepoID .Issue.RepoID}}
-									#{{.DependentIssue.Index}} {{$strTitle}}
+									{{if .DependentIssue.IsPull}}!{{else}}#{{end}}{{.DependentIssue.Index}} {{$strTitle}}
 								{{else}}
-									{{.DependentIssue.Repo.FullName}}#{{.DependentIssue.Index}} - {{$strTitle}}
+									{{.DependentIssue.Repo.FullName}}{{if .DependentIssue.IsPull}}!{{else}}#{{end}}{{.DependentIssue.Index}} - {{$strTitle}}
 								{{end}}
 							</a>
 						</span>
@@ -386,9 +386,9 @@
 							<a href="{{.DependentIssue.Link}}">
 								{{$strTitle := RenderRefIssueTitle $.Context .DependentIssue.Title}}
 								{{if eq .DependentIssue.RepoID .Issue.RepoID}}
-									#{{.DependentIssue.Index}} {{$strTitle}}
+									{{if .DependentIssue.IsPull}}!{{else}}#{{end}}{{.DependentIssue.Index}} {{$strTitle}}
 								{{else}}
-									{{.DependentIssue.Repo.FullName}}#{{.DependentIssue.Index}} - {{$strTitle}}
+									{{.DependentIssue.Repo.FullName}}{{if .DependentIssue.IsPull}}!{{else}}#{{end}}{{.DependentIssue.Index}} - {{$strTitle}}
 								{{end}}
 							</a>
 						</span>
