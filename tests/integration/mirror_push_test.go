@@ -1093,3 +1093,47 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 		})
 	})
 }
+
+// Verifies that a push mirror which was created while the remote address was permitted will fail to sync if the
+// AllowedDomains configuration later changes such that the remote URL is no longer permitted.
+func TestMirrorPushAddressCheck(t *testing.T) {
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "127.0.0.1"
+	migrations_allowlist.Init()
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+	}()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+		mirrorRepo, err := repo_service.CreateRepositoryDirectly(db.DefaultContext, user, user, repo_service.CreateRepoOptions{
+			Name: "test-push-mirror-address-check",
+		})
+		require.NoError(t, err)
+
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
+
+		// Create the push mirror while localhost is still an allowed migration domain.
+		doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape(mirrorRepo.Name)), user.LowerName, userPassword)(t)
+
+		mirrors, _, err := repo_model.GetPushMirrorsByRepoID(db.DefaultContext, srcRepo.ID, db.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, mirrors, 1)
+
+		// The push should succeed while localhost is permitted.
+		ok := mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.True(t, ok, "expected push mirror sync to succeed while the remote URL is permitted")
+
+		// Reset the allowed domains to the default, which does not permit localhost.
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+
+		// Re-triggering the push mirror should now fail because the remote URL is no longer permitted.
+		ok = mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.False(t, ok, "expected push mirror sync to fail because the remote URL is no longer permitted")
+	})
+}
