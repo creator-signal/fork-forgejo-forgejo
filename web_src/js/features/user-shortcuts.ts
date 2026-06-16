@@ -354,7 +354,7 @@ export function initUserShortcuts() {
     document.addEventListener('keydown', onKeydown);
   }
   document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === '?' && e.shiftKey) {
+    if (e.key === '?') {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
     }
   });
