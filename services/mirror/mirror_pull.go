@@ -6,6 +6,7 @@ package mirror
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	notify_service "forgejo.org/services/notify"
 )
 
@@ -301,6 +303,13 @@ func ModernizePullMirrorConfig(ctx context.Context, m *repo_model.Mirror) error 
 	return nil
 }
 
+func recheckPullPermitted(ctx context.Context, m *repo_model.Mirror, remoteURL *url.URL) error {
+	if err := m.Repo.LoadOwner(ctx); err != nil {
+		return err
+	}
+	return migrations_allowlist.IsMigrateURLAllowed(remoteURL.String(), m.Repo.Owner)
+}
+
 // runSync returns true if sync finished without error.
 func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bool) {
 	repoPath := m.Repo.RepoPath()
@@ -317,6 +326,14 @@ func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bo
 	remoteURL, err := DecryptOrRecoverRemoteAddress(ctx, m)
 	if err != nil {
 		log.Error("SyncMirrors [repo: %-v]: failed to get remote address: %v", m.Repo, err)
+		return nil, false
+	}
+
+	// Recheck that the remote address is still permitted before pulling. The address passed IsMigrateURLAllowed at
+	// creation time, but the allow/block lists may have changed since, or DNS for the remote host may now resolve to an
+	// internal address (DNS rebinding).
+	if err := recheckPullPermitted(ctx, m, remoteURL.URL); err != nil {
+		log.Error("SyncMirrors [repo: %-v]: pull mirror failed to meet migration URL requirements: %v", m.Repo, err)
 		return nil, false
 	}
 

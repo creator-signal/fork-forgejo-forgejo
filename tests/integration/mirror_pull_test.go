@@ -25,6 +25,7 @@ import (
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	migrations_allowlist "forgejo.org/services/migrations/allowlist"
@@ -48,6 +49,17 @@ func TestMirrorPull(t *testing.T) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		repoPath := repo_model.RepoPath(user.Name, repo.Name)
+
+		// This test is mirroring a local repo, and at one point passed just because it missed any "IsMigrateURLAllowed"
+		// check. As one is now rechecked during the migration, to preserve the rest of the logic of this test we enable
+		// local imports for user 2 during this test:
+		defer test.MockVariableValue(&setting.ImportLocalPaths, true)()
+		_, err := db.GetEngine(t.Context()).ID(user.ID).SetExpr("allow_import_local", true).Update(user)
+		require.NoError(t, err)
+		defer func() { // restore allow_import_local
+			_, err := db.GetEngine(t.Context()).ID(user.ID).SetExpr("allow_import_local", false).Update(user)
+			require.NoError(t, err)
+		}()
 
 		opts := migration.MigrateOptions{
 			RepoName:    "test_mirror",
@@ -321,6 +333,50 @@ func TestMirrorPull(t *testing.T) {
 	followRedirects = false
 `, string(config))
 		})
+	})
+}
+
+// Verifies that a pull mirror which was created while the remote address was permitted will fail to sync if the
+// AllowedDomains configuration later changes such that the remote URL is no longer permitted.
+func TestMirrorPullAddressCheck(t *testing.T) {
+	// Allow localhost as a migration domain so the mirror can initially be created from the local test server. Not
+	// using MockVariableValue due to need to undo `migrations_allowlist.Init()`.
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "localhost"
+	migrations_allowlist.Init() // reinitialize for changed allowList
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init() // reinitialize for changed allowList
+	}()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// Create the source repository that will be mirrored.
+		var sourceRepoSha string
+		sourceRepo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Files: forgery.MapFS{
+				"docs.md": forgery.MapFile("hello, world"),
+			},
+			LatestSha: &sourceRepoSha,
+		})
+		require.NotEmpty(t, sourceRepoSha)
+
+		// Create the pull mirror while localhost is still an allowed migration domain.
+		mirrorName := createPullMirrorViaWeb(t, sourceRepo, false)
+		verifyPullMirrorContents(t, mirrorName, sourceRepoSha)
+
+		// Reset the allowed domains to the default, which does not permit localhost.
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+
+		// Re-triggering the mirror should now fail because the remote URL is no longer permitted.
+		mirrorRepo, err := repo_model.GetRepositoryByOwnerAndName(t.Context(), "user2", mirrorName)
+		require.NoError(t, err)
+		ok := mirror_service.SyncPullMirror(t.Context(), mirrorRepo.ID)
+		assert.False(t, ok, "expected pull mirror sync to fail because the remote URL is no longer permitted")
 	})
 }
 
