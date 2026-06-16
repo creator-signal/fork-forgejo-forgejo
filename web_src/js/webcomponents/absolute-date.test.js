@@ -28,7 +28,7 @@ test('absolute-date structure', () => {
   element.setAttribute('date', '2026-06-16T00:00:00Z');
   element.setAttribute('year', 'numeric');
 
-  document.body.appendChild(element);
+  document.body.append(element);
 
   const shadowRoot = element.shadowRoot;
   const childSpan = shadowRoot.querySelector('span');
@@ -38,5 +38,5 @@ test('absolute-date structure', () => {
   expect(childSpan.getAttribute('part')).toBe('absolute-date'); // verifies the CSS styling hook bridge
   expect(childSpan.textContent).toContain('2026'); // verifies that the date string outputs
 
-  document.body.removeChild(element);// clean up DOM env
+  element.remove();// clean up DOM env
 });
