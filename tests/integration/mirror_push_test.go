@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -25,6 +26,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
@@ -1091,5 +1093,58 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 
 			htmlDoc.AssertElement(t, "#push_mirror_branch_filter", true)
 		})
+	})
+}
+
+func TestMirrorPushFailOnRedirect(t *testing.T) {
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "127.0.0.1"
+	migrations_allowlist.Init()
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+	}()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+		// Target repo that the mirror may go into...
+		mirrorRepo, err := repo_service.CreateRepositoryDirectly(db.DefaultContext, user, user, repo_service.CreateRepoOptions{
+			Name: "test-push-mirror-address-check",
+		})
+		require.NoError(t, err)
+
+		// Actual HTTP server that the mirror will go into, which will attempt to redirect to the mirrorRepo
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// w.Header().Set("Location", "https://example.com/some-user/some-repo.git")
+			targetLocation := fmt.Sprintf("%s%s/%s%s", u.String(), mirrorRepo.OwnerName, mirrorRepo.Name, r.RequestURI)
+			t.Logf("targetLocation = %q", targetLocation)
+			w.Header().Set("Location", targetLocation)
+			w.WriteHeader(301)
+		}))
+		t.Cleanup(s.Close)
+
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
+		doCreatePushMirror(ctx, s.URL, user.LowerName, userPassword)(t)
+
+		mirrors, _, err := repo_model.GetPushMirrorsByRepoID(db.DefaultContext, srcRepo.ID, db.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, mirrors, 1)
+
+		// Regardless of whether http.followRedirects is set or not, this sync will fail -- auth doesn't get sent to the
+		// new redirected URL (great!) and would fail with a 401 -- so to ensure that we're hitting the
+		// http.followRedirects=false case, check the error log output and ensure it has the expected git error.
+		lc, cleanup := test.NewLogChecker(log.DEFAULT, log.ERROR)
+		lc.Filter("The requested URL returned error: 301") // expected git error
+		lc.StopMark("SyncPushMirror")
+		defer cleanup()
+
+		ok := mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.False(t, ok, "expected push mirror sync to fail due to redirect")
+
+		logFiltered, _ := lc.Check(5 * time.Second)
+		assert.True(t, logFiltered[0], "expected migration error output")
 	})
 }

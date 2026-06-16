@@ -255,6 +255,9 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 			Mirror:         true,
 			Timeout:        timeout,
 			PrivateKeyPath: privateKeyPath,
+			// The remote URL passed IsPushMirrorURLAllowed, but any redirection URL may not. Prohibit redirects in
+			// order to protect against SSRF risks.
+			ProhibitHTTPRedirect: true,
 		}); err != nil {
 			log.Error("Error pushing %s mirror[%d] remote %s: %v", path, m.ID, m.RemoteName, err)
 

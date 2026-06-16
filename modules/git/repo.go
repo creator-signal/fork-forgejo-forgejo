@@ -206,18 +206,25 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 
 // PushOptions options when push to remote
 type PushOptions struct {
-	Remote         string
-	Branch         string
-	Force          bool
-	Mirror         bool
-	Env            []string
-	Timeout        time.Duration
-	PrivateKeyPath string
+	Remote               string
+	Branch               string
+	Force                bool
+	Mirror               bool
+	Env                  []string
+	Timeout              time.Duration
+	PrivateKeyPath       string
+	ProhibitHTTPRedirect bool
 }
 
 // Push pushs local commits to given remote branch.
 func Push(ctx context.Context, repoPath string, opts PushOptions) error {
-	cmd := NewCommand(ctx, "push")
+	cmd := NewCommand(ctx)
+
+	if opts.ProhibitHTTPRedirect {
+		cmd.AddArguments("-c", "http.followRedirects=false")
+	}
+
+	cmd.AddArguments("push")
 
 	if opts.PrivateKeyPath != "" {
 		// Preserve the behavior that existing environments are used if no
