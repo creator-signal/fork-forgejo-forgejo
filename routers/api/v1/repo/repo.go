@@ -90,7 +90,7 @@ func Search(ctx *context.APIContext) {
 	//   type: boolean
 	// - name: template
 	//   in: query
-	//   description: include template repositories this user has access to (defaults to true)
+	//   description: show only template, non-template or all repositories (defaults to all)
 	//   type: boolean
 	// - name: archived
 	//   in: query
@@ -296,6 +296,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *user_model.User, opt api.Cre
 	repo, err = repo_model.GetRepositoryByID(ctx, repo.ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetRepositoryByID", err)
+		return
 	}
 
 	ctx.JSON(http.StatusCreated, convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}))
