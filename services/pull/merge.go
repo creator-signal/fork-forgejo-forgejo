@@ -79,6 +79,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 	if isExternalTracker {
 		issueReference = "!"
 	}
+	pullRequestReference := "!"
 
 	reviewedOn := fmt.Sprintf("Reviewed-on: %s", pr.Issue.HTMLURL())
 	reviewedBy := pr.GetApprovers(ctx)
@@ -87,13 +88,13 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 
 	// Squash merge has a different from other styles.
 	if mergeStyle == repo_model.MergeStyleSquash {
-		message = fmt.Sprintf("%s (%s%d)", pr.Issue.Title, issueReference, pr.Issue.Index)
+		message = fmt.Sprintf("%s (%s%d)", pr.Issue.Title, pullRequestReference, pr.Issue.Index)
 	} else if pr.BaseRepoID == pr.HeadRepoID {
-		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, pullRequestReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
 	} else if pr.HeadRepo == nil {
-		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from <deleted>:%s into %s", pr.Issue.Title, pullRequestReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
 	} else {
-		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch)
+		message = fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, pullRequestReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch)
 	}
 
 	if mergeStyle != "" {
@@ -132,7 +133,7 @@ func getMergeMessage(ctx context.Context, baseGitRepo *git.Repository, pr *issue
 				"PullRequestDescription": pr.Issue.Content,
 				"PullRequestPosterName":  pr.Issue.Poster.Name,
 				"PullRequestIndex":       strconv.FormatInt(pr.Index, 10),
-				"PullRequestReference":   fmt.Sprintf("%s%d", issueReference, pr.Index),
+				"PullRequestReference":   fmt.Sprintf("%s%d", pullRequestReference, pr.Index),
 				"ReviewedOn":             reviewedOn,
 				"ReviewedBy":             reviewedBy,
 			}
