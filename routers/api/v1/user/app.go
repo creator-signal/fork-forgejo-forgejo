@@ -5,6 +5,7 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
 
 	auth_model "forgejo.org/models/auth"
@@ -12,6 +13,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
+	audit_service "forgejo.org/services/audit"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 )
@@ -152,6 +154,10 @@ func CreateOauth2Application(ctx *context.APIContext) {
 		return
 	}
 	app.ClientSecret = secret
+
+	audit_service.Record(ctx, audit_service.UserOAuth2ApplicationAdd, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "oauth2_application", ID: app.ID, Name: app.Name},
+		fmt.Sprintf("Created OAuth2 application %q via the API.", app.Name))
 
 	ctx.JSON(http.StatusCreated, convert.ToOAuth2Application(app))
 }

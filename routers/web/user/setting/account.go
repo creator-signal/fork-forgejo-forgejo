@@ -6,6 +6,7 @@ package setting
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
+	audit_service "forgejo.org/services/audit"
 	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/db"
 	"forgejo.org/services/auth/source/smtp"
@@ -94,6 +96,10 @@ func AccountPost(ctx *context.Context) {
 				}
 			}
 
+			audit_service.Record(ctx, audit_service.UserPasswordChange, ctx.Doer, ctx.RemoteAddr(),
+				audit_service.TypeDescriptor{Type: "user", ID: ctx.Doer.ID, Name: ctx.Doer.Name},
+				"Changed account password.")
+
 			log.Trace("User password updated: %s", ctx.Doer.Name)
 			ctx.Flash.Success(ctx.Tr("settings.change_password_success"))
 		}
@@ -122,6 +128,10 @@ func EmailPost(ctx *context.Context) {
 			ctx.ServerError("MakeEmailPrimary", err)
 			return
 		}
+
+		audit_service.Record(ctx, audit_service.UserEmailPrimaryChange, ctx.Doer, ctx.RemoteAddr(),
+			audit_service.TypeDescriptor{Type: "email_address", ID: email.ID, Name: email.Email},
+			fmt.Sprintf("Changed primary email address to %q.", email.Email))
 
 		log.Trace("Email made primary: %s", ctx.Doer.Name)
 		ctx.Redirect(setting.AppSubURL + "/user/settings/account")
@@ -226,6 +236,10 @@ func EmailPost(ctx *context.Context) {
 		}
 		return
 	}
+
+	audit_service.Record(ctx, audit_service.UserEmailAdd, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "email_address", Name: form.Email},
+		fmt.Sprintf("Added email address %q.", form.Email))
 
 	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {

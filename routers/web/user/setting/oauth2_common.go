@@ -12,6 +12,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	shared_user "forgejo.org/routers/web/shared/user"
+	audit_service "forgejo.org/services/audit"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 )
@@ -57,6 +58,10 @@ func (oa *OAuth2CommonHandlers) AddApp(ctx *context.Context) {
 		ctx.ServerError("CreateOAuth2Application", err)
 		return
 	}
+
+	audit_service.Record(ctx, audit_service.UserOAuth2ApplicationAdd, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "oauth2_application", ID: app.ID, Name: app.Name},
+		fmt.Sprintf("Created OAuth2 application %q.", app.Name))
 
 	// render the edit page with secret
 	ctx.Flash.Success(ctx.Tr("settings.create_oauth2_application_success"), true)

@@ -1,0 +1,32 @@
+{{template "admin/layout_head" (dict "ctxData" . "pageClass" "admin audit")}}
+	<div class="admin-setting-content">
+		<h4 class="ui top attached header">
+			{{ctx.Locale.Tr "admin.audit.event_list"}} ({{ctx.Locale.Tr "admin.total" .Total}})
+		</h4>
+		<table class="ui attached segment select selectable striped table unstackable g-table-auto-ellipsis">
+			<thead>
+				<tr>
+					<th>{{ctx.Locale.Tr "admin.audit.timestamp"}}</th>
+					<th>{{ctx.Locale.Tr "admin.audit.action"}}</th>
+					<th>{{ctx.Locale.Tr "admin.audit.user"}}</th>
+					<th>{{ctx.Locale.Tr "admin.audit.details"}}</th>
+					<th>{{ctx.Locale.Tr "admin.audit.ip_address"}}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Events}}
+					<tr>
+						<td nowrap>{{DateUtils.AbsoluteShort .CreatedUnix}}</td>
+						<td><code>{{.Action}}</code></td>
+						<td>{{if .DoerName}}<a href="{{AppSubUrl}}/{{.DoerName}}">{{.DoerName}}</a>{{else}}-{{end}}</td>
+						<td class="auto-ellipsis tw-w-4/5">{{.Message}}</td>
+						<td nowrap>{{.IPAddress}}</td>
+					</tr>
+				{{else}}
+					<tr><td class="tw-text-center" colspan="5">{{ctx.Locale.Tr "repo.pulls.no_results"}}</td></tr>
+				{{end}}
+			</tbody>
+		</table>
+		{{template "base/paginate" .}}
+	</div>
+{{template "admin/layout_footer" .}}

@@ -20,6 +20,7 @@ import (
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/web/shared/user"
+	audit_service "forgejo.org/services/audit"
 	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 )
@@ -224,6 +225,11 @@ func CreateAccessToken(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "NewAccessToken", err)
 		return
 	}
+
+	audit_service.Record(ctx, audit_service.UserAccessTokenAdd, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "access_token", ID: t.ID, Name: t.Name},
+		fmt.Sprintf("Created access token %q with scope %q via the API.", t.Name, t.Scope))
+
 	ctx.JSON(http.StatusCreated, &api.AccessToken{
 		Name:           t.Name,
 		Token:          t.Token,

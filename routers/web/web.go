@@ -947,6 +947,8 @@ func registerRoutes(m *web.Route) {
 			m.Post("/empty", admin.EmptyNotices)
 		})
 
+		m.Get("/audit", admin.Audit)
+
 		m.Group("/applications", func() {
 			m.Get("", admin.Applications)
 			m.Post("/oauth2", web.Bind(forms.EditOAuth2ApplicationForm{}), admin.ApplicationsPost)

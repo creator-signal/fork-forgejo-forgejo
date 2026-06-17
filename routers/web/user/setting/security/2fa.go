@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
+	audit_service "forgejo.org/services/audit"
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/mailer"
@@ -92,6 +93,10 @@ func disableTwoFactor(ctx *context.Context) {
 		}
 		return
 	}
+
+	audit_service.Record(ctx, audit_service.UserTwoFactorDisable, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "user", ID: ctx.Doer.ID, Name: ctx.Doer.Name},
+		"Disabled two-factor authentication (TOTP).")
 
 	if err := mailer.SendDisabledTOTP(ctx, ctx.Doer); err != nil {
 		ctx.ServerError("SendDisabledTOTP", err)
@@ -261,6 +266,10 @@ func enrollTwoFactor(ctx *context.Context) {
 		ctx.ServerError("SettingsTwoFactor: Failed to save two factor", err)
 		return
 	}
+
+	audit_service.Record(ctx, audit_service.UserTwoFactorEnable, ctx.Doer, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "user", ID: ctx.Doer.ID, Name: ctx.Doer.Name},
+		"Enabled two-factor authentication (TOTP).")
 
 	ctx.Flash.Success(ctx.Tr("settings.twofa_enrolled", token))
 	ctx.Redirect(setting.AppSubURL + "/user/settings/security")

@@ -28,6 +28,7 @@ import (
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
 	"forgejo.org/modules/web/middleware"
+	audit_service "forgejo.org/services/audit"
 	auth_service "forgejo.org/services/auth"
 	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/oauth2"
@@ -385,6 +386,10 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 		ctx.ServerError("UpdateUser", err)
 		return setting.AppSubURL + "/"
 	}
+
+	audit_service.Record(ctx, audit_service.UserLogin, u, ctx.RemoteAddr(),
+		audit_service.TypeDescriptor{Type: "user", ID: u.ID, Name: u.Name},
+		"Signed in.")
 
 	redirectTo := ctx.GetSiteCookie("redirect_to")
 	if redirectTo != "" {
