@@ -517,6 +517,52 @@
         }
       }
     },
+    "/admin/audit": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "admin"
+        ],
+        "summary": "List security audit log events",
+        "operationId": "adminListAuditEvents",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "only return events with this action identifier (e.g. user_login)",
+            "name": "action",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "only return events performed by this user ID",
+            "name": "doer",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/AuditEventList"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          }
+        }
+      }
+    },
     "/admin/cron": {
       "get": {
         "produces": [
@@ -23696,6 +23742,52 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "AuditEvent": {
+      "type": "object",
+      "title": "AuditEvent represents a single security audit log event.",
+      "properties": {
+        "action": {
+          "type": "string",
+          "x-go-name": "Action"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Created"
+        },
+        "doer_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DoerID"
+        },
+        "doer_name": {
+          "type": "string",
+          "x-go-name": "DoerName"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "ip_address": {
+          "type": "string",
+          "x-go-name": "IPAddress"
+        },
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "target_name": {
+          "type": "string",
+          "x-go-name": "TargetName"
+        },
+        "target_type": {
+          "type": "string",
+          "x-go-name": "TargetType"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "BlockedUser": {
       "type": "object",
       "title": "BlockedUser represents a blocked user.",
@@ -31287,6 +31379,15 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/Attachment"
+        }
+      }
+    },
+    "AuditEventList": {
+      "description": "AuditEventList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/AuditEvent"
         }
       }
     },

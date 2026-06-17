@@ -17,7 +17,9 @@ import (
 func TestInsertAndQueryEvents(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
-	require.EqualValues(t, 0, audit_model.CountEvents(db.DefaultContext))
+	_, total, err := audit_model.FindEvents(db.DefaultContext, audit_model.FindEventsOptions{})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
 
 	require.NoError(t, audit_model.InsertEvent(db.DefaultContext, &audit_model.Event{
 		Action:   audit_model.UserLogin,
@@ -33,10 +35,9 @@ func TestInsertAndQueryEvents(t *testing.T) {
 		Message:   `Created access token "test".`,
 	}))
 
-	assert.EqualValues(t, 2, audit_model.CountEvents(db.DefaultContext))
-
-	events, err := audit_model.Events(db.DefaultContext, 1, 10)
+	events, total, err := audit_model.FindEvents(db.DefaultContext, audit_model.FindEventsOptions{})
 	require.NoError(t, err)
+	assert.EqualValues(t, 2, total)
 	require.Len(t, events, 2)
 
 	// newest first
@@ -44,4 +45,11 @@ func TestInsertAndQueryEvents(t *testing.T) {
 	assert.Equal(t, "192.0.2.1", events[0].IPAddress)
 	assert.NotZero(t, events[0].CreatedUnix)
 	assert.Equal(t, audit_model.UserLogin, events[1].Action)
+
+	// filtering by action
+	filtered, total, err := audit_model.FindEvents(db.DefaultContext, audit_model.FindEventsOptions{Action: audit_model.UserLogin})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, total)
+	require.Len(t, filtered, 1)
+	assert.Equal(t, audit_model.UserLogin, filtered[0].Action)
 }

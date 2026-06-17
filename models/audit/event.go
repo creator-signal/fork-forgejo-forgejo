@@ -11,6 +11,8 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/modules/timeutil"
+
+	"xorm.io/builder"
 )
 
 // Action identifies the type of a recorded audit event. Values are stable
@@ -69,17 +71,31 @@ func InsertEvent(ctx context.Context, e *Event) error {
 	return db.Insert(ctx, e)
 }
 
-// CountEvents returns the total number of recorded audit events.
-func CountEvents(ctx context.Context) int64 {
-	count, _ := db.GetEngine(ctx).Count(new(Event))
-	return count
+// FindEventsOptions narrows and paginates an audit log query.
+type FindEventsOptions struct {
+	db.ListOptions
+	Action Action
+	DoerID int64
 }
 
-// Events returns audit events for the given page, newest first.
-func Events(ctx context.Context, page, pageSize int) ([]*Event, error) {
-	events := make([]*Event, 0, pageSize)
-	return events, db.GetEngine(ctx).
-		Limit(pageSize, (page-1)*pageSize).
-		Desc("created_unix").
-		Find(&events)
+// ToConds implements db.FindOptions.
+func (opts FindEventsOptions) ToConds() builder.Cond {
+	cond := builder.NewCond()
+	if opts.Action != "" {
+		cond = cond.And(builder.Eq{"action": string(opts.Action)})
+	}
+	if opts.DoerID != 0 {
+		cond = cond.And(builder.Eq{"doer_id": opts.DoerID})
+	}
+	return cond
+}
+
+// ToOrders implements db.FindOptionsOrder: newest events first.
+func (opts FindEventsOptions) ToOrders() string {
+	return "created_unix DESC"
+}
+
+// FindEvents returns the matching audit events and the total count ignoring pagination.
+func FindEvents(ctx context.Context, opts FindEventsOptions) ([]*Event, int64, error) {
+	return db.FindAndCount[Event](ctx, opts)
 }
