@@ -5,16 +5,98 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/repo"
+	"forgejo.org/models/user"
 	"forgejo.org/modules/webhook"
 
+	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestConfigureActionRunTitle(t *testing.T) {
+	const defaultTitle = "default title"
+	for _, tc := range []struct {
+		name          string
+		runName       string
+		vars          map[string]string
+		inputs        map[string]any
+		expectedTitle string
+	}{
+		{
+			name:          "empty run-name keeps default title",
+			runName:       "",
+			expectedTitle: defaultTitle,
+		},
+		{
+			name:          "plain string",
+			runName:       "deploy to production",
+			expectedTitle: "deploy to production",
+		},
+		{
+			name:          "github context actor",
+			runName:       "deploy by ${{ github.actor }}",
+			expectedTitle: "deploy by someone",
+		},
+		{
+			name:          "inputs",
+			runName:       "deploy to ${{ inputs.environment }}",
+			inputs:        map[string]any{"environment": "staging"},
+			expectedTitle: "deploy to staging",
+		},
+		{
+			name:          "vars",
+			runName:       "build for ${{ vars.region }}",
+			vars:          map[string]string{"region": "eu"},
+			expectedTitle: "build for eu",
+		},
+		{
+			name:          "empty evaluation result keeps default title",
+			runName:       "${{ inputs.does_not_exist }}",
+			expectedTitle: defaultTitle,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			run := &actions_model.ActionRun{
+				Title:        defaultTitle,
+				Ref:          "refs/head/main",
+				WorkflowID:   "testing.yml",
+				Event:        webhook.HookEventPush,
+				TriggerEvent: string(webhook.HookEventPush),
+				TriggerUser:  &user.User{Name: "someone"},
+				Repo:         &repo.Repository{},
+			}
+			runNameLine := ""
+			if tc.runName != "" {
+				runNameLine = "run-name: " + tc.runName
+			}
+			content := fmt.Sprintf(`
+name: testing
+%s
+on: push
+jobs:
+  job:
+    runs-on: ubuntu
+    steps: []
+`, runNameLine)
+			workflows, err := jobparser.Parse([]byte(content), false,
+				jobparser.WithGitContext(generateGiteaContextForRun(run)),
+				jobparser.WithVars(tc.vars),
+				jobparser.WithInputs(tc.inputs),
+			)
+			require.NoError(t, err)
+
+			require.NoError(t, ConfigureActionRunTitle(workflows, run))
+
+			assert.Equal(t, tc.expectedTitle, run.Title)
+		})
+	}
+}
 
 func TestConfigureActionRunConcurrency(t *testing.T) {
 	for _, tc := range []struct {
