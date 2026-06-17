@@ -37,6 +37,18 @@ func TestThemeChange(t *testing.T) {
 	testSelectedTheme(t, user, "gitea-dark", "gitea-dark", locale.TrString("settings.theme_update_error"))
 }
 
+// Test UI fallback in case user's DB entry has a non-existent theme. This can
+// happen if a theme was removed from the instance config at some point
+func TestUserHasNonExistentTheme(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// user40 has a "frog" theme in the DB
+	user := loginUser(t, "user40")
+
+	// Verify that the UI falls back to the default theme
+	testSelectedTheme(t, user, "forgejo-auto", "Forgejo (follow system theme)", "")
+}
+
 // testSelectedTheme checks that the expected theme is used in html[data-theme]
 // and is default on appearance page
 func testSelectedTheme(t *testing.T, session *TestSession, expectedTheme, expectedName, expectedErr string) {
