@@ -259,5 +259,13 @@ test.describe(`Visual properties`, () => {
     // Dropdown with only one item, which should be completely round
     await page.locator(`#dropdown-3 > summary`).click();
     expect(await page.locator(`#dd3_g1_i1`).evaluate((el) => getComputedStyle(el).borderRadius)).toBe('4px');
+    await page.keyboard.press('Enter'); // Exit dropdown - page is in noJS mode
+
+    // Dropdown with additional content and a HR - which the very first item should take into consideration
+    await page.locator(`#dropdown-5 > summary`).click();
+    expect(await page.locator(`#dd5_g1_i1`).evaluate((el) => getComputedStyle(el).borderRadius)).toBe('0px');
+    expect(await page.locator(`#dd5_g1_i2`).evaluate((el) => getComputedStyle(el).borderRadius)).toBe('0px');
+    expect(await page.locator(`#dd5_g2_i1`).evaluate((el) => getComputedStyle(el).borderRadius)).toBe('0px');
+    expect(await page.locator(`#dd5_g2_i2`).evaluate((el) => getComputedStyle(el).borderRadius)).toBe('0px 0px 4px 4px');
   });
 });
