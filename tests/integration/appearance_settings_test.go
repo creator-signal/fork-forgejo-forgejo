@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"forgejo.org/modules/translation"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -15,23 +16,30 @@ import (
 
 func TestThemeChange(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
 	user := loginUser(t, "user2")
 
 	// Verify default theme
-	testSelectedTheme(t, user, "forgejo-auto", "Forgejo (follow system theme)")
+	testSelectedTheme(t, user, "forgejo-auto", "Forgejo (follow system theme)", "")
 
 	// Change theme to forgejo-dark and verify it works fine
 	testChangeTheme(t, user, "forgejo-dark")
-	testSelectedTheme(t, user, "forgejo-dark", "Forgejo dark")
+	testSelectedTheme(t, user, "forgejo-dark", "Forgejo dark", "")
 
 	// Change theme to gitea-dark and also verify that it's name is not translated
 	testChangeTheme(t, user, "gitea-dark")
-	testSelectedTheme(t, user, "gitea-dark", "gitea-dark")
+	testSelectedTheme(t, user, "gitea-dark", "gitea-dark", "")
+
+	// Attempt to change theme to a non-existent one and verify that it wasn't
+	// applied, and that there's an error message
+	testChangeTheme(t, user, "non-existent")
+	testSelectedTheme(t, user, "gitea-dark", "gitea-dark", locale.TrString("settings.theme_update_error"))
 }
 
 // testSelectedTheme checks that the expected theme is used in html[data-theme]
 // and is default on appearance page
-func testSelectedTheme(t *testing.T, session *TestSession, expectedTheme, expectedName string) {
+func testSelectedTheme(t *testing.T, session *TestSession, expectedTheme, expectedName, expectedErr string) {
 	t.Helper()
 	response := session.MakeRequest(t, NewRequest(t, "GET", "/user/settings/appearance"), http.StatusOK)
 	page := NewHTMLParser(t, response.Body)
@@ -45,9 +53,14 @@ func testSelectedTheme(t *testing.T, session *TestSession, expectedTheme, expect
 	assert.True(t, selectorThemeExists)
 	assert.Equal(t, expectedTheme, selectorTheme)
 	assert.Equal(t, expectedName, strings.TrimSpace(selectedTheme.Text()))
+
+	if expectedErr != "" {
+		errMsg := strings.TrimSpace(page.Find("#flash-message").Text())
+		assert.Equal(t, expectedErr, errMsg)
+	}
 }
 
-// testSelectedTheme changes user's theme
+// testChangeTheme changes user's theme
 func testChangeTheme(t *testing.T, session *TestSession, newTheme string) {
 	t.Helper()
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", "/user/settings/appearance/theme", map[string]string{
