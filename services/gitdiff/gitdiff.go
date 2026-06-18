@@ -1065,7 +1065,7 @@ type DiffFileMetadata struct {
 	OnPage   int
 }
 
-func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, limit int) ([]DiffFileMetadata, error) {
+func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, pageSize int) ([]DiffFileMetadata, error) {
 	afterCommit, err := gitRepo.GetCommit(afterCommitID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the after commit %q: %w", afterCommitID, err)
@@ -1113,7 +1113,7 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 		return nil, err
 	}
 
-	return parseNameStatusFileListSplit(stdout, limit)
+	return parseNameStatusFileListSplit(stdout, pageSize)
 }
 
 func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.PullRequest, diffFiles ...DiffFileMetadata) ([]DiffFileMetadata, error) {
@@ -1128,9 +1128,9 @@ func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.Pull
 	return diffFiles, nil
 }
 
-func parseNameStatusFileListSplit(output string, limit int) ([]DiffFileMetadata, error) {
-	if limit == 0 {
-		return nil, errors.New("limit cannot be 0")
+func parseNameStatusFileListSplit(output string, pageSize int) ([]DiffFileMetadata, error) {
+	if pageSize == 0 {
+		return nil, errors.New("pageSize cannot be 0")
 	}
 
 	var files []DiffFileMetadata
@@ -1155,7 +1155,7 @@ func parseNameStatusFileListSplit(output string, limit int) ([]DiffFileMetadata,
 		file := DiffFileMetadata{}
 		file.Name = fields[1]
 		file.NameHash = git.HashFilePathForWebUI(fields[1])
-		file.OnPage = (cur + limit - 1) / limit
+		file.OnPage = (cur + pageSize - 1) / pageSize
 
 		switch status {
 		case "A":
