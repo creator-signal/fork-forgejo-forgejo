@@ -303,8 +303,8 @@ func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch
 	return do, nil
 }
 
-// GetAutosquashCommits returns the number of autosquash commits a targetBranch has compared to a baseBranch
-func GetAutosquashCommits(ctx context.Context, repoPath, baseBranch, targetBranch string, env []string) (autosquashCommits int, err error) {
+// HasAutosquashCommits returns if a targetBranch has autosquash commits compared to a baseBranch
+func HasAutosquashCommits(ctx context.Context, repoPath, baseBranch, targetBranch string, env []string) (autosquashCommits bool, err error) {
 	// git rev-list has --grep option, but it matches not only the commit message headings
 	cmd := NewCommand(ctx, "rev-list", "--no-commit-header", "--pretty=format:%s").
 		AddDynamicArguments("^" + baseBranch, targetBranch).AddArguments("--")
@@ -312,11 +312,7 @@ func GetAutosquashCommits(ctx context.Context, repoPath, baseBranch, targetBranc
 	if err != nil {
 		return autosquashCommits, err
 	}
-	autosquashCommitMessages := autosquashCommitMessagePattern.FindAllString(stdout, -1)
-	if autosquashCommitMessages == nil {
-		return autosquashCommits, nil
-	}
-	return len(autosquashCommitMessages), nil
+	return autosquashCommitMessagePattern.FindString(stdout) != "", nil
 }
 
 // CreateBundle create bundle content to the target path
