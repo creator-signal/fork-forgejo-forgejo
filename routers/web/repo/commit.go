@@ -353,18 +353,13 @@ func Diff(ctx *context.Context) {
 		Page:     page,
 		PageSize: setting.UI.DiffPagingNum,
 	}
-	start, limit := listOpts.GetSkipTake()
-	limit += start
-	if !pager.Paginater.HasNext() {
-		limit = len(diffFileMetadata)
-	}
 
 	diffFileMetadataStat := gitdiff.GetDiffFileMetadataStat(diffFileMetadata, pager.Paginater)
 
 	ctx.Data["DiffFileMetadata"] = diffFileMetadata
 	ctx.Data["DiffFileMetadataStat"] = diffFileMetadataStat
 
-	pagedFiles := gitdiff.GetFileNames(diffFileMetadata[start:limit])
+	pagedFiles := gitdiff.GetDiffFilePage(diffFileMetadata, listOpts.Page, listOpts.PageSize, len(diffFileMetadata))
 
 	if fileOnly && (len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1) {
 		maxLines = -1

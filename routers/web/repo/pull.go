@@ -1082,12 +1082,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		PageSize: setting.UI.DiffPagingNum,
 	}
 
-	start, limit := listOpts.GetSkipTake()
-	limit += start
-	if !pager.Paginater.HasNext() {
-		limit = len(diffFileMetadata)
-	}
-	pagedFiles := gitdiff.GetFileNames(diffFileMetadata[start:limit])
+	pagedFiles := gitdiff.GetDiffFilePage(diffFileMetadata, listOpts.Page, listOpts.PageSize, len(diffFileMetadata))
 
 	if fileOnly && (len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1) {
 		maxLines = -1

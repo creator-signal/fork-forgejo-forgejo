@@ -1065,7 +1065,7 @@ type DiffFileMetadata struct {
 	OnPage   int
 }
 
-func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, pageSize int) ([]DiffFileMetadata, error) {
+func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, pageSize int) ([]*DiffFileMetadata, error) {
 	afterCommit, err := gitRepo.GetCommit(afterCommitID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the after commit %q: %w", afterCommitID, err)
@@ -1116,7 +1116,7 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 	return parseNameStatusFileListSplit(stdout, pageSize)
 }
 
-func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.PullRequest, diffFiles ...DiffFileMetadata) ([]DiffFileMetadata, error) {
+func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.PullRequest, diffFiles ...*DiffFileMetadata) ([]*DiffFileMetadata, error) {
 	review, err := pull_model.GetNewestReviewState(ctx, userID, pull.ID)
 	if err != nil || review == nil || review.UpdatedFiles == nil {
 		return diffFiles, err
@@ -1128,12 +1128,12 @@ func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.Pull
 	return diffFiles, nil
 }
 
-func parseNameStatusFileListSplit(output string, pageSize int) ([]DiffFileMetadata, error) {
+func parseNameStatusFileListSplit(output string, pageSize int) ([]*DiffFileMetadata, error) {
 	if pageSize == 0 {
 		return nil, errors.New("pageSize cannot be 0")
 	}
 
-	var files []DiffFileMetadata
+	var files []*DiffFileMetadata
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	cur := 0
@@ -1179,13 +1179,13 @@ func parseNameStatusFileListSplit(output string, pageSize int) ([]DiffFileMetada
 				file.NameHash = git.HashFilePathForWebUI(fields[2])
 			}
 		}
-		files = append(files, file)
+		files = append(files, &file)
 	}
 
 	return files, scanner.Err()
 }
 
-func GetFileNames(files []DiffFileMetadata) []string {
+func GetFileNames(files []*DiffFileMetadata) []string {
 	fileNames := make([]string, len(files))
 	for i, v := range files {
 		fileNames[i] = v.Name
@@ -1200,7 +1200,7 @@ type DiffFileMetadataStat struct {
 	NumberOfViewedFiles int
 }
 
-func GetDiffFileMetadataStat(files []DiffFileMetadata, paginator *paginator.Paginator) (stat DiffFileMetadataStat) {
+func GetDiffFileMetadataStat(files []*DiffFileMetadata, paginator *paginator.Paginator) (stat DiffFileMetadataStat) {
 	stat.TotalNumberOfFiles = len(files)
 	for _, v := range files {
 		if v.IsViewed {
@@ -1210,6 +1210,32 @@ func GetDiffFileMetadataStat(files []DiffFileMetadata, paginator *paginator.Pagi
 	stat.CurrentPage = paginator.Current()
 	stat.HasNext = paginator.HasNext()
 	return stat
+}
+
+// GetDiffFilePage slices the full changeset metadata to one page.
+//
+// page and pageSize are 1-based and come from the request/list options.
+// totalFiles is the full length of metadata (may differ from len(metadata)
+// when the caller has already filtered the list).
+func GetDiffFilePage(metadata []*DiffFileMetadata, page, pageSize, totalFiles int) []string {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 1
+	}
+
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > len(metadata) {
+		start = len(metadata)
+	}
+	if end > len(metadata) {
+		end = len(metadata)
+	}
+
+	return GetFileNames(metadata[start:end])
+
 }
 
 // GetDiffSimple builds a Diff between two commits of a repository.

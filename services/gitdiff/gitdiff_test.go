@@ -526,7 +526,7 @@ func TestGetDiffNameStatus_GetsAllChangedFiles(t *testing.T) {
 	files, _ := GetDiffNameStatus(db.DefaultContext, gitRepo, "8fee858da5796dfb37704761701bb8e800ad9ef3", "5684d0c8cfdfb17fcd59101826efc9ff54b80df4", 1)
 
 	assert.Len(t, files, 3)
-	assert.ElementsMatch(t, files, []DiffFileMetadata{
+	assert.ElementsMatch(t, files, []*DiffFileMetadata{
 		{
 			Name:     ".gitattributes",
 			NameHash: "24139dae656713ba861751fb2c2ac38839349a7a",
@@ -722,4 +722,23 @@ func TestNoCrashes(t *testing.T) {
 		// It shouldn't crash, so don't care about the output.
 		ParsePatch(db.DefaultContext, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, strings.NewReader(testcase.gitdiff))
 	}
+}
+
+func TestGetDiffFilePage(t *testing.T) {
+	metadata := []*DiffFileMetadata{
+		{Name: "a.go"}, {Name: "b.go"}, {Name: "c.go"},
+		{Name: "d.go"}, {Name: "e.go"},
+	}
+
+	files := GetDiffFilePage(metadata, 1, 2, len(metadata))
+	assert.Equal(t, []string{"a.go", "b.go"}, files)
+
+	files = GetDiffFilePage(metadata, 2, 2, len(metadata))
+	assert.Equal(t, []string{"c.go", "d.go"}, files)
+
+	files = GetDiffFilePage(metadata, 3, 2, len(metadata))
+	assert.Equal(t, []string{"e.go"}, files)
+
+	files = GetDiffFilePage(metadata, 99, 2, len(metadata))
+	assert.Empty(t, files)
 }
