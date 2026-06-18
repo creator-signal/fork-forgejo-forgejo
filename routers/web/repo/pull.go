@@ -1061,13 +1061,15 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 	ctx.Data["Reponame"] = ctx.Repo.Repository.Name
 
 	fileOnly := ctx.FormBool("file-only")
+	files := ctx.FormStrings("files")
+	ctx.Data["FileSelection"] = files
 
 	maxLines := setting.Git.MaxGitDiffLines
 
 	var methodWithError string
 	var diff *gitdiff.Diff
 
-	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum)
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum, files...)
 	if err != nil {
 		methodWithError = "GetDiffNameStatus"
 		ctx.ServerError(methodWithError, err)

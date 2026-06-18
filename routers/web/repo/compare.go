@@ -584,11 +584,15 @@ func PrepareCompareDiff(
 		beforeCommitID = ci.CompareInfo.BaseCommitID
 	}
 
-	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, ci.HeadGitRepo, beforeCommitID, headCommitID, setting.UI.DiffPagingNum)
+	fileOnly := ctx.FormBool("file-only")
+	files := ctx.FormStrings("files")
+	ctx.Data["FileSelection"] = files
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, ci.HeadGitRepo, beforeCommitID, headCommitID, setting.UI.DiffPagingNum, files...)
 	if err != nil {
 		ctx.ServerError("GetDiffNameOnly", err)
 		return false
 	}
+
 	page := max(ctx.FormInt("diff-page"), 1)
 	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
 
@@ -608,8 +612,6 @@ func PrepareCompareDiff(
 	if len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1 {
 		maxLines = -1
 	}
-
-	fileOnly := ctx.FormBool("file-only")
 
 	diff, err := gitdiff.GetDiffFull(ctx, ci.HeadGitRepo,
 		&gitdiff.DiffOptions{

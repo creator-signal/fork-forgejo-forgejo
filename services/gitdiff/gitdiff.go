@@ -1065,7 +1065,7 @@ type DiffFileMetadata struct {
 	OnPage   int
 }
 
-func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, pageSize int) ([]*DiffFileMetadata, error) {
+func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommitID, afterCommitID string, pageSize int, files ...string) ([]*DiffFileMetadata, error) {
 	afterCommit, err := gitRepo.GetCommit(afterCommitID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the after commit %q: %w", afterCommitID, err)
@@ -1104,6 +1104,8 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 
 	// Add the after commit to the diff command.
 	cmdDiff.AddDynamicArguments(afterCommitID)
+
+	cmdDiff.AddDashesAndList(files...)
 
 	stdout, stderr, err := cmdDiff.RunStdString(&git.RunOpts{Dir: gitRepo.Path})
 	if err != nil {
@@ -1236,6 +1238,26 @@ func GetDiffFilePage(metadata []*DiffFileMetadata, page, pageSize, totalFiles in
 
 	return GetFileNames(metadata[start:end])
 
+}
+
+// FilterDiffFileMetadataByNames returns only the metadata entries whose Name is in names.
+// If names is empty, the original slice is returned unchanged.
+// Order is preserved from metadata; unknown names are ignored.
+func FilterDiffFileMetadataByNames(metadata []*DiffFileMetadata, names []string) []*DiffFileMetadata {
+	if len(names) == 0 {
+		return metadata
+	}
+	set := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		set[name] = struct{}{}
+	}
+	filtered := make([]*DiffFileMetadata, 0, len(names))
+	for _, m := range metadata {
+		if _, ok := set[m.Name]; ok {
+			filtered = append(filtered, m)
+		}
+	}
+	return filtered
 }
 
 // GetDiffSimple builds a Diff between two commits of a repository.

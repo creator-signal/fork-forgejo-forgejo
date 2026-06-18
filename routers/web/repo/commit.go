@@ -340,12 +340,15 @@ func Diff(ctx *context.Context) {
 	}
 
 	fileOnly := ctx.FormBool("file-only")
+	files := ctx.FormStrings("files")
+	ctx.Data["FileSelection"] = files
 	maxLines := setting.Git.MaxGitDiffLines
-	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, "", commitID, setting.UI.DiffPagingNum)
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, "", commitID, setting.UI.DiffPagingNum, files...)
 	if err != nil {
 		ctx.ServerError("GetDiffNameOnly", err)
 		return
 	}
+
 	page := max(ctx.FormInt("diff-page"), 1)
 	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
 
