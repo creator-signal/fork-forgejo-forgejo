@@ -53,6 +53,51 @@ func TestRepoGetDivergingCommits(t *testing.T) {
 	}, do)
 }
 
+func TestRepoGetAutosquashCommits(t *testing.T) {
+	// 1 fixup! commit in main branch,
+	// 2 fixup! commits in fixup branch (based on older main branch),
+	// 2 amend! commits in amend branch,
+	// 1 squash! commit in squash branch,
+	// 0 autosquash commits in not branch,
+	// 1 squash! commit in not2 branch, which is for a non-existing commit
+	repoPath := filepath.Join(testReposDir, "autosquash_repo")
+
+	autosquashCommits, err := GetAutosquashCommits(t.Context(), repoPath, "main", "fixup", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, autosquashCommits)
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "fixup", "main", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, autosquashCommits)
+
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "main", "amend", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, autosquashCommits)
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "amend", "main", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, autosquashCommits)
+
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "main", "squash", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, autosquashCommits)
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "squash", "main", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, autosquashCommits)
+
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "main", "not", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, autosquashCommits)
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "not", "main", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, autosquashCommits)
+
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "main", "not2", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, autosquashCommits)
+	autosquashCommits, err = GetAutosquashCommits(t.Context(), repoPath, "not2", "main", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, autosquashCommits)
+}
+
 func TestCloneCredentials(t *testing.T) {
 	calledWithoutPassword := false
 	credentialsFile := ""

@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ type GPGSettings struct {
 }
 
 const prettyLogFormat = `--pretty=format:%H`
+
+var autosquashCommitMessagePattern = regexp.MustCompile(`(?m)^(amend|fixup|squash)! `)
 
 // GetAllCommitsCount returns count of all commits in repository
 func (repo *Repository) GetAllCommitsCount() (int64, error) {
@@ -298,6 +301,22 @@ func GetDivergingCommits(ctx context.Context, repoPath, baseBranch, targetBranch
 		return do, err
 	}
 	return do, nil
+}
+
+// GetAutosquashCommits returns the number of autosquash commits a targetBranch has compared to a baseBranch
+func GetAutosquashCommits(ctx context.Context, repoPath, baseBranch, targetBranch string, env []string) (autosquashCommits int, err error) {
+	// git rev-list has --grep option, but it matches not only the commit message headings
+	cmd := NewCommand(ctx, "rev-list", "--no-commit-header", "--pretty=format:%s").
+		AddDynamicArguments("^" + baseBranch, targetBranch).AddArguments("--")
+	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repoPath, Env: env})
+	if err != nil {
+		return autosquashCommits, err
+	}
+	autosquashCommitMessages := autosquashCommitMessagePattern.FindAllString(stdout, -1)
+	if autosquashCommitMessages == nil {
+		return autosquashCommits, nil
+	}
+	return len(autosquashCommitMessages), nil
 }
 
 // CreateBundle create bundle content to the target path
