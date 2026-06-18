@@ -319,9 +319,9 @@ function onKeydown(e: KeyboardEvent) {
         ?.click();
       break;
     case 'y': {
-      const sha = document.querySelector<HTMLAnchorElement>('.sha');
-      if (!sha) return;
-      navigator.clipboard.writeText(sha.href);
+      const perma = document.querySelector<HTMLAnchorElement>('#permalink-btn');
+      if (!perma) return;
+      navigator.clipboard.writeText(perma.href);
       break;
     }
     case '/':
