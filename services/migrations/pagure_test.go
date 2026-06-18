@@ -12,12 +12,17 @@ import (
 
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// Skip tests if Pagure token is not found
 	cloneUser := os.Getenv("PAGURE_CLONE_USER")
 	clonePassword := os.Getenv("PAGURE_CLONE_PASSWORD")
