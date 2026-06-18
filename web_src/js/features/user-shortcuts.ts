@@ -226,10 +226,18 @@ function onKeydown(e: KeyboardEvent) {
         goto_state = false;
       }, 750);
       return;
-    case 'h':
+    case 'h': {
       if (goto(Page.Homepage)) return;
-      document.querySelector<HTMLAnchorElement>('#history-btn')?.click();
+      const btn = document.querySelector<HTMLAnchorElement>('#history-btn');
+      if (btn) btn.click();
+      else if (document.querySelector('#commits-table')) {
+        window.location.pathname = window.location.pathname.replace(
+          'commits',
+          'src',
+        );
+      }
       break;
+    }
     case 'i':
       goto(Page.Issues);
       break;
