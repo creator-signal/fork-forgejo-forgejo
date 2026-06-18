@@ -246,6 +246,11 @@
 					{{ctx.Locale.Tr "repo.settings.block_outdated_branch"}}
 					<span class="help">{{ctx.Locale.Tr "repo.settings.block_outdated_branch_desc"}}</span>
 				</label>
+				<label>
+					<input name="block_on_autosquash_commits" type="checkbox" {{if .Rule.BlockOnAutosquashCommits}}checked{{end}}>
+					{{ctx.Locale.Tr "repo.settings.block_autosquash_commits"}}
+					<span class="help">{{ctx.Locale.Tr "repo.settings.block_autosquash_commits_desc"}}</span>
+				</label>
 			</fieldset>
 			<fieldset>
 				<legend>{{ctx.Locale.Tr "repo.settings.event_pull_request_enforcement"}}</legend>

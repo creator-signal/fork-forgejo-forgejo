@@ -159,6 +159,8 @@ type PullRequest struct {
 	CommitsAhead    int
 	CommitsBehind   int
 
+	HasAutosquashCommits bool
+
 	ChangedProtectedFiles []string `xorm:"TEXT JSON"`
 
 	IssueID                    int64  `xorm:"INDEX REFERENCES(issue, id)"`
@@ -837,6 +839,16 @@ func (pr *PullRequest) UpdateCommitDivergence(ctx context.Context, ahead, behind
 	return err
 }
 
+// UpdateHasAutosquashCommits updates if pull request has autosquash commits
+func (pr *PullRequest) UpdateHasAutosquashCommits(ctx context.Context, hasAutosquashCommits bool) error {
+	if pr.ID == 0 {
+		return errors.New("pull ID is 0")
+    }
+	pr.HasAutosquashCommits = hasAutosquashCommits
+	_, err := db.GetEngine(ctx).ID(pr.ID).Cols("has_autosquash_commits").Update(pr)
+	return err
+}
+
 // IsSameRepo returns true if base repo and head repo is the same
 func (pr *PullRequest) IsSameRepo() bool {
 	return pr.BaseRepoID == pr.HeadRepoID
@@ -954,6 +966,11 @@ func MergeBlockedByOfficialReviewRequests(ctx context.Context, protectBranch *gi
 // MergeBlockedByOutdatedBranch returns true if merge is blocked by an outdated head branch
 func MergeBlockedByOutdatedBranch(protectBranch *git_model.ProtectedBranch, pr *PullRequest) bool {
 	return protectBranch.BlockOnOutdatedBranch && pr.CommitsBehind > 0
+}
+
+// MergeBlockedByAutosquashCommits returns true if merge is blocked by commit messages starting with autosquash keywords
+func MergeBlockedByAutosquashCommits(protectBranch *git_model.ProtectedBranch, pr *PullRequest) bool {
+	return protectBranch.BlockOnAutosquashCommits && pr.HasAutosquashCommits
 }
 
 // GetCodeOwnersFromReader returns the code owners configuration

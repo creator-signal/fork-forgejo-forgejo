@@ -77,6 +77,7 @@ type RenderContext struct {
 	DefaultLink      string
 	GitRepo          *git.Repository
 	ShaExistCache    map[string]bool
+	IssueRefLinks    map[string]string
 	cancelFn         func()
 	SidebarTocNode   ast.Node
 	InStandalonePage bool // used by external render. the router "/org/repo/render/..." will output the rendered content in a standalone page
@@ -135,6 +136,7 @@ func (ctx *RenderContext) Cancel() {
 		return
 	}
 	ctx.ShaExistCache = map[string]bool{}
+	ctx.IssueRefLinks = map[string]string{}
 	if ctx.cancelFn == nil {
 		return
 	}

@@ -179,3 +179,17 @@ func GetDiverging(ctx context.Context, pr *issues_model.PullRequest) (*git.Diver
 	diff, err := git.GetDivergingCommits(ctx, prCtx.tmpBasePath, baseBranch, trackingBranch, nil)
 	return &diff, err
 }
+
+// HasAutosquashCommits determines if a PR has autosquash commits
+func HasAutosquashCommits(ctx context.Context, pr *issues_model.PullRequest) (bool, error) {
+	prCtx, cancel, err := createTemporaryRepoForPR(ctx, pr)
+	if err != nil {
+		if !git_model.IsErrBranchNotExist(err) {
+			log.Error("CreateTemporaryRepoForPR %-v: %v", pr, err)
+		}
+		return false, err
+	}
+	defer cancel()
+
+	return git.HasAutosquashCommits(ctx, prCtx.tmpBasePath, baseBranch, trackingBranch, nil)
+}

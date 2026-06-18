@@ -210,13 +210,6 @@ func (f *RepoUnitSettingForm) Validate(req *http.Request, errs binding.Errors) b
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// __________                             .__
-// \______   \____________    ____   ____ |  |__
-//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
-//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
-//  |______  / |__|  (____  /___|  /\___  >___|  /
-//         \/             \/     \/     \/     \/
-
 // ProtectBranchForm form for changing protected branch settings
 type ProtectBranchForm struct {
 	RuleName                      string `binding:"Required"`
@@ -237,6 +230,7 @@ type ProtectBranchForm struct {
 	BlockOnRejectedReviews        bool
 	BlockOnOfficialReviewRequests bool
 	BlockOnOutdatedBranch         bool
+	BlockOnAutosquashCommits      bool
 	DismissStaleApprovals         bool
 	IgnoreStaleApprovals          bool
 	RequireSignedCommits          bool
@@ -250,13 +244,6 @@ func (f *ProtectBranchForm) Validate(req *http.Request, errs binding.Errors) bin
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-//  __      __      ___.   .__                   __
-// /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
-// \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /
-//  \        /\  ___/| \_\ \   Y  (  <_> |  <_> )    <
-//   \__/\  /  \___  >___  /___|  /\____/ \____/|__|_ \
-//        \/       \/    \/     \/                   \/
 
 // WebhookCoreForm form for changing web hook (common to all webhook types)
 type WebhookCoreForm struct {
@@ -314,13 +301,6 @@ type WebhookForm struct {
 	HTTPMethod  string
 	Metadata    any
 }
-
-// .___
-// |   | ______ ________ __   ____
-// |   |/  ___//  ___/  |  \_/ __ \
-// |   |\___ \ \___ \|  |  /\  ___/
-// |___/____  >____  >____/  \___  >
-//          \/     \/            \/
 
 // CreateIssueForm form for creating issue
 type CreateIssueForm struct {
@@ -533,13 +513,6 @@ type UpdateAllowEditsForm struct {
 	AllowMaintainerEdit bool
 }
 
-// __________       .__
-// \______   \ ____ |  |   ____ _____    ______ ____
-//  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \
-//  |    |   \  ___/|  |_\  ___/ / __ \_\___ \\  ___/
-//  |____|_  /\___  >____/\___  >____  /____  >\___  >
-//         \/     \/          \/     \/     \/     \/
-
 // NewReleaseForm form for creating release
 type NewReleaseForm struct {
 	TagName          string `binding:"Required;GitRefName;MaxSize(255)"`
@@ -576,13 +549,6 @@ func (f *EditReleaseForm) Validate(req *http.Request, errs binding.Errors) bindi
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-//  __      __.__ __   .__
-// /  \    /  \__|  | _|__|
-// \   \/\/   /  |  |/ /  |
-//  \        /|  |    <|  |
-//   \__/\  / |__|__|_ \__|
-//        \/          \/
-
 // NewWikiForm form for creating wiki
 type NewWikiForm struct {
 	Title   string `binding:"Required"`
@@ -596,13 +562,6 @@ func (f *NewWikiForm) Validate(req *http.Request, errs binding.Errors) binding.E
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-// ___________    .___.__  __
-// \_   _____/  __| _/|__|/  |_
-//  |    __)_  / __ | |  \   __\
-//  |        \/ /_/ | |  ||  |
-// /_______  /\____ | |__||__|
-//         \/      \/
 
 // EditRepoFileForm form for changing repository file
 type EditRepoFileForm struct {
@@ -634,13 +593,6 @@ func (f *EditPreviewDiffForm) Validate(req *http.Request, errs binding.Errors) b
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// _________ .__                                 __________.__        __
-// \_   ___ \|  |__   __________________ ___.__. \______   \__| ____ |  | __
-// /    \  \/|  |  \_/ __ \_  __ \_  __ <   |  |  |     ___/  |/ ___\|  |/ /
-// \     \___|   Y  \  ___/|  | \/|  | \/\___  |  |    |   |  \  \___|    <
-//  \______  /___|  /\___  >__|   |__|   / ____|  |____|   |__|\___  >__|_ \
-//         \/     \/     \/              \/                        \/     \/
-
 // CherryPickForm form for changing repository file
 type CherryPickForm struct {
 	CommitSummary string `binding:"MaxSize(100)"`
@@ -658,14 +610,6 @@ func (f *CherryPickForm) Validate(req *http.Request, errs binding.Errors) bindin
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-//  ____ ___        .__                    .___
-// |    |   \______ |  |   _________     __| _/
-// |    |   /\____ \|  |  /  _ \__  \   / __ |
-// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
-// |______/  |   __/|____/\____(____  /\____ |
-//           |__|                   \/      \/
-//
 
 // UploadRepoFileForm form for uploading repository file
 type UploadRepoFileForm struct {
@@ -697,13 +641,6 @@ func (f *RemoveUploadFileForm) Validate(req *http.Request, errs binding.Errors) 
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// ________         .__          __
-// \______ \   ____ |  |   _____/  |_  ____
-// |    |  \_/ __ \|  | _/ __ \   __\/ __ \
-// |    `   \  ___/|  |_\  ___/|  | \  ___/
-// /_______  /\___  >____/\___  >__|  \___  >
-//         \/     \/          \/          \/
-
 // DeleteRepoFileForm form for deleting repository file
 type DeleteRepoFileForm struct {
 	CommitSummary string `binding:"MaxSize(100)"`
@@ -720,13 +657,6 @@ func (f *DeleteRepoFileForm) Validate(req *http.Request, errs binding.Errors) bi
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
-
-// ___________.__                 ___________                     __
-// \__    ___/|__| _____   ____   \__    ___/___________    ____ |  | __ ___________
-// |    |   |  |/     \_/ __ \    |    |  \_  __ \__  \ _/ ___\|  |/ // __ \_  __ \
-// |    |   |  |  Y Y  \  ___/    |    |   |  | \// __ \\  \___|    <\  ___/|  | \/
-// |____|   |__|__|_|  /\___  >   |____|   |__|  (____  /\___  >__|_ \\___  >__|
-// \/     \/                        \/     \/     \/    \/
 
 // AddTimeManuallyForm form that adds spent time manually.
 type AddTimeManuallyForm struct {

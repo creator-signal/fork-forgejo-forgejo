@@ -537,6 +537,12 @@ func CheckPullBranchProtections(ctx context.Context, pr *issues_model.PullReques
 		}
 	}
 
+	if issues_model.MergeBlockedByAutosquashCommits(pb, pr) {
+		return pb, models.ErrDisallowedToMerge{
+			Reason: "There are commits with messages starting with autosquash keywords",
+		}
+	}
+
 	if skipProtectedFilesCheck {
 		return nil, nil
 	}

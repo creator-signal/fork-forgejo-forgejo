@@ -243,6 +243,13 @@ func ChangeTargetBranch(ctx context.Context, pr *issues_model.PullRequest, doer 
 	pr.CommitsAhead = divergence.Ahead
 	pr.CommitsBehind = divergence.Behind
 
+	// Update if it has autostash commits
+	hasAutosquashCommits, err := HasAutosquashCommits(ctx, pr)
+	if err != nil {
+		return err
+	}
+	pr.HasAutosquashCommits = hasAutosquashCommits
+
 	if err := pr.UpdateColsIfNotMerged(ctx, "merge_base", "status", "conflicted_files", "changed_protected_files", "base_branch", "commits_ahead", "commits_behind"); err != nil {
 		return err
 	}
@@ -366,13 +373,26 @@ func TestPullRequest(ctx context.Context, doer *user_model.User, repoID, olderTh
 				log.Error("UpdateCommitDivergence: %v", err)
 			}
 		}
+		hasAutosquashCommits, err := HasAutosquashCommits(ctx, pr)
+		if err != nil {
+			if git_model.IsErrBranchNotExist(err) && !git.IsBranchExist(ctx, pr.HeadRepo.RepoPath(), pr.HeadBranch) {
+				log.Warn("Cannot test PR %s/%d: head_branch %s no longer exists", pr.BaseRepo.Name, pr.IssueID, pr.HeadBranch)
+			} else {
+				log.Error("HasAutosquashCommits: %v", err)
+			}
+		} else {
+			err = pr.UpdateHasAutosquashCommits(ctx, hasAutosquashCommits)
+			if err != nil {
+				log.Error("UpdateHasAutosquashCommits: %v", err)
+			}
+		}
 		AddToTaskQueue(ctx, pr)
 	}
 }
 
 // Mark old reviews as stale if diff to mergebase has changed.
 // Dismiss all approval reviews if protected branch rule item enabled.
-// Update commit divergence.
+// Update commit divergence and if it has autosquash commits
 func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newCommitID, oldCommitID string, doer *user_model.User) {
 	objectFormat := git.ObjectFormatFromName(pr.BaseRepo.ObjectFormatName)
 	if newCommitID == "" || newCommitID == objectFormat.EmptyObjectID().String() {
@@ -416,6 +436,16 @@ func ValidatePullRequest(ctx context.Context, pr *issues_model.PullRequest, newC
 		err = pr.UpdateCommitDivergence(ctx, divergence.Ahead, divergence.Behind)
 		if err != nil {
 			log.Error("UpdateCommitDivergence: %v", err)
+		}
+	}
+
+	hasAutosquashCommits, err := git.HasAutosquashCommits(ctx, testPatchCtx.gitRepo.Path, testPatchCtx.baseRev, testPatchCtx.headRev, testPatchCtx.env)
+	if err != nil {
+		log.Error("HasAutosquashCommits: %v", err)
+	} else {
+		err = pr.UpdateHasAutosquashCommits(ctx, hasAutosquashCommits)
+		if err != nil {
+			log.Error("UpdateHasAutosquashCommits: %v", err)
 		}
 	}
 }
