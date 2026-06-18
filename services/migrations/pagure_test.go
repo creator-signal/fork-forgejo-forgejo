@@ -20,6 +20,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPagureDownloaderBlocksLocalhost(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, false, func() { require.NoError(t, allowlist.Init()) })()
+
+	u, _ := url.Parse("http://localhost")
+	downloader := NewPagureDownloader(t.Context(), u, "", "test_repo")
+	_, err := downloader.GetRepoInfo()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "can only call allowed HTTP servers")
+}
+
 func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
 
