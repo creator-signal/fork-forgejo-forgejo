@@ -30,8 +30,9 @@ function keyboardSelector(up: boolean) {
     row.classList.contains('keyboard-selected'),
   );
   if (cur === -1) {
-    rows[0].classList.add('keyboard-selected');
-    rows[0].querySelector('a')?.focus();
+    const idx = up ? rows.length - 1 : 0;
+    rows[idx].classList.add('keyboard-selected');
+    rows[idx].querySelector('a')?.focus();
     return;
   }
   let el = rows[cur];
