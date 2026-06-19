@@ -44,6 +44,11 @@ a.ui.label {
   height: 2.1666em;
 }
 
+.ui.label > span.emoji {
+  line-height: unset;
+  font-size: unset;
+}
+
 .ui.label > .color-icon {
   margin-inline-start: 0;
 }
