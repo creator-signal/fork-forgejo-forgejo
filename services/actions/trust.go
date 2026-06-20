@@ -45,7 +45,7 @@ func mustGetIssuePoster(ctx context.Context, issue *issues_model.Issue) (*user_m
 		return issue.Poster, nil
 	}
 	if issue.PosterID == 0 {
-		return nil, user_model.ErrUserNotExist{}
+		return nil, issues_model.ErrNoPosterSetOnIssue
 	}
 
 	poster, err := user_model.GetPossibleUserByID(ctx, issue.PosterID)
