@@ -23,7 +23,7 @@ const list = document.querySelector(`\
 .wiki-pages-list tbody\
 `);
 
-function keyboardSelector(up: boolean) {
+function keyboardSelector(up: boolean, tab: boolean) {
   const rows = Array.from(list?.children ?? []) as HTMLElement[];
   if (rows.length === 0) return;
   const cur = rows.findIndex((row) =>
@@ -43,9 +43,14 @@ function keyboardSelector(up: boolean) {
   } else if (el.nextElementSibling) {
     el = el.nextElementSibling as HTMLElement;
   }
-  el.classList.add('keyboard-selected');
-  el.querySelector('a')?.focus();
+  if (tab) {
+    if (rows[cur] === el) {
+      el.classList.remove('keyboard-selected');
+      return;
+    }
+  } else el.querySelector('a')?.focus();
   if (rows[cur] === el) return;
+  el.classList.add('keyboard-selected');
   rows[cur].classList.remove('keyboard-selected');
 }
 
@@ -244,11 +249,11 @@ function onKeydown(e: KeyboardEvent) {
       break;
     case 'j':
       (e.target as HTMLInputElement).blur();
-      keyboardSelector(false);
+      keyboardSelector(false, false);
       break;
     case 'k':
       (e.target as HTMLInputElement).blur();
-      keyboardSelector(true);
+      keyboardSelector(true, false);
       break;
     case 'l':
       switch (where) {
@@ -353,6 +358,14 @@ function onKeydown(e: KeyboardEvent) {
       }
       break;
     }
+    case 'Tab': {
+      setTimeout(() => {
+        const ks = document.querySelector('.keyboard-selected');
+        if (!ks) return;
+        if (ks.contains(document.activeElement)) return;
+        keyboardSelector(false, true);
+      }, 50);
+    }
   }
   goto_state = false;
 }
@@ -367,6 +380,15 @@ export function initUserShortcuts() {
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === '?') {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
+    }
+    if (!document.querySelector<HTMLInputElement>('#shortcuts input')?.checked) return;
+    if (e.key === 'Tab' && e.shiftKey) {
+      setTimeout(() => {
+        const ks = document.querySelector('.keyboard-selected');
+        if (!ks) return;
+        if (ks.contains(document.activeElement)) return;
+        keyboardSelector(true, true);
+      }, 50);
     }
   });
   if (document.querySelector('#repo-code-tab.active')) {
