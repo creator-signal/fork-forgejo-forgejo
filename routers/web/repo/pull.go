@@ -1126,7 +1126,6 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			return
 		}
 		diffFileMetadata = gitdiff.EnrichWithReview(reviewState, diffFileMetadata...)
-
 	}
 	diffMetadata, err := gitdiff.GetDiffMetadata(reviewState, pager.Paginater, prInfo)
 	if err != nil {

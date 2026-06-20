@@ -1206,7 +1206,7 @@ func GetDiffMetadata(review *pull_model.ReviewState, paginator *paginator.Pagina
 		return nil, errors.New("prInfo cannot be null")
 	}
 
-	var diffMetadata = &DiffMetadata{}
+	diffMetadata := &DiffMetadata{}
 	diffMetadata.TotalNumberOfFiles = prInfo.NumFiles
 	if review != nil {
 		for _, v := range review.UpdatedFiles {
@@ -1244,27 +1244,6 @@ func GetDiffFilePage(metadata []*DiffFileMetadata, page, pageSize, totalFiles in
 	}
 
 	return GetFileNames(metadata[start:end])
-
-}
-
-// FilterDiffFileMetadataByNames returns only the metadata entries whose Name is in names.
-// If names is empty, the original slice is returned unchanged.
-// Order is preserved from metadata; unknown names are ignored.
-func FilterDiffFileMetadataByNames(metadata []*DiffFileMetadata, names []string) []*DiffFileMetadata {
-	if len(names) == 0 {
-		return metadata
-	}
-	set := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		set[name] = struct{}{}
-	}
-	filtered := make([]*DiffFileMetadata, 0, len(names))
-	for _, m := range metadata {
-		if _, ok := set[m.Name]; ok {
-			filtered = append(filtered, m)
-		}
-	}
-	return filtered
 }
 
 // GetDiffSimple builds a Diff between two commits of a repository.

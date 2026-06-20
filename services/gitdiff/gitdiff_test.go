@@ -726,8 +726,11 @@ func TestNoCrashes(t *testing.T) {
 
 func TestGetDiffFilePage(t *testing.T) {
 	metadata := []*DiffFileMetadata{
-		{Name: "a.go"}, {Name: "b.go"}, {Name: "c.go"},
-		{Name: "d.go"}, {Name: "e.go"},
+		{Name: "a.go"},
+		{Name: "b.go"},
+		{Name: "c.go"},
+		{Name: "d.go"},
+		{Name: "e.go"},
 	}
 
 	files := GetDiffFilePage(metadata, 1, 2, len(metadata))

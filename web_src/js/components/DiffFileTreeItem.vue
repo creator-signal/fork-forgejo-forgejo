@@ -27,11 +27,11 @@ export default {
       return diffTypes[pType];
     },
     async loadMoreData() {
-      const params = new URLSearchParams(window.location.search)
-      params.set('file-only', true)
- 
+      const params = new URLSearchParams(window.location.search);
+      params.set('file-only', true);
+
       for (let page = this.store.currentPage + 1; page <= this.item.file.OnPage; page++) {
-        params.set('diff-page', page)
+        params.set('diff-page', page);
         await loadMoreFiles(`?${params.toString()}`);
       }
       window.location.hash = `#diff-${this.item.file.NameHash}`;
