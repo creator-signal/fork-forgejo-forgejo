@@ -229,7 +229,7 @@
 				<div class="diff-file-box diff-box file-content tw-mt-2" id="diff-incomplete">
 					<h4 class="ui top attached header tw-font-normal tw-flex tw-items-center tw-justify-between">
 						{{ctx.Locale.Tr "repo.diff.too_many_files"}}
-						<a class="ui basic tiny button" id="diff-show-more-files" data-href="?{{ range $i, $f := .FileSelection}}{{ if $i }}&{{ end }}files={{ $f }}{{ end }}&diff-page={{len (printf "a%*s" .DiffMetadata.CurrentPage "")}}&file-only=true">{{ctx.Locale.Tr "repo.diff.show_more"}}</a>
+						<a class="ui basic tiny button" id="diff-show-more-files" data-href="?{{range $i, $f := .FileSelection}}{{if $i}}&{{end}}files={{$f}}{{end}}&diff-page={{len (printf "a%*s" .DiffMetadata.CurrentPage "")}}&file-only=true">{{ctx.Locale.Tr "repo.diff.show_more"}}</a>
 					</h4>
 				</div>
 			{{end}}
