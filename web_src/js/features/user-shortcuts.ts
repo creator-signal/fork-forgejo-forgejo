@@ -291,6 +291,10 @@ function onKeydown(e: KeyboardEvent) {
           break;
       }
       break;
+    case 'q':
+    case 'Escape':
+      document.querySelector<HTMLDialogElement>('dialog[open]')?.close();
+      break;
     case 'r':
       if (goto(Page.Releases)) return;
       document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
@@ -349,8 +353,6 @@ function onKeydown(e: KeyboardEvent) {
       }
       break;
     }
-    case 'Escape':
-      document.querySelector<HTMLDialogElement>('dialog[open]')?.close();
   }
   goto_state = false;
 }
