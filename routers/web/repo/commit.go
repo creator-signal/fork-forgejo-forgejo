@@ -357,10 +357,20 @@ func Diff(ctx *context.Context) {
 		PageSize: setting.UI.DiffPagingNum,
 	}
 
-	diffFileMetadataStat := gitdiff.GetDiffFileMetadataStat(diffFileMetadata, pager.Paginater)
+	compareInfo, err := gitRepo.GetCompareInfo(gitRepo.Path, "", commitID, false, false)
+	if err != nil {
+		ctx.ServerError("GetCompareInfo", err)
+		return
+	}
+
+	diffFileMetadataStat, err := gitdiff.GetDiffMetadata(nil, pager.Paginater, compareInfo)
+	if err != nil {
+		ctx.ServerError("GetDiffMetadata", err)
+		return
+	}
 
 	ctx.Data["DiffFileMetadata"] = diffFileMetadata
-	ctx.Data["DiffFileMetadataStat"] = diffFileMetadataStat
+	ctx.Data["DiffMetadata"] = diffFileMetadataStat
 
 	pagedFiles := gitdiff.GetDiffFilePage(diffFileMetadata, listOpts.Page, listOpts.PageSize, len(diffFileMetadata))
 

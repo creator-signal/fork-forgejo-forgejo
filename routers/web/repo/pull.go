@@ -1118,21 +1118,28 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 
+	var reviewState *pull_model.ReviewState
 	if ctx.IsSigned && !willShowSpecifiedCommit && !willShowSpecifiedCommitRange {
-		diffFileMetadata, err = gitdiff.EnrichWithReview(ctx, ctx.Doer.ID, pull, diffFileMetadata...)
+		reviewState, err = pull_model.GetNewestReviewState(ctx, ctx.Doer.ID, pull.ID)
 		if err != nil {
-			ctx.ServerError("EnrichWithReview", err)
+			ctx.ServerError("GetNewestReviewState", err)
 			return
 		}
+		diffFileMetadata = gitdiff.EnrichWithReview(reviewState, diffFileMetadata...)
+
 	}
-	diffFileMetadataStat := gitdiff.GetDiffFileMetadataStat(diffFileMetadata, pager.Paginater)
+	diffMetadata, err := gitdiff.GetDiffMetadata(reviewState, pager.Paginater, prInfo)
+	if err != nil {
+		ctx.ServerError("GetDiffMetadata", err)
+		return
+	}
 
 	ctx.Data["DiffFileMetadata"] = diffFileMetadata
-	ctx.Data["DiffFileMetadataStat"] = diffFileMetadataStat
+	ctx.Data["DiffMetadata"] = diffMetadata
 
 	ctx.PageData["prReview"] = map[string]any{
-		"numberOfFiles":       diffFileMetadataStat.TotalNumberOfFiles,
-		"numberOfViewedFiles": diffFileMetadataStat.NumberOfViewedFiles,
+		"numberOfFiles":       diffMetadata.TotalNumberOfFiles,
+		"numberOfViewedFiles": diffMetadata.NumberOfViewedFiles,
 	}
 
 	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool), endCommitID); err != nil {

@@ -1118,16 +1118,15 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 	return parseNameStatusFileListSplit(stdout, pageSize)
 }
 
-func EnrichWithReview(ctx context.Context, userID int64, pull *issues_model.PullRequest, diffFiles ...*DiffFileMetadata) ([]*DiffFileMetadata, error) {
-	review, err := pull_model.GetNewestReviewState(ctx, userID, pull.ID)
-	if err != nil || review == nil || review.UpdatedFiles == nil {
-		return diffFiles, err
+func EnrichWithReview(reviewState *pull_model.ReviewState, diffFiles ...*DiffFileMetadata) []*DiffFileMetadata {
+	if reviewState == nil || reviewState.UpdatedFiles == nil {
+		return diffFiles
 	}
 	for i := range diffFiles {
-		diffFiles[i].IsViewed = review.UpdatedFiles[diffFiles[i].Name] == pull_model.Viewed
+		diffFiles[i].IsViewed = reviewState.UpdatedFiles[diffFiles[i].Name] == pull_model.Viewed
 	}
 
-	return diffFiles, nil
+	return diffFiles
 }
 
 func parseNameStatusFileListSplit(output string, pageSize int) ([]*DiffFileMetadata, error) {
@@ -1195,23 +1194,31 @@ func GetFileNames(files []*DiffFileMetadata) []string {
 	return fileNames
 }
 
-type DiffFileMetadataStat struct {
+type DiffMetadata struct {
 	HasNext             bool
 	CurrentPage         int
 	TotalNumberOfFiles  int
 	NumberOfViewedFiles int
 }
 
-func GetDiffFileMetadataStat(files []*DiffFileMetadata, paginator *paginator.Paginator) (stat DiffFileMetadataStat) {
-	stat.TotalNumberOfFiles = len(files)
-	for _, v := range files {
-		if v.IsViewed {
-			stat.NumberOfViewedFiles++
+func GetDiffMetadata(review *pull_model.ReviewState, paginator *paginator.Paginator, prInfo *git.CompareInfo) (*DiffMetadata, error) {
+	if prInfo == nil {
+		return nil, errors.New("prInfo cannot be null")
+	}
+
+	var diffMetadata = &DiffMetadata{}
+	diffMetadata.TotalNumberOfFiles = prInfo.NumFiles
+	if review != nil {
+		for _, v := range review.UpdatedFiles {
+			if v == pull_model.Viewed {
+				diffMetadata.NumberOfViewedFiles++
+			}
 		}
 	}
-	stat.CurrentPage = paginator.Current()
-	stat.HasNext = paginator.HasNext()
-	return stat
+
+	diffMetadata.CurrentPage = paginator.Current()
+	diffMetadata.HasNext = paginator.HasNext()
+	return diffMetadata, nil
 }
 
 // GetDiffFilePage slices the full changeset metadata to one page.
