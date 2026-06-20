@@ -6,6 +6,8 @@ const testLocale = {
   approve: 'Locale Approve',
   cancel: 'Locale Cancel',
   rerun: 'Locale Re-run',
+  delete: 'Locale Delete',
+  confirmDelete: '',
   artifactsTitle: 'artifactTitleHere',
   areYouSure: '',
   confirmDeleteArtifact: '',
@@ -168,6 +170,7 @@ function configureForMultipleAttemptTests({viewHistorical}) {
       canApprove: true,
       canCancel: true,
       canRerun: true,
+      canDelete: false,
       status: 'success',
       commit: {
         pusher: {},
@@ -449,8 +452,12 @@ test('artifacts download links', async () => {
   await flushPromises();
 
   expect(wrapper.get('.job-artifacts .job-artifacts-title').text()).toEqual('artifactTitleHere');
+
+  expect(wrapper.find('.job-artifacts .job-artifacts-item:nth-of-type(1) a').exists()).toBe(true);
+  // Expired artifacts should be listed, but not be linked, because they no longer exist.
+  expect(wrapper.find('.job-artifacts .job-artifacts-item:nth-of-type(2) a').exists()).toBe(false);
+
   expect(wrapper.get('.job-artifacts .job-artifacts-item:nth-of-type(1) .job-artifacts-link').attributes('href')).toEqual('https://example.com/example-org/example-repo/actions/runs/1001/artifacts/artifactname1');
-  expect(wrapper.get('.job-artifacts .job-artifacts-item:nth-of-type(2) .job-artifacts-link').attributes('href')).toEqual('https://example.com/example-org/example-repo/actions/runs/1001/artifacts/artifactname2');
 });
 
 test('initial load schedules refresh when job is not done', async () => {

@@ -26,16 +26,15 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/indexer/issues"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/references"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	repo_service "forgejo.org/services/repository"
-	files_service "forgejo.org/services/repository/files"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -489,8 +488,7 @@ func TestIssueDependencies(t *testing.T) {
 	session := loginUser(t, owner.Name)
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteIssue)
 
-	repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, owner, tests.DeclarativeRepoOptions{})
-	defer f()
+	repo := forgery.CreateRepository(t, owner, nil)
 
 	createIssue := func(t *testing.T, title string) api.Issue {
 		t.Helper()
@@ -1359,13 +1357,9 @@ func TestIssueForm(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		session := loginUser(t, user2.Name)
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "",
-			[]unit_model.Type{unit_model.TypeCode, unit_model.TypeIssues}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/issue_template/test.yaml",
-					ContentReader: strings.NewReader(`name: Test
+		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Files: forgery.MapFS{
+				".forgejo/issue_template/test.yaml": forgery.MapFile(`name: Test
 about: Hello World
 body:
   - type: checkboxes
@@ -1375,10 +1369,8 @@ body:
       options:
         - label: This is a label
 `),
-				},
 			},
-		)
-		defer f()
+		})
 
 		t.Run("Choose list", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -1407,10 +1399,7 @@ body:
 func TestIssueUnsubscription(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			AutoInit: optional.Some(false),
-		})
-		defer f()
+		repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 		session := loginUser(t, user.Name)
 
 		issueURL := testNewIssue(t, session, user.Name, repo.Name, "Issue title", "Description")
@@ -1437,6 +1426,31 @@ func TestIssueLabelList(t *testing.T) {
 		htmlDoc.AssertElement(t, labelListSelector, true)
 		htmlDoc.AssertElement(t, ".labels.list .no-select."+hiddenClass, true)
 	})
+}
+
+func TestIssueNoLabel(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	session := loginUser(t, user.Name)
+	testFn := func(t *testing.T, route string) {
+		req := NewRequest(t, "GET", route)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#issue-list .labels-list .label", false)
+	}
+
+	for pathTitle, path := range map[string]string{
+		"User Issues": "/issues",
+		"Repo Issues": "/user2/repo1/issues",
+		"Repo Pulls":  "/user2/repo1/pulls",
+	} {
+		for _, issuesQuery := range []string{"0", "0,1", "1,0"} {
+			t.Run(fmt.Sprintf("%s (%s)", pathTitle, issuesQuery), func(t *testing.T) {
+				testFn(t, path+"?labels="+issuesQuery)
+			})
+		}
+	}
 }
 
 func TestIssueUserDashboard(t *testing.T) {
@@ -1471,6 +1485,40 @@ func TestIssueOrgDashboard(t *testing.T) {
 		htmlDoc := NewHTMLParser(t, resp.Body)
 		htmlDoc.AssertElement(t, sel, true)
 	}
+}
+
+func TestIssueDashboardProjects(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3, Type: user_model.UserTypeOrganization})
+	session := loginUser(t, user.Name)
+
+	testFn := func(t *testing.T, req *RequestWrapper, projectID int64) {
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		projectFilterHref, ok := htmlDoc.Find("[data-test-tag=filter-project] a.active").Attr("href")
+		assert.True(t, ok)
+		assert.Contains(t, projectFilterHref, fmt.Sprintf("project=%d", projectID))
+
+		issues := htmlDoc.Find("#issue-list .issue-meta")
+		assert.NotZero(t, issues.Length())
+
+		issues.Each(func(i int, s *goquery.Selection) {
+			issueProjectHref, ok := s.Find("a.project").Attr("href")
+			assert.True(t, ok)
+			assert.Contains(t, issueProjectHref, fmt.Sprintf("projects/%d", projectID))
+		})
+	}
+
+	t.Run("User", func(t *testing.T) {
+		testFn(t, NewRequest(t, "GET", "/issues?project=4"), 4)
+	})
+
+	t.Run("Org", func(t *testing.T) {
+		testFn(t, NewRequestf(t, "GET", "/org/%s/issues?project=7", org.Name), 7)
+	})
 }
 
 func TestIssueCount(t *testing.T) {

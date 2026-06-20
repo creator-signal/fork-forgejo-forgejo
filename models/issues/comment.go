@@ -283,6 +283,7 @@ type Comment struct {
 
 	CommitID        int64
 	Line            int64 // - previous line / + proposed line
+	ExtraLinesCount int64 `xorm:"NOT NULL DEFAULT 0"` // number of additional lines after Line (0 = single line)
 	TreePath        string
 	Content         string        `xorm:"LONGTEXT"`
 	ContentVersion  int           `xorm:"NOT NULL DEFAULT 0"`
@@ -751,6 +752,58 @@ func (c *Comment) UnsignedLine() uint64 {
 	return uint64(c.Line)
 }
 
+// DisplayLine returns the signed line number where the comment should be displayed
+// in the diff view. For multi-line comments, this is the last line of the range.
+func (c *Comment) DisplayLine() int64 {
+	if c.Line < 0 {
+		return c.Line - c.ExtraLinesCount
+	}
+	return c.Line + c.ExtraLinesCount
+}
+
+// UnsignedDisplayLine returns the unsigned (absolute) display line number.
+// For multi-line comments, this is the last line of the range (UnsignedLine + ExtraLinesCount).
+func (c *Comment) UnsignedDisplayLine() uint64 {
+	return c.UnsignedLine() + uint64(c.ExtraLinesCount)
+}
+
+// resolveLineAtHead checks whether a specific line is still present at the given head commit.
+// For positive lines (proposed side), uses git blame --reverse.
+// For negative lines (previous side), uses diff + FindAdjustedLineNumber.
+func (c *Comment) resolveLineAtHead(gitRepo *git.Repository, lineNum uint64, currentHead string) (*git.ReverseLineBlame, error) {
+	if c.Line > 0 {
+		blame, err := gitRepo.ReverseLineBlame(c.CommitSHA, c.TreePath, lineNum, currentHead)
+		if err != nil {
+			return nil, fmt.Errorf("ReverseLineBlame for line %d: %w", lineNum, err)
+		}
+		return blame, nil
+	}
+
+	// For comments on removed lines, diff the commit the line was known to exist in against the head
+	// being viewed, then locate the line in that diff.
+	var buffer bytes.Buffer
+	if err := git.GetRepoRawDiffForFile(gitRepo, c.CommitSHA, currentHead, git.RawDiffNormal, c.TreePath, &buffer); err != nil {
+		return nil, fmt.Errorf("failed to get diff: %w", err)
+	}
+	diff := buffer.String()
+
+	adjustedLine, err := git.FindAdjustedLineNumber(c.Patch, int64(lineNum), strings.NewReader(diff))
+	if err != nil && errors.Is(err, git.ErrLineNotFound) {
+		return &git.ReverseLineBlame{
+			CommitID:   "", // not currentHead — indicates the line is outdated
+			LineNumber: lineNum,
+			FilePath:   c.TreePath,
+		}, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("FindAdjustedLineNumber for line %d: %w", lineNum, err)
+	}
+	return &git.ReverseLineBlame{
+		CommitID:   currentHead,
+		LineNumber: uint64(adjustedLine.Left),
+		FilePath:   c.TreePath,
+	}, nil
+}
+
 func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repository, currentHead string) (*git.ReverseLineBlame, error) {
 	if c.reverseLineBlame != nil {
 		return c.reverseLineBlame, nil
@@ -774,43 +827,15 @@ func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repos
 		}
 		defer closer.Close()
 
-		var reverseBlame *git.ReverseLineBlame
-		if c.Line > 0 {
-			var err error
-			reverseBlame, err = gitRepo.ReverseLineBlame(c.CommitSHA, c.TreePath, c.UnsignedLine(), currentHead)
-			if err != nil {
-				return "", fmt.Errorf("failed to perform `git blame --reverse` to resolve current line for comment (id=%d): %w", c.ID, err)
-			}
-		} else {
-			// For comments on removed lines, perform a `git diff` between the last commit that the line of code was
-			// known to exist (which is recorded as CommitSHA) and the requested head. Then inspect the diff to verify
-			// that the removed line of code is present in the diff.
-			buffer := bytes.Buffer{}
-			err := git.GetRepoRawDiffForFile(gitRepo, c.CommitSHA, currentHead, git.RawDiffNormal, c.TreePath, &buffer)
-			if err != nil {
-				return "", fmt.Errorf("failed to get diff: %w", err)
-			}
-
-			diff := buffer.String()
-			adjustedLine, err := git.FindAdjustedLineNumber(c.Patch, int64(c.UnsignedLine()), strings.NewReader(diff))
-			if err != nil && errors.Is(err, git.ErrLineNotFound) {
-				// Line not found in the diff. Don't treat this as an error, because that would break the caching --
-				// instead, return a blame where CommitID != headCommitID, which will be an indicator to callers (for
-				// both resolution methods) that the line of code is outdated in the diff.
-				reverseBlame = &git.ReverseLineBlame{
-					CommitID:   "", // not currentHead
-					LineNumber: c.UnsignedLine(),
-					FilePath:   c.TreePath,
-				}
-			} else if err != nil {
-				return "", fmt.Errorf("failed in finding adjusted line number: %w", err)
-			} else {
-				reverseBlame = &git.ReverseLineBlame{
-					CommitID:   currentHead,
-					LineNumber: uint64(adjustedLine.Left),
-					FilePath:   c.TreePath,
-				}
-			}
+		// On the previous side the patch is cut around the last line of the range, so resolve that line
+		// (for single-line comments and the proposed side it equals UnsignedLine).
+		resolveLine := c.UnsignedLine()
+		if c.Line < 0 {
+			resolveLine = c.UnsignedDisplayLine()
+		}
+		reverseBlame, err := c.resolveLineAtHead(gitRepo, resolveLine, currentHead)
+		if err != nil {
+			return "", err
 		}
 
 		data, err := json.Marshal(reverseBlame)
@@ -832,6 +857,120 @@ func (c *Comment) ResolveCurrentLine(ctx context.Context, repo *repo_model.Repos
 
 	c.reverseLineBlame = reverseBlame
 	return c.reverseLineBlame, nil
+}
+
+// CheckLineRangeValid reports whether a multi-line comment range can still be placed at the given head.
+// Previous (negative) side: only the last line can be located in the cut patch, so only it is checked.
+// Proposed (positive) side: modified lines are tolerated; only a line landing at an unexpected offset
+// (lines inserted/removed inside the range) invalidates it. Uses the same caching pattern as ResolveCurrentLine.
+func (c *Comment) CheckLineRangeValid(ctx context.Context, repo *repo_model.Repository, currentHead string) (bool, error) {
+	if c.ExtraLinesCount <= 0 {
+		return true, nil
+	}
+
+	resultJSON, err := cache.GetString(fmt.Sprintf("comment.ResolveRange;ID=%d;HEAD=%s", c.ID, currentHead), func() (string, error) {
+		gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, repo)
+		if err != nil {
+			return "", fmt.Errorf("failed to open repo: %w", err)
+		}
+		defer closer.Close()
+
+		// Previous side: only the last line of the range can be located in the cut patch, so validate it.
+		if c.Line < 0 {
+			blame, err := c.resolveLineAtHead(gitRepo, c.UnsignedDisplayLine(), currentHead)
+			if err != nil {
+				return "", err
+			}
+			if blame.CommitID != currentHead {
+				return "invalid", nil
+			}
+			return "valid", nil
+		}
+
+		// Proposed side: resolve the first line; the others are expected to follow it consecutively.
+		anchorBlame, err := c.resolveLineAtHead(gitRepo, c.UnsignedLine(), currentHead)
+		if err != nil {
+			return "", err
+		}
+		if anchorBlame.CommitID != currentHead {
+			return "invalid", nil
+		}
+		anchorResolvedLine := anchorBlame.LineNumber
+
+		// Catch a line changed by a later commit by comparing each range line's current content
+		// to the comment's Patch (its content at creation; lines the PR itself changed already match it).
+		// The Patch uses the comment's line coordinates, so trust it only
+		// when the anchor's recorded content equals its current content — otherwise fall back below.
+		if expected := git.PatchRightSideContent(c.Patch); len(expected) > 0 {
+			if headLines, ok := c.headFileLines(gitRepo, currentHead, anchorBlame.FilePath); ok {
+				lineAt := func(n uint64) (string, bool) {
+					if n >= 1 && n <= uint64(len(headLines)) {
+						return headLines[n-1], true
+					}
+					return "", false
+				}
+				anchorExpected, hasAnchor := expected[int64(c.UnsignedLine())]
+				anchorCurrent, hasCurrent := lineAt(anchorResolvedLine)
+				if hasAnchor && hasCurrent && anchorExpected == anchorCurrent {
+					trusted := true
+					for i := int64(1); i <= c.ExtraLinesCount; i++ {
+						exp, okExp := expected[int64(c.UnsignedLine())+i]
+						cur, okCur := lineAt(anchorResolvedLine + uint64(i))
+						if !okExp || !okCur {
+							trusted = false // mapping incomplete -> fall back to the offset-only check
+							break
+						}
+						if exp != cur {
+							return "invalid", nil // a range line was changed after the comment was made
+						}
+					}
+					if trusted {
+						return "valid", nil
+					}
+				}
+			}
+		}
+
+		// Fallback (offset-only): a line that no longer resolves is treated as "modified but present"
+		// and tolerated; only a resolved line landing at an unexpected offset (lines inserted/removed
+		// inside the range) is a break.
+		startLine := c.UnsignedLine()
+		for i := int64(1); i <= c.ExtraLinesCount; i++ {
+			blame, err := c.resolveLineAtHead(gitRepo, startLine+uint64(i), currentHead)
+			if err != nil {
+				return "", err
+			}
+			if blame.CommitID == currentHead && blame.LineNumber != anchorResolvedLine+uint64(i) {
+				return "invalid", nil
+			}
+		}
+
+		return "valid", nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return resultJSON == "valid", nil
+}
+
+// headFileLines reads the content of treePath at the given commit and returns its lines
+// (dropping the trailing empty element produced by a final newline). ok is false when the
+// file can't be read at head.
+func (c *Comment) headFileLines(gitRepo *git.Repository, head, treePath string) (lines []string, ok bool) {
+	commit, err := gitRepo.GetCommit(head)
+	if err != nil {
+		return nil, false
+	}
+	content, err := commit.GetFileContent(treePath, -1)
+	if err != nil {
+		return nil, false
+	}
+	lines = strings.Split(content, "\n")
+	if n := len(lines); n > 0 && lines[n-1] == "" {
+		lines = lines[:n-1]
+	}
+	return lines, true
 }
 
 // CodeCommentLink returns the url to a comment in code
@@ -914,6 +1053,7 @@ func CreateComment(ctx context.Context, opts *CreateCommentOptions) (_ *Comment,
 		CommitID:         opts.CommitID,
 		CommitSHA:        opts.CommitSHA,
 		Line:             opts.LineNum,
+		ExtraLinesCount:  opts.ExtraLinesCount,
 		Content:          opts.Content,
 		OldTitle:         opts.OldTitle,
 		NewTitle:         opts.NewTitle,
@@ -1090,6 +1230,7 @@ type CreateCommentOptions struct {
 	CommitSHA        string
 	Patch            string
 	LineNum          int64
+	ExtraLinesCount  int64
 	TreePath         string
 	ReviewID         int64
 	Content          string

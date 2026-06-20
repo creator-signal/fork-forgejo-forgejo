@@ -22,7 +22,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKey, handle *string) (*runnerv1.Task, bool, error) {
+var ErrEphemeralRunnerHasAssignedTask = errors.New("ephemeral runner already has an assigned task")
+
+func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKey, handle *string) (*runnerv1.Task, error) {
 	var (
 		task *runnerv1.Task
 		job  *actions_model.ActionRunJob
@@ -32,22 +34,19 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 		hasRunnerAssignedTask, err := actions_model.HasTaskForRunner(ctx, runner.ID)
 		// Let the runner retry the request, do not allow to proceed
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		// if runner has task, dont assign new task
 		if hasRunnerAssignedTask {
-			return nil, false, nil
+			return nil, ErrEphemeralRunnerHasAssignedTask
 		}
 	}
 
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		t, ok, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey, handle)
+		t, err := actions_model.CreateTaskForRunner(ctx, runner, requestKey, handle)
 		if err != nil {
 			return fmt.Errorf("CreateTaskForRunner: %w", err)
-		}
-		if !ok {
-			return nil
 		}
 
 		if err := t.LoadAttributes(ctx); err != nil {
@@ -91,16 +90,18 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 
 		return nil
 	}); err != nil {
-		return nil, false, err
-	}
-
-	if task == nil {
-		return nil, false, nil
+		return nil, err
 	}
 
 	CreateCommitStatus(ctx, job)
 
-	return task, true, nil
+	return task, nil
+}
+
+func IsNoTaskAvailable(err error) bool {
+	return errors.Is(err, ErrEphemeralRunnerHasAssignedTask) ||
+		errors.Is(err, actions_model.ErrNoMatchingJobFound) ||
+		errors.Is(err, actions_model.ErrNoJobUpdated)
 }
 
 func RecoverTasks(ctx context.Context, tasks []*actions_model.ActionTask) ([]*runnerv1.Task, error) {
@@ -366,4 +367,43 @@ func convertTimestamp(timestamp *timestamppb.Timestamp) timeutil.TimeStamp {
 		return timeutil.TimeStamp(0)
 	}
 	return timeutil.TimeStamp(timestamp.AsTime().Unix())
+}
+
+// deleteTask removes the given task with all associated steps, outputs, logs, and ephemeral runners, if any. For
+// deleteTask to succeed, it must have completed. If it has not, an error is returned. If the given task does not exist,
+// nothing happens.
+func deleteTask(ctx context.Context, taskID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		task, err := actions_model.GetTaskByID(ctx, taskID)
+		if err != nil {
+			if errors.Is(err, util.ErrNotExist) {
+				return nil
+			}
+			return fmt.Errorf("unable to load task %d: %w", taskID, err)
+		}
+
+		if !task.Status.IsDone() {
+			return fmt.Errorf("unable to remove task %d because it has not completed yet", taskID)
+		}
+
+		if task.HasLogs() {
+			err = actions_module.RemoveLogs(ctx, task.LogInStorage, task.LogFilename)
+			if err != nil {
+				return fmt.Errorf("unable to remove logs of task %d: %w", taskID, err)
+			}
+		}
+
+		// Whether an ephemeral runner has been used is determined based on whether it is assigned to a task.
+		// Consequently, ephemeral runners have to be cleaned up before any task can be removed.
+		err = actions_model.DeleteEphemeralRunner(ctx, task.RunnerID)
+		if err != nil {
+			return fmt.Errorf("unable to cleanup ephemeral runners before removing task %d: %w", taskID, err)
+		}
+		err = actions_model.DeleteTask(ctx, task.ID)
+		if err != nil {
+			return fmt.Errorf("unable to remove task %d: %w", task.ID, err)
+		}
+
+		return nil
+	})
 }

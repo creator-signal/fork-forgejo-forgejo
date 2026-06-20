@@ -179,18 +179,20 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 	// 1,-2 means including label 1 and excluding label 2
 	// 0 means issues with no label
 	// blank means labels will not be filtered for issues
+
 	selectLabels := ctx.FormString("labels")
-	switch selectLabels {
-	case "":
-		ctx.Data["AllLabels"] = true
-	case "0":
-		ctx.Data["NoLabel"] = true
-	}
 	if len(selectLabels) > 0 {
 		labelIDs, err = base.StringsToInt64s(strings.Split(selectLabels, ","))
 		if err != nil {
 			ctx.Flash.Error(ctx.Tr("invalid_data", selectLabels), true)
 		}
+		if slices.Contains(labelIDs, 0) {
+			labelIDs = []int64{0}
+			ctx.Data["NoLabel"] = true
+		}
+	}
+	if len(labelIDs) == 0 {
+		ctx.Data["AllLabels"] = true
 	}
 
 	keyword := strings.Trim(ctx.FormString("q"), " ")
@@ -2457,6 +2459,7 @@ func UpdateIssueMilestone(ctx *context.Context) {
 		has, err := db.GetEngine(ctx).Where("issue_id = ? AND type = ?", issue.ID, issues_model.CommentTypeMilestone).OrderBy("id DESC").Limit(1).Get(comment)
 		if !has || err != nil {
 			ctx.ServerError("GetLatestMilestoneComment", err)
+			return
 		}
 		if err := comment.LoadMilestone(ctx); err != nil {
 			ctx.ServerError("LoadMilestone", err)
@@ -2940,6 +2943,7 @@ func ListIssues(ctx *context.Context) {
 				continue
 			}
 			ctx.Error(http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 

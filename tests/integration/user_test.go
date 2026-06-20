@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,11 +30,13 @@ import (
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/html"
 )
 
 func TestViewUser(t *testing.T) {
@@ -409,17 +412,16 @@ func TestUserHints(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
 
 	// Create a known-good repo, with only one unit enabled
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
-		unit_model.TypeCode,
-	}, []unit_model.Type{
+	repo := forgery.CreateRepository(t, user, nil)
+	forgery.EnableRepoUnits(t, repo, unit_model.TypeCode)
+	forgery.DisableRepoUnits(t, repo,
 		unit_model.TypePullRequests,
 		unit_model.TypeProjects,
 		unit_model.TypePackages,
 		unit_model.TypeActions,
 		unit_model.TypeIssues,
 		unit_model.TypeWiki,
-	}, nil)
-	defer f()
+	)
 
 	ensureRepoUnitHints := func(t *testing.T, hints bool) {
 		t.Helper()
@@ -500,11 +502,19 @@ func TestUserHints(t *testing.T) {
 		assertAddMore := func(t *testing.T, present bool) {
 			t.Helper()
 
+			// check if the tab is present
 			req := NewRequest(t, "GET", repo.Link())
 			resp := session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 
 			htmlDoc.AssertElement(t, fmt.Sprintf("a[href='%s/settings/units']", repo.Link()), present)
+
+			// check if the user settings hint is present
+			req = NewRequest(t, "GET", repo.Link()+"/settings/units")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			htmlDoc.AssertElement(t, ".user-main-content a[href='/user/settings/appearance#hints']", present)
 		}
 
 		t.Run("hints enabled", func(t *testing.T) {
@@ -729,6 +739,65 @@ func TestUserPronouns(t *testing.T) {
 
 		userName := strings.TrimSpace(htmlDoc.Find(".profile-avatar-name .username").Text())
 		assert.Equal(t, "user2", userName)
+	})
+}
+
+func TestUserEditWebsite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := forgery.CreateUser(t, nil)
+	urlStr := "/api/v1/user/settings"
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+
+	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should work
+		website := "https://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var apiUser api.UserSettings
+		DecodeJSON(t, resp, &apiUser)
+
+		assert.Equal(t, website, apiUser.Website)
+	})
+
+	t.Run("an H3 website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should not work
+		website := "h3://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+
+		var apiErr api.APIError
+		DecodeJSON(t, resp, &apiErr)
+
+		assert.Equal(t, "[Website]: Url", apiErr.Message)
+	})
+
+	t.Run("an H3 website under custom schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		// changing website should work
+		website := "h3://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var apiUser api.UserSettings
+		DecodeJSON(t, resp, &apiUser)
+
+		assert.Equal(t, website, apiUser.Website)
 	})
 }
 
@@ -1300,4 +1369,87 @@ func TestExportUserSSHKeys(t *testing.T) {
 
 		assert.Equal(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDN7KuFUnlztx/UM6PUTyiBAq5SeIqr+qSVFC6JzLQAh\n", resp.Body.String())
 	})
+}
+
+func TestAuthorizedIntegrationList(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
+	topDescription := locale.TrString("settings.authorized_integration.desc")
+	noAI := locale.TrString("settings.authorized_integration.none")
+
+	session := loginUser(t, "user2")
+
+	// Load page with no authorized integrations:
+	req := NewRequest(t, "GET", "/user/settings/authorized-integrations")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item", topDescription), true)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item-body p", noAI), true)
+
+	ait := newAITester(t)
+	defer ait.close()
+
+	// Load page which should now have a generic authorized integration:
+	req = NewRequest(t, "GET", "/user/settings/authorized-integrations")
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item", topDescription), true)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item-body p", noAI), false) // "no ... configured" no longer present
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item span.flex-item-title", "AI TestAuthorizedIntegrationList"), true)
+}
+
+func TestAuthorizedIntegrationView(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	locale := translation.NewLocale("en-US")
+	topDescription := locale.TrString("settings.authorized_integration.desc")
+	noAI := locale.TrString("settings.authorized_integration.none")
+
+	session := loginUser(t, "user2")
+
+	// Create an Authorized Integration
+	ait := newAITester(t)
+	defer ait.close()
+
+	// Load page which should now have a generic authorized integration:
+	req := NewRequest(t, "GET", "/user/settings/authorized-integrations")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item", topDescription), true)
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item-body p", noAI), false) // "no ... configured" no longer present
+	htmlDoc.AssertSelection(t, htmlDoc.FindByTextTrim("div.flex-item span.flex-item-title", "AI TestAuthorizedIntegrationView"), true)
+
+	// Find button to view/edit and verify it's URL
+	viewButtonSelector := htmlDoc.Find("div.flex-item-trailing a.primary.button")
+	require.Equal(t, 1, viewButtonSelector.Length())
+	viewButton := viewButtonSelector.Get(0)
+	hrefIndex := slices.IndexFunc(viewButton.Attr, func(attr html.Attribute) bool {
+		return attr.Key == "href"
+	})
+	require.NotEqual(t, -1, hrefIndex)
+	href := viewButton.Attr[hrefIndex].Val
+	assert.Equal(t, fmt.Sprintf("/user/settings/authorized-integrations/generic/%d", ait.authorizedIntegration.ID), href)
+
+	// Load the view/edit page
+	req = NewRequest(t, "GET", href)
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+
+	// Assert contents of all the fields
+	htmlDoc.AssertAttrEqual(t, "#name", "value", "AI TestAuthorizedIntegrationView")
+	assert.Equal(t, "An Authorized Integration created for the test case TestAuthorizedIntegrationView.\nIt's pretty neat.", htmlDoc.doc.Find("textarea[name='description']").Text())
+	htmlDoc.AssertAttrEqual(t, "#audience", "value", ait.authorizedIntegration.Audience)
+	htmlDoc.AssertAttrEqual(t, "#issuer", "value", ait.authorizedIntegration.Issuer)
+	assert.Equal(t, "{\n  \"rules\": [\n    {\n      \"claim\": \"custom-claim\",\n      \"compare\": \"eq\",\n      \"value\": \"custom-claim-value\"\n    }\n  ]\n}", htmlDoc.doc.Find("textarea[id='claim_rules']").Text()) //nolint:testifylint // this isn't a JSON comparison; the formatting here should be exact as it represents the auto-indentation generated by the server
+	htmlDoc.AssertElementChecked(t, "#resource-all")
+	htmlDoc.AssertElementSelected(t, "#scope-activitypub option[value='write:activitypub']")
+	assert.Equal(t, 0, htmlDoc.Find("#scope-admin").Length()) // not an admin user
+	htmlDoc.AssertElementSelected(t, "#scope-issue option[value='write:issue']")
+	htmlDoc.AssertElementSelected(t, "#scope-misc option[value='write:misc']")
+	htmlDoc.AssertElementSelected(t, "#scope-notification option[value='write:notification']")
+	htmlDoc.AssertElementSelected(t, "#scope-organization option[value='write:organization']")
+	htmlDoc.AssertElementSelected(t, "#scope-package option[value='write:package']")
+	htmlDoc.AssertElementSelected(t, "#scope-repository option[value='write:repository']")
+	htmlDoc.AssertElementSelected(t, "#scope-user option[value='write:user']")
 }

@@ -6,6 +6,7 @@ package actions
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"time"
 
@@ -161,19 +162,8 @@ func (task *ActionTask) UpdateToken(ctx context.Context) error {
 	return UpdateTask(ctx, task, "token_hash", "token_salt", "token_last_eight")
 }
 
-// Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
-// the LogIndexes blob when not needed.
-func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
-	var attempts []*ActionTask
-	err := db.GetEngine(ctx).
-		Cols("id", "attempt", "status", "started").
-		Where("job_id=?", task.JobID).
-		Desc("attempt").
-		Find(&attempts)
-	if err != nil {
-		return nil, err
-	}
-	return attempts, nil
+func (task *ActionTask) HasLogs() bool {
+	return task.LogFilename != ""
 }
 
 func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
@@ -190,6 +180,15 @@ func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
 
 func HasTaskForRunner(ctx context.Context, runnerID int64) (bool, error) {
 	return db.GetEngine(ctx).Where("runner_id = ?", runnerID).Exist(&ActionTask{})
+}
+
+func GetTasksOfJob(ctx context.Context, jobID int64) ([]*ActionTask, error) {
+	var tasks []*ActionTask
+	err := db.GetEngine(ctx).Where("job_id=?", jobID).Find(&tasks)
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch tasks of job %d: %w", jobID, err)
+	}
+	return tasks, nil
 }
 
 func GetTaskByJobAttempt(ctx context.Context, jobID, attempt int64) (*ActionTask, error) {
@@ -341,16 +340,26 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	}
 
 	var jobs []*ActionRunJob
-	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+	if err := e.
+		Join("INNER", "action_run", "action_run_job.run_id=action_run.id").
+		Where("task_id=? AND action_run_job.status=?", 0, StatusWaiting).And(jobCond).
+		Desc("action_run.priority").
+		Asc("action_run_job.updated", "action_run_job.id").
+		Find(&jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
 }
 
-func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, bool, error) {
+var (
+	ErrNoMatchingJobFound = errors.New("no matching job found")
+	ErrNoJobUpdated       = errors.New("no job updated")
+)
+
+func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer committer.Close()
 
@@ -358,7 +367,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 
 	jobs, err := GetAvailableJobsForRunner(e, runner)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	// TODO: a more efficient way to filter labels
@@ -371,10 +380,10 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 		}
 	}
 	if job == nil {
-		return nil, false, nil
+		return nil, ErrNoMatchingJobFound
 	}
 	if err := job.LoadAttributes(ctx); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	now := timeutil.TimeStampNow()
@@ -399,20 +408,20 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 
 	var workflowJob *jobparser.Job
 	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
-		return nil, false, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
+		return nil, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
 	} else if len(gots) != 1 {
-		return nil, false, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
+		return nil, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
 	} else { //nolint:revive
 		_, workflowJob = gots[0].Job()
 	}
 
 	if _, err := e.Insert(task); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	task.LogFilename = logFileName(job.Run.Repo.FullName(), task.ID)
 	if err := UpdateTask(ctx, task, "log_filename"); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if len(workflowJob.Steps) > 0 {
@@ -428,7 +437,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 			}
 		}
 		if _, err := e.Insert(steps); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		task.Steps = steps
 	}
@@ -436,18 +445,18 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 	job.TaskID = task.ID
 	// We never have to send a notification here because the job is started with a not done status.
 	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil {
-		return nil, false, err
+		return nil, err
 	} else if n != 1 {
-		return nil, false, nil
+		return nil, ErrNoJobUpdated
 	}
 
 	task.Job = job
 
 	if err := committer.Commit(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return task, true, nil
+	return task, nil
 }
 
 // Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to
@@ -495,6 +504,27 @@ func UpdateTask(ctx context.Context, task *ActionTask, cols ...string) error {
 	}
 	_, err := sess.Update(task)
 	return err
+}
+
+// DeleteTask removes the given task including all its steps and outputs. Removing logs and ephemeral runners is the
+// caller's responsibility.
+func DeleteTask(ctx context.Context, taskID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		_, err = db.GetEngine(ctx).Delete(&ActionTaskStep{TaskID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete steps of task %d: %w", taskID, err)
+		}
+		_, err = db.GetEngine(ctx).Delete(&ActionTaskOutput{TaskID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete outputs of task %d: %w", taskID, err)
+		}
+		_, err = db.GetEngine(ctx).Delete(&ActionTask{ID: taskID})
+		if err != nil {
+			return fmt.Errorf("unable to delete task %d: %w", taskID, err)
+		}
+		return nil
+	})
 }
 
 func FindOldTasksToExpire(ctx context.Context, olderThan timeutil.TimeStamp, limit int) ([]*ActionTask, error) {

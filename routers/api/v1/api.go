@@ -450,9 +450,16 @@ func reqSelfOrAdmin() func(ctx *context.APIContext) {
 	}
 }
 
-// reqAdmin user should be an owner or a collaborator with admin write of a repository, or site admin
-func reqAdmin() func(ctx *context.APIContext) {
+// reqAdmin user should be an owner or a collaborator with admin write of a repository, or site admin. If one or more
+// unitTypes are given, it also requires that at least one the respective unitTypes is enabled.
+func reqAdmin(unitTypes ...unit.Type) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
+		if len(unitTypes) > 0 && !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
+			return ctx.Repo.Repository.UnitEnabled(ctx, unitType)
+		}) {
+			ctx.NotFound()
+			return
+		}
 		if !ctx.IsUserRepoAdmin() && !ctx.IsUserSiteAdmin() {
 			ctx.Error(http.StatusForbidden, "reqAdmin", "user should be an owner or a collaborator with admin write of a repository")
 			return
@@ -919,6 +926,8 @@ func Routes() *web.Route {
 				m.Get("/attachment", settings.GetGeneralAttachmentSettings)
 				m.Get("/repository", settings.GetGeneralRepoSettings)
 			})
+
+			m.Get("/actions/run", misc.GetActionsRun)
 		})
 
 		// Notifications (requires 'notifications' scope)
@@ -1242,10 +1251,14 @@ func Routes() *web.Route {
 						m.Delete("/{artifact_id}", reqToken(), reqRepoWriter(unit.TypeActions), repo.DeleteActionArtifact)
 						m.Get("/{artifact_id}/zip", repo.DownloadActionArtifact)
 					})
+					m.Get("/jobs/{job_id}/logs", repo.GetActionJobLogs)
 					m.Group("/runs", func() {
 						m.Get("", repo.ListActionRuns)
 						m.Get("/{run_id}", repo.GetActionRun)
+						m.Delete("/{run_id}", reqToken(), reqAdmin(unit.TypeActions), repo.DeleteActionRun)
+						m.Post("/{run_id}/cancel", reqToken(), reqRepoWriter(unit.TypeActions), repo.CancelActionRun)
 						m.Get("/{run_id}/jobs", repo.ListActionRunJobs)
+						m.Get("/{run_id}/logs", repo.GetActionRunLogs)
 						m.Get("/{run_id}/artifacts", repo.ListActionRunArtifacts)
 					})
 
@@ -1689,6 +1702,11 @@ func Routes() *web.Route {
 					m.Combo("/emails").
 						Get(admin.ListUserEmails).
 						Delete(bind(api.DeleteEmailOption{}), admin.DeleteUserEmails)
+					m.Group("/tokens", func() {
+						m.Combo("").Get(admin.ListUserAccessTokens).
+							Post(bind(api.CreateAccessTokenOption{}), admin.CreateUserAccessToken)
+						m.Combo("/{id}").Delete(admin.DeleteUserAccessToken)
+					})
 					if setting.Quota.Enabled {
 						m.Group("/quota", func() {
 							m.Get("", admin.GetUserQuota)

@@ -27,14 +27,39 @@ func NewHTMLParser(t testing.TB, body *bytes.Buffer) *HTMLDoc {
 	return &HTMLDoc{doc: doc}
 }
 
-func (doc *HTMLDoc) AssertElementPredicate(t testing.TB, selector string, predicate func(element *goquery.Selection) bool) bool {
+// Fetch selector and pass it into the provided function which should perform test assert/require checks on the element.
+func (doc *HTMLDoc) AssertElementPredicate(t testing.TB, selector string, predicate func(element *goquery.Selection)) {
 	t.Helper()
 	selection := doc.doc.Find(selector)
 	require.NotEmpty(t, selection, selector)
-	return predicate(selection)
+	predicate(selection)
 }
 
-func (doc *HTMLDoc) AssertAttrPredicate(t testing.TB, selector, attr string, predicate func(attrValue string) bool) bool {
+// Verify that a single element exists with the given selector, and it has the attribute `checked`.
+func (doc *HTMLDoc) AssertElementChecked(t testing.TB, selector string) {
+	doc.AssertElementPredicate(t, selector, func(element *goquery.Selection) {
+		if assert.Equal(t, 1, element.Length(), 1) {
+			val, exists := element.Attr("checked")
+			assert.True(t, exists)
+			assert.Empty(t, val)
+		}
+	})
+}
+
+// Verify that a single element exists with the given selector, and it has the attribute `selected`.
+func (doc *HTMLDoc) AssertElementSelected(t testing.TB, selector string) {
+	doc.AssertElementPredicate(t, selector, func(element *goquery.Selection) {
+		if assert.Equal(t, 1, element.Length(), 1) {
+			val, exists := element.Attr("selected")
+			assert.True(t, exists)
+			assert.Empty(t, val)
+		}
+	})
+}
+
+// Fetch attr from selector, which must exist, and pass it into the provided function which should perform test
+// assert/require checks on the attribute value.
+func (doc *HTMLDoc) AssertAttrPredicate(t testing.TB, selector, attr string, predicate func(attrValue string)) {
 	t.Helper()
 	selection := doc.doc.Find(selector)
 	require.NotEmpty(t, selection, selector)
@@ -42,13 +67,13 @@ func (doc *HTMLDoc) AssertAttrPredicate(t testing.TB, selector, attr string, pre
 	actual, exists := selection.Attr(attr)
 	require.True(t, exists, "%s not found in %s", attr, selection.Text())
 
-	return predicate(actual)
+	predicate(actual)
 }
 
-func (doc *HTMLDoc) AssertAttrEqual(t testing.TB, selector, attr, expected string) bool {
+func (doc *HTMLDoc) AssertAttrEqual(t testing.TB, selector, attr, expected string) {
 	t.Helper()
-	return doc.AssertAttrPredicate(t, selector, attr, func(actual string) bool {
-		return assert.Equal(t, expected, actual)
+	doc.AssertAttrPredicate(t, selector, attr, func(actual string) {
+		assert.Equal(t, expected, actual)
 	})
 }
 

@@ -154,6 +154,7 @@ linters:
           - gosec
           - staticcheck
           - unparam
+          - nilnil
         path: _test\.go
       - linters:
           - dupl
@@ -164,6 +165,9 @@ linters:
       - linters:
           - forbidigo
         path: cmd
+      - linters:
+          - forbidigo
+        path: build/lint-single-response
       - linters:
           - dupl
         text: (?i)webhook
@@ -188,27 +192,6 @@ linters:
         text: "(ST1005|ST1003|QF1001):"
 
       # TODO: eventually remove this section entirely
-      - path: cmd/admin_auth_ldap_test.go
-        linters:
-          - nilnil
-      - path: cmd/admin_auth_oauth_test.go
-        linters:
-          - nilnil
-      - path: cmd/admin_auth_pam_test.go
-        linters:
-          - nilnil
-      - path: cmd/cmd.go
-        linters:
-          - nilnil
-      - path: cmd/forgejo/actions.go
-        linters:
-          - nilnil
-      - path: models/actions/run.go
-        linters:
-          - nilnil
-      - path: models/actions/task.go
-        linters:
-          - nilnil
       - path: models/activities/action_list.go
         linters:
           - nilnil
@@ -225,9 +208,6 @@ linters:
         linters:
           - nilnil
       - path: models/forgejo_migrations_legacy/v32.go
-        linters:
-          - nilnil
-      - path: models/forgejo_migrations_legacy/v32_test.go
         linters:
           - nilnil
       - path: models/db/context.go
@@ -339,9 +319,6 @@ linters:
         linters:
           - nilnil
       - path: services/actions/context.go
-        linters:
-          - nilnil
-      - path: services/actions/task.go
         linters:
           - nilnil
       - path: services/actions/trust.go

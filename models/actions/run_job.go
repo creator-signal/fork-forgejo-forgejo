@@ -153,6 +153,21 @@ func (job *ActionRunJob) CanBeRerun(ctx context.Context) (bool, error) {
 	return job.Status.IsDone(), nil
 }
 
+// GetAllAttempts retrieve all the attempts of this job. Limited fields are queried to avoid loading the LogIndexes blob
+// when not needed.
+func (job *ActionRunJob) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
+	var attempts []*ActionTask
+	err := db.GetEngine(ctx).
+		Cols("id", "attempt", "status", "started").
+		Where("job_id=?", job.ID).
+		Desc("attempt").
+		Find(&attempts)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
+}
+
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {
 	var job ActionRunJob
 	has, err := db.GetEngine(ctx).Where("id=?", id).Get(&job)
@@ -364,4 +379,11 @@ func (job *ActionRunJob) AllNeedsExist(allExistingJobIDs container.Set[string]) 
 	}
 
 	return unknownJobIDs, len(unknownJobIDs) == 0
+}
+
+// DeleteJob removes the given job. Removing all associated tasks is up to the caller. If the given job does not exist,
+// nothing happens.
+func DeleteJob(ctx context.Context, jobID int64) error {
+	_, err := db.GetEngine(ctx).Delete(&ActionRunJob{ID: jobID})
+	return err
 }
