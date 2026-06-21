@@ -1,23 +1,23 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package lfs
 
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	git_model "forgejo.org/models/git"
 	"forgejo.org/models/perm"
 	access_model "forgejo.org/models/perm/access"
-	quota_model "forgejo.org/models/quota"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
@@ -30,6 +30,16 @@ import (
 
 // See https://github.com/git-lfs/git-lfs/blob/main/docs/proposals/ssh_adapter.md
 
+const (
+	batchCommand        = "batch"
+	getObjectCommand    = "get-object"
+	listLockCommand     = "list-lock"
+	lockCommand         = "lock"
+	putObjectCommand    = "put-object"
+	unlockCommand       = "unlock"
+	verifyObjectCommand = "verify-object"
+)
+
 type OidLine struct {
 	Oid  string
 	Size int
@@ -37,12 +47,19 @@ type OidLine struct {
 }
 
 type SSHAdpater struct {
+	bridge        *HTTPBridge
+	client        *lfs_module.Client
 	ctx           context.Context
-	user          *user_model.User
+	handlerMap    map[string]commandHandler
+	lfsVerb       string
+	pktAdapter    *PktAdapter
+	quitExpected  bool
 	repository    *repo_model.Repository
 	requestedMode perm.AccessMode
-	pktAdapter    *PktAdapter
+	user          *user_model.User
 }
+
+type commandHandler func(string, [][]byte) error
 
 func parseArguments(req [][]byte) (map[string]string, error) {
 	arguments := make(map[string]string)
@@ -59,8 +76,8 @@ func parseArguments(req [][]byte) (map[string]string, error) {
 	return arguments, nil
 }
 
-func parseBatchRequest(req [][]byte) ([]OidLine, error) {
-	var oidLines []OidLine
+func parseBatchRequest(req [][]byte) ([]lfs_module.Pointer, error) {
+	var oidLines []lfs_module.Pointer
 	for _, packet := range req {
 		if packet == nil {
 			break
@@ -73,28 +90,13 @@ func parseBatchRequest(req [][]byte) ([]OidLine, error) {
 		if err != nil {
 			return oidLines, fmt.Errorf("Error parsing batch request oid's size: %q", values[1])
 		}
-		args := make(map[string]string)
-		if len(values) > 2 {
-			for _, value := range values[2:] {
-				key, value, found := strings.Cut(strings.TrimRight(value, "\n"), "=")
-				if !found {
-					return oidLines, fmt.Errorf("Error parsing batch request arguments %q: expected \"key=value\"", value)
-				}
-				args[key] = value
-			}
-		}
 		oidLines = append(oidLines,
-			OidLine{
+			lfs_module.Pointer{
 				Oid:  values[0],
-				Size: size,
-				Args: args,
+				Size: int64(size),
 			})
 	}
 	return oidLines, nil
-}
-
-func (s *SSHAdpater) getCapabilityAdvertisement() []byte {
-	return []byte("version=1\n")
 }
 
 func (s *SSHAdpater) checkVersionCommand(c []byte) bool {
@@ -111,227 +113,365 @@ func (s *SSHAdpater) CheckAuthorization() bool {
 	return perm.CanAccess(s.requestedMode, unit.TypeCode)
 }
 
-func (s *SSHAdpater) handleBatchRequest(lfsVerb string) (PktLine, int, error) {
-	var batchOidLine PktLine
+func (s *SSHAdpater) handleError(status int, err error) error {
+	reportError := s.pktAdapter.WriteHTTPError(status, err.Error())
+	if err != nil {
+		return fmt.Errorf("Error sending error (status %d: %v): %v", status, err, reportError)
+	}
+	s.quitExpected = true
+	return nil
+}
+
+func (s *SSHAdpater) handleBatchRequest(_ string, _ [][]byte) error {
 	packets, err := s.pktAdapter.Read()
 	if err != nil {
-		return batchOidLine, http.StatusBadRequest, errors.New("Failed to read LFS command")
+		return s.handleError(http.StatusBadRequest, errors.New("Failed to read batch request data"))
 	}
 
 	oidLines, err := parseBatchRequest(packets)
 	if err != nil {
-		return batchOidLine, http.StatusBadRequest, fmt.Errorf("Error parsing batch request: %v", err)
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing batch request: %v", err))
+	}
+	err = s.bridge.Batch(s.ctx, s.user, s.repository, s.lfsVerb, oidLines)
+	if err != nil {
+		return s.handleError(http.StatusInternalServerError, err)
 	}
 
+	var batchOidLine PktLine
 	for _, oidLine := range oidLines {
-		batchLine, err := NewPktLine(fmt.Appendf(nil, "%s %d %s", oidLine.Oid, oidLine.Size, lfsVerb))
+		batchLine, err := NewPktLine(fmt.Appendf(nil, "%s %d %s", oidLine.Oid, oidLine.Size, s.lfsVerb))
 		if err != nil {
-			return batchOidLine, http.StatusInternalServerError, fmt.Errorf("Error creating batch response: %v", err)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("Error creating batch response: %v", err))
 		}
 		batchOidLine = append(batchOidLine, batchLine...)
 	}
-	return batchOidLine, http.StatusOK, nil
+
+	statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", http.StatusOK))
+	if err != nil {
+		return fmt.Errorf("Error creating status PktLine: %v", err)
+	}
+	if err := s.pktAdapter.WriteSplitPacket(statusPkt, batchOidLine); err != nil {
+		return fmt.Errorf("Error sending batch response: %v", err)
+	}
+	return nil
 }
 
-func (s *SSHAdpater) handlePutObjectRequest(command string, packets [][]byte) (int, error) {
+func (s *SSHAdpater) handlePutObjectRequest(oid string, packets [][]byte) error {
 	if s.requestedMode < perm.AccessModeWrite {
-		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for put-object command", s.requestedMode)
+		return s.handleError(
+			http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for put-object command", s.requestedMode))
 	}
-	_, oid, found := strings.Cut(command, " ")
-	if !found {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in put-object request: %q", command)
+	if oid == "" {
+		return s.handleError(http.StatusUnprocessableEntity, errors.New("No oid in put-object request"))
 	}
 	if len(packets) <= 1 {
-		return http.StatusBadRequest, errors.New("Put-object request must have more than 1 packets")
+		return s.handleError(http.StatusBadRequest, errors.New("Put-object request must have more than 1 packets"))
 	}
 	args, err := parseArguments(packets[1:])
 	if err != nil {
-		return http.StatusBadRequest, fmt.Errorf("Error parsing put-object arguments: %v", err)
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing put-object arguments: %v", err))
 	}
 	size, ok := args["size"]
 	if !ok {
-		return http.StatusBadRequest, fmt.Errorf("Size argument not found in put-object: %q %q", packets, args)
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Size argument not found in put-object: %q %q", packets, args))
 	}
 
-	p := lfs_module.Pointer{Oid: oid}
-	if p.Size, err = strconv.ParseInt(size, 10, 64); err != nil {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Invalid size: %q", size)
+	pointer := &lfs_module.Pointer{Oid: oid}
+	if pointer.Size, err = strconv.ParseInt(size, 10, 64); err != nil {
+		return s.handleError(http.StatusUnprocessableEntity, fmt.Errorf("Invalid size: %q", size))
 	}
-	if !p.IsValid() {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", p.Oid, s.repository.Name)
+	if !pointer.IsValid() {
+		return s.handleError(
+			http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", pointer.Oid, s.repository.Name))
 	}
 
-	binaryReader := s.pktAdapter.GetBinaryReader()
-	contentStore := lfs_module.NewContentStore()
-	exists, err := contentStore.Exists(p)
+	err = s.bridge.Upload(s.ctx, s.user, s.repository, pointer, s.pktAdapter)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Unable to check if LFS OID[%s] exist. Error: %v", p.Oid, err)
+		return s.handleError(http.StatusInternalServerError, err)
 	}
 
-	if exists {
-		ok, err := quota_model.EvaluateForUser(s.ctx, s.repository.OwnerID, quota_model.LimitSubjectSizeGitLFS)
-		if err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("quota_model.EvaluateForUser: %v", err)
-		}
-		if !ok {
-			return http.StatusRequestEntityTooLarge, errors.New("quota exceeded")
-		}
+	if err := s.pktAdapter.WriteHTTPOK(); err != nil {
+		return fmt.Errorf("Error sending OK response to put-object: %v", err)
 	}
-
-	uploadOrVerify := func() error {
-		if exists {
-			accessible, err := git_model.LFSObjectAccessible(s.ctx, s.user, p.Oid)
-			if err != nil {
-				return fmt.Errorf("Unable to check if LFS MetaObject [%s] is accessible. Error: %v", p.Oid, err)
-			}
-			if !accessible {
-				// The file exists but the user has no access to it.
-				// The upload gets verified by hashing and size comparison to prove access to it.
-				hash := sha256.New()
-				written, err := io.Copy(hash, binaryReader)
-				if err != nil {
-					return fmt.Errorf("Error creating hash. Error: %v", err)
-				}
-
-				if written != p.Size {
-					return fmt.Errorf("content size does not match (got %d, expected %d)", written, p.Size)
-				}
-				if hex.EncodeToString(hash.Sum(nil)) != p.Oid {
-					return lfs_module.ErrHashMismatch
-				}
-			} else {
-				_, err := io.Copy(io.Discard, binaryReader) // Discarding data
-				if err != nil {
-					return fmt.Errorf("Error discarding data: %v", err)
-				}
-			}
-		} else if err := contentStore.Put(p, binaryReader); err != nil {
-			return fmt.Errorf("error copying data: %v", err)
-		}
-		_, err := git_model.NewLFSMetaObject(s.ctx, s.repository.ID, p)
-		return err
-	}
-
-	if err := uploadOrVerify(); err != nil {
-		returnErr := fmt.Errorf("Error whilst uploadOrVerify LFS OID[%s]: %v", p.Oid, err)
-		if _, err = git_model.RemoveLFSMetaObjectByOid(s.ctx, s.repository.ID, p.Oid); err != nil {
-			returnErr = errors.Join(fmt.Errorf("Error whilst removing MetaObject for LFS OID[%s]: %v", p.Oid, err))
-		}
-		return http.StatusInternalServerError, returnErr
-	}
-	return http.StatusOK, nil
+	return nil
 }
 
-func (s *SSHAdpater) handleVerifyObject(command string, packets [][]byte) (int, error) {
+func (s *SSHAdpater) handleVerifyObject(oid string, packets [][]byte) error {
 	if s.requestedMode < perm.AccessModeRead {
-		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for verify-object command", s.requestedMode)
+		return s.handleError(
+			http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for verify-object command", s.requestedMode))
 	}
-	_, oid, found := strings.Cut(command, " ")
-	if !found {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in verify-object request: %q", command)
+	if oid == "" {
+		return s.handleError(http.StatusUnprocessableEntity, errors.New("No oid in verify-object"))
 	}
 	if len(packets) <= 1 {
-		return http.StatusBadRequest, errors.New("Verify-object request must have more than 1 packets")
+		return s.handleError(http.StatusBadRequest, errors.New("Verify-object request must have more than 1 packets"))
 	}
 	args, err := parseArguments(packets[1:])
 	if err != nil {
-		return http.StatusBadRequest, fmt.Errorf("Error parsing verify-object arguments: %v", err)
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing verify-object arguments: %v", err))
 	}
-	size, ok := args["size"]
+	sizeStr, ok := args["size"]
 	if !ok {
-		return http.StatusBadRequest, fmt.Errorf("Size argument not found in verify-object: %q %q", packets, args)
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Size argument not found in verify-object: %q %q", packets, args))
+	}
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		return s.handleError(
+			http.StatusBadRequest, fmt.Errorf("Size argument (%s) cannot be parsed as an integer in verify-object: %v", sizeStr, err))
 	}
 
-	p := lfs_module.Pointer{Oid: oid}
-	if p.Size, err = strconv.ParseInt(size, 10, 64); err != nil {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Invalid size: %q", size)
-	}
-	contentStore := lfs_module.NewContentStore()
-	ok, err = contentStore.Verify(p)
+	pointer := &lfs_module.Pointer{Oid: oid, Size: size}
+	err = s.bridge.Verify(s.ctx, s.user, s.repository, pointer)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Error whilst verifying LFS OID[%s]: %v", p.Oid, err)
-	} else if !ok {
-		return http.StatusNotFound, fmt.Errorf("LFS OID[%s] not found", p.Oid)
+		return s.handleError(http.StatusInternalServerError, err)
 	}
-	return http.StatusOK, nil
+
+	if err := s.pktAdapter.WriteHTTPOK(); err != nil {
+		return fmt.Errorf("Error sending OK response to put-object: %v", err)
+	}
+	return nil
 }
 
-func (s *SSHAdpater) handleGetObjectRequest(command string) (int, error) {
+func (s *SSHAdpater) handleGetObjectRequest(oid string, _ [][]byte) error {
 	if s.requestedMode < perm.AccessModeRead {
-		return http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for get-object command", s.requestedMode)
+		return s.handleError(
+			http.StatusUnauthorized, fmt.Errorf("Requested mode %s does not allow for get-object command", s.requestedMode))
 	}
-	_, oid, found := strings.Cut(command, " ")
-	if !found {
-		return http.StatusUnprocessableEntity, fmt.Errorf("Cannot find oid in get-object request: %q", command)
-	}
-
-	p := lfs_module.Pointer{Oid: oid}
-	if !p.IsValid() {
-		return http.StatusUnprocessableEntity, errors.New("Oid or size are invalid")
-	}
-	meta, err := git_model.GetLFSMetaObjectByOid(s.ctx, s.repository.ID, p.Oid)
-	if err != nil {
-		return http.StatusNotFound, errors.New("Unable to get LFS oid")
+	if oid == "" {
+		return s.handleError(http.StatusUnprocessableEntity, errors.New("No oid in get-object request"))
 	}
 
-	contentStore := lfs_module.NewContentStore()
-	content, err := contentStore.Get(meta.Pointer)
-	if err != nil {
-		return http.StatusNotFound, errors.New("Content not found")
-	}
-	defer content.Close()
-	err = s.pktAdapter.WriteBinaryData(content)
-	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Error whilst sending LFS OID[%s] data: %v", p.Oid, err)
+	pointer := &lfs_module.Pointer{Oid: oid}
+	if !pointer.IsValid() {
+		return s.handleError(http.StatusUnprocessableEntity, errors.New("Oid or size are invalid"))
 	}
 
-	return http.StatusOK, nil
+	err := s.bridge.Download(s.ctx, s.user, s.repository, pointer, s.pktAdapter)
+	if err != nil {
+		return s.handleError(http.StatusInternalServerError, err)
+	}
+	return nil
 }
 
-func (s *SSHAdpater) handleListLockRequest() (PktLine, int, error) {
+func (s *SSHAdpater) handleListLockRequest(_ string, packets [][]byte) error {
+	requestArgs, err := parseArguments(packets[1:])
+	if err != nil {
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing list-lock arguments: %v", err))
+	}
+
 	var lockSpec PktLine
-	cursor := 0
-	limit := 100
-
-	lockList, err := git_model.GetLFSLockByRepoID(s.ctx, s.repository.ID, cursor, limit)
+	lockList, err := s.bridge.ListLock(s.ctx, s.user, s.repository, requestArgs)
 	if err != nil {
-		return lockSpec, http.StatusUnprocessableEntity, fmt.Errorf(
-			"Unable to list locks for repository ID[%d]: Error: %v", s.repository.ID, err)
+		return s.handleError(http.StatusInternalServerError, fmt.Errorf("error requesting lock list from bridge: %v", err))
 	}
-	for _, lock := range lockList {
-		idLine, err := NewPktLine(fmt.Appendf(nil, "lock %d", lock.ID))
+
+	for _, lock := range lockList.Locks {
+		idLine, err := NewPktLine(fmt.Appendf(nil, "lock %s", lock.ID))
 		if err != nil {
-			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] id", lock.ID)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] id", lock.ID))
 		}
-		pathLine, err := NewPktLine(fmt.Appendf(nil, "path %d %s", lock.ID, lock.Path))
+		pathLine, err := NewPktLine(fmt.Appendf(nil, "path %s %s", lock.ID, lock.Path))
 		if err != nil {
-			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] patch", lock.ID)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] patch", lock.ID))
 		}
-		atLine, err := NewPktLine(fmt.Appendf(nil, "locked-at %d %s", lock.ID, lock.Created.Format(time.RFC3339)))
+		atLine, err := NewPktLine(fmt.Appendf(nil, "locked-at %s %s", lock.ID, lock.LockedAt.Format(time.RFC3339)))
 		if err != nil {
-			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] locked-at", lock.ID)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] locked-at", lock.ID))
 		}
-		ownerNameLine, err := NewPktLine(fmt.Appendf(nil, "ownername %d %s", lock.ID, lock.Owner.Name))
+		ownerNameLine, err := NewPktLine(fmt.Appendf(nil, "ownername %s %s", lock.ID, lock.Owner.Name))
 		if err != nil {
-			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] ownername", lock.ID)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] ownername", lock.ID))
 		}
 		var owning string
-		if lock.OwnerID == s.user.ID {
+		if lock.Owner.Name == s.user.Name {
 			owning = "ours"
 		} else {
 			owning = "theirs"
 		}
-		ownerLine, err := NewPktLine(fmt.Appendf(nil, "owner %d %s", lock.ID, owning))
+		ownerLine, err := NewPktLine(fmt.Appendf(nil, "owner %s %s", lock.ID, owning))
 		if err != nil {
-			return lockSpec, http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%d] owner", lock.ID)
+			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] owner", lock.ID))
 		}
 		lockSpec = slices.Concat(lockSpec, idLine, pathLine, atLine, ownerNameLine, ownerLine)
 	}
-	return lockSpec, http.StatusOK, nil
+	statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", http.StatusOK))
+	if err != nil {
+		return fmt.Errorf("Error creating status PktLine: %v", err)
+	}
+	if err := s.pktAdapter.WriteSplitPacket(statusPkt, lockSpec); err != nil {
+		return fmt.Errorf("Error sending list-lock response: %v", err)
+	}
+	return nil
+}
+
+func (s *SSHAdpater) handleLockRequest(_ string, packets [][]byte) error {
+	args, err := parseArguments(packets[1:])
+	if err != nil {
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing lock arguments: %v", err))
+	}
+	path, ok := args["path"]
+	if !ok {
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Path argument not found in lock: %q %q", packets, args))
+	}
+
+	lockResponse, errorResponse, code, ok, err := s.bridge.Lock(s.ctx, s.user, s.repository, path)
+	if err != nil {
+		return s.handleError(code, err)
+	}
+
+	if !ok {
+		return s.pktAdapter.WriteHTTPErrorWithArgs(code, errorResponse.Message, map[string]any{
+			"id": errorResponse.Lock.ID, "path": errorResponse.Lock.Path, "locked-at": errorResponse.Lock.LockedAt,
+			"ownername": s.user.Name,
+		})
+	}
+	return s.pktAdapter.WriteStatusWithArgs(code, map[string]any{
+		"id": lockResponse.Lock.ID, "path": lockResponse.Lock.Path, "locked-at": lockResponse.Lock.LockedAt,
+		"ownername": s.user.Name,
+	})
+}
+
+func (s *SSHAdpater) handleUnlockRequest(lid string, packets [][]byte) error {
+	if lid == "" {
+		return s.handleError(http.StatusUnprocessableEntity, errors.New("No lock id in unlock request"))
+	}
+	if len(packets) <= 1 {
+		return s.handleError(http.StatusBadRequest, errors.New("Unlock request must have more than 1 packet"))
+	}
+	args, err := parseArguments(packets[1:])
+	if err != nil {
+		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing unlock arguments: %v", err))
+	}
+	forceStr, ok := args["force"]
+	force := false
+	if ok {
+		force, err = strconv.ParseBool(forceStr)
+		if err != nil {
+			return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing unlock force argument (%s): %v", forceStr, err))
+		}
+	}
+
+	lockResponse, errorResponse, code, ok, err := s.bridge.Unlock(s.ctx, s.user, s.repository, lid, force)
+	if err != nil {
+		return s.handleError(code, err)
+	}
+
+	if !ok {
+		return s.pktAdapter.WriteHTTPErrorWithArgs(code, errorResponse.Message, map[string]any{
+			"id": errorResponse.Lock.ID, "path": errorResponse.Lock.Path, "locked-at": errorResponse.Lock.LockedAt,
+			"ownername": s.user.Name,
+		})
+	}
+	return s.pktAdapter.WriteStatusWithArgs(code, map[string]any{
+		"id": lockResponse.Lock.ID, "path": lockResponse.Lock.Path, "locked-at": lockResponse.Lock.LockedAt,
+		"ownername": s.user.Name,
+	})
+}
+
+func (s *SSHAdpater) init() error {
+	s.handlerMap = map[string]commandHandler{
+		batchCommand:        s.handleBatchRequest,
+		getObjectCommand:    s.handleGetObjectRequest,
+		listLockCommand:     s.handleListLockRequest,
+		lockCommand:         s.handleLockRequest,
+		putObjectCommand:    s.handlePutObjectRequest,
+		unlockCommand:       s.handleUnlockRequest,
+		verifyObjectCommand: s.handleVerifyObject,
+	}
+
+	if !s.CheckAuthorization() {
+		return fmt.Errorf("Not authorized to access repository")
+	}
+
+	err := s.pktAdapter.WriteStr("version=1")
+	if err != nil {
+		return fmt.Errorf("Failed to send version capability advertisement: %v", err)
+	}
+	err = s.pktAdapter.WriteStr("locking")
+	if err != nil {
+		return fmt.Errorf("Failed to send locking capability advertisement: %v", err)
+	}
+	err = s.pktAdapter.WriteFlush()
+	if err != nil {
+		return fmt.Errorf("Failed to flush capability advertisement: %v", err)
+	}
+	return nil
+}
+
+func (s *SSHAdpater) run() error {
+	err := s.init()
+	if err != nil {
+		return err
+	}
+
+	packets, err := s.pktAdapter.Read()
+	if err != nil {
+		return fmt.Errorf("Failed to read capability response: %v", err)
+	} else if len(packets) != 1 {
+		return fmt.Errorf("Unexpected capability response: more than 1 packet received")
+	}
+
+	if !s.checkVersionCommand(packets[0]) {
+		err = s.pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected version received")
+		if err != nil {
+			return fmt.Errorf("Failed to send version error: %v", err)
+		}
+		return fmt.Errorf("Failed to match capability: %q", packets[0])
+	}
+	err = s.pktAdapter.WriteHTTPOK()
+	if err != nil {
+		return fmt.Errorf("Failed to send version acknowledgment: %v", err)
+	}
+
+	for {
+		packets, err = s.pktAdapter.Read()
+		if err != nil {
+			if err == io.EOF { // client closed connection
+				return nil
+			}
+			statusErr := s.pktAdapter.WriteHTTPError(http.StatusInternalServerError, "Failed to read LFS command")
+			if statusErr != nil {
+				err = errors.Join(err, statusErr)
+			}
+			return fmt.Errorf("Failed to read LFS command: %v", err)
+		} else if len(packets) == 0 {
+			statusErr := s.pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected empty LFS command")
+			if statusErr != nil {
+				err = errors.Join(err, statusErr)
+			}
+			return fmt.Errorf("Unexpected empty LFS command: %v", err)
+		}
+
+		commandName, commandArg, _ := strings.Cut(strings.TrimRight(string(packets[0]), "\n"), " ")
+		if commandName == "quit" {
+			err = s.pktAdapter.WriteHTTPOK()
+			break
+		} else if s.quitExpected {
+			return fmt.Errorf("Unexpected LFS command waiting for quit: %q", packets)
+		}
+
+		handler, found := s.handlerMap[commandName]
+		if !found {
+			if err := s.pktAdapter.WriteHTTPError(http.StatusBadRequest, fmt.Sprintf("Unrecognized command: %q", commandName)); err != nil {
+				return fmt.Errorf("Unrecognized LFS command: %v", err)
+			}
+			s.quitExpected = true
+		} else {
+			err = handler(commandArg, packets)
+			if err != nil {
+				break
+			}
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("Unexpected error during LFS transfer: %v", err)
+	}
+	return nil
 }
 
 func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults, pktAdapter *PktAdapter,
-	requestedMode perm.AccessMode, lfsVerb string,
+	requestedMode perm.AccessMode, lfsVerb, tokenString string,
 ) error {
 	if !setting.LFS.StartServer {
 		return fmt.Errorf("LFS isn't enabled")
@@ -348,155 +488,14 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	if err != nil {
 		return fmt.Errorf("You must have pull access to %s/%s: %v", results.OwnerName, results.RepoName, err)
 	}
-	sshAdapter := SSHAdpater{ctx: ctx, user: user, repository: repository, requestedMode: requestedMode, pktAdapter: pktAdapter}
-	if !sshAdapter.CheckAuthorization() {
-		return fmt.Errorf("Not authorized to access repository")
-	}
-
-	err = pktAdapter.WriteData(sshAdapter.getCapabilityAdvertisement())
+	localURL, err := url.Parse(setting.LocalURL)
 	if err != nil {
-		return fmt.Errorf("Failed to send capability advertisement: %v", err)
+		return fmt.Errorf("Cannot create local url for LFS HTTP bridge: %v", err)
 	}
-	err = pktAdapter.WriteFlush()
-	if err != nil {
-		return fmt.Errorf("Failed to flush capability advertisement: %v", err)
+	client := lfs_module.NewClient(localURL, nil)
+	sshAdapter := SSHAdpater{
+		bridge: newHTTPBridge(tokenString), client: &client, ctx: ctx, lfsVerb: lfsVerb, pktAdapter: pktAdapter,
+		repository: repository, requestedMode: requestedMode, user: user,
 	}
-
-	packets, err := pktAdapter.Read()
-	if err != nil {
-		return fmt.Errorf("Failed to read capability response: %v", err)
-	} else if len(packets) != 1 {
-		return fmt.Errorf("Unexpected capability response: more than 1 packet received")
-	}
-
-	quitExpected := false
-	var finalErr error
-	if !sshAdapter.checkVersionCommand(packets[0]) {
-		err = pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected version received")
-		if err != nil {
-			return fmt.Errorf("Failed to send version error: %v", err)
-		}
-		return fmt.Errorf("Failed to match capability: %q", packets[0])
-	}
-	err = pktAdapter.WriteHTTPOK()
-	if err != nil {
-		return fmt.Errorf("Failed to send version acknowledgment: %v", err)
-	}
-
-	for {
-		packets, err = pktAdapter.Read()
-		if err != nil {
-			statusErr := pktAdapter.WriteHTTPError(http.StatusInternalServerError, "Failed to read LFS command")
-			if statusErr != nil {
-				err = errors.Join(err, statusErr)
-			}
-			return fmt.Errorf("Failed to read LFS command: %v", err)
-		} else if len(packets) == 0 {
-			statusErr := pktAdapter.WriteHTTPError(http.StatusBadRequest, "Unexpected empty LFS command")
-			if statusErr != nil {
-				err = errors.Join(err, statusErr)
-			}
-			return fmt.Errorf("Unexpected empty LFS command: %v", err)
-		}
-
-		command := strings.TrimRight(string(packets[0]), "\n")
-		if command == "quit" {
-			quitErr := pktAdapter.WriteHTTPOK()
-			if quitErr != nil {
-				if finalErr != nil {
-					finalErr = errors.Join(finalErr, quitErr)
-				} else {
-					finalErr = quitErr
-				}
-			}
-			break
-		} else if quitExpected {
-			return fmt.Errorf("Unexpected LFS command waiting for quit: %q", packets)
-		}
-
-		if command == "batch" {
-			batchOidLine, status, err := sshAdapter.handleBatchRequest(lfsVerb)
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-				if statusErr != nil {
-					return fmt.Errorf("Failed reporting error during batch handling: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", 200))
-			if err != nil {
-				return fmt.Errorf("Error creating status PktLine: %v", err)
-			}
-			if err := pktAdapter.WriteSplitPacket(statusPkt, batchOidLine); err != nil {
-				return fmt.Errorf("Error sending batch response: %v", err)
-			}
-		} else if command == "list-lock" {
-			lockSpec, status, err := sshAdapter.handleListLockRequest()
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-				if statusErr != nil {
-					return fmt.Errorf("Failed reporting error during list-lock handling: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", 200))
-			if err != nil {
-				return fmt.Errorf("Error creating status PktLine: %v", err)
-			}
-			if err := pktAdapter.WriteSplitPacket(statusPkt, lockSpec); err != nil {
-				return fmt.Errorf("Error sending list-lock response: %v", err)
-			}
-		} else if strings.HasPrefix(command, "put-object") {
-			status, err := sshAdapter.handlePutObjectRequest(command, packets)
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object request handling: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			if err := pktAdapter.WriteHTTPOK(); err != nil {
-				return fmt.Errorf("Error sending OK response to put-object: %v", err)
-			}
-		} else if strings.HasPrefix(command, "verify-object") {
-			status, err := sshAdapter.handleVerifyObject(command, packets)
-			if err != nil {
-				statusErr := pktAdapter.WriteHTTPError(status, err.Error())
-				if statusErr != nil {
-					return fmt.Errorf("Failed error reporting for put-object request handling: %v", errors.Join(err, statusErr))
-				}
-				finalErr = err
-				quitExpected = true
-				continue
-			}
-			if err := pktAdapter.WriteHTTPOK(); err != nil {
-				return fmt.Errorf("Error sending OK response to put-object: %v", err)
-			}
-		} else if strings.HasPrefix(command, "get-object") {
-			statusCode, err := sshAdapter.handleGetObjectRequest(command)
-			if err != nil {
-				err := pktAdapter.WriteHTTPError(statusCode, err.Error())
-				if err != nil {
-					return fmt.Errorf("Error sending error status: %v", err)
-				}
-				quitExpected = true
-				continue
-			}
-		} else {
-			if err := pktAdapter.WriteHTTPError(http.StatusBadRequest, fmt.Sprintf("Unrecognized command: %q", command)); err != nil {
-				return fmt.Errorf("Unrecognized LFS command: %v", err)
-			}
-			quitExpected = true
-		}
-	}
-	if finalErr != nil {
-		return fmt.Errorf("Unexpected error during LFS transfer: %v", err)
-	}
-	return nil
+	return sshAdapter.run()
 }

@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"net/url"
@@ -294,11 +295,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		return fail(ctx, extra.UserMsg, "ServCommand failed: %s", extra.Error)
 	}
 
-	// LFS token authentication
-	switch verb {
-	case lfsAuthenticateVerb:
-		url := fmt.Sprintf("%s%s/%s.git/info/lfs", setting.AppURL, url.PathEscape(results.OwnerName), url.PathEscape(results.RepoName))
-
+	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
 		now := time.Now()
 		claims := lfs_module.Claims{
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -315,32 +312,36 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		if err != nil {
 			return fail(ctx, "Failed to sign JWT Token", "Failed to sign JWT token: %v", err)
 		}
+		switch verb {
+		case lfsAuthenticateVerb: // LFS token authentication
+			tokenAuthentication := &git_model.LFSTokenResponse{
+				Header: make(map[string]string),
+				Href: fmt.Sprintf(
+					"%s%s/%s.git/info/lfs", setting.AppURL, url.PathEscape(results.OwnerName), url.PathEscape(results.RepoName)),
+			}
+			tokenAuthentication.Header["Authorization"] = fmt.Sprintf("Bearer %s", tokenString)
 
-		tokenAuthentication := &git_model.LFSTokenResponse{
-			Header: make(map[string]string),
-			Href:   url,
+			enc := json.NewEncoder(os.Stdout)
+			err = enc.Encode(tokenAuthentication)
+			if err != nil {
+				return fail(ctx, "Failed to encode LFS json response", "Failed to encode LFS json response: %v", err)
+			}
+			return nil
+		case lfsTransferVerb: // LFS transfer
+			if lfsVerb != lfsTransferDownload && lfsVerb != lfsTransferUpload {
+				return lfsTransferFail(ctx, fmt.Sprintf("Unexpected operation: %v", lfsVerb))
+			}
+			if err := initDB(ctx); err != nil {
+				return lfsTransferFail(ctx, fmt.Sprintf("Cannot initialize database: %v", err))
+			}
+			pktAdapter := lfs.NewPktAdapter(
+				bufio.NewReaderSize(os.Stdin, lfs.MaxPacketLength), bufio.NewWriterSize(os.Stdout, lfs.MaxPacketLength))
+			err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb, tokenString)
+			if err != nil {
+				return lfsTransferFail(ctx, err.Error())
+			}
+			return nil
 		}
-		tokenAuthentication.Header["Authorization"] = fmt.Sprintf("Bearer %s", tokenString)
-
-		enc := json.NewEncoder(os.Stdout)
-		err = enc.Encode(tokenAuthentication)
-		if err != nil {
-			return fail(ctx, "Failed to encode LFS json response", "Failed to encode LFS json response: %v", err)
-		}
-		return nil
-	case lfsTransferVerb: // LFS transfer
-		if lfsVerb != lfsTransferDownload && lfsVerb != lfsTransferUpload {
-			return lfsTransferFail(ctx, fmt.Sprintf("Unexpected operation: %v", lfsVerb))
-		}
-		if err := initDB(ctx); err != nil {
-			return lfsTransferFail(ctx, fmt.Sprintf("Cannot initialize database: %v", err))
-		}
-		pktAdapter := lfs.NewPktAdapter(os.Stdin, os.Stdout)
-		err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb)
-		if err != nil {
-			return lfsTransferFail(ctx, err.Error())
-		}
-		return nil
 	}
 
 	var gitcmd *exec.Cmd

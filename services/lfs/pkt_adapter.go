@@ -1,3 +1,6 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package lfs
 
 import (
@@ -6,8 +9,8 @@ import (
 	"io"
 	"slices"
 	"strconv"
-
-	"forgejo.org/modules/storage"
+	"sync"
+	"time"
 )
 
 type PktLine []byte
@@ -27,24 +30,55 @@ type PktAdapter struct {
 }
 
 type PktBinaryDataReader struct {
-	r              io.Reader
-	remainingBytes int64
+	r               io.Reader
+	remainingBytes  int
+	currentPktBytes int64
+	eofReached      bool
+	mu              sync.Mutex
+}
+
+func NewPktBinaryDataReader(r io.Reader, remainingBytes int) *PktBinaryDataReader {
+	return &PktBinaryDataReader{r: r, remainingBytes: remainingBytes, currentPktBytes: 0, eofReached: false}
+}
+
+func (r *PktBinaryDataReader) IsDone() bool {
+	return r.eofReached
 }
 
 func (r *PktBinaryDataReader) Read(d []byte) (int, error) {
-	if r.remainingBytes <= 0 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.eofReached {
+		return 0, io.EOF
+	}
+	if r.currentPktBytes <= 0 {
 		pktLen, err := readPacketLen(r.r)
 		if err != nil {
 			return 0, err
 		}
 		if pktLen == 0 {
+			r.eofReached = true
 			return 0, io.EOF
 		}
-		r.remainingBytes = pktLen - 4
+		r.currentPktBytes = pktLen - 4
 	}
-	bytes, err := io.LimitReader(r.r, r.remainingBytes).Read(d)
-	r.remainingBytes -= int64(bytes)
+	bytes, err := io.LimitReader(r.r, r.currentPktBytes).Read(d)
+	r.currentPktBytes -= int64(bytes)
+	r.remainingBytes -= bytes
 	return bytes, err
+}
+
+func (r *PktBinaryDataReader) Close() error {
+	buf := make([]byte, MaxPacketLength)
+	for {
+		if r.eofReached {
+			return nil
+		}
+		_, err := r.Read(buf)
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func readPacketLen(r io.Reader) (int64, error) {
@@ -64,7 +98,10 @@ func readPacketLen(r io.Reader) (int64, error) {
 func readPacket(r io.Reader) ([]byte, int, error) {
 	pktLen, err := readPacketLen(r)
 	if err != nil {
-		return nil, 0, fmt.Errorf("Failed to read packet length: %s", err)
+		return nil, 0, err
+	}
+	if pktLen > MaxPacketLength {
+		return nil, 0, fmt.Errorf("Failed to read packet length: length is to high %d > %d", pktLen, MaxPacketLength)
 	}
 	if pktLen <= 1 {
 		return nil, int(pktLen), nil
@@ -84,8 +121,8 @@ func NewPktAdapter(r io.Reader, w io.Writer) *PktAdapter {
 	return &PktAdapter{r: bufio.NewReader(r), w: bufio.NewWriter(w)}
 }
 
-func (p *PktAdapter) GetBinaryReader() *PktBinaryDataReader {
-	return &PktBinaryDataReader{p.r, 0}
+func (p *PktAdapter) GetBinaryReader(size int) *PktBinaryDataReader {
+	return NewPktBinaryDataReader(p.r, size)
 }
 
 func (p *PktAdapter) Read() ([][]byte, error) {
@@ -93,7 +130,7 @@ func (p *PktAdapter) Read() ([][]byte, error) {
 	for {
 		pkt, pktLen, err := readPacket(p.r)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to read packet: %v", err)
+			return nil, err
 		}
 
 		if pktLen == 0 { // flush pkt
@@ -116,6 +153,21 @@ func NewPktLine(data []byte) (PktLine, error) {
 
 func (p *PktAdapter) NewStrPktLine(msg string) (PktLine, error) {
 	return NewPktLine([]byte(msg + "\n"))
+}
+
+func (p *PktAdapter) createArgsData(args map[string]any) ([]byte, error) {
+	var data []byte
+	for key, val := range args {
+		if valTime, ok := val.(time.Time); ok {
+			val = valTime.UTC().Format(time.RFC3339)
+		}
+		pkt, err := NewPktLine(fmt.Appendf(nil, "%s=%v\n", key, val))
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, []byte(pkt)...)
+	}
+	return data, nil
 }
 
 func (p *PktAdapter) WriteRaw(data []byte) error {
@@ -163,6 +215,20 @@ func (p *PktAdapter) WriteHTTPOK() error {
 	return p.WriteFlush()
 }
 
+func (p *PktAdapter) WriteStatusWithArgs(status int, args map[string]any) error {
+	if err := p.WriteData(fmt.Appendf(nil, "status %d\n", status)); err != nil {
+		return err
+	}
+	argData, err := p.createArgsData(args)
+	if err != nil {
+		return err
+	}
+	if err := p.WriteRaw(argData); err != nil {
+		return err
+	}
+	return p.WriteFlush()
+}
+
 func (p *PktAdapter) WriteSplitPacket(packets ...PktLine) error {
 	if len(packets) == 0 {
 		return nil
@@ -184,10 +250,17 @@ func (p *PktAdapter) WriteSplitPacket(packets ...PktLine) error {
 	return p.WriteFlush()
 }
 
-func (p *PktAdapter) WriteHTTPError(status int, msg string) error {
+func (p *PktAdapter) WriteHTTPErrorWithArgs(status int, msg string, args map[string]any) error {
 	statusPkt, err := NewPktLine(fmt.Appendf(nil, "status %d\n", status))
 	if err != nil {
 		return err
+	}
+	if args != nil {
+		argData, err := p.createArgsData(args)
+		if err != nil {
+			return err
+		}
+		statusPkt = append(statusPkt, argData...)
 	}
 	msgPkt, err := p.NewStrPktLine(msg)
 	if err != nil {
@@ -196,21 +269,21 @@ func (p *PktAdapter) WriteHTTPError(status int, msg string) error {
 	return p.WriteSplitPacket(statusPkt, msgPkt)
 }
 
-func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
-	stat, err := content.Stat()
-	if err != nil {
-		return fmt.Errorf("cannot get content stat: %v", err)
-	}
+func (p *PktAdapter) WriteHTTPError(status int, msg string) error {
+	return p.WriteHTTPErrorWithArgs(status, msg, nil)
+}
+
+func (p *PktAdapter) WriteBinaryData(size int64, content io.Reader) error {
 	if err := p.WriteStr("status 200"); err != nil {
 		return fmt.Errorf("error writing OK status pkt-line: %v", err)
 	}
-	if err := p.WriteStr(fmt.Sprintf("size=%d", stat.Size())); err != nil {
+	if err := p.WriteStr(fmt.Sprintf("size=%d", size)); err != nil {
 		return fmt.Errorf("error writing arguments: %v", err)
 	}
 	if err := p.WriteDelim(); err != nil {
 		return fmt.Errorf("error writing delim-pkt: %v", err)
 	}
-	remainingBytes := stat.Size()
+	remainingBytes := size
 	if remainingBytes > MaxPacketLength {
 		for remainingBytes >= MaxPacketLength-4 {
 			if err := p.WriteRaw(fmt.Appendf(nil, "%04x", MaxPacketLength)); err != nil {
@@ -219,7 +292,7 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 			written, err := io.CopyN(p.w, content, MaxPacketLength-4)
 			remainingBytes -= written
 			if err != nil {
-				return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", stat.Size()-remainingBytes, err)
+				return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", size-remainingBytes, err)
 			}
 		}
 	}
@@ -232,7 +305,7 @@ func (p *PktAdapter) WriteBinaryData(content storage.Object) error {
 			return fmt.Errorf("error whilst copying binary data after %d bytes. Error: %v", written, err)
 		}
 		if written != remainingBytes {
-			return fmt.Errorf("error copying binary data: sent %d instead of %d", written, stat.Size())
+			return fmt.Errorf("error copying binary data: sent %d instead of %d", written, size)
 		}
 	}
 	return p.WriteFlush()
