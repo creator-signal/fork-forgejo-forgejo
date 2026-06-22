@@ -161,6 +161,14 @@ linters:
           - errcheck
           - gocyclo
           - gosec
+          - staticcheck
+          - unparam
+        path: routers/api/v1/permissions/tests
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
         path: models/gitea_migrations/v
       - linters:
           - forbidigo
@@ -319,9 +327,6 @@ linters:
         linters:
           - nilnil
       - path: services/actions/context.go
-        linters:
-          - nilnil
-      - path: services/actions/task.go
         linters:
           - nilnil
       - path: services/actions/trust.go
