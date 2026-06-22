@@ -1416,3 +1416,166 @@ jobs:
 		}
 	})
 }
+
+func TestActionWorkflowTitle(t *testing.T) {
+	const (
+		pushDefaultTitle = "init" // the commit message
+		workflowFile     = "workflow.yml"
+
+		staticName       = "some static name"
+		runNameExpr      = "run for ${{ forgejo.ref_name }}"
+		runNameEvaluated = "run for main"
+	)
+
+	var (
+		owner            *user_model.User
+		workflowFilePath = fmt.Sprintf(".forgejo/workflows/%s", workflowFile)
+	)
+
+	mkWorkflow := func(name, runName string) string {
+		var b strings.Builder
+
+		if name != "" {
+			_, _ = fmt.Fprintf(&b, "name: %s\n", name)
+		}
+
+		if runName != "" {
+			_, _ = fmt.Fprintf(&b, "run-name: %s\n", runName)
+		}
+
+		_, _ = b.WriteString(`
+on:
+  push:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo OK
+`)
+
+		return b.String()
+	}
+
+	tests := []struct {
+		name      string
+		wfName    string
+		wfRunName string
+		// The title depends on the trigger event
+		expectedTitle map[string]string
+	}{
+		{
+			name: "neither name nor run-name",
+			expectedTitle: map[string]string{
+				"push":              pushDefaultTitle,
+				"schedule":          workflowFilePath,
+				"workflow_dispatch": workflowFilePath,
+			},
+		},
+		{
+			name:   "just name",
+			wfName: staticName,
+			expectedTitle: map[string]string{
+				"push":              pushDefaultTitle,
+				"schedule":          staticName,
+				"workflow_dispatch": staticName,
+			},
+		},
+		{
+			name:      "just run-name",
+			wfRunName: runNameExpr,
+			expectedTitle: map[string]string{
+				"push":              runNameEvaluated,
+				"schedule":          runNameEvaluated,
+				"workflow_dispatch": runNameEvaluated,
+			},
+		},
+		{
+			name:      "both name and run-name",
+			wfName:    staticName,
+			wfRunName: runNameExpr,
+			expectedTitle: map[string]string{
+				"push":              runNameEvaluated,
+				"schedule":          runNameEvaluated,
+				"workflow_dispatch": runNameEvaluated,
+			},
+		},
+	}
+
+	triggers := []struct {
+		event string
+		run   func(t testing.TB, repo *repo_model.Repository) (*actions_model.ActionRun, error)
+	}{
+		{
+			event: "push",
+			run: func(t testing.TB, repo *repo_model.Repository) (*actions_model.ActionRun, error) {
+				return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{
+					RepoID: repo.ID,
+					Event:  webhook_module.HookEventPush,
+				}), nil
+			},
+		},
+		{
+			event: "schedule",
+			run: func(t testing.TB, repo *repo_model.Repository) (*actions_model.ActionRun, error) {
+				schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
+				if err != nil {
+					return nil, err
+				}
+
+				err = actions_service.CreateScheduleTask(t.Context(), schedules[0])
+				if err != nil {
+					return nil, err
+				}
+
+				return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{
+					RepoID:     repo.ID,
+					ScheduleID: schedules[0].ID,
+				}), nil
+			},
+		},
+		{
+			event: "workflow_dispatch",
+			run: func(t testing.TB, repo *repo_model.Repository) (*actions_model.ActionRun, error) {
+				gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
+				require.NoError(t, err)
+				defer gitRepo.Close()
+
+				workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, repo.DefaultBranch, workflowFile)
+				if err != nil {
+					return nil, err
+				}
+
+				run, _, err := workflow.Dispatch(t.Context(), nil, repo, owner)
+				if err != nil {
+					return nil, err
+				}
+
+				return run, nil
+			},
+		},
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		owner = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		for _, trigger := range triggers {
+			for _, test := range tests {
+				t.Run(fmt.Sprintf("%s_%s", test.name, trigger.event), func(t *testing.T) {
+					repo := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{
+						Files: forgery.MapFS{
+							workflowFilePath: forgery.MapFile(mkWorkflow(test.wfName, test.wfRunName)),
+						},
+					})
+
+					run, err := trigger.run(t, repo)
+
+					require.NoError(t, err)
+					assert.Equal(t, test.expectedTitle[trigger.event], run.Title)
+				})
+			}
+		}
+	})
+}
