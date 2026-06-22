@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository milestone-issue-list">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="tw-flex tw-items-center tw-justify-between">
 			<h1 class="tw-mb-2">{{.Milestone.Name}}</h1>
@@ -61,7 +60,6 @@
 		{{template "repo/issue/filters" .}}
 
 		{{template "shared/issuelist" dict "." . "listType" "milestone"}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

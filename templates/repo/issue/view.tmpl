@@ -1,14 +1,12 @@
 {{template "base/head" .}}
 <div class="page-content repository view issue pull">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "repo/issue/view_title" .}}
 		{{if .Issue.IsPull}}
 			{{template "repo/pulls/tab_menu" .}}
 		{{end}}
 		{{template "repo/issue/view_content" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

@@ -2,24 +2,20 @@
 {{if .ContextUser.IsOrganization}}
 	<div class="page-content organization packages">
 		{{template "org/header" .}}
-		<main id="main" aria-label="{{.Title}}">
-			<div class="ui container">
-				{{template "package/shared/versionlist" .}}
-			</div>
+		<main id="main" aria-label="{{.Title}}" class="ui container">
+			{{template "package/shared/versionlist" .}}
 		</main>
 	</div>
 {{else}}
 	<div class="page-content user profile packages">
-		<main id="main" aria-label="{{.Title}}">
-			<div class="ui container">
-				<div class="ui stackable grid">
-					<div class="ui four wide column">
-						{{template "shared/user/profile_big_avatar" .}}
-					</div>
-					<div class="ui twelve wide column tw-mb-4">
-						{{template "user/overview/header" .}}
-						{{template "package/shared/versionlist" .}}
-					</div>
+		<main id="main" aria-label="{{.Title}}" class="ui container">
+			<div class="ui stackable grid">
+				<div class="ui four wide column">
+					{{template "shared/user/profile_big_avatar" .}}
+				</div>
+				<div class="ui twelve wide column tw-mb-4">
+					{{template "user/overview/header" .}}
+					{{template "package/shared/versionlist" .}}
 				</div>
 			</div>
 		</main>

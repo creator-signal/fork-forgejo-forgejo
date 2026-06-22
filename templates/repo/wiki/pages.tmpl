@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository wiki pages">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<h2 class="ui header tw-flex tw-items-center tw-justify-between">
 			<span>{{ctx.Locale.Tr "repo.wiki.pages"}}</span>
 			<span>
@@ -26,7 +25,6 @@
 				{{end}}
 			</tbody>
 		</table>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

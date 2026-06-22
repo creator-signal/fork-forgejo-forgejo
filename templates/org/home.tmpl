@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content organization profile">
+<div class="page-content organization profile">
 	{{if .Flash}}
 		<div class="ui container tw-mb-8">
 			{{template "base/alert" .}}
@@ -7,7 +7,7 @@
 	{{end}}
 	{{template "org/header" .}}
 
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div class="ui mobile reversed stackable grid">
 			<div class="ui {{if .ShowMemberAndTeamTab}}eleven wide{{end}} column">
 				{{if .ProfileReadme}}
@@ -74,6 +74,6 @@
 			</div>
 			{{end}}
 		</div>
-	</div>
+	</main>
 </div>
 {{template "base/footer" .}}

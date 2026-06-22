@@ -1,6 +1,6 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content moderation new-report">
-	<div class="ui middle very relaxed page grid">
+<div class="page-content moderation new-report">
+	<main id="main" aria-label="{{.Title}}" class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
 				<h3 class="ui top attached header">
@@ -39,6 +39,6 @@
 				</div>
 			</form>
 		</div>
-	</div>
+	</main>
 </div>
 {{template "base/footer" .}}

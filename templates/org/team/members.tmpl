@@ -1,7 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content organization teams">
+<div class="page-content organization teams">
 	{{template "org/header" .}}
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="ui stackable grid">
 			{{template "org/team/sidebar" .}}
@@ -90,7 +90,7 @@
 				{{end}}
 			</div>
 		</div>
-	</div>
+	</main>
 </div>
 <div class="ui g-modal-confirm delete modal" id="remove-team-member">
 	<div class="header">

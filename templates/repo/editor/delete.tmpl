@@ -1,14 +1,12 @@
 {{template "base/head" .}}
 <div class="page-content repository file editor delete">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui form" method="post">
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
 			{{template "repo/editor/commit_form" .}}
 		</form>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

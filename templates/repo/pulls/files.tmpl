@@ -4,13 +4,11 @@
 <input type="hidden" id="issueIndex" value="{{.Issue.Index}}">
 
 <div class="page-content repository view issue pull files diff">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container fluid padded">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container fluid padded">
 		{{template "repo/issue/view_title" .}}
 		{{template "repo/pulls/tab_menu" .}}
 		{{template "repo/diff/box" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

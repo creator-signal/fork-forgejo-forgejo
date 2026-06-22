@@ -1,19 +1,19 @@
 {{template "base/head" .}}
 <div class="page-content repository projects view-project">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container padded">
-		<div class="tw-flex tw-justify-between tw-items-center tw-mb-4">
-			{{template "repo/issue/navbar" .}}
-			{{if (not $.Repository.IsArchived)}}
-				<a class="ui small primary button" href="{{.RepoLink}}/issues/new/choose?project={{.Project.ID}}">{{ctx.Locale.Tr "repo.issues.new"}}</a>
-			{{end}}
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}">
+		<div class="ui container padded">
+			<div class="tw-flex tw-justify-between tw-items-center tw-mb-4">
+				{{template "repo/issue/navbar" .}}
+				{{if (not $.Repository.IsArchived)}}
+					<a class="ui small primary button" href="{{.RepoLink}}/issues/new/choose?project={{.Project.ID}}">{{ctx.Locale.Tr "repo.issues.new"}}</a>
+				{{end}}
+			</div>
 		</div>
-	</div>
-	<div class="ui container fluid padded">
-		{{template "projects/view" .}}
-	</div>
-</main>
+		<div class="ui container fluid padded">
+			{{template "projects/view" .}}
+		</div>
+	</main>
 </div>
 
 {{template "base/footer" .}}

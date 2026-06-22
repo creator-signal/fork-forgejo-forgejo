@@ -1,7 +1,6 @@
 {{template "base/head" .}}
 <div class="page-content user profile">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="ui stackable grid">
 			<div class="ui four wide column">
@@ -74,8 +73,7 @@
 				{{end}}
 			</div>
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="block-user">

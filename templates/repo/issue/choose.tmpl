@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository new issue">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="issue-navbar">
 			{{template "repo/issue/navbar" .}}
@@ -55,7 +54,6 @@
 				</div>
 			</div>
 		{{end}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

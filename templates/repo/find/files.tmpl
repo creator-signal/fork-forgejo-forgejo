@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div class="tw-flex tw-items-center">
 			<a href="{{$.RepoLink}}">{{.RepoName}}</a>
 			<span class="tw-mx-2">/</span>
@@ -17,7 +16,6 @@
 		<div id="repo-find-file-no-result" class="ui row center tw-mt-8 tw-hidden">
 			<h3>{{ctx.Locale.Tr "repo.find_file.no_matching"}}</h3>
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

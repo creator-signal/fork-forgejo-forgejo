@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository file list">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{if $.CodeIndexerDisabled}}
 			{{$branchURLPrefix := printf "%s/search/branch/" $.RepoLink}}
 			{{$tagURLPrefix := printf "%s/search/tag/" $.RepoLink}}
@@ -10,7 +9,6 @@
 			{{template "repo/branch_dropdown" dict "root" . "ContainerClasses" "tw-mb-3" "branchURLPrefix" $branchURLPrefix "branchURLSuffix" $suffix "tagURLPrefix" $tagURLPrefix "tagURLSuffix" $suffix}}
 		{{end}}
 		{{template "shared/search/code/search" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

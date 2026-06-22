@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository file list {{if .IsBlame}}blame{{end}}">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container {{if .IsBlame}}fluid padded{{end}}">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container {{if .IsBlame}}fluid padded{{end}}">
 		{{template "base/alert" .}}
 		{{if and (not .HideRepoInfo) (not .IsBlame)}}
 		<div class="repo-description">
@@ -176,7 +175,6 @@
 			{{end}}
 			{{template "repo/view_list" .}}
 		{{end}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

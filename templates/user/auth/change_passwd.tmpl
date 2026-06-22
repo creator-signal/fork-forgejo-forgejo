@@ -1,9 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content user signin{{if .LinkAccountMode}} icon{{end}}">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "user/auth/change_passwd_inner" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository milestones">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 
 		<div class="list-header list-header-issues">
@@ -93,8 +92,7 @@
 
 			{{template "base/paginate" .}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 
 {{if or .CanWriteIssues .CanWritePulls}}

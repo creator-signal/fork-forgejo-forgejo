@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository wiki new">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="ui header flex-text-block tw-justify-between">
 			{{ctx.Locale.Tr "repo.wiki.new_page"}}
@@ -43,7 +42,6 @@
 				<a class="ui button red" href="{{.Link}}">{{ctx.Locale.Tr "repo.wiki.cancel"}}</a>
 			</div>
 		</form>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

@@ -1,7 +1,6 @@
 {{template "base/head" .}}
 <div class="page-content repository new migrate">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui middle very relaxed page grid">
+	<main id="main" aria-label="{{.Title}}" class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
 				{{template "base/disable_form_autofill"}}
@@ -121,7 +120,6 @@
 				</div>
 			</form>
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

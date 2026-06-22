@@ -24,7 +24,7 @@
 			</div>
 		</nav>
 
-		<div role="main" class="page-content status-page-500">
+		<main id="main" class="page-content status-page-500">
 			<div class="ui container" >
 				<style> .ui.message.flash-message { text-align: left; } </style>
 				{{template "base/alert" .}}
@@ -44,7 +44,7 @@
 					{{if .SignedUser.IsAdmin}}<p>{{ctx.Locale.Tr "error.report_message" "https://codeberg.org/forgejo/forgejo/issues"}}</p>{{end}}
 				</div>
 			</div>
-		</div>
+		</main>
 	</div>
 
 	{{/* When a sub-template triggers an 500 error, its parent template has been partially rendered, then the 500 page

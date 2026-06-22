@@ -1,7 +1,6 @@
 {{template "base/head" .}}
 <div class="page-content repository new migrate">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<h2 class="tw-mt-4">{{ctx.Locale.Tr "migrate.select.title"}}</h1>
 		{{template "repo/migrate/helper" .}}
 		<div class="migrate-entries">
@@ -23,7 +22,6 @@
 				</a>
 			{{end}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

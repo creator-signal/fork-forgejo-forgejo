@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository file editor edit">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui edit form" method="post">
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
@@ -53,7 +52,7 @@
 			</div>
 			{{template "repo/editor/commit_form" .}}
 		</form>
-	</div>
+	</main>
 	<dialog id="edit-empty-content-modal">
 		<article>
 			<header>
@@ -75,6 +74,5 @@
 			</div>
 		</article>
 	</dialog>
-</main>
 </div>
 {{template "base/footer" .}}

@@ -1,9 +1,8 @@
 {{template "base/head" .}}
 <div class="page-content repository wiki view">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
+	{{template "repo/header" .}}
 	{{$title := .title}}
-	<div class="ui container file-content">
+	<main id="main" aria-label="{{.Title}}" class="ui container file-content">
 		<div class="repo-button-row">
 			<div class="tw-flex tw-items-center">
 				<div class="ui floating filter dropdown" data-no-results="{{ctx.Locale.Tr "repo.pulls.no_results"}}">
@@ -108,8 +107,7 @@
 			</div>
 			{{end}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="delete-wiki-page">

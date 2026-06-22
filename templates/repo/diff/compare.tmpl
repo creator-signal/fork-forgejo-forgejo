@@ -1,10 +1,9 @@
 {{template "base/head" .}}
 <div class="page-content repository diff {{if .PageIsComparePull}}compare pull{{end}}">
 {{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
+<main id="main" aria-label="{{.Title}}" class="ui container fluid padded">
 	{{$showDiffBox := false}}
 	{{$canReadPullRequests := .Permission.CanRead $.UnitTypePullRequests}}
-	<div class="ui container fluid padded">
 	<h2 class="ui header">
 		{{if and $.PageIsComparePull $.IsSigned (not .Repository.IsArchived)}}
 			{{if $canReadPullRequests}}
@@ -229,5 +228,4 @@
 	</div>
 	{{end}}
 </main>
-</div>
 {{template "base/footer" .}}

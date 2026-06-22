@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository quickstart">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div class="ui grid">
 			<div class="sixteen wide column content">
 				{{template "base/alert" .}}
@@ -78,7 +77,6 @@ git push -u origin {{.Repository.DefaultBranch}}</code></pre>
 				</div>
 			</div>
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

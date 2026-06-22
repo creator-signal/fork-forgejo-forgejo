@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content dashboard issues">
-{{template "user/dashboard/navbar" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "user/dashboard/navbar" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<div class="list-header">
 			<div class="switch list-header-toggle">
@@ -114,7 +113,6 @@
 			</div>
 		</div>
 		{{template "shared/issuelist" dict "." . "listType" "dashboard"}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

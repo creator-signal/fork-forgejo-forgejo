@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository wiki start">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div class="ui center segment tw-py-8">
 			{{svg "octicon-book" 48}}
 			<h2>{{ctx.Locale.Tr "repo.wiki.welcome"}}</h2>
@@ -11,7 +10,6 @@
 				<a class="ui primary button" href="{{.RepoLink}}/wiki?action=_new">{{ctx.Locale.Tr "repo.wiki.create_first_page"}}</a>
 			{{end}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

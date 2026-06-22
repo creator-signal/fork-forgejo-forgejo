@@ -1,7 +1,6 @@
 {{template "base/head" .}}
 <div class="page-content user signin">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div class="ui grid">
 			{{template "user/auth/finalize_openid_navbar" .}}
 			<div class="twelve wide column content">
@@ -42,7 +41,6 @@
 				</div>
 			</div>
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

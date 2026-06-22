@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository commits">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container flex-container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container flex-container">
 		{{if and (not .IsEmptyRepo) (.Permission.CanRead $.UnitTypeCode)}}
 			<div class="flex-container-nav">
 				{{template "repo/navbar" .}}
@@ -14,8 +13,7 @@
 			{{if .PageIsCodeFrequency}}{{template "repo/code_frequency" .}}{{end}}
 			{{if .PageIsRecentCommits}}{{template "repo/recent_commits" .}}{{end}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}
 

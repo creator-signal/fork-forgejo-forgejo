@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content ui repository branches">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		{{template "repo/sub_menu" .}}
 		{{if .DefaultBranchBranch}}
@@ -202,8 +201,7 @@
 			</table>
 		</div>
 		{{template "base/paginate" .}}
-	</div>
-</main>
+	</main>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="delete-branch">

@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository tags">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		{{template "repo/release_tag_header" .}}
 		<h4 class="ui top attached header">
@@ -61,8 +60,7 @@
 		</div>
 
 		{{template "base/paginate" .}}
-	</div>
-</main>
+	</main>
 </div>
 
 {{if $.Permission.CanWrite $.UnitTypeCode}}

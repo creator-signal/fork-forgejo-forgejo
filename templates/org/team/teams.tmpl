@@ -1,7 +1,7 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content organization teams">
+<div class="page-content organization teams">
 	{{template "org/header" .}}
-	<div class="ui container">
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		{{if .IsOrganizationOwner}}
 			<div class="text right">
@@ -41,7 +41,7 @@
 				</div>
 			{{end}}
 		</div>
-	</div>
+	</main>
 </div>
 <div class="ui g-modal-confirm delete modal" id="leave-team">
 	<div class="header">

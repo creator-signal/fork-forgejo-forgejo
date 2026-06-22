@@ -1,14 +1,14 @@
 {{template "base/head" .}}
 {{if .ContextUser.IsOrganization}}
-	<div role="main" aria-label="{{.Title}}" class="page-content organization code">
+	<div class="page-content organization code">
 		{{template "org/header" .}}
-		<div class="ui container">
+		<main id="main" aria-label="{{.Title}}" class="ui container">
 			{{template "shared/search/code/search" .}}
-		</div>
+		</main>
 	</div>
 {{else}}
-	<div role="main" aria-label="{{.Title}}" class="page-content user profile">
-		<div class="ui container">
+	<div class="page-content user profile">
+		<main id="main" aria-label="{{.Title}}" class="ui container">
 			<div class="ui stackable grid">
 				<div class="ui four wide column">
 					{{template "shared/user/profile_big_avatar" .}}
@@ -18,7 +18,7 @@
 					{{template "shared/search/code/search" .}}
 				</div>
 			</div>
-		</div>
+		</main>
 	</div>
 {{end}}
 {{template "base/footer" .}}

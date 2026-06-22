@@ -1,13 +1,11 @@
 {{template "base/head" .}}
 <div class="page-content ui {{if .IsRepo}}repository{{end}}">
-{{if .IsRepo}}{{template "repo/header" .}}{{end}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container center">
+	{{if .IsRepo}}{{template "repo/header" .}}{{end}}
+	<main id="main" aria-label="{{.Title}}" class="ui container center">
 		<h1 style="margin-top: 100px" class="error-code">413</h1>
 		<p>{{ctx.Locale.Tr "error413"}}</p>
 		<div class="divider"></div>
 		<br>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

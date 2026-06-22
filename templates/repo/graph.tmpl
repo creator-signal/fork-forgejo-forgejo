@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository commits">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		<div id="git-graph-container" class="ui segment{{if eq .Mode "monochrome"}} monochrome{{end}}">
 			<div id="git-graph-heading">
 				<div id="git-graph-heading-left">
@@ -64,10 +63,8 @@
 				{{template "repo/graph/commits" .}}
 			</div>
 		</div>
+	</main>
+	<div id="pagination">
+		{{template "base/paginate" .}}
 	</div>
-</main>
-</div>
-<div id="pagination">
-	{{template "base/paginate" .}}
-</div>
 {{template "base/footer" .}}

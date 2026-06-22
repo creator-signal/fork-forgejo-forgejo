@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository file editor edit">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui edit form" method="post" action="{{.RepoLink}}/_cherrypick/{{.SHA}}/{{.BranchName | PathEscapeSegments}}">
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
@@ -25,7 +24,6 @@
 			</div>
 			{{template "repo/editor/commit_form" .}}
 		</form>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

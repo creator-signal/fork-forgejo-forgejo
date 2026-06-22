@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content organization repository projects view-project">
+<div class="page-content organization repository projects view-project">
 	{{if .ContextUser.IsOrganization}}
 		{{template "org/header" .}}
 	{{else}}
@@ -8,8 +8,8 @@
 			{{template "user/overview/header" .}}
 		</div>
 	{{end}}
-	<div class="ui container fluid padded">
+	<main id="main" aria-label="{{.Title}}" class="ui container fluid padded">
 		{{template "projects/view" .}}
-	</div>
+	</main>
 </div>
 {{template "base/footer" .}}

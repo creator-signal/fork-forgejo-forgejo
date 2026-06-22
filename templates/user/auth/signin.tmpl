@@ -1,11 +1,9 @@
 {{template "base/head" .}}
 <div class="page-content user signin{{if .LinkAccountMode}} icon{{end}}">
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui middle very relaxed page grid">
+	<main id="main" aria-label="{{.Title}}" class="ui middle very relaxed page grid">
 		<div class="column tw-flex tw-flex-col tw-gap-4 tw-max-w-2xl tw-m-auto">
 			{{template "user/auth/signin_inner" .}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

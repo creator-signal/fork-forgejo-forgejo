@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository actions">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "base/alert" .}}
 
 		{{/* Refresh the list every interval (30s) unless the document isn't visible or a dropdown is open; refresh
@@ -15,8 +14,7 @@
 			hx-indicator="#reloading-indicator">
 			{{template "repo/actions/list_inner" .}}
 		</div>
-	</div>
-</main>
+	</main>
 </div>
 
 <script type="text/javascript">

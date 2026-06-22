@@ -1,8 +1,7 @@
 {{template "base/head" .}}
 <div class="page-content repository packages">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{if (and .Repository.IsPrivate .Repository.Owner.Visibility.IsPublic)}}
 			<div class="ui warning message flash-message flash-warning">
 				{{svg "octicon-alert"}}
@@ -10,7 +9,6 @@
 			</div>
 		{{end}}
 		{{template "package/shared/list" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

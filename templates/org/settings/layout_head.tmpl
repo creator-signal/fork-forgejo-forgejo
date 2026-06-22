@@ -1,7 +1,7 @@
 {{template "base/head" .ctxData}}
-<div role="main" aria-label="{{.ctxData.Title}}" class="page-content {{.pageClass}}">
+<div class="page-content {{.pageClass}}">
 	{{template "org/header" .ctxData}}
-	<div class="ui container flex-container">
+	<main id="main" aria-label="{{.ctxData.Title}}" class="ui container flex-container">
 		{{template "org/settings/navbar" .ctxData}}
 		<div class="flex-container-main">
 			{{template "base/alert" .ctxData}}
@@ -9,6 +9,6 @@
 
 {{if false}}{{/* to make html structure "likely" complete to prevent IDE warnings */}}
 		</div>
-	</div>
+	</main>
 </div>
 {{end}}

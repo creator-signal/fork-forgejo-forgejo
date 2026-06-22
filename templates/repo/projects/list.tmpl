@@ -1,10 +1,8 @@
 {{template "base/head" .}}
 <div class="page-content repository projects milestones">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
 		{{template "projects/list" .}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}

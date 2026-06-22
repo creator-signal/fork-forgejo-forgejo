@@ -1,19 +1,18 @@
 {{template "base/head" .}}
 <div class="page-content repository issue-list">
-{{template "repo/header" .}}
-<main id="main" aria-label="{{.Title}}">
-	<div class="ui container">
-	{{template "base/alert" .}}
+	{{template "repo/header" .}}
+	<main id="main" aria-label="{{.Title}}" class="ui container">
+		{{template "base/alert" .}}
 
-	{{if .PinnedIssues}}
-		<div id="issue-pins" {{if .IsRepoAdmin}}data-is-repo-admin{{end}}>
-			{{range .PinnedIssues}}
-				<div class="issue-card tw-break-anywhere {{if $.IsRepoAdmin}}tw-cursor-grab{{end}}" data-move-url="{{$.Link}}/move_pin" data-issue-id="{{.ID}}">
-					{{template "repo/issue/card" (dict "Issue" . "Page" $ "isPinnedIssueCard" true)}}
-				</div>
-			{{end}}
-		</div>
-	{{end}}
+		{{if .PinnedIssues}}
+			<div id="issue-pins" {{if .IsRepoAdmin}}data-is-repo-admin{{end}}>
+				{{range .PinnedIssues}}
+					<div class="issue-card tw-break-anywhere {{if $.IsRepoAdmin}}tw-cursor-grab{{end}}" data-move-url="{{$.Link}}/move_pin" data-issue-id="{{.ID}}">
+						{{template "repo/issue/card" (dict "Issue" . "Page" $ "isPinnedIssueCard" true)}}
+					</div>
+				{{end}}
+			</div>
+		{{end}}
 
 		<div class="list-header list-header-issues">
 			{{template "repo/issue/navbar" .}}
@@ -51,7 +50,6 @@
 			</div>
 		</div>
 		{{template "shared/issuelist" dict "." . "listType" "repo"}}
-	</div>
-</main>
+	</main>
 </div>
 {{template "base/footer" .}}
