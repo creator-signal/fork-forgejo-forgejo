@@ -71,15 +71,15 @@ func TestAccessTokenCreatePost(t *testing.T) {
 
 	t.Run("retains form info on missing token name", func(t *testing.T) {
 		ctx, body := render(t, &forms.NewAccessTokenPostForm{
-			Name:         "", // absent
-			Resource:     "repo-specific",
-			Scope:        []string{"read:repository"},
-			SelectedRepo: []string{"org17/big_test_private_4"},
+			Name:            "", // absent
+			Resource:        "repo-specific",
+			ScopeRepository: "read:repository",
+			SelectedRepo:    []string{"org17/big_test_private_4"},
 		})
 		require.Contains(t, body, "settings.token_nameform.require_error")
 
 		assert.Equal(t, "repo-specific", ctx.Data["resource"])
-		assert.Contains(t, ctx.Data["scope"], "read:repository")
+		assert.Equal(t, "read:repository", ctx.Data["scope_repository"])
 		assert.True(t, slices.ContainsFunc(ctx.Data["SelectedRepos"].([]*repo_model.Repository), func(r *repo_model.Repository) bool {
 			return r.OwnerName == "org17" && r.Name == "big_test_private_4"
 		}), "SelectedRepos missing org17/big_test_private_4")
@@ -89,7 +89,6 @@ func TestAccessTokenCreatePost(t *testing.T) {
 		ctx, body := render(t, &forms.NewAccessTokenPostForm{
 			Name:         "my new token",
 			Resource:     "repo-specific",
-			Scope:        []string{"", "", ""}, // absent
 			SelectedRepo: []string{"org17/big_test_private_4"},
 		})
 		require.Contains(t, body, "settings.at_least_one_permission")
@@ -103,16 +102,16 @@ func TestAccessTokenCreatePost(t *testing.T) {
 
 	t.Run("retains form info on duplicate token name", func(t *testing.T) {
 		ctx, body := render(t, &forms.NewAccessTokenPostForm{
-			Name:         "Token A", // duplicate
-			Resource:     "repo-specific",
-			Scope:        []string{"read:repository"},
-			SelectedRepo: []string{"org17/big_test_private_4"},
+			Name:            "Token A", // duplicate
+			Resource:        "repo-specific",
+			ScopeRepository: "read:repository",
+			SelectedRepo:    []string{"org17/big_test_private_4"},
 		})
 		require.Contains(t, body, "settings.generate_token_name_duplicate")
 
 		assert.Equal(t, "Token A", ctx.Data["name"])
 		assert.Equal(t, "repo-specific", ctx.Data["resource"])
-		assert.Contains(t, ctx.Data["scope"], "read:repository")
+		assert.Equal(t, "read:repository", ctx.Data["scope_repository"])
 		assert.True(t, slices.ContainsFunc(ctx.Data["SelectedRepos"].([]*repo_model.Repository), func(r *repo_model.Repository) bool {
 			return r.OwnerName == "org17" && r.Name == "big_test_private_4"
 		}), "SelectedRepos missing org17/big_test_private_4")
@@ -122,14 +121,14 @@ func TestAccessTokenCreatePost(t *testing.T) {
 		ctx, body := render(t, &forms.NewAccessTokenPostForm{
 			Name:         "my new token",
 			Resource:     "repo-specific",
-			Scope:        []string{"read:admin"}, // not permitted for repo-specific
+			ScopeAdmin:   "read:admin", // not permitted for repo-specific
 			SelectedRepo: []string{"org17/big_test_private_4"},
 		})
 		require.Contains(t, body, "access_token.error.specified_repos_and_invalid_scope")
 
 		assert.Equal(t, "my new token", ctx.Data["name"])
 		assert.Equal(t, "repo-specific", ctx.Data["resource"])
-		assert.Contains(t, ctx.Data["scope"], "read:admin")
+		assert.Equal(t, "read:admin", ctx.Data["scope_admin"])
 		assert.True(t, slices.ContainsFunc(ctx.Data["SelectedRepos"].([]*repo_model.Repository), func(r *repo_model.Repository) bool {
 			return r.OwnerName == "org17" && r.Name == "big_test_private_4"
 		}), "SelectedRepos missing org17/big_test_private_4")
@@ -139,7 +138,7 @@ func TestAccessTokenCreatePost(t *testing.T) {
 		_, resp := post(t, &forms.NewAccessTokenPostForm{
 			Name:         "my new token",
 			Resource:     "repo-specific",
-			Scope:        []string{"read:admin"}, // not permitted for repo-specific
+			ScopeAdmin:   "read:admin", // not permitted for repo-specific
 			SelectedRepo: []string{"org17/big_test_private_4000000_does_not_exist"},
 		})
 		assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
@@ -148,10 +147,10 @@ func TestAccessTokenCreatePost(t *testing.T) {
 
 	t.Run("non-visible repo selected via IDOR", func(t *testing.T) {
 		_, resp := post(t, &forms.NewAccessTokenPostForm{
-			Name:         "my new token",
-			Resource:     "repo-specific",
-			Scope:        []string{"read:repository"},
-			SelectedRepo: []string{"user30/empty"}, // private repo, user2 has no visibility
+			Name:            "my new token",
+			Resource:        "repo-specific",
+			ScopeRepository: "read:repository",
+			SelectedRepo:    []string{"user30/empty"}, // private repo, user2 has no visibility
 		})
 		assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 		assert.Equal(t, "getSelectedRepos\n", resp.Body.String()) // should be exact same response as "invalid repo selected" case

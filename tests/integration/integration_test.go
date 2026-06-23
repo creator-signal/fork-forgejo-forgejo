@@ -466,8 +466,13 @@ func createApplicationSettingsToken(t testing.TB, session *TestSession, name str
 	for _, scope := range scopes {
 		if scope == auth.AccessTokenScopePublicOnly {
 			publicOnly = true
+		} else if scope == "all" {
+			// web UI doesn't really allow "all", and that's the backend being used to
+			// create this token... but the backend can be tricked into it:
+			urlValues.Add("scope_repository", "all")
 		} else {
-			urlValues.Add("scope", string(scope))
+			split := strings.SplitN(string(scope), ":", 2)                  // read:repository -> "read", "repository"
+			urlValues.Add(fmt.Sprintf("scope_%s", split[1]), string(scope)) // "scope_repository": "read:repository"
 		}
 	}
 	if publicOnly {

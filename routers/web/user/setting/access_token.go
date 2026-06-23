@@ -190,9 +190,9 @@ func loadAccessTokenCreateData(ctx *context.Context) {
 	autofocus := ""
 	if isGet {
 		switch {
-		// Token name will be autofocused the first time the page is loaded -- if form.Scope is empty then that would be
-		// a good sign it's the first load.
-		case len(getForm.Scope) == 0:
+		// Token name will be autofocused the first time the page is loaded -- if form.Resource is empty then that would
+		// be a good sign it's the first load.
+		case len(getForm.Resource) == 0:
 			autofocus = "name"
 		// After submitting a search, refocus the search text box.  Search invokes set_page=1 to reset the pagination
 		// which we'll use to detect this case.

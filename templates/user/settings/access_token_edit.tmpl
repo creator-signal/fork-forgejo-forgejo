@@ -149,26 +149,54 @@
 					<p>{{ctx.Locale.Tr "settings.access_token_desc" (printf "%s/api/swagger" AppSubUrl) "https://forgejo.org/docs/latest/user/token-scope/"}}</p>
 				</p>
 
-				{{range .Categories}}
-					<div class="field tw-pl-1 tw-pb-1 access-token-category">
-						<label class="category-label" for="access-token-scope-{{.}}">
-							{{.}}
-						</label>
-						<div class="gitea-select">
-							<select class="ui selection access-token-select" name="scope" id="access-token-scope-{{.}}">
-								<option value="">
-									{{ctx.Locale.Tr "settings.permission_no_access"}}
-								</option>
-								<option value="read:{{.}}" {{if (SliceUtils.Contains $.scope (printf "read:%s" .))}} selected {{end}}>
-									{{ctx.Locale.Tr "settings.permission_read"}}
-								</option>
-								<option value="write:{{.}}" {{if (SliceUtils.Contains $.scope (printf "write:%s" .))}} selected {{end}}>
-									{{ctx.Locale.Tr "settings.permission_write"}}
-								</option>
-							</select>
-						</div>
-					</div>
-				{{end}}
+				<fieldset>
+					<table class="ui table optionmatrix">
+						<thead>
+							<tr>
+								<th>{{ctx.Locale.Tr "api.scope"}}</th>
+								<th>{{ctx.Locale.Tr "api.scope.no_access"}}</th>
+								<th>{{ctx.Locale.Tr "api.scope.read"}}</th>
+								<th>{{ctx.Locale.Tr "api.scope.write"}}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range .Categories}}
+								{{$formValue := index $ (printf "scope_%s" .)}}
+								{{$readValue := (printf "read:%s" .)}}
+								{{$writeValue := (printf "write:%s" .)}}
+								<tr>
+									<td>
+										<label>
+											<span>{{ctx.Locale.Tr (print "api.scope." .)}}</span>
+											<span class="help" id="help_{{.}}_r">{{ctx.Locale.Tr (print "api.scope." . ".read")}}</span>
+											<span class="help" id="help_{{.}}_w">{{ctx.Locale.Tr (print "api.scope." . ".write")}}</span>
+										</label>
+									</td>
+									<td>
+										<label>
+											<!-- FIXME: All the "if" blocks for 'checked' state need updating due to the usage of different field names for each radio group -->
+											<input aria-labelledby="help_{{.}}_name access_none" type="radio" name="scope_{{.}}" value=""{{if not (or (eq $formValue $readValue) (eq $formValue $writeValue))}} checked{{end}}>
+											<span class="only-mobile">{{ctx.Locale.Tr "org.teams.none_access"}}</span>
+										</label>
+									</td>
+									<td>
+										<label>
+											<input aria-labelledby="help_{{.}}_name help_{{.}}_r" type="radio" name="scope_{{.}}" value="{{$readValue}}" {{if (eq $formValue $readValue)}}checked{{end}}>
+											<span class="only-mobile">{{ctx.Locale.Tr "org.teams.read_access"}}</span>
+										</label>
+									</td>
+									<td>
+										<label>
+											<input aria-labelledby="help_{{.}}_name help_{{.}}_w" type="radio" name="scope_{{.}}" value="{{$writeValue}}" {{if (eq $formValue $writeValue)}}checked{{end}}>
+											<span class="only-mobile">{{ctx.Locale.Tr "org.teams.write_access"}}</span>
+										</label>
+									</td>
+
+								</tr>
+							{{end}}
+						</tbody>
+					</table>
+				</fieldset>
 			</div>
 			<button id="scoped-access-submit" class="ui primary button">
 				{{ctx.Locale.Tr "settings.generate_token"}}

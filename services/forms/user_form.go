@@ -345,10 +345,18 @@ func (f *EditVariableForm) Validate(req *http.Request, errs binding.Errors) bind
 // is only part of the GET requests as the SelectedRepo field is built up interactively, and, it also removes the
 // Required binding to allow this to be used on a formless GET request without displaying an initial error.
 type NewAccessTokenGetForm struct {
-	Name         string `binding:"MaxSize(255)" locale:"settings.token_name"`
-	Resource     string // all, public-only, repo-specific
-	Scope        []string
-	SelectedRepo []string // slice of ownername/reponame
+	Name              string `binding:"MaxSize(255)" locale:"settings.token_name"`
+	Resource          string // all, public-only, repo-specific
+	ScopeActivitypub  string // note, must be Activitypub, not ActivityPub, as capitalization would cause it to be scope_activity_pub which wouldn't match permission `(read|write)):activitypub`
+	ScopeAdmin        string
+	ScopeIssue        string
+	ScopeMisc         string
+	ScopeNotification string
+	ScopeOrganization string
+	ScopePackage      string
+	ScopeRepository   string
+	ScopeUser         string
+	SelectedRepo      []string // slice of ownername/reponame
 
 	// Transient form values, not part of the final data for the access token form
 	RepoSearch         string
@@ -366,10 +374,18 @@ func (f *NewAccessTokenGetForm) Validate(req *http.Request, errs binding.Errors)
 
 // NewAccessTokenPostForm form for creating access token
 type NewAccessTokenPostForm struct {
-	Name         string `binding:"Required;MaxSize(255)" locale:"settings.token_name"`
-	Resource     string `binding:"Required" locale:"settings.repo_and_org_access"` // all, public-only, repo-specific
-	Scope        []string
-	SelectedRepo []string // slice of ownername/reponame
+	Name              string `binding:"Required;MaxSize(255)" locale:"settings.token_name"`
+	Resource          string `binding:"Required" locale:"settings.repo_and_org_access"` // all, public-only, repo-specific
+	ScopeActivitypub  string // note, must be Activitypub, not ActivityPub, as capitalization would cause it to be scope_activity_pub which wouldn't match permission `(read|write)):activitypub`
+	ScopeAdmin        string
+	ScopeIssue        string
+	ScopeMisc         string
+	ScopeNotification string
+	ScopeOrganization string
+	ScopePackage      string
+	ScopeRepository   string
+	ScopeUser         string
+	SelectedRepo      []string // slice of ownername/reponame
 }
 
 // Validate validates the fields
@@ -379,7 +395,17 @@ func (f *NewAccessTokenPostForm) Validate(req *http.Request, errs binding.Errors
 }
 
 func (f *NewAccessTokenPostForm) GetScope() (auth_model.AccessTokenScope, error) {
-	scope := strings.Join(f.Scope, ",")
+	scope := strings.Join([]string{
+		f.ScopeActivitypub,
+		f.ScopeAdmin,
+		f.ScopeIssue,
+		f.ScopeMisc,
+		f.ScopeNotification,
+		f.ScopeOrganization,
+		f.ScopePackage,
+		f.ScopeRepository,
+		f.ScopeUser,
+	}, ",")
 	s, err := auth_model.AccessTokenScope(scope).Normalize()
 	return s, err
 }
