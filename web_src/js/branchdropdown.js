@@ -2,5 +2,3 @@ const data = JSON.parse(document.getElementById('branch-dropdown-data').dataset.
 
 window.config.pageData.branchDropdownDataList = window.config.pageData.branchDropdownDataList || [];
 window.config.pageData.branchDropdownDataList.push(data);
-
-
