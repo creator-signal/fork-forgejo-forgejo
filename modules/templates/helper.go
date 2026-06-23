@@ -15,10 +15,10 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"encoding/json"
 
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/svg"
@@ -287,7 +287,7 @@ func DotEscape(raw string) string {
 	return strings.ReplaceAll(raw, ".", "\u200d.\u200d")
 }
 
-func toJSON(v interface{}) template.JS {
+func toJSON(v any) template.JS {
     b, _ := json.Marshal(v)
     return template.JS(b)
 }

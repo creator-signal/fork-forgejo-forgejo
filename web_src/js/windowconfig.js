@@ -2,17 +2,17 @@ window.addEventListener('error', function(e) {window._globalHandlerErrors=window
 window.addEventListener('unhandledrejection', function(e) {window._globalHandlerErrors=window._globalHandlerErrors||[]; window._globalHandlerErrors.push(e);});
 const dataset = document.documentElement.dataset;
 window.config = {
-	appUrl: dataset.appurl,
-	appSubUrl: dataset.appsuburl,
-	assetVersionEncoded: encodeURIComponent(dataset.assetversion), // will be used in URL construction directly
-	assetUrlPrefix: dataset.asseturlprefix,
-	runModeIsProd: (dataset.runmodelisprod == "true"),
-	customEmojis: new Set(JSON.parse(dataset.customemojis)),
-	pageData: JSON.parse(dataset.pagedata),
-	notificationSettings: JSON.parse(dataset.notificationsettings), 
-	enableTimeTracking: (dataset.enabletimetracking == "true"),
-	mermaidMaxSourceCharacters: parseInt(dataset.mermaidmaxsourcecharacters),
-	i18n: JSON.parse(dataset.i18n),
+    appUrl: dataset.appurl,
+    appSubUrl: dataset.appsuburl,
+    assetVersionEncoded: encodeURIComponent(dataset.assetversion), // will be used in URL construction directly
+    assetUrlPrefix: dataset.asseturlprefix,
+    runModeIsProd: (dataset.runmodelisprod == "true"),
+    customEmojis: new Set(JSON.parse(dataset.customemojis)),
+    pageData: JSON.parse(dataset.pagedata),
+    notificationSettings: JSON.parse(dataset.notificationsettings),
+    enableTimeTracking: (dataset.enabletimetracking == "true"),
+    mermaidMaxSourceCharacters: parseInt(dataset.mermaidmaxsourcecharacters),
+    i18n: ('i18n' in dataset) ? JSON.parse(dataset.i18n) : {},
 };
 window.config.pageData = window.config.pageData || {};
 window.addEventListener('load', function(){

@@ -80,7 +80,7 @@ body {
   text-spacing-trim: normal;
 }
 
-body.js #asset-error {
+body:not(.no-js) #asset-error {
   display: none;
 }
 
