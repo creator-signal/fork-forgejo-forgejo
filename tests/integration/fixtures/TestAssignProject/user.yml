@@ -1,8 +1,7 @@
--
-  id: 1001
+- id: 1001
   lower_name: test_assign_project_org
   name: test_assign_project_org
-  full_name: ' <<<< >> >> > >> > >>> >> '
+  full_name: " <<<< >> >> > >> > >>> >> "
   email: org1001@example.com
   keep_email_private: false
   email_notifications_preference: onmention
@@ -26,7 +25,6 @@
   use_custom_avatar: true
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 1
   num_teams: 1
   num_members: 1

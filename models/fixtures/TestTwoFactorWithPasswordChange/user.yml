@@ -1,5 +1,4 @@
--
-  id: 2001
+- id: 2001
   lower_name: user2001
   name: user2001
   full_name: "user2001"
@@ -26,7 +25,6 @@
   use_custom_avatar: true
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0

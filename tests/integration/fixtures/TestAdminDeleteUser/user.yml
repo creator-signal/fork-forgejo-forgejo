@@ -1,5 +1,4 @@
--
-  id: 1000
+- id: 1000
   lower_name: user1000
   name: user1000
   full_name: User Thousand
@@ -26,7 +25,6 @@
   use_custom_avatar: false
   num_followers: 1
   num_following: 1
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0
@@ -35,8 +33,7 @@
   theme: ""
   keep_activity_private: false
 
--
-  id: 1001
+- id: 1001
   lower_name: user1001
   name: user1001
   full_name: User 1001
@@ -63,7 +60,6 @@
   use_custom_avatar: false
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 1
   num_teams: 0
   num_members: 0

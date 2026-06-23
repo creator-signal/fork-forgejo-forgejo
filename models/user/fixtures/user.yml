@@ -1,5 +1,4 @@
--
-  id: 1041
+- id: 1041
   lower_name: remote01
   name: remote01
   full_name: Remote01
@@ -27,7 +26,6 @@
   use_custom_avatar: false
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0
@@ -36,8 +34,7 @@
   theme: ""
   keep_activity_private: false
 
--
-  id: 1042
+- id: 1042
   lower_name: bot01
   name: bot01
   full_name: Bot01
@@ -64,7 +61,6 @@
   use_custom_avatar: false
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0

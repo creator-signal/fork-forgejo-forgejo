@@ -21,8 +21,8 @@ import (
 
 // getStarredRepos returns the repos that the user with the specified userID has
 // starred
-func getStarredRepos(ctx *context.APIContext, user *user_model.User, private bool, listOptions db.ListOptions) ([]*api.Repository, error) {
-	starredRepos, err := repo_model.GetStarredRepos(ctx, user.ID, private, listOptions, ctx.Reducer())
+func getStarredRepos(ctx *context.APIContext, user, doer *user_model.User, listOptions db.ListOptions) ([]*api.Repository, error) {
+	starredRepos, err := repo_model.GetStarredRepos(ctx, user, doer, listOptions, ctx.Reducer())
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +69,21 @@ func GetStarredRepos(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	private := ctx.User().ID == ctx.Doer().ID
-	repos, err := getStarredRepos(ctx, ctx.User(), private, utils.GetListOptions(ctx))
+	repos, err := getStarredRepos(ctx, ctx.User(), ctx.Doer(), utils.GetListOptions(ctx))
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 		return
 	}
-
-	ctx.SetTotalCountHeader(int64(ctx.User().NumStars))
+	orgName := ""
+	if ctx.Org() != nil && ctx.Org().Organization != nil {
+		orgName = ctx.Org().Organization.Name
+	}
+	starCount, err := repo_model.GetVisibleStarCount(ctx, ctx.User(), ctx.Doer(), orgName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetVisibleStarCount", err)
+		return
+	}
+	ctx.SetTotalCountHeader(int64(starCount))
 	ctx.JSON(http.StatusOK, &repos)
 }
 
@@ -104,13 +111,23 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	repos, err := getStarredRepos(ctx, ctx.Doer(), true, utils.GetListOptions(ctx))
+	repos, err := getStarredRepos(ctx, ctx.Doer(), ctx.Doer(), utils.GetListOptions(ctx))
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 		return
 	}
+	orgName := ""
+	if ctx.Org != nil && ctx.Org().Organization != nil {
+		orgName = ctx.Org().Organization.Name
+	}
+	starCount, err := repo_model.GetVisibleStarCount(ctx, ctx.Doer(), ctx.Doer(), orgName)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetVisibleStarCount", err)
+		return
+	}
+	// since user is trying to get star count, so we are sure visited user and requesting user are same  so Deor == profileUser
 
-	ctx.SetTotalCountHeader(int64(ctx.Doer().NumStars))
+	ctx.SetTotalCountHeader(int64(starCount))
 	ctx.JSON(http.StatusOK, &repos)
 }
 

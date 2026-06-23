@@ -267,13 +267,6 @@ func UpdateRepoStats(ctx context.Context, id int64) error {
 	return nil
 }
 
-// DoctorUserStarNum recalculate Stars number for all user
-func DoctorUserStarNum(ctx context.Context) (err error) {
-	_, err = db.Exec(ctx, "UPDATE `user` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE uid=`user`.id) WHERE type = 0")
-	log.Debug("recalculate Stars number for all user finished")
-	return err
-}
-
 // DeleteDeployKey delete deploy keys
 func DeleteDeployKey(ctx context.Context, id, repoID int64) error {
 	key, err := asymkey_model.GetDeployKeyByID(ctx, id)

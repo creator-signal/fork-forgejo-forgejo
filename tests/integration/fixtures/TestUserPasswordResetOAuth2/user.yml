@@ -1,5 +1,4 @@
--
-  id: 1000
+- id: 1000
   lower_name: oauth2_user_with_password
   name: oauth2_user_with_password
   full_name: OAuth2 User With Password
@@ -27,7 +26,6 @@
   use_custom_avatar: false
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0
@@ -37,8 +35,7 @@
   keep_activity_private: false
   created_unix: 1672578410
 
--
-  id: 1001
+- id: 1001
   lower_name: oauth2_user_no_password
   name: oauth2_user_no_password
   full_name: OAuth2 User Without Password
@@ -66,7 +63,6 @@
   use_custom_avatar: false
   num_followers: 0
   num_following: 0
-  num_stars: 0
   num_repos: 0
   num_teams: 0
   num_members: 0

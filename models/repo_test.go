@@ -19,12 +19,6 @@ func TestCheckRepoStats(t *testing.T) {
 	require.NoError(t, CheckRepoStats(db.DefaultContext))
 }
 
-func TestDoctorUserStarNum(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	require.NoError(t, DoctorUserStarNum(db.DefaultContext))
-}
-
 func Test_repoStatsCorrectIssueNumComments(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 

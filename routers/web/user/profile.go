@@ -79,6 +79,16 @@ func userProfile(ctx *context.Context) {
 	prepareUserProfileTabData(ctx, showPrivate, profileDbRepo, profileGitRepo, profileReadmeBlob)
 	// call PrepareContextForProfileBigAvatar later to avoid re-querying the NumFollowers & NumFollowing
 	shared_user.PrepareContextForProfileBigAvatar(ctx)
+	orgName := ""
+	if ctx.Org.Organization != nil {
+		orgName = ctx.Org.Organization.Name
+	}
+	starCount, err := repo_model.GetVisibleStarCount(ctx, ctx.ContextUser, ctx.Doer, orgName)
+	if err != nil {
+		ctx.ServerError("GetVisibleStarCount", err)
+		return
+	}
+	ctx.Data["StarredRepos"] = int(starCount)
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 

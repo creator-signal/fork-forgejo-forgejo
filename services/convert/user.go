@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"forgejo.org/models/perm"
+	"forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	api "forgejo.org/modules/structs"
 )
@@ -47,6 +48,12 @@ func ToUserWithAccessMode(ctx context.Context, user *user_model.User, accessMode
 // toUser convert user_model.User to api.User
 // signed shall only be set if requester is logged in. authed shall only be set if user is site admin or user himself
 func toUser(ctx context.Context, user *user_model.User, signed, authed bool) *api.User {
+	deor := user
+	if !authed {
+		deor = nil // annonymous user (no loggedIn)
+	}
+	starCount, _ := repo.GetVisibleStarCount(ctx, user, deor, "")
+
 	result := &api.User{
 		ID:          user.ID,
 		UserName:    user.Name,
@@ -63,7 +70,7 @@ func toUser(ctx context.Context, user *user_model.User, signed, authed bool) *ap
 		// counter's
 		Followers:    user.NumFollowers,
 		Following:    user.NumFollowing,
-		StarredRepos: user.NumStars,
+		StarredRepos: int(starCount),
 	}
 
 	result.Visibility = user.Visibility.String()

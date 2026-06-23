@@ -11,7 +11,6 @@ import (
 	"path"
 	"strings"
 
-	"forgejo.org/models"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -44,19 +43,6 @@ func checkScriptType(ctx context.Context, logger log.Logger, autofix bool) error
 		return fmt.Errorf("ScriptType \"%q\" is not on the current PATH. Error: %w", setting.ScriptType, err)
 	}
 	logger.Info("ScriptType %s is on the current PATH at %s", setting.ScriptType, path)
-	return nil
-}
-
-func checkUserStarNum(ctx context.Context, logger log.Logger, autofix bool) error {
-	if autofix {
-		if err := models.DoctorUserStarNum(ctx); err != nil {
-			logger.Critical("Unable update User Stars numbers")
-			return err
-		}
-		logger.Info("Updated User Stars numbers.")
-	} else {
-		logger.Info("No check available for User Stars numbers (skipped)")
-	}
 	return nil
 }
 
@@ -234,13 +220,6 @@ func init() {
 		IsDefault: false,
 		Run:       checkScriptType,
 		Priority:  5,
-	})
-	Register(&Check{
-		Title:     "Recalculate Stars number for all user",
-		Name:      "recalculate-stars-number",
-		IsDefault: false,
-		Run:       checkUserStarNum,
-		Priority:  6,
 	})
 	Register(&Check{
 		Title:     "Check that all git repositories have receive.advertisePushOptions set to true",
