@@ -32,7 +32,10 @@ function keyboardSelector(up: boolean, tab: boolean) {
   if (cur === -1) {
     const idx = up ? rows.length - 1 : 0;
     rows[idx].classList.add('keyboard-selected');
-    rows[idx].querySelector('a')?.focus();
+    const anchor = rows[idx].querySelector('a');
+    if (!anchor) return;
+    anchor.scrollIntoView({block: 'center'});
+    anchor.focus();
     return;
   }
   let el = rows[cur];
@@ -51,6 +54,7 @@ function keyboardSelector(up: boolean, tab: boolean) {
   } else el.querySelector('a')?.focus();
   if (rows[cur] === el) return;
   el.classList.add('keyboard-selected');
+  el.scrollIntoView({block: 'center'});
   rows[cur].classList.remove('keyboard-selected');
 }
 
