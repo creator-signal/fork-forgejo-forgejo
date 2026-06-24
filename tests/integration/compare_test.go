@@ -252,6 +252,9 @@ func TestCompareBranches(t *testing.T) {
 
 func TestCompareBranchesPaginatesDiff(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
+	defer func(old int) {
+		setting.UI.DiffPagingNum = old
+	}(setting.UI.DiffPagingNum)
 
 	setting.UI.DiffPagingNum = 2
 

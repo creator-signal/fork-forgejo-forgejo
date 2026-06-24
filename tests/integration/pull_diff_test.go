@@ -30,6 +30,10 @@ func TestPullDiff_CompletePRDiff(t *testing.T) {
 }
 
 func TestPullDiff_PaginatesPRDiff(t *testing.T) {
+	defer func(old int) {
+		setting.UI.DiffPagingNum = old
+	}(setting.UI.DiffPagingNum)
+
 	setting.UI.DiffPagingNum = 5
 
 	doc := doTestPRDiff(t, "/user2/commitsonpr/pulls/1/files", []string{"test1.txt", "test10.txt", "test2.txt", "test3.txt", "test4.txt"}, true)
