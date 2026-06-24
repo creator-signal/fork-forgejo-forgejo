@@ -11,9 +11,11 @@ import (
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
+	pull_model "forgejo.org/models/pull"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/paginator"
 	"forgejo.org/modules/setting"
 
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
@@ -724,6 +726,141 @@ func TestNoCrashes(t *testing.T) {
 	}
 }
 
+func TestEnrichWithReview(t *testing.T) {
+	tests := []struct {
+		name        string
+		reviewState *pull_model.ReviewState
+		diffFiles   []*DiffFileMetadata
+		want        []*DiffFileMetadata
+	}{
+		{
+			name:        "nil review state returns files unchanged",
+			reviewState: nil,
+			diffFiles: []*DiffFileMetadata{
+				{Name: "a.go"},
+				{Name: "b.go"},
+			},
+			want: []*DiffFileMetadata{
+				{Name: "a.go"},
+				{Name: "b.go"},
+			},
+		},
+		{
+			name: "nil UpdatedFiles returns files unchanged",
+			reviewState: &pull_model.ReviewState{
+				UpdatedFiles: nil,
+			},
+			diffFiles: []*DiffFileMetadata{
+				{Name: "a.go"},
+			},
+			want: []*DiffFileMetadata{
+				{Name: "a.go"},
+			},
+		},
+		{
+			name: "marks viewed files",
+			reviewState: &pull_model.ReviewState{
+				UpdatedFiles: map[string]pull_model.ViewedState{
+					"a.go": pull_model.Viewed,
+					"b.go": pull_model.Unviewed,
+				},
+			},
+			diffFiles: []*DiffFileMetadata{
+				{Name: "a.go"},
+				{Name: "b.go"},
+				{Name: "c.go"},
+			},
+			want: []*DiffFileMetadata{
+				{Name: "a.go", IsViewed: true},
+				{Name: "b.go", IsViewed: false},
+				{Name: "c.go", IsViewed: false},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EnrichWithReview(tt.reviewState, tt.diffFiles...)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetFileNames(t *testing.T) {
+	files := []*DiffFileMetadata{
+		{Name: "a.go"},
+		{Name: "b/c.go"},
+		{Name: "d.go"},
+	}
+
+	got := GetFileNames(files)
+	want := []string{"a.go", "b/c.go", "d.go"}
+	assert.Equal(t, want, got)
+}
+
+func TestGetDiffMetadata(t *testing.T) {
+	tests := []struct {
+		name      string
+		review    *pull_model.ReviewState
+		paginator *paginator.Paginator
+		prInfo    *git.CompareInfo
+		want      *DiffMetadata
+		wantErr   bool
+	}{
+		{
+			name:    "nil prInfo returns error",
+			review:  nil,
+			prInfo:  nil,
+			wantErr: true,
+		},
+		{
+			name:      "no review",
+			review:    nil,
+			paginator: paginator.New(100, 20, 1, 5),
+			prInfo: &git.CompareInfo{
+				NumFiles: 100,
+			},
+			want: &DiffMetadata{
+				HasNext:            true,
+				CurrentPage:        1,
+				TotalNumberOfFiles: 100,
+			},
+		},
+		{
+			name: "review with viewed files",
+			review: &pull_model.ReviewState{
+				UpdatedFiles: map[string]pull_model.ViewedState{
+					"a.go": pull_model.Viewed,
+					"b.go": pull_model.Viewed,
+					"c.go": pull_model.Unviewed,
+				},
+			},
+			paginator: paginator.New(50, 20, 2, 5),
+			prInfo: &git.CompareInfo{
+				NumFiles: 50,
+			},
+			want: &DiffMetadata{
+				HasNext:             true,
+				CurrentPage:         2,
+				TotalNumberOfFiles:  50,
+				NumberOfViewedFiles: 2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetDiffMetadata(tt.review, tt.paginator, tt.prInfo)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestGetDiffFilePage(t *testing.T) {
 	metadata := []*DiffFileMetadata{
 		{Name: "a.go"},
@@ -733,15 +870,61 @@ func TestGetDiffFilePage(t *testing.T) {
 		{Name: "e.go"},
 	}
 
-	files := GetDiffFilePage(metadata, 1, 2, len(metadata))
-	assert.Equal(t, []string{"a.go", "b.go"}, files)
+	tests := []struct {
+		name       string
+		page       int
+		pageSize   int
+		totalFiles int
+		want       []string
+	}{
+		{
+			name:       "first page",
+			page:       1,
+			pageSize:   2,
+			totalFiles: len(metadata),
+			want:       []string{"a.go", "b.go"},
+		},
+		{
+			name:       "second page",
+			page:       2,
+			pageSize:   2,
+			totalFiles: len(metadata),
+			want:       []string{"c.go", "d.go"},
+		},
+		{
+			name:       "last partial page",
+			page:       3,
+			pageSize:   2,
+			totalFiles: len(metadata),
+			want:       []string{"e.go"},
+		},
+		{
+			name:       "page beyond end",
+			page:       10,
+			pageSize:   2,
+			totalFiles: len(metadata),
+			want:       []string{},
+		},
+		{
+			name:       "negative page normalizes to 1",
+			page:       -1,
+			pageSize:   2,
+			totalFiles: len(metadata),
+			want:       []string{"a.go", "b.go"},
+		},
+		{
+			name:       "zero pageSize normalizes to 1",
+			page:       1,
+			pageSize:   0,
+			totalFiles: len(metadata),
+			want:       []string{"a.go"},
+		},
+	}
 
-	files = GetDiffFilePage(metadata, 2, 2, len(metadata))
-	assert.Equal(t, []string{"c.go", "d.go"}, files)
-
-	files = GetDiffFilePage(metadata, 3, 2, len(metadata))
-	assert.Equal(t, []string{"e.go"}, files)
-
-	files = GetDiffFilePage(metadata, 99, 2, len(metadata))
-	assert.Empty(t, files)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetDiffFilePage(metadata, tt.page, tt.pageSize, tt.totalFiles)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
