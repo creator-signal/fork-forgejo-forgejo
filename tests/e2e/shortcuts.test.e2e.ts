@@ -52,7 +52,7 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
       return await navigator.clipboard.readText();
     }),
   ).toBe(
-    'http://localhost:3003/user2/repo2/commit/1032bbf17fbc0d9c95bb5418dabe8f8c99278700',
+    'http://localhost:3003/user2/repo2/src/commit/1032bbf17fbc0d9c95bb5418dabe8f8c99278700/test.xml',
   );
 });
 
