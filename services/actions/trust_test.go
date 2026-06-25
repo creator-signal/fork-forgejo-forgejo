@@ -388,4 +388,18 @@ func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 		assert.Equal(t, pr.Issue.PosterID, run.PullRequestPosterID)
 		assert.Equal(t, pr.ID, run.PullRequestID)
 	})
+
+	t.Run("no poster set on issue linked to pull request", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 6000})
+		posterTrust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		require.ErrorIs(t, err, issues_model.ErrNoPosterSetOnIssue)
+		require.Equal(t, UserIsNotTrustedWithActions, posterTrust)
+	})
+
+	t.Run("poster set on issue linked to pull request does not exist", func(t *testing.T) {
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 7000})
+		posterTrust, err := GetPullRequestPosterIsTrustedWithActions(t.Context(), pr)
+		require.ErrorIs(t, err, user_model.ErrUserNotExist{UID: 666})
+		require.Equal(t, UserIsNotTrustedWithActions, posterTrust)
+	})
 }
