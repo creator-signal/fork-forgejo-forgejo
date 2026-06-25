@@ -30,7 +30,7 @@ require (
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/blevesearch/bleve/v2 v2.6.0
 	github.com/buildkite/terminal-to-html/v3 v3.16.8
-	github.com/caddyserver/certmagic v0.25.3
+	github.com/caddyserver/certmagic v0.25.4
 	github.com/chi-middleware/proxy v1.1.1
 	github.com/djherbis/buffer v1.2.0
 	github.com/djherbis/nio/v3 v3.0.1
