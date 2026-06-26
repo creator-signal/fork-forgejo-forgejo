@@ -171,8 +171,8 @@ test('Line menu styles', async ({page}) => {
 test('Table of contents', async ({page}) => {
   expect((await page.goto('/user2/repo1'))?.status()).toBe(200);
 
-  const btn = page.locator('details.dropdown');
-  const toc = page.locator('#toc');
+  const btn = page.locator('.dropdown[aria-label="Table of contents"]');
+  const toc = btn.locator('div');
 
   await expect(toc).toBeHidden();
   btn.click();

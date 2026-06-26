@@ -2748,7 +2748,3 @@ tbody.commit-list {
 #repo-activity-top-authors-chart {
   height: 150px; /* Pre-allocate the height that will be taken up by the chart, to avoid the container 'jumping'. */
 }
-
-#toc {
-  transform: translateX(-90%);
-}

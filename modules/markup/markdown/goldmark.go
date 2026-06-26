@@ -102,9 +102,12 @@ func (g *ASTTransformer) Transform(node *ast.Document, reader text.Reader, pc pa
 		if showTocInMain {
 			tocNode := createTOCNode(tocList, rc.Lang, nil)
 			node.InsertBefore(node, firstChild, tocNode)
-		} else {
+			ctx.MarkupTocNode = createMarkupTocNode(tocList)
+		} else if ctx.IsWiki {
 			tocNode := createTOCNode(tocList, rc.Lang, map[string]string{"open": "open"})
 			ctx.SidebarTocNode = tocNode
+		} else {
+			ctx.MarkupTocNode = createMarkupTocNode(tocList)
 		}
 	}
 

@@ -13,6 +13,12 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
+func createMarkupTocNode(toc []markup.Header) ast.Node {
+	ul := ast.NewList('-')
+	populateTOCList(ul, toc)
+	return ul
+}
+
 func createTOCNode(toc []markup.Header, lang string, detailsAttrs map[string]string) ast.Node {
 	details := NewDetails()
 	summary := NewSummary()
@@ -24,7 +30,12 @@ func createTOCNode(toc []markup.Header, lang string, detailsAttrs map[string]str
 	summary.AppendChild(summary, ast.NewString([]byte(translation.NewLocale(lang).TrString("toc"))))
 	details.AppendChild(details, summary)
 	ul := ast.NewList('-')
+	populateTOCList(ul, toc)
 	details.AppendChild(details, ul)
+	return details
+}
+
+func populateTOCList(ul *ast.List, toc []markup.Header) {
 	currentLevel := 6
 	for _, header := range toc {
 		if header.Level < currentLevel {
@@ -49,6 +60,4 @@ func createTOCNode(toc []markup.Header, lang string, detailsAttrs map[string]str
 		li.AppendChild(li, a)
 		ul.AppendChild(ul, li)
 	}
-
-	return details
 }

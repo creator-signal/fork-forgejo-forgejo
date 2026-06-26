@@ -34,6 +34,17 @@
 				{{else}}
 					{{template "repo/file_info" .}}
 				{{end}}
+				{{if .MarkupToc}}
+					<details class="dropdown"
+						data-tooltip-content="{{ctx.Locale.Tr "toc"}}"
+						aria-label="{{ctx.Locale.Tr "toc"}}"
+					>
+						<summary>
+							{{svg "octicon-list-unordered" 16}}
+						</summary>
+						<div class="content markup">{{.MarkupToc}}</div>
+					</details>
+				{{end}}
 			</div>
 			<div class="file-header-right file-actions tw-flex tw-items-center tw-flex-wrap">
 				{{if .HasSourceRenderedToggle}}
@@ -103,17 +114,6 @@
 				{{end}}
 				{{if and .ReadmeInList .CanEditReadmeFile}}
 					<a class="btn-octicon" data-tooltip-content="{{ctx.Locale.Tr "repo.editor.edit_this_file"}}" href="{{.RepoLink}}/_edit/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}/{{PathEscapeSegments .FileName}}">{{svg "octicon-pencil"}}</a>
-				{{end}}
-				{{if .IsMarkup}}
-					<details class="dropdown"
-						data-tooltip-content="{{ctx.Locale.Tr "repo.files.table_of_contents"}}"
-						aria-label="{{ctx.Locale.Tr "repo.files.table_of_contents"}}"
-					>
-						<summary>
-							{{svg "octicon-list-unordered" 16}}
-						</summary>
-						<div id="toc" class="content"/>
-					</details>
 				{{end}}
 			</div>
 		</div>

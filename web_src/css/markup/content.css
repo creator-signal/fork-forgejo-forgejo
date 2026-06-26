@@ -41,6 +41,16 @@
   margin-top: -2px; /* re-align to center */
 }
 
+.markdown :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 8rem;
+}
+
+@media (min-width: 40rem) {
+  .markdown :is(h1, h2, h3, h4, h5, h6) {
+    scroll-margin-top: 4rem;
+  }
+}
+
 .markup h1 .anchor .svg,
 .markup h2 .anchor .svg,
 .markup h3 .anchor .svg,
@@ -337,8 +347,7 @@
   text-align: center;
 }
 
-.markup span.align-center span img
-.markup span.align-center span video {
+.markup span.align-center span img .markup span.align-center span video {
   margin: 0 auto;
   text-align: center;
 }

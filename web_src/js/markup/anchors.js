@@ -59,6 +59,9 @@ export function initMarkupAnchors() {
     for (const a of markupEl.querySelectorAll('a[href^="#"]')) {
       a.addEventListener('click', (e) => {
         scrollToAnchor(e.currentTarget.getAttribute('href')?.substring(1));
+        document
+          .querySelector('.dropdown[aria-label="Table of contents"]')
+          ?.removeAttribute('open');
       });
     }
   }

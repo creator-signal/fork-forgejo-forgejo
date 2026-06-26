@@ -44,6 +44,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
+	"forgejo.org/modules/markup/markdown"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
@@ -725,6 +726,14 @@ func markupRender(ctx *context.Context, renderCtx *markup.RenderContext, input i
 	err = markup.Render(renderCtx, input, markupWr)
 	_ = markupWr.CloseWithError(err)
 	<-done
+	if err == nil && renderCtx.MarkupTocNode != nil {
+		sb := &strings.Builder{}
+		if err := markdown.SpecializedMarkdown().Renderer().Render(sb, nil, renderCtx.MarkupTocNode); err != nil {
+			log.Error("Failed to render file header TOC: %v", err)
+		} else {
+			ctx.Data["MarkupToc"] = template.HTML(sb.String())
+		}
+	}
 	return escaped, output, err
 }
 
