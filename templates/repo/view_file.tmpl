@@ -28,12 +28,6 @@
 	<h4 class="file-header ui top attached header tw-sticky tw-z-50 tw-top-0">
 		<div class="tw-w-full tw-flex tw-items-center tw-justify-between tw-flex-wrap">
 			<div class="file-header-left tw-flex tw-items-center tw-pr-4 tw-flex-wrap {{if .IsCitationFile}}tw-gap-4{{else}}tw-gap-2{{end}}">
-				{{if .ReadmeInList}}
-					{{svg "octicon-book"}}
-					<strong><a class="default-link muted" href="#readme">{{.FileName}}</a></strong>
-				{{else}}
-					{{template "repo/file_info" .}}
-				{{end}}
 				{{if .MarkupToc}}
 					<details class="dropdown"
 						data-tooltip-content="{{ctx.Locale.Tr "toc"}}"
@@ -44,6 +38,12 @@
 						</summary>
 						<div class="content markup">{{.MarkupToc}}</div>
 					</details>
+				{{end}}
+				{{if .ReadmeInList}}
+					{{svg "octicon-book"}}
+					<strong><a class="default-link muted" href="#readme">{{.FileName}}</a></strong>
+				{{else}}
+					{{template "repo/file_info" .}}
 				{{end}}
 			</div>
 			<div class="file-header-right file-actions tw-flex tw-items-center tw-flex-wrap">
