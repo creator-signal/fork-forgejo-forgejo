@@ -60,7 +60,7 @@ export function initMarkupAnchors() {
       a.addEventListener('click', (e) => {
         scrollToAnchor(e.currentTarget.getAttribute('href')?.substring(1));
         document
-          .querySelector('.dropdown[aria-label="Table of contents"]')
+          .querySelector('.dropdown[aria-label]')
           ?.removeAttribute('open');
       });
     }
