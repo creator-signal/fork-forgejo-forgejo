@@ -200,9 +200,6 @@ linters:
         text: "(ST1005|ST1003|QF1001):"
 
       # TODO: eventually remove this section entirely
-      - path: models/activities/action_list.go
-        linters:
-          - nilnil
       - path: models/asymkey/gpg_key_object_verification.go
         linters:
           - nilnil
