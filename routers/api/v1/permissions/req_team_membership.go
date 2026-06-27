@@ -19,7 +19,7 @@ func ReqTeamMembership(ctx Context) {
 	}
 
 	orgID := ctx.Team().OrgID
-	isOwner, err := organization.IsOrganizationOwner(ctx.GetContext(), orgID, ctx.Doer().ID)
+	isOwner, err := organization.IsOrganizationOwner(ctx.Context(), orgID, ctx.Doer().ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationOwner", err)
 		return
@@ -27,11 +27,11 @@ func ReqTeamMembership(ctx Context) {
 		return
 	}
 
-	if isTeamMember, err := organization.IsTeamMember(ctx.GetContext(), orgID, ctx.Team().ID, ctx.Doer().ID); err != nil {
+	if isTeamMember, err := organization.IsTeamMember(ctx.Context(), orgID, ctx.Team().ID, ctx.Doer().ID); err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsTeamMember", err)
 		return
 	} else if !isTeamMember {
-		isOrgMember, err := organization.IsOrganizationMember(ctx.GetContext(), orgID, ctx.Doer().ID)
+		isOrgMember, err := organization.IsOrganizationMember(ctx.Context(), orgID, ctx.Doer().ID)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "IsOrganizationMember", err)
 		} else if isOrgMember {

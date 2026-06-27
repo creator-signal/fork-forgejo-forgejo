@@ -185,7 +185,7 @@ func (ctx *APIContext) ServerError(title string, err error) {
 	ctx.Error(http.StatusInternalServerError, title, err)
 }
 
-func (ctx *APIContext) GetContext() context.Context {
+func (ctx *APIContext) Context() context.Context {
 	return ctx.originCtx
 }
 

@@ -17,7 +17,7 @@ import (
 )
 
 type Context interface {
-	GetContext() context.Context
+	Context() context.Context
 
 	Repository() *repo_model.Repository
 

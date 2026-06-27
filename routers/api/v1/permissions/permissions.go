@@ -41,7 +41,7 @@ type Permissions struct {
 	message string
 }
 
-func (o *Permissions) GetContext() context.Context {
+func (o *Permissions) Context() context.Context {
 	return o.ctx
 }
 

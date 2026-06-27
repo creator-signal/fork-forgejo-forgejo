@@ -11,11 +11,11 @@ import (
 )
 
 func MustEnableLocalIssuesIfIsIssue(ctx Context, index int64) {
-	if ctx.Repository().UnitEnabled(ctx.GetContext(), unit.TypeIssues) {
+	if ctx.Repository().UnitEnabled(ctx.Context(), unit.TypeIssues) {
 		return
 	}
 
-	issue, err := issues_model.GetIssueByIndex(ctx.GetContext(), ctx.Repository().ID, index)
+	issue, err := issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, index)
 	if err != nil {
 		if issues_model.IsErrIssueNotExist(err) {
 			ctx.NotFound()

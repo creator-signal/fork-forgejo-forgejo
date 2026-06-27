@@ -10,7 +10,7 @@ import (
 )
 
 func ReqRepoReader(ctx Context, unitType unit.Type) {
-	if !ctx.Repository().UnitEnabled(ctx.GetContext(), unitType) {
+	if !ctx.Repository().UnitEnabled(ctx.Context(), unitType) {
 		ctx.NotFound()
 		return
 	}

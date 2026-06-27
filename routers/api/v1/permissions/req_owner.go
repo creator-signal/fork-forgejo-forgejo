@@ -12,7 +12,7 @@ import (
 
 func ReqOwner(ctx Context, unitTypes []unit.Type) {
 	if len(unitTypes) > 0 && !slices.ContainsFunc(unitTypes, func(unitType unit.Type) bool {
-		return ctx.Repository().UnitEnabled(ctx.GetContext(), unitType)
+		return ctx.Repository().UnitEnabled(ctx.Context(), unitType)
 	}) {
 		ctx.NotFound()
 		return

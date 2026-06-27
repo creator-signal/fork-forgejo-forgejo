@@ -158,7 +158,7 @@ func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permiss
 	}
 	owner := fixtureCreateUser(t, &user_model.User{Name: fixtureData.Get("packageOwner")})
 	permissions.SetPackageOwner(owner)
-	mode, err := packages_service.DeterminePackageAccessMode(permissions.GetContext(), permissions.PackageOwner(), permissions.Doer())
+	mode, err := packages_service.DeterminePackageAccessMode(permissions.Context(), permissions.PackageOwner(), permissions.Doer())
 	require.NoError(t, err)
 	permissions.SetPackageAccessMode(mode)
 }
@@ -225,7 +225,7 @@ func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Perm
 
 	permissions.SetAuthentication(&actionsTaskTokenAuthenticationResult{user: permissions.Doer(), taskID: task.ID})
 	permissions.SetReducer(&authz.AllAccessAuthorizationReducer{})
-	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.GetContext(), permissions.Repository(), permissions.Doer(), permissions.Reducer())
+	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.Context(), permissions.Repository(), permissions.Doer(), permissions.Reducer())
 	require.NoError(t, err)
 	permissions.SetPermission(&permission)
 }
