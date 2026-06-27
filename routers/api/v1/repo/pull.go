@@ -130,7 +130,7 @@ func ListPullRequests(ctx *context.APIContext) {
 		posterID = poster.ID
 	}
 	listOptions := utils.GetListOptions(ctx)
-	prs, maxResults, err := issues_model.PullRequests(ctx, ctx.Repo.Repository.ID, &issues_model.PullRequestsOptions{
+	prs, maxResults, err := issues_model.PullRequests(ctx, ctx.Repo().Repository.ID, &issues_model.PullRequestsOptions{
 		ListOptions: listOptions,
 		State:       ctx.FormTrim("state"),
 		SortType:    ctx.FormTrim("sort"),
@@ -177,7 +177,7 @@ func ListPullRequests(ctx *context.APIContext) {
 	}
 
 	for i := range prs {
-		apiPrs[i] = convert.ToAPIPullRequest(ctx, prs[i], ctx.Doer)
+		apiPrs[i] = convert.ToAPIPullRequest(ctx, prs[i], ctx.Doer())
 	}
 
 	ctx.SetLinkHeader(int(maxResults), listOptions.PageSize)
@@ -215,7 +215,7 @@ func GetPullRequest(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -233,7 +233,7 @@ func GetPullRequest(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "LoadHeadRepo", err)
 		return
 	}
-	ctx.JSON(http.StatusOK, convert.ToAPIPullRequest(ctx, pr, ctx.Doer))
+	ctx.JSON(http.StatusOK, convert.ToAPIPullRequest(ctx, pr, ctx.Doer()))
 }
 
 // GetPullRequest returns a single PR based on index
@@ -283,7 +283,7 @@ func GetPullRequestByBaseHead(ctx *context.APIContext) {
 			name = split[1]
 		} else {
 			owner = split[0]
-			name = ctx.Repo.Repository.Name
+			name = ctx.Repo().Repository.Name
 		}
 		repo, err := repo_model.GetRepositoryByOwnerAndName(ctx, owner, name)
 		if err != nil {
@@ -296,11 +296,11 @@ func GetPullRequestByBaseHead(ctx *context.APIContext) {
 		}
 		headRepoID = repo.ID
 	} else {
-		headRepoID = ctx.Repo.Repository.ID
+		headRepoID = ctx.Repo().Repository.ID
 		headBranch = head
 	}
 
-	pr, err := issues_model.GetPullRequestByBaseHeadInfo(ctx, ctx.Repo.Repository.ID, headRepoID, ctx.Params(":base"), headBranch)
+	pr, err := issues_model.GetPullRequestByBaseHeadInfo(ctx, ctx.Repo().Repository.ID, headRepoID, ctx.Params(":base"), headBranch)
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -318,7 +318,7 @@ func GetPullRequestByBaseHead(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "LoadHeadRepo", err)
 		return
 	}
-	ctx.JSON(http.StatusOK, convert.ToAPIPullRequest(ctx, pr, ctx.Doer))
+	ctx.JSON(http.StatusOK, convert.ToAPIPullRequest(ctx, pr, ctx.Doer()))
 }
 
 // DownloadPullDiffOrPatch render a pull's raw diff or patch
@@ -360,7 +360,7 @@ func DownloadPullDiffOrPatch(ctx *context.APIContext) {
 	//     "$ref": "#/responses/string"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -430,7 +430,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	}
 
 	var (
-		repo        = ctx.Repo.Repository
+		repo        = ctx.Repo().Repository
 		labelIDs    []int64
 		milestoneID int64
 	)
@@ -443,7 +443,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	defer headGitRepo.Close()
 
 	// Check if another PR exists with the same targets
-	existingPr, err := issues_model.GetUnmergedPullRequest(ctx, headRepo.ID, ctx.Repo.Repository.ID, headBranch, baseBranch, issues_model.PullRequestFlowGithub)
+	existingPr, err := issues_model.GetUnmergedPullRequest(ctx, headRepo.ID, ctx.Repo().Repository.ID, headBranch, baseBranch, issues_model.PullRequestFlowGithub)
 	if err != nil {
 		if !issues_model.IsErrPullRequestNotExist(err) {
 			ctx.Error(http.StatusInternalServerError, "GetUnmergedPullRequest", err)
@@ -463,7 +463,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	}
 
 	if len(form.Labels) > 0 {
-		labels, err := issues_model.GetLabelsInRepoByIDs(ctx, ctx.Repo.Repository.ID, form.Labels)
+		labels, err := issues_model.GetLabelsInRepoByIDs(ctx, ctx.Repo().Repository.ID, form.Labels)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetLabelsInRepoByIDs", err)
 			return
@@ -474,8 +474,8 @@ func CreatePullRequest(ctx *context.APIContext) {
 			labelIDs = append(labelIDs, label.ID)
 		}
 
-		if ctx.Repo.Owner.IsOrganization() {
-			orgLabels, err := issues_model.GetLabelsInOrgByIDs(ctx, ctx.Repo.Owner.ID, form.Labels)
+		if ctx.Repo().Owner.IsOrganization() {
+			orgLabels, err := issues_model.GetLabelsInOrgByIDs(ctx, ctx.Repo().Owner.ID, form.Labels)
 			if err != nil {
 				ctx.Error(http.StatusInternalServerError, "GetLabelsInOrgByIDs", err)
 				return
@@ -490,7 +490,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	}
 
 	if form.Milestone > 0 {
-		milestone, err := issues_model.GetMilestoneByRepoID(ctx, ctx.Repo.Repository.ID, form.Milestone)
+		milestone, err := issues_model.GetMilestoneByRepoID(ctx, ctx.Repo().Repository.ID, form.Milestone)
 		if err != nil {
 			if issues_model.IsErrMilestoneNotExist(err) {
 				ctx.NotFound()
@@ -511,8 +511,8 @@ func CreatePullRequest(ctx *context.APIContext) {
 	prIssue := &issues_model.Issue{
 		RepoID:       repo.ID,
 		Title:        form.Title,
-		PosterID:     ctx.Doer.ID,
-		Poster:       ctx.Doer,
+		PosterID:     ctx.Doer().ID,
+		Poster:       ctx.Doer(),
 		MilestoneID:  milestoneID,
 		IsPull:       true,
 		Content:      form.Body,
@@ -570,7 +570,7 @@ func CreatePullRequest(ctx *context.APIContext) {
 	}
 
 	log.Trace("Pull request created: %d/%d", repo.ID, prIssue.ID)
-	ctx.JSON(http.StatusCreated, convert.ToAPIPullRequest(ctx, pr, ctx.Doer))
+	ctx.JSON(http.StatusCreated, convert.ToAPIPullRequest(ctx, pr, ctx.Doer()))
 }
 
 // EditPullRequest does what it says
@@ -618,7 +618,7 @@ func EditPullRequest(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 
 	form := web.GetForm(ctx).(*api.EditPullRequestOption)
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -634,27 +634,27 @@ func EditPullRequest(ctx *context.APIContext) {
 		return
 	}
 	issue := pr.Issue
-	issue.Repo = ctx.Repo.Repository
+	issue.Repo = ctx.Repo().Repository
 
 	if err := issue.LoadAttributes(ctx); err != nil {
 		ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
 		return
 	}
 
-	if !issue.IsPoster(ctx.Doer.ID) && !ctx.Repo.CanWrite(unit.TypePullRequests) {
+	if !issue.IsPoster(ctx.Doer().ID) && !ctx.Repo().CanWrite(unit.TypePullRequests) {
 		ctx.Status(http.StatusForbidden)
 		return
 	}
 
 	if len(form.Title) > 0 {
-		err = issue_service.ChangeTitle(ctx, issue, ctx.Doer, form.Title)
+		err = issue_service.ChangeTitle(ctx, issue, ctx.Doer(), form.Title)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "ChangeTitle", err)
 			return
 		}
 	}
 	if form.Body != nil {
-		err = issue_service.ChangeContent(ctx, issue, ctx.Doer, *form.Body, issue.ContentVersion)
+		err = issue_service.ChangeContent(ctx, issue, ctx.Doer(), *form.Body, issue.ContentVersion)
 		if err != nil {
 			if errors.Is(err, issues_model.ErrIssueAlreadyChanged) {
 				ctx.Error(http.StatusBadRequest, "ChangeContent", err)
@@ -675,7 +675,7 @@ func EditPullRequest(ctx *context.APIContext) {
 			deadlineUnix = timeutil.TimeStamp(deadline.Unix())
 		}
 
-		if err := issues_model.UpdateIssueDeadline(ctx, issue, deadlineUnix, ctx.Doer); err != nil {
+		if err := issues_model.UpdateIssueDeadline(ctx, issue, deadlineUnix, ctx.Doer()); err != nil {
 			ctx.Error(http.StatusInternalServerError, "UpdateIssueDeadline", err)
 			return
 		}
@@ -690,8 +690,8 @@ func EditPullRequest(ctx *context.APIContext) {
 	// Pass one or more user logins to replace the set of assignees on this Issue.
 	// Send an empty array ([]) to clear all assignees from the Issue.
 
-	if ctx.Repo.CanWrite(unit.TypePullRequests) && (form.Assignees != nil || len(form.Assignee) > 0) {
-		err = issue_service.UpdateAssignees(ctx, issue, form.Assignee, form.Assignees, ctx.Doer)
+	if ctx.Repo().CanWrite(unit.TypePullRequests) && (form.Assignees != nil || len(form.Assignee) > 0) {
+		err = issue_service.UpdateAssignees(ctx, issue, form.Assignee, form.Assignees, ctx.Doer())
 		if err != nil {
 			if user_model.IsErrUserNotExist(err) {
 				ctx.Error(http.StatusUnprocessableEntity, "", fmt.Sprintf("Assignee does not exist: [name: %s]", err))
@@ -702,25 +702,25 @@ func EditPullRequest(ctx *context.APIContext) {
 		}
 	}
 
-	if ctx.Repo.CanWrite(unit.TypePullRequests) && form.Milestone != 0 &&
+	if ctx.Repo().CanWrite(unit.TypePullRequests) && form.Milestone != 0 &&
 		issue.MilestoneID != form.Milestone {
 		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = form.Milestone
-		if err = issue_service.ChangeMilestoneAssign(ctx, issue, ctx.Doer, oldMilestoneID); err != nil {
+		if err = issue_service.ChangeMilestoneAssign(ctx, issue, ctx.Doer(), oldMilestoneID); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ChangeMilestoneAssign", err)
 			return
 		}
 	}
 
-	if ctx.Repo.CanWrite(unit.TypePullRequests) && form.Labels != nil {
-		labels, err := issues_model.GetLabelsInRepoByIDs(ctx, ctx.Repo.Repository.ID, form.Labels)
+	if ctx.Repo().CanWrite(unit.TypePullRequests) && form.Labels != nil {
+		labels, err := issues_model.GetLabelsInRepoByIDs(ctx, ctx.Repo().Repository.ID, form.Labels)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetLabelsInRepoByIDsError", err)
 			return
 		}
 
-		if ctx.Repo.Owner.IsOrganization() {
-			orgLabels, err := issues_model.GetLabelsInOrgByIDs(ctx, ctx.Repo.Owner.ID, form.Labels)
+		if ctx.Repo().Owner.IsOrganization() {
+			orgLabels, err := issues_model.GetLabelsInOrgByIDs(ctx, ctx.Repo().Owner.ID, form.Labels)
 			if err != nil {
 				ctx.Error(http.StatusInternalServerError, "GetLabelsInOrgByIDs", err)
 				return
@@ -729,7 +729,7 @@ func EditPullRequest(ctx *context.APIContext) {
 			labels = append(labels, orgLabels...)
 		}
 
-		if err = issues_model.ReplaceIssueLabels(ctx, issue, labels, ctx.Doer); err != nil {
+		if err = issues_model.ReplaceIssueLabels(ctx, issue, labels, ctx.Doer()); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ReplaceLabelsError", err)
 			return
 		}
@@ -742,7 +742,7 @@ func EditPullRequest(ctx *context.APIContext) {
 		}
 		isClosed := api.StateClosed == api.StateType(*form.State)
 		if issue.IsClosed != isClosed {
-			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, "", isClosed); err != nil {
+			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer(), "", isClosed); err != nil {
 				if issues_model.IsErrDependenciesLeft(err) {
 					ctx.Error(http.StatusPreconditionFailed, "DependenciesLeft", "cannot close this pull request because it still has open dependencies")
 					return
@@ -755,11 +755,11 @@ func EditPullRequest(ctx *context.APIContext) {
 
 	// change pull target branch
 	if !pr.HasMerged && len(form.Base) != 0 && form.Base != pr.BaseBranch {
-		if !ctx.Repo.GitRepo.IsBranchExist(form.Base) {
+		if !ctx.Repo().GitRepo.IsBranchExist(form.Base) {
 			ctx.Error(http.StatusNotFound, "NewBaseBranchNotExist", fmt.Errorf("new base '%s' not exist", form.Base))
 			return
 		}
-		if err := pull_service.ChangeTargetBranch(ctx, pr, ctx.Doer, form.Base); err != nil {
+		if err := pull_service.ChangeTargetBranch(ctx, pr, ctx.Doer(), form.Base); err != nil {
 			if issues_model.IsErrPullRequestAlreadyExists(err) {
 				ctx.Error(http.StatusConflict, "IsErrPullRequestAlreadyExists", err)
 				return
@@ -773,12 +773,12 @@ func EditPullRequest(ctx *context.APIContext) {
 			ctx.InternalServerError(err)
 			return
 		}
-		notify_service.PullRequestChangeTargetBranch(ctx, ctx.Doer, pr, form.Base)
+		notify_service.PullRequestChangeTargetBranch(ctx, ctx.Doer(), pr, form.Base)
 	}
 
 	// update allow edits
 	if form.AllowMaintainerEdit != nil {
-		if err := pull_service.SetAllowEdits(ctx, ctx.Doer, pr, *form.AllowMaintainerEdit); err != nil {
+		if err := pull_service.SetAllowEdits(ctx, ctx.Doer(), pr, *form.AllowMaintainerEdit); err != nil {
 			if errors.Is(err, pull_service.ErrUserHasNoPermissionForAction) {
 				ctx.Error(http.StatusForbidden, "SetAllowEdits", fmt.Sprintf("SetAllowEdits: %s", err))
 				return
@@ -789,7 +789,7 @@ func EditPullRequest(ctx *context.APIContext) {
 	}
 
 	// Refetch from database
-	pr, err = issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, pr.Index)
+	pr, err = issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, pr.Index)
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -800,7 +800,7 @@ func EditPullRequest(ctx *context.APIContext) {
 	}
 
 	// TODO this should be 200, not 201
-	ctx.JSON(http.StatusCreated, convert.ToAPIPullRequest(ctx, pr, ctx.Doer))
+	ctx.JSON(http.StatusCreated, convert.ToAPIPullRequest(ctx, pr, ctx.Doer()))
 }
 
 // IsPullRequestMerged checks if a PR exists given an index
@@ -833,7 +833,7 @@ func IsPullRequestMerged(ctx *context.APIContext) {
 	//   "404":
 	//     description: pull request has not been merged
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -893,7 +893,7 @@ func MergePullRequest(ctx *context.APIContext) {
 
 	form := web.GetForm(ctx).(*forms.MergePullRequestForm)
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound("GetPullRequestByIndex", err)
@@ -912,11 +912,11 @@ func MergePullRequest(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "LoadIssue", err)
 		return
 	}
-	pr.Issue.Repo = ctx.Repo.Repository
+	pr.Issue.Repo = ctx.Repo().Repository
 
-	if ctx.IsSigned {
+	if ctx.IsSigned() {
 		// Update issue-user.
-		if err = activities_model.SetIssueReadBy(ctx, pr.Issue.ID, ctx.Doer.ID); err != nil {
+		if err = activities_model.SetIssueReadBy(ctx, pr.Issue.ID, ctx.Doer().ID); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ReadBy", err)
 			return
 		}
@@ -933,7 +933,7 @@ func MergePullRequest(ctx *context.APIContext) {
 	}
 
 	// start with merging by checking
-	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge); err != nil {
+	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer(), &ctx.Repo().Permission, pr, mergeCheckType, form.ForceMerge); err != nil {
 		if errors.Is(err, pull_service.ErrIsClosed) {
 			ctx.NotFound()
 		} else if errors.Is(err, pull_service.ErrUserNotAllowedToMerge) {
@@ -956,7 +956,7 @@ func MergePullRequest(ctx *context.APIContext) {
 
 	// handle manually-merged mark
 	if manuallyMerged {
-		if err := pull_service.MergedManually(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, form.MergeCommitID); err != nil {
+		if err := pull_service.MergedManually(ctx, pr, ctx.Doer(), ctx.Repo().GitRepo, form.MergeCommitID); err != nil {
 			if models.IsErrInvalidMergeStyle(err) {
 				ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
 				return
@@ -978,7 +978,7 @@ func MergePullRequest(ctx *context.APIContext) {
 
 	message := strings.TrimSpace(form.MergeTitleField)
 	if len(message) == 0 {
-		message, _, err = pull_service.GetDefaultMergeMessage(ctx, ctx.Repo.GitRepo, pr, repo_model.MergeStyle(form.Do))
+		message, _, err = pull_service.GetDefaultMergeMessage(ctx, ctx.Repo().GitRepo, pr, repo_model.MergeStyle(form.Do))
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetDefaultMergeMessage", err)
 			return
@@ -991,7 +991,7 @@ func MergePullRequest(ctx *context.APIContext) {
 	}
 
 	if form.MergeWhenChecksSucceed {
-		scheduled, err := automerge.ScheduleAutoMerge(ctx, ctx.Doer, pr, repo_model.MergeStyle(form.Do), message, form.DeleteBranchAfterMerge)
+		scheduled, err := automerge.ScheduleAutoMerge(ctx, ctx.Doer(), pr, repo_model.MergeStyle(form.Do), message, form.DeleteBranchAfterMerge)
 		if err != nil {
 			if pull_model.IsErrAlreadyScheduledToAutoMerge(err) {
 				ctx.Error(http.StatusConflict, "ScheduleAutoMerge", err)
@@ -1006,7 +1006,7 @@ func MergePullRequest(ctx *context.APIContext) {
 		}
 	}
 
-	if err := pull_service.Merge(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
+	if err := pull_service.Merge(ctx, pr, ctx.Doer(), ctx.Repo().GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
 		if models.IsErrInvalidMergeStyle(err) {
 			ctx.Error(http.StatusMethodNotAllowed, "Invalid merge style", fmt.Errorf("%s is not an allowed merge style for this repository", repo_model.MergeStyle(form.Do)))
 		} else if models.IsErrMergeConflicts(err) {
@@ -1041,8 +1041,8 @@ func MergePullRequest(ctx *context.APIContext) {
 
 	if form.DeleteBranchAfterMerge {
 		var headRepo *git.Repository
-		if ctx.Repo != nil && ctx.Repo.Repository != nil && ctx.Repo.Repository.ID == pr.HeadRepoID && ctx.Repo.GitRepo != nil {
-			headRepo = ctx.Repo.GitRepo
+		if ctx.Repo() != nil && ctx.Repo().Repository != nil && ctx.Repo().Repository.ID == pr.HeadRepoID && ctx.Repo().GitRepo != nil {
+			headRepo = ctx.Repo().GitRepo
 		} else {
 			headRepo, err = gitrepo.OpenRepository(ctx, pr.HeadRepo)
 			if err != nil {
@@ -1052,7 +1052,7 @@ func MergePullRequest(ctx *context.APIContext) {
 			defer headRepo.Close()
 		}
 
-		if err := repo_service.DeleteBranchAfterMerge(ctx, ctx.Doer, pr, headRepo); err != nil {
+		if err := repo_service.DeleteBranchAfterMerge(ctx, ctx.Doer(), pr, headRepo); err != nil {
 			switch {
 			case errors.Is(err, repo_service.ErrBranchIsDefault):
 				ctx.Error(http.StatusForbidden, "DefaultBranch", errors.New("the head branch is the default branch"))
@@ -1071,7 +1071,7 @@ func MergePullRequest(ctx *context.APIContext) {
 }
 
 func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption) (*repo_model.Repository, *git.Repository, *git.CompareInfo, string, string) {
-	baseRepo := ctx.Repo.Repository
+	baseRepo := ctx.Repo().Repository
 
 	// Get compared branches information
 	// format: <base branch>...[<head repo>:]<head branch>
@@ -1092,7 +1092,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	headInfos := strings.Split(form.Head, ":")
 	if len(headInfos) == 1 {
 		isSameRepo = true
-		headUser = ctx.Repo.Owner
+		headUser = ctx.Repo().Owner
 		headBranch = headInfos[0]
 	} else if len(headInfos) == 2 {
 		headUser, err = user_model.GetUserByName(ctx, headInfos[0])
@@ -1106,19 +1106,19 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 		}
 		headBranch = headInfos[1]
 		// The head repository can also point to the same repo
-		isSameRepo = ctx.Repo.Owner.ID == headUser.ID
+		isSameRepo = ctx.Repo().Owner.ID == headUser.ID
 	} else {
 		ctx.NotFound(fmt.Errorf("the head part of {basehead} %s must contain zero or one colon (:) but contains %d", form.Head, len(headInfos)-1))
 		return nil, nil, nil, "", ""
 	}
 
-	ctx.Repo.PullRequest.SameRepo = isSameRepo
-	log.Trace("Repo path: %q, base branch: %q, head branch: %q", ctx.Repo.GitRepo.Path, baseBranch, headBranch)
+	ctx.Repo().PullRequest.SameRepo = isSameRepo
+	log.Trace("Repo path: %q, base branch: %q, head branch: %q", ctx.Repo().GitRepo.Path, baseBranch, headBranch)
 
 	// Check if base branch is valid.
-	baseIsCommit := ctx.Repo.GitRepo.IsCommitExist(baseBranch)
-	baseIsBranch := ctx.Repo.GitRepo.IsBranchExist(baseBranch)
-	baseIsTag := ctx.Repo.GitRepo.IsTagExist(baseBranch)
+	baseIsCommit := ctx.Repo().GitRepo.IsCommitExist(baseBranch)
+	baseIsBranch := ctx.Repo().GitRepo.IsBranchExist(baseBranch)
+	baseIsTag := ctx.Repo().GitRepo.IsTagExist(baseBranch)
 	if !baseIsCommit && !baseIsBranch && !baseIsTag {
 		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the base repository %s/%s", baseBranch, baseRepo.Owner.Name, baseRepo.Name))
 		return nil, nil, nil, "", ""
@@ -1142,8 +1142,8 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 
 	var headGitRepo *git.Repository
 	if isSameRepo {
-		headRepo = ctx.Repo.Repository
-		headGitRepo = ctx.Repo.GitRepo
+		headRepo = ctx.Repo().Repository
+		headGitRepo = ctx.Repo().GitRepo
 	} else {
 		headGitRepo, err = gitrepo.OpenRepository(ctx, headRepo)
 		if err != nil {
@@ -1153,7 +1153,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// user should have permission to read baseRepo's codes and pulls, NOT headRepo's
-	permBase, err := access_model.GetUserRepoPermissionWithReducer(ctx, baseRepo, ctx.Doer, ctx.Reducer)
+	permBase, err := access_model.GetUserRepoPermissionWithReducer(ctx, baseRepo, ctx.Doer(), ctx.Reducer())
 	if err != nil {
 		headGitRepo.Close()
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
@@ -1162,7 +1162,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	if !permBase.CanReadIssuesOrPulls(true) || !permBase.CanRead(unit.TypeCode) {
 		if log.IsTrace() {
 			log.Trace("Permission Denied: User %-v cannot create/read pull requests or cannot read code in Repo %-v\nUser in baseRepo has Permissions: %-+v",
-				ctx.Doer,
+				ctx.Doer(),
 				baseRepo,
 				permBase)
 		}
@@ -1172,7 +1172,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// user should have permission to read headrepo's codes
-	permHead, err := access_model.GetUserRepoPermissionWithReducer(ctx, headRepo, ctx.Doer, ctx.Reducer)
+	permHead, err := access_model.GetUserRepoPermissionWithReducer(ctx, headRepo, ctx.Doer(), ctx.Reducer())
 	if err != nil {
 		headGitRepo.Close()
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
@@ -1181,7 +1181,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	if !permHead.CanRead(unit.TypeCode) {
 		if log.IsTrace() {
 			log.Trace("Permission Denied: User: %-v cannot read code in Repo: %-v\nUser in headRepo has Permissions: %-+v",
-				ctx.Doer,
+				ctx.Doer(),
 				headRepo,
 				permHead)
 		}
@@ -1266,7 +1266,7 @@ func UpdatePullRequest(ctx *context.APIContext) {
 	//   "422":
 	//     "$ref": "#/responses/validationError"
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -1302,7 +1302,7 @@ func UpdatePullRequest(ctx *context.APIContext) {
 
 	rebase := ctx.FormString("style") == "rebase"
 
-	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, pr, ctx.Doer)
+	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, pr, ctx.Doer())
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsUserAllowedToMerge", err)
 		return
@@ -1316,7 +1316,7 @@ func UpdatePullRequest(ctx *context.APIContext) {
 	// default merge commit message
 	message := fmt.Sprintf("Merge branch '%s' into %s", pr.BaseBranch, pr.HeadBranch)
 
-	if err = pull_service.Update(ctx, pr, ctx.Doer, message, rebase); err != nil {
+	if err = pull_service.Update(ctx, pr, ctx.Doer(), message, rebase); err != nil {
 		if models.IsErrMergeConflicts(err) {
 			ctx.Error(http.StatusConflict, "Update", "merge failed because of conflict")
 			return
@@ -1366,7 +1366,7 @@ func CancelScheduledAutoMerge(ctx *context.APIContext) {
 	//     "$ref": "#/responses/repoArchivedError"
 
 	pullIndex := ctx.ParamsInt64(":index")
-	pull, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, pullIndex)
+	pull, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, pullIndex)
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -1376,7 +1376,7 @@ func CancelScheduledAutoMerge(ctx *context.APIContext) {
 		return
 	}
 
-	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer, pull, ctx.Repo.Permission); err != nil {
+	if err := automerge.RemoveScheduledAutoMerge(ctx, ctx.Doer(), pull, ctx.Repo().Permission); err != nil {
 		switch {
 		case errors.Is(err, util.ErrPermissionDenied):
 			ctx.Error(http.StatusForbidden, "No permission to cancel", "user has no permission to cancel the scheduled auto merge")
@@ -1436,7 +1436,7 @@ func GetPullRequestCommits(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -1487,7 +1487,7 @@ func GetPullRequestCommits(ctx *context.APIContext) {
 
 	apiCommits := make([]*api.Commit, 0, limit)
 	for i := start; i < start+limit; i++ {
-		apiCommit, err := convert.ToCommit(ctx, ctx.Repo.Repository, baseGitRepo, commits[i], userCache,
+		apiCommit, err := convert.ToCommit(ctx, ctx.Repo().Repository, baseGitRepo, commits[i], userCache,
 			convert.ToCommitOptions{
 				Stat:         true,
 				Verification: verification,
@@ -1559,7 +1559,7 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrPullRequestNotExist(err) {
 			ctx.NotFound()
@@ -1579,7 +1579,7 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 		return
 	}
 
-	baseGitRepo := ctx.Repo.GitRepo
+	baseGitRepo := ctx.Repo().GitRepo
 
 	baseRef := pr.BaseBranch
 	if pr.HasMerged {

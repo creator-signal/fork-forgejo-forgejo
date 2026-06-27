@@ -82,9 +82,9 @@ func apiAuthentication(authMethod auth.Method) func(*context.APIContext) {
 			ctx.ServerError("nil authentication result", errors.New("nil authentication result"))
 			return
 		}
-		ctx.Doer = ar.User()
-		ctx.IsSigned = ctx.Doer != nil
-		ctx.Authentication = ar
+		ctx.SetDoer(ar.User())
+		ctx.SetIsSigned(ctx.Doer() != nil)
+		ctx.SetAuthentication(ar)
 	}
 }
 
@@ -99,16 +99,16 @@ func apiAuthorization() func(ctx *context.APIContext) {
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
 		// Check prohibit login users.
-		if ctx.IsSigned {
-			if !ctx.Doer.IsActive && setting.Service.RegisterEmailConfirm {
+		if ctx.IsSigned() {
+			if !ctx.Doer().IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "This account is not activated.",
 				})
 				return
 			}
-			if !ctx.Doer.IsActive || ctx.Doer.ProhibitLogin {
-				log.Info("Failed authentication attempt for %s from %s", ctx.Doer.Name, ctx.RemoteAddr())
+			if !ctx.Doer().IsActive || ctx.Doer().ProhibitLogin {
+				log.Info("Failed authentication attempt for %s from %s", ctx.Doer().Name, ctx.RemoteAddr())
 				ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "This account is prohibited from signing in, please contact your site administrator.",
@@ -116,15 +116,15 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 				return
 			}
 
-			if ctx.Doer.MustChangePassword {
+			if ctx.Doer().MustChangePassword {
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "You must change your password. Change it at: " + setting.AppURL + "/user/change_password",
 				})
 				return
 			}
 
-			if ctx.Doer.MustHaveTwoFactor() {
-				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer.ID)
+			if ctx.Doer().MustHaveTwoFactor() {
+				hasTwoFactor, err := auth_model.HasTwoFactorByUID(ctx, ctx.Doer().ID)
 				if err != nil {
 					ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 					log.Error("Error getting 2fa: %s", err)
@@ -144,19 +144,19 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
-		if options.SignOutRequired && ctx.IsSigned && ctx.Req.URL.RequestURI() != "/" {
+		if options.SignOutRequired && ctx.IsSigned() && ctx.Req.URL.RequestURI() != "/" {
 			ctx.Redirect(setting.AppSubURL + "/")
 			return
 		}
 
 		if options.SignInRequired {
-			if !ctx.IsSigned {
+			if !ctx.IsSigned() {
 				// Restrict API calls with error message.
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "Only signed in user is allowed to call APIs.",
 				})
 				return
-			} else if !ctx.Doer.IsActive && setting.Service.RegisterEmailConfirm {
+			} else if !ctx.Doer().IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
 				ctx.JSON(http.StatusForbidden, map[string]string{
 					"message": "This account is not activated.",

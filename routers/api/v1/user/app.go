@@ -56,7 +56,7 @@ func ListAccessTokens(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	opts := auth_model.ListAccessTokensOptions{UserID: ctx.ContextUser.ID, ListOptions: utils.GetListOptions(ctx)}
+	opts := auth_model.ListAccessTokensOptions{UserID: ctx.User().ID, ListOptions: utils.GetListOptions(ctx)}
 
 	tokens, count, err := db.FindAndCount[auth_model.AccessToken](ctx, opts)
 	if err != nil {
@@ -70,7 +70,7 @@ func ListAccessTokens(ctx *context.APIContext) {
 			// Repos associated with a repo-specific access token should already be visible to the token owner, but it's
 			// possible that access has changed, such as a removed collaborator on a repo -- don't provide info on that
 			// repo if so.
-			permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
+			permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer(), ctx.Reducer())
 			if err != nil {
 				return false, err
 			}
@@ -147,7 +147,7 @@ func CreateAccessToken(ctx *context.APIContext) {
 	form := web.GetForm(ctx).(*api.CreateAccessTokenOption)
 
 	t := &auth_model.AccessToken{
-		UID:  ctx.ContextUser.ID,
+		UID:  ctx.User().ID,
 		Name: form.Name,
 	}
 
@@ -186,7 +186,7 @@ func CreateAccessToken(ctx *context.APIContext) {
 				ctx.ServerError("GetRepositoryByOwnerAndName", err)
 				return
 			}
-			permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
+			permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer(), ctx.Reducer())
 			if err != nil {
 				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
 				return
@@ -278,7 +278,7 @@ func DeleteAccessToken(ctx *context.APIContext) {
 	if tokenID == 0 {
 		tokens, err := db.Find[auth_model.AccessToken](ctx, auth_model.ListAccessTokensOptions{
 			Name:   token,
-			UserID: ctx.ContextUser.ID,
+			UserID: ctx.User().ID,
 		})
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "ListAccessTokens", err)
@@ -301,7 +301,7 @@ func DeleteAccessToken(ctx *context.APIContext) {
 		return
 	}
 
-	if err := auth_model.DeleteAccessTokenByID(ctx, tokenID, ctx.ContextUser.ID); err != nil {
+	if err := auth_model.DeleteAccessTokenByID(ctx, tokenID, ctx.User().ID); err != nil {
 		if auth_model.IsErrAccessTokenNotExist(err) {
 			ctx.NotFound()
 		} else {
@@ -340,7 +340,7 @@ func CreateOauth2Application(ctx *context.APIContext) {
 
 	app, err := auth_model.CreateOAuth2Application(ctx, auth_model.CreateOAuth2ApplicationOptions{
 		Name:               data.Name,
-		UserID:             ctx.Doer.ID,
+		UserID:             ctx.Doer().ID,
 		RedirectURIs:       data.RedirectURIs,
 		ConfidentialClient: data.ConfidentialClient,
 	})
@@ -384,7 +384,7 @@ func ListOauth2Applications(ctx *context.APIContext) {
 
 	apps, total, err := db.FindAndCount[auth_model.OAuth2Application](ctx, auth_model.FindOAuth2ApplicationsOptions{
 		ListOptions: utils.GetListOptions(ctx),
-		OwnerID:     ctx.Doer.ID,
+		OwnerID:     ctx.Doer().ID,
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ListOAuth2Applications", err)
@@ -425,7 +425,7 @@ func DeleteOauth2Application(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	appID := ctx.ParamsInt64(":id")
-	if err := auth_model.DeleteOAuth2Application(ctx, appID, ctx.Doer.ID); err != nil {
+	if err := auth_model.DeleteOAuth2Application(ctx, appID, ctx.Doer().ID); err != nil {
 		if auth_model.IsErrOAuthApplicationNotFound(err) {
 			ctx.NotFound()
 		} else {
@@ -470,7 +470,7 @@ func GetOauth2Application(ctx *context.APIContext) {
 		}
 		return
 	}
-	if app.UID != ctx.Doer.ID {
+	if app.UID != ctx.Doer().ID {
 		ctx.NotFound()
 		return
 	}
@@ -514,7 +514,7 @@ func UpdateOauth2Application(ctx *context.APIContext) {
 
 	app, err := auth_model.UpdateOAuth2Application(ctx, auth_model.UpdateOAuth2ApplicationOptions{
 		Name:               data.Name,
-		UserID:             ctx.Doer.ID,
+		UserID:             ctx.Doer().ID,
 		ID:                 appID,
 		RedirectURIs:       data.RedirectURIs,
 		ConfidentialClient: data.ConfidentialClient,

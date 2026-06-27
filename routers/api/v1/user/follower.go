@@ -18,13 +18,13 @@ import (
 func responseAPIUsers(ctx *context.APIContext, users []*user_model.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
-		apiUsers[i] = convert.ToUser(ctx, users[i], ctx.Doer)
+		apiUsers[i] = convert.ToUser(ctx, users[i], ctx.Doer())
 	}
 	ctx.JSON(http.StatusOK, &apiUsers)
 }
 
 func listUserFollowers(ctx *context.APIContext, u *user_model.User) {
-	users, count, err := user_model.GetUserFollowers(ctx, u, ctx.Doer, utils.GetListOptions(ctx))
+	users, count, err := user_model.GetUserFollowers(ctx, u, ctx.Doer(), utils.GetListOptions(ctx))
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserFollowers", err)
 		return
@@ -58,7 +58,7 @@ func ListMyFollowers(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	listUserFollowers(ctx, ctx.Doer)
+	listUserFollowers(ctx, ctx.Doer())
 }
 
 // ListFollowers list the given user's followers
@@ -88,11 +88,11 @@ func ListFollowers(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	listUserFollowers(ctx, ctx.ContextUser)
+	listUserFollowers(ctx, ctx.User())
 }
 
 func listUserFollowing(ctx *context.APIContext, u *user_model.User) {
-	users, count, err := user_model.GetUserFollowing(ctx, u, ctx.Doer, utils.GetListOptions(ctx))
+	users, count, err := user_model.GetUserFollowing(ctx, u, ctx.Doer(), utils.GetListOptions(ctx))
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserFollowing", err)
 		return
@@ -126,7 +126,7 @@ func ListMyFollowing(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	listUserFollowing(ctx, ctx.Doer)
+	listUserFollowing(ctx, ctx.Doer())
 }
 
 // ListFollowing list the users that the given user is following
@@ -156,7 +156,7 @@ func ListFollowing(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	listUserFollowing(ctx, ctx.ContextUser)
+	listUserFollowing(ctx, ctx.User())
 }
 
 func checkUserFollowing(ctx *context.APIContext, u *user_model.User, followID int64) {
@@ -188,7 +188,7 @@ func CheckMyFollowing(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	checkUserFollowing(ctx, ctx.Doer, ctx.ContextUser.ID)
+	checkUserFollowing(ctx, ctx.Doer(), ctx.User().ID)
 }
 
 // CheckFollowing check if one user is following another user
@@ -217,7 +217,7 @@ func CheckFollowing(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	checkUserFollowing(ctx, ctx.ContextUser, target.ID)
+	checkUserFollowing(ctx, ctx.User(), target.ID)
 }
 
 // Follow follow a user
@@ -241,7 +241,7 @@ func Follow(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if err := user_model.FollowUser(ctx, ctx.Doer.ID, ctx.ContextUser.ID); err != nil {
+	if err := user_model.FollowUser(ctx, ctx.Doer().ID, ctx.User().ID); err != nil {
 		if errors.Is(err, user_model.ErrBlockedByUser) {
 			ctx.Error(http.StatusForbidden, "BlockedByUser", err)
 			return
@@ -273,7 +273,7 @@ func Unfollow(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if err := user_model.UnfollowUser(ctx, ctx.Doer.ID, ctx.ContextUser.ID); err != nil {
+	if err := user_model.UnfollowUser(ctx, ctx.Doer().ID, ctx.User().ID); err != nil {
 		ctx.Error(http.StatusInternalServerError, "UnfollowUser", err)
 		return
 	}
