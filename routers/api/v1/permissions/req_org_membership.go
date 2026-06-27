@@ -17,8 +17,8 @@ func ReqOrgMembership(ctx Context) {
 	var orgID int64
 	if ctx.Organization() != nil {
 		orgID = ctx.Organization().ID
-	} else if ctx.GetTeam() != nil {
-		orgID = ctx.GetTeam().OrgID
+	} else if ctx.Team() != nil {
+		orgID = ctx.Team().OrgID
 	} else {
 		ctx.Error(http.StatusInternalServerError, "", "reqOrgMembership: unprepared context")
 		return

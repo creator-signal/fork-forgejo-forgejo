@@ -13,12 +13,12 @@ func ReqTeamMembership(ctx Context) {
 	if IsUserSiteAdmin(ctx) {
 		return
 	}
-	if ctx.GetTeam() == nil {
+	if ctx.Team() == nil {
 		ctx.Error(http.StatusInternalServerError, "", "reqTeamMembership: unprepared context")
 		return
 	}
 
-	orgID := ctx.GetTeam().OrgID
+	orgID := ctx.Team().OrgID
 	isOwner, err := organization.IsOrganizationOwner(ctx.GetContext(), orgID, ctx.Doer().ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationOwner", err)
@@ -27,7 +27,7 @@ func ReqTeamMembership(ctx Context) {
 		return
 	}
 
-	if isTeamMember, err := organization.IsTeamMember(ctx.GetContext(), orgID, ctx.GetTeam().ID, ctx.Doer().ID); err != nil {
+	if isTeamMember, err := organization.IsTeamMember(ctx.GetContext(), orgID, ctx.Team().ID, ctx.Doer().ID); err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsTeamMember", err)
 		return
 	} else if !isTeamMember {

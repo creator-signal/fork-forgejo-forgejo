@@ -265,7 +265,7 @@ func (ctx *APIContext) SetOrg(org *APIOrganization) {
 	ctx.org = org
 }
 
-func (ctx *APIContext) GetTeam() *org_model.Team {
+func (ctx *APIContext) Team() *org_model.Team {
 	return ctx.Org().Team
 }
 

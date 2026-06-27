@@ -27,7 +27,7 @@ type Context interface {
 
 	Organization() *org_model.Organization
 
-	GetTeam() *org_model.Team
+	Team() *org_model.Team
 
 	GetPackageOwner() *user_model.User
 	GetPackageAccessMode() perm.AccessMode

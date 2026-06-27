@@ -89,7 +89,7 @@ func (o *Permissions) SetOrganization(org *org_model.Organization) {
 	o.org = org
 }
 
-func (o *Permissions) GetTeam() *org_model.Team {
+func (o *Permissions) Team() *org_model.Team {
 	return o.team
 }
 
