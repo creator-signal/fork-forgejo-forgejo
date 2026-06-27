@@ -193,10 +193,6 @@ func (ctx *APIContext) Cache() cache.Cache {
 	return ctx.cache
 }
 
-func (ctx *APIContext) GetDoer() *user_model.User {
-	return ctx.Doer()
-}
-
 func (ctx *APIContext) Doer() *user_model.User {
 	return ctx.doer
 }

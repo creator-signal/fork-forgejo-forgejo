@@ -65,7 +65,7 @@ func (o *Permissions) SetRepository(repository *repo_model.Repository) {
 	o.repository = repository
 }
 
-func (o *Permissions) GetDoer() *user_model.User {
+func (o *Permissions) Doer() *user_model.User {
 	return o.doer
 }
 

@@ -14,7 +14,7 @@ func MustAllowPulls(ctx Context) {
 			if ctx.GetIsSigned() {
 				log.Trace("Permission Denied: User %-v cannot read %-v in Repo %-v\n"+
 					"User in Repo has Permissions: %-+v",
-					ctx.GetDoer(),
+					ctx.Doer(),
 					unit.TypePullRequests,
 					ctx.GetRepository(),
 					ctx.GetPermission())

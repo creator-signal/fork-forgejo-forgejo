@@ -14,7 +14,7 @@ import (
 )
 
 func RepoAccess(ctx Context) {
-	if ctx.GetDoer() != nil && ctx.GetDoer().ID == user_model.ActionsUserID && ctx.GetAuthentication().ActionsTaskID().Has() {
+	if ctx.Doer() != nil && ctx.Doer().ID == user_model.ActionsUserID && ctx.GetAuthentication().ActionsTaskID().Has() {
 		_, taskID := ctx.GetAuthentication().ActionsTaskID().Get()
 		task, err := actions_model.GetTaskByID(ctx.GetContext(), taskID)
 		if err != nil {
@@ -42,7 +42,7 @@ func RepoAccess(ctx Context) {
 			ctx.GetPermission().UnitsMode[u.Type] = ctx.GetPermission().AccessMode
 		}
 	} else {
-		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.GetRepository(), ctx.GetDoer(), ctx.GetReducer())
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.GetRepository(), ctx.Doer(), ctx.GetReducer())
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 			return

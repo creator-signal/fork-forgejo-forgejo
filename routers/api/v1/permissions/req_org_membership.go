@@ -24,7 +24,7 @@ func ReqOrgMembership(ctx Context) {
 		return
 	}
 
-	if isMember, err := organization.IsOrganizationMember(ctx.GetContext(), orgID, ctx.GetDoer().ID); err != nil {
+	if isMember, err := organization.IsOrganizationMember(ctx.GetContext(), orgID, ctx.Doer().ID); err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationMember", err)
 		return
 	} else if !isMember {

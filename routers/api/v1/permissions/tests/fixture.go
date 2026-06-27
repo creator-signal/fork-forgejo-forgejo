@@ -158,7 +158,7 @@ func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permiss
 	}
 	owner := fixtureCreateUser(t, &user_model.User{Name: fixtureData.Get("packageOwner")})
 	permissions.SetPackageOwner(owner)
-	mode, err := packages_service.DeterminePackageAccessMode(permissions.GetContext(), permissions.GetPackageOwner(), permissions.GetDoer())
+	mode, err := packages_service.DeterminePackageAccessMode(permissions.GetContext(), permissions.GetPackageOwner(), permissions.Doer())
 	require.NoError(t, err)
 	permissions.SetPackageAccessMode(mode)
 }
@@ -168,7 +168,7 @@ func fixtureSetDoer(t *testing.T, permissions *apiv1_permissions.Permissions, fi
 	if !fixtureData.Has("doer") {
 		return
 	}
-	if doer := permissions.GetDoer(); doer != nil {
+	if doer := permissions.Doer(); doer != nil {
 		if doer.Name != fixtureData.Get("doer") {
 			panic(fmt.Sprintf("attempting to override already doer %s with %s", doer.Name, fixtureData.Get("doer")))
 		}
@@ -223,9 +223,9 @@ func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Perm
 		require.NotZero(t, task.ID)
 	}
 
-	permissions.SetAuthentication(&actionsTaskTokenAuthenticationResult{user: permissions.GetDoer(), taskID: task.ID})
+	permissions.SetAuthentication(&actionsTaskTokenAuthenticationResult{user: permissions.Doer(), taskID: task.ID})
 	permissions.SetReducer(&authz.AllAccessAuthorizationReducer{})
-	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.GetContext(), permissions.GetRepository(), permissions.GetDoer(), permissions.GetReducer())
+	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.GetContext(), permissions.GetRepository(), permissions.Doer(), permissions.GetReducer())
 	require.NoError(t, err)
 	permissions.SetPermission(&permission)
 }
@@ -303,22 +303,22 @@ func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Perm
 		panic(fmt.Errorf("attempting to set doer with no name"))
 	}
 
-	if permissions.GetDoer() == nil {
+	if permissions.Doer() == nil {
 		permissions.SetAuthentication(&auth.UnauthenticatedResult{})
 	} else {
-		token, err := fixtureCreateToken(t, permissions.GetDoer(), scope)
+		token, err := fixtureCreateToken(t, permissions.Doer(), scope)
 		require.NoError(t, err)
 		tokenReducer, err := authz.GetAuthorizationReducerForAccessToken(t.Context(), token)
 		require.NoError(t, err)
 		permissions.SetIsSigned(true)
 		switch fixtureData.Get("authentication") {
 		case "basic":
-			permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.GetDoer()})
+			permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.Doer()})
 		case "proxy":
-			permissions.SetAuthentication(&reverseProxyAuthenticationResult{user: permissions.GetDoer()})
+			permissions.SetAuthentication(&reverseProxyAuthenticationResult{user: permissions.Doer()})
 		default:
 			permissions.SetToken(token)
-			permissions.SetAuthentication(&accessTokenAuthenticationResult{user: permissions.GetDoer(), scope: token.Scope, reducer: tokenReducer})
+			permissions.SetAuthentication(&accessTokenAuthenticationResult{user: permissions.Doer(), scope: token.Scope, reducer: tokenReducer})
 		}
 	}
 }

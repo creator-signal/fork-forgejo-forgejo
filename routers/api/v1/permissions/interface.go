@@ -21,7 +21,7 @@ type Context interface {
 
 	GetRepository() *repo_model.Repository
 
-	GetDoer() *user_model.User
+	Doer() *user_model.User
 
 	GetUser() *user_model.User
 

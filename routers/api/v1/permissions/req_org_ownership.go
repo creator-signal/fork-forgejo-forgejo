@@ -24,7 +24,7 @@ func ReqOrgOwnership(ctx Context) {
 		return
 	}
 
-	isOwner, err := organization.IsOrganizationOwner(ctx.GetContext(), orgID, ctx.GetDoer().ID)
+	isOwner, err := organization.IsOrganizationOwner(ctx.GetContext(), orgID, ctx.Doer().ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationOwner", err)
 		return

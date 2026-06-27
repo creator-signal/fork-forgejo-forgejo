@@ -12,12 +12,12 @@ func IndividualPermsChecker(ctx Context) {
 	if ctx.GetUser().IsIndividual() {
 		switch ctx.GetUser().Visibility {
 		case api.VisibleTypePrivate:
-			if ctx.GetDoer() == nil || (ctx.GetUser().ID != ctx.GetDoer().ID && !IsUserSiteAdmin(ctx)) {
+			if ctx.Doer() == nil || (ctx.GetUser().ID != ctx.Doer().ID && !IsUserSiteAdmin(ctx)) {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
 		case api.VisibleTypeLimited:
-			if ctx.GetDoer() == nil {
+			if ctx.Doer() == nil {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
