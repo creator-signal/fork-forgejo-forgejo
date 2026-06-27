@@ -15,8 +15,8 @@ func ReqOrgMembership(ctx Context) {
 	}
 
 	var orgID int64
-	if ctx.GetOrg() != nil {
-		orgID = ctx.GetOrg().ID
+	if ctx.Organization() != nil {
+		orgID = ctx.Organization().ID
 	} else if ctx.GetTeam() != nil {
 		orgID = ctx.GetTeam().OrgID
 	} else {
@@ -28,7 +28,7 @@ func ReqOrgMembership(ctx Context) {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationMember", err)
 		return
 	} else if !isMember {
-		if ctx.GetOrg() != nil {
+		if ctx.Organization() != nil {
 			ctx.Error(http.StatusForbidden, "", "Must be an organization member")
 		} else {
 			ctx.NotFound()

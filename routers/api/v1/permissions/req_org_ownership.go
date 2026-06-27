@@ -15,8 +15,8 @@ func ReqOrgOwnership(ctx Context) {
 	}
 
 	var orgID int64
-	if ctx.GetOrg() != nil {
-		orgID = ctx.GetOrg().ID
+	if ctx.Organization() != nil {
+		orgID = ctx.Organization().ID
 	} else if ctx.GetTeam() != nil {
 		orgID = ctx.GetTeam().OrgID
 	} else {
@@ -29,7 +29,7 @@ func ReqOrgOwnership(ctx Context) {
 		ctx.Error(http.StatusInternalServerError, "IsOrganizationOwner", err)
 		return
 	} else if !isOwner {
-		if ctx.GetOrg() != nil {
+		if ctx.Organization() != nil {
 			ctx.Error(http.StatusForbidden, "", "Must be an organization owner")
 		} else {
 			ctx.NotFound()

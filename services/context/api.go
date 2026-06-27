@@ -253,7 +253,7 @@ func (ctx *APIContext) SetComment(comment *issues_model.Comment) {
 	ctx.comment = comment
 }
 
-func (ctx *APIContext) GetOrg() *org_model.Organization {
+func (ctx *APIContext) Organization() *org_model.Organization {
 	return ctx.Org().Organization
 }
 

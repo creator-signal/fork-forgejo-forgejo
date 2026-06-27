@@ -81,11 +81,11 @@ func (o *Permissions) SetUser(user *user_model.User) {
 	o.user = user
 }
 
-func (o *Permissions) GetOrg() *org_model.Organization {
+func (o *Permissions) Organization() *org_model.Organization {
 	return o.org
 }
 
-func (o *Permissions) SetOrg(org *org_model.Organization) {
+func (o *Permissions) SetOrganization(org *org_model.Organization) {
 	o.org = org
 }
 

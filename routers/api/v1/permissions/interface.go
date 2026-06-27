@@ -25,7 +25,7 @@ type Context interface {
 
 	User() *user_model.User
 
-	GetOrg() *org_model.Organization
+	Organization() *org_model.Organization
 
 	GetTeam() *org_model.Team
 
