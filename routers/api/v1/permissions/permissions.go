@@ -137,7 +137,7 @@ func (o *Permissions) SetPublicOnly(publicOnly bool) {
 	o.publicOnly = publicOnly
 }
 
-func (o *Permissions) GetReducer() authz.AuthorizationReducer {
+func (o *Permissions) Reducer() authz.AuthorizationReducer {
 	return o.reducer
 }
 

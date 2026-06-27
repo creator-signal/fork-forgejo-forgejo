@@ -311,10 +311,6 @@ func (ctx *APIContext) SetReducer(reducer authz.AuthorizationReducer) {
 	ctx.reducer = reducer
 }
 
-func (ctx *APIContext) GetReducer() authz.AuthorizationReducer {
-	return ctx.Reducer()
-}
-
 func (ctx *APIContext) RequiredScopeCategories() []auth_model.AccessTokenScopeCategory {
 	return ctx.requiredScopeCategories
 }

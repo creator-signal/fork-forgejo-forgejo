@@ -10,14 +10,14 @@ import (
 )
 
 func IsUserSiteAdmin(ctx Context) bool {
-	if !ctx.GetReducer().AllowAdminOverride() {
+	if !ctx.Reducer().AllowAdminOverride() {
 		return false
 	}
 	return ctx.IsSigned() && ctx.Doer().IsAdmin
 }
 
 func IsUserRepoAdmin(ctx Context) bool {
-	if !ctx.GetReducer().AllowAdminOverride() {
+	if !ctx.Reducer().AllowAdminOverride() {
 		return false
 	}
 	return ctx.Permission().IsAdmin()

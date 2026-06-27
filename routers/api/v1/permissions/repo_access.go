@@ -42,7 +42,7 @@ func RepoAccess(ctx Context) {
 			ctx.Permission().UnitsMode[u.Type] = ctx.Permission().AccessMode
 		}
 	} else {
-		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.Repository(), ctx.Doer(), ctx.GetReducer())
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.Repository(), ctx.Doer(), ctx.Reducer())
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 			return

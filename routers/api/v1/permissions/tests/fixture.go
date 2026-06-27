@@ -225,7 +225,7 @@ func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Perm
 
 	permissions.SetAuthentication(&actionsTaskTokenAuthenticationResult{user: permissions.Doer(), taskID: task.ID})
 	permissions.SetReducer(&authz.AllAccessAuthorizationReducer{})
-	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.GetContext(), permissions.Repository(), permissions.Doer(), permissions.GetReducer())
+	permission, err := access_model.GetUserRepoPermissionWithReducer(permissions.GetContext(), permissions.Repository(), permissions.Doer(), permissions.Reducer())
 	require.NoError(t, err)
 	permissions.SetPermission(&permission)
 }

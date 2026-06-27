@@ -40,7 +40,7 @@ type Context interface {
 	PublicOnly() bool
 	SetPublicOnly(bool)
 
-	GetReducer() authz.AuthorizationReducer
+	Reducer() authz.AuthorizationReducer
 	SetReducer(authz.AuthorizationReducer)
 
 	Authentication() auth.AuthenticationResult
