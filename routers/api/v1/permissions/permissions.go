@@ -97,7 +97,7 @@ func (o *Permissions) SetTeam(team *org_model.Team) {
 	o.team = team
 }
 
-func (o *Permissions) GetPackageOwner() *user_model.User {
+func (o *Permissions) PackageOwner() *user_model.User {
 	return o.packageOwner
 }
 
@@ -105,7 +105,7 @@ func (o *Permissions) SetPackageOwner(packageOwner *user_model.User) {
 	o.packageOwner = packageOwner
 }
 
-func (o *Permissions) GetPackageAccessMode() perm.AccessMode {
+func (o *Permissions) PackageAccessMode() perm.AccessMode {
 	return o.packageAccessMode
 }
 

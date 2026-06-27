@@ -158,7 +158,7 @@ func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permiss
 	}
 	owner := fixtureCreateUser(t, &user_model.User{Name: fixtureData.Get("packageOwner")})
 	permissions.SetPackageOwner(owner)
-	mode, err := packages_service.DeterminePackageAccessMode(permissions.GetContext(), permissions.GetPackageOwner(), permissions.Doer())
+	mode, err := packages_service.DeterminePackageAccessMode(permissions.GetContext(), permissions.PackageOwner(), permissions.Doer())
 	require.NoError(t, err)
 	permissions.SetPackageAccessMode(mode)
 }

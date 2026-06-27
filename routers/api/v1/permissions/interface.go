@@ -29,8 +29,8 @@ type Context interface {
 
 	Team() *org_model.Team
 
-	GetPackageOwner() *user_model.User
-	GetPackageAccessMode() perm.AccessMode
+	PackageOwner() *user_model.User
+	PackageAccessMode() perm.AccessMode
 
 	Permission() *access_model.Permission
 	SetPermission(*access_model.Permission)

@@ -273,14 +273,14 @@ func (ctx *APIContext) Package() *Package {
 	return ctx.pkg
 }
 
-func (ctx *APIContext) GetPackageOwner() *user_model.User {
+func (ctx *APIContext) PackageOwner() *user_model.User {
 	if ctx.Package() == nil {
 		return nil
 	}
 	return ctx.Package().Owner
 }
 
-func (ctx *APIContext) GetPackageAccessMode() perm.AccessMode {
+func (ctx *APIContext) PackageAccessMode() perm.AccessMode {
 	if ctx.Package() == nil {
 		return perm.AccessModeNone
 	}
