@@ -43,7 +43,7 @@ All fixtures are dynamically created (they are not using the global fixtures fou
 
 ## Debugging
 
-- Running the tests in verbose mode `make GOTESTFLAGS=-v GO_TEST_PACKAGES=forgejo.org/routers/api/v1/permissions/tests/... 'test#Test' `
+- Running the tests in verbose mode `COVERAGE_TEST_ARGS='-test.v -test.run=TestAPIv1Permissions' make coverage-reset coverage-run-integration-sqlite' `
 - Browsing the tests such as
 ```
 ...
@@ -88,7 +88,7 @@ The `signature[1:]` list are the mandatory arguments to the function call.
 ### `routers/api/v1/permissions`
 
 - At the root of the source tree
-- `COVERAGE_TEST_PACKAGES="forgejo.org/routers/api/v1/permissions forgejo.org/routers/api/v1/permissions/tests" make coverage-run coverage-show-percentage | grep v1/permissions | grep -v v1/permissions/permissions.go | grep -v v1/permissions/tests | sed -e 's/\t\t*/ /g' -e 's|forgejo.org/routers/||'`
+- `COVERAGE_TEST_ARGS='-test.v -test.run=TestAPIv1Permissions' make coverage-reset coverage-run-integration-sqlite coverage-show-percentage | grep v1/permissions | grep -v v1/permissions/permissions.go | grep -v v1/permissions/test | sed -e 's/\t\t*/ /g' -e 's|forgejo.org/routers/||'`
 - `uncover coverage/textfmt.out ReqOrgOwnership`
 
 ### Forgejo development branch
