@@ -6,16 +6,34 @@
 		</form>
 	</header>
 	<article class="content">
-		<div class="switch">
-			<button type="button" class="item active" data-tab="global">{{ctx.Locale.Tr "shortcuts.button.global"}}</button>
-			<button type="button" class="item" data-tab="repo">{{ctx.Locale.Tr "shortcuts.button.repo"}}</button>
-			<button type="button" class="item" data-tab="code">{{ctx.Locale.Tr "shortcuts.button.code"}}</button>
-			<button type="button" class="item" data-tab="issue">{{ctx.Locale.Tr "shortcuts.button.issue"}}</button>
+		<div class="ui small dropdown selection tw-w-full" role="combobox" >
+			{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+			<div class="text">
+				{{ctx.Locale.Tr "shortcuts.button.global"}}
+			</div>
+			<div class="menu" role="listbox">
+					<label class="active item" role="option">
+						<input hidden type="radio" name="tab" value="global" checked>
+						{{ctx.Locale.Tr "shortcuts.button.global"}}
+					</label>
+					<label class="item" role="option">
+						<input hidden type="radio" name="tab" value="repo">
+						{{ctx.Locale.Tr "shortcuts.button.repo"}}
+					</label>
+					<label class="item" role="option">
+						<input hidden type="radio" name="tab" value="code">
+						{{ctx.Locale.Tr "shortcuts.button.code"}}
+					</label>
+					<label class="item" role="option">
+						<input hidden type="radio" name="tab" value="issue">
+						{{ctx.Locale.Tr "shortcuts.button.issue"}}
+					</label>
+			</div>
 		</div>
 		<div class="tw-mt-4 tw-flex tw-justify-center">
-			<kbd>{{svg "octicon-arrow-left" 16}}</kbd>
+			<kbd>{{svg "octicon-arrow-up" 16}}</kbd>
 			&nbsp;{{ctx.Locale.Tr "shortcuts.hint"}}&nbsp;
-			<kbd>{{svg "octicon-arrow-right" 16}}</kbd>
+			<kbd>{{svg "octicon-arrow-down" 16}}</kbd>
 		</div>
 		<div class="tw-items-start tw-grid tw-grid-cols-1">
 			<ul data-tab="global">
@@ -56,7 +74,7 @@
 					<div><kbd>Escape</kbd></div>
 				</li>
 			</ul>
-			<ul data-tab="repo" style="visibility: hidden" aria-hidden="true">
+			<ul data-tab="repo" class="tw-invisible" aria-hidden="true">
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.repo.create"}}</div>
 					<div><kbd>c</kbd></div>
@@ -108,7 +126,7 @@
 					<div><kbd>w</kbd></div>
 				</li>
 			</ul>
-			<ul data-tab="code" style="visibility: hidden" aria-hidden="true">
+			<ul data-tab="code" class="tw-invisible" aria-hidden="true">
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.code.blame"}}</div>
 					<div><kbd>b</kbd></div>
@@ -130,7 +148,7 @@
 					<div><kbd>y</kbd></div>
 				</li>
 			</ul>
-			<ul data-tab="issue" style="visibility: hidden" aria-hidden="true">
+			<ul data-tab="issue" class="tw-invisible" aria-hidden="true">
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.issue.assignee"}}</div>
 					<div><kbd>a</kbd></div>

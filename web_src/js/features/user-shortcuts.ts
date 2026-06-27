@@ -60,30 +60,33 @@ function keyboardSelector(up: boolean, tab: boolean) {
 
 function initPopupTabs() {
   const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
-  const btns = dialog.querySelectorAll<HTMLButtonElement>('[data-tab]');
+  const inputs = dialog.querySelectorAll<HTMLInputElement>('[type="radio"]');
   const lists = dialog.querySelectorAll('ul');
-  const selectList = (name: string) => {
-    for (const btn of btns) {
-      btn.classList.toggle('active', btn.dataset.tab === name);
-    }
+  dialog.addEventListener('close', () => inputs[0].click());
+  const fn = (value: string) => {
     for (const ls of lists) {
-      const active = ls.dataset.tab !== name;
-      ls.style.visibility = active ? 'hidden' : 'visible';
+      const active = ls.dataset.tab !== value;
+      ls.classList.toggle('tw-invisible', active);
       ls.toggleAttribute('aria-hidden', active);
     }
   };
-  for (const btn of btns) {
-    btn.addEventListener('click', () => {
-      selectList(btn.dataset.tab);
-    });
+  for (const input of inputs) {
+    input.addEventListener('change', () => fn(input.value));
   }
-  dialog.addEventListener('close', () => {
-    selectList('global');
+  new MutationObserver(([mut], _) => {
+    const el = mut.target as HTMLElement;
+    if (el.getAttribute('aria-expanded') === 'true') return;
+    const value = el.querySelector<HTMLInputElement>('.selected input')?.value;
+    if (value) fn(value);
+  }).observe(dialog.querySelector('.dropdown'), {
+    attributeFilter: ['aria-expanded'],
   });
 }
 
 function initEnableCheckbox() {
-  const checkbox = document.querySelector<HTMLInputElement>('#shortcuts input');
+  const checkbox = document.querySelector<HTMLInputElement>(
+    '#shortcuts [type="checkbox"]',
+  );
   checkbox?.addEventListener('change', () => {
     const enable = checkbox.checked;
     if (enable) document.addEventListener('keydown', onKeydown);
@@ -342,26 +345,20 @@ function onKeydown(e: KeyboardEvent) {
       document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       e.preventDefault();
       break;
-    case 'ArrowLeft': {
-      const btns = Array.from(
-        document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
-      );
-      const idx = btns.findIndex((btn) => btn.classList.contains('active'));
-      if (idx > 0) {
-        btns[idx - 1].click();
-      }
+    case 'ArrowUp':
+      if (document.querySelector('#shortcuts .visible')) return;
+      (
+        document.querySelector('#shortcuts .active')
+          ?.previousElementSibling as HTMLElement
+      )?.click();
       break;
-    }
-    case 'ArrowRight': {
-      const btns = Array.from(
-        document.querySelectorAll<HTMLButtonElement>('#shortcuts .item'),
-      );
-      const idx = btns.findIndex((btn) => btn.classList.contains('active'));
-      if (idx < btns.length - 1) {
-        btns[idx + 1].click();
-      }
+    case 'ArrowDown':
+      if (document.querySelector('#shortcuts .visible')) return;
+      (
+        document.querySelector('#shortcuts .active')
+          ?.nextElementSibling as HTMLElement
+      )?.click();
       break;
-    }
     case 'Tab': {
       setTimeout(() => {
         const ks = document.querySelector('.keyboard-selected');
@@ -378,14 +375,20 @@ export function initUserShortcuts() {
   initPopupTabs();
   initEnableCheckbox();
   initLineJump();
-  if (document.querySelector<HTMLInputElement>('#shortcuts input')?.checked) {
+  if (
+    document.querySelector<HTMLInputElement>('#shortcuts [type="checkbox"]')
+      ?.checked
+  ) {
     document.addEventListener('keydown', onKeydown);
   }
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === '?') {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
     }
-    if (!document.querySelector<HTMLInputElement>('#shortcuts input')?.checked) return;
+    if (
+      !document.querySelector<HTMLInputElement>('#shortcuts [type="checkbox"]')
+        ?.checked
+    ) return;
     if (e.key === 'Tab' && e.shiftKey) {
       setTimeout(() => {
         const ks = document.querySelector('.keyboard-selected');

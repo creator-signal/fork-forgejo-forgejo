@@ -227,10 +227,10 @@ test('Open dialog and persist enable setting', async ({
       resp.status() === 200,
   );
 
-  await page.keyboard.press('ArrowRight');
-  await expect(dialog.locator('button.active')).toHaveText('Repository');
-  await page.keyboard.press('ArrowLeft');
-  await expect(dialog.locator('button.active')).toHaveText('Global');
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.locator('input').first()).toHaveValue('repo');
+  await page.keyboard.press('ArrowUp');
+  await expect(dialog.locator('input').first()).toHaveValue('global');
   await page.keyboard.press('Escape');
   await dialog.isHidden();
 });
