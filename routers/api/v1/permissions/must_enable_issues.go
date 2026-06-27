@@ -11,7 +11,7 @@ import (
 func MustEnableIssues(ctx Context) {
 	if !ctx.GetPermission().CanRead(unit.TypeIssues) {
 		if log.IsTrace() {
-			if ctx.GetIsSigned() {
+			if ctx.IsSigned() {
 				log.Trace("Permission Denied: User %-v cannot read %-v in Repo %-v\n"+
 					"User in Repo has Permissions: %-+v",
 					ctx.Doer(),

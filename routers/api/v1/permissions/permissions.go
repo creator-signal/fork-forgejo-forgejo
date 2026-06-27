@@ -121,7 +121,7 @@ func (o *Permissions) SetPermission(permission *access_model.Permission) {
 	o.permission = permission
 }
 
-func (o *Permissions) GetIsSigned() bool {
+func (o *Permissions) IsSigned() bool {
 	return o.isSigned
 }
 

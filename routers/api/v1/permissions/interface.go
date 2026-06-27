@@ -35,7 +35,7 @@ type Context interface {
 	GetPermission() *access_model.Permission
 	SetPermission(*access_model.Permission)
 
-	GetIsSigned() bool
+	IsSigned() bool
 
 	GetPublicOnly() bool
 	SetPublicOnly(bool)

@@ -13,7 +13,7 @@ func IsUserSiteAdmin(ctx Context) bool {
 	if !ctx.GetReducer().AllowAdminOverride() {
 		return false
 	}
-	return ctx.GetIsSigned() && ctx.Doer().IsAdmin
+	return ctx.IsSigned() && ctx.Doer().IsAdmin
 }
 
 func IsUserRepoAdmin(ctx Context) bool {

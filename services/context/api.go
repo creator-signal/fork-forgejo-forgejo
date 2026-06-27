@@ -209,10 +209,6 @@ func (ctx *APIContext) SetIsSigned(isSigned bool) {
 	ctx.isSigned = isSigned
 }
 
-func (ctx *APIContext) GetIsSigned() bool {
-	return ctx.IsSigned()
-}
-
 func (ctx *APIContext) Authentication() auth.AuthenticationResult {
 	return ctx.authentication
 }

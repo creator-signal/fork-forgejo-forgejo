@@ -13,7 +13,7 @@ func ReqToken(ctx Context) {
 		return
 	}
 
-	if ctx.GetIsSigned() {
+	if ctx.IsSigned() {
 		return
 	}
 	ctx.Error(http.StatusUnauthorized, "reqToken", "token is required")

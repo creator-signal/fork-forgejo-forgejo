@@ -10,7 +10,7 @@ import (
 )
 
 func ReqBasicOrRevProxyAuth(ctx Context) {
-	if ctx.GetIsSigned() && setting.Service.EnableReverseProxyAuthAPI && ctx.GetAuthentication().IsReverseProxyAuthentication() {
+	if ctx.IsSigned() && setting.Service.EnableReverseProxyAuthAPI && ctx.GetAuthentication().IsReverseProxyAuthentication() {
 		return
 	}
 
