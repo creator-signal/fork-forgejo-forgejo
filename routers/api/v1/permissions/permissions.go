@@ -129,7 +129,7 @@ func (o *Permissions) SetIsSigned(isSigned bool) {
 	o.isSigned = isSigned
 }
 
-func (o *Permissions) GetPublicOnly() bool {
+func (o *Permissions) PublicOnly() bool {
 	return o.publicOnly
 }
 

@@ -303,10 +303,6 @@ func (ctx *APIContext) SetPublicOnly(publicOnly bool) {
 	ctx.publicOnly = publicOnly
 }
 
-func (ctx *APIContext) GetPublicOnly() bool {
-	return ctx.PublicOnly()
-}
-
 func (ctx *APIContext) Reducer() authz.AuthorizationReducer {
 	return ctx.reducer
 }

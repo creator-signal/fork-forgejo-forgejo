@@ -37,7 +37,7 @@ type Context interface {
 
 	IsSigned() bool
 
-	GetPublicOnly() bool
+	PublicOnly() bool
 	SetPublicOnly(bool)
 
 	GetReducer() authz.AuthorizationReducer

@@ -12,7 +12,7 @@ import (
 )
 
 func CheckTokenPublicOnly(ctx Context, user, org, packageOwner *user_model.User) {
-	if !ctx.GetPublicOnly() {
+	if !ctx.PublicOnly() {
 		return
 	}
 

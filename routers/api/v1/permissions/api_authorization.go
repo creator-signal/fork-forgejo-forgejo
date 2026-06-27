@@ -26,7 +26,7 @@ func APIAuthorization(ctx Context) {
 		// No Reducer will be populated if the auth method wasn't an PAT.  In this case, we populate `ctx.Reducer` so no
 		// nil checks are needed, and we respect the scope `PublicOnly()` so that it it's safe to just rely on
 		// `ctx.Reducer` to account for public-only access:
-		if ctx.GetPublicOnly() {
+		if ctx.PublicOnly() {
 			ctx.SetReducer(&authz.PublicReposAuthorizationReducer{})
 		} else {
 			ctx.SetReducer(&authz.AllAccessAuthorizationReducer{})
