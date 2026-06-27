@@ -57,7 +57,7 @@ func (o *Permissions) SetToken(token *auth_model.AccessToken) {
 	o.token = token
 }
 
-func (o *Permissions) GetRepository() *repo_model.Repository {
+func (o *Permissions) Repository() *repo_model.Repository {
 	return o.repository
 }
 

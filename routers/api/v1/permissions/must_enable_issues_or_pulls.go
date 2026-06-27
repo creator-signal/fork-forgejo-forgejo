@@ -10,22 +10,22 @@ import (
 
 func MustEnableIssuesOrPulls(ctx Context) {
 	if !ctx.GetPermission().CanRead(unit.TypeIssues) &&
-		(!ctx.GetRepository().CanEnablePulls() || !ctx.GetPermission().CanRead(unit.TypePullRequests)) {
-		if ctx.GetRepository().CanEnablePulls() && log.IsTrace() {
+		(!ctx.Repository().CanEnablePulls() || !ctx.GetPermission().CanRead(unit.TypePullRequests)) {
+		if ctx.Repository().CanEnablePulls() && log.IsTrace() {
 			if ctx.IsSigned() {
 				log.Trace("Permission Denied: User %-v cannot read %-v and %-v in Repo %-v\n"+
 					"User in Repo has Permissions: %-+v",
 					ctx.Doer(),
 					unit.TypeIssues,
 					unit.TypePullRequests,
-					ctx.GetRepository(),
+					ctx.Repository(),
 					ctx.GetPermission())
 			} else {
 				log.Trace("Permission Denied: Anonymous user cannot read %-v and %-v in Repo %-v\n"+
 					"Anonymous user in Repo has Permissions: %-+v",
 					unit.TypeIssues,
 					unit.TypePullRequests,
-					ctx.GetRepository(),
+					ctx.Repository(),
 					ctx.GetPermission())
 			}
 		}

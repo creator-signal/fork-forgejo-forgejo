@@ -21,7 +21,7 @@ func RepoAccess(ctx Context) {
 			ctx.Error(http.StatusInternalServerError, "actions_model.GetTaskByID", err)
 			return
 		}
-		if task.RepoID != ctx.GetRepository().ID {
+		if task.RepoID != ctx.Repository().ID {
 			ctx.NotFound()
 			return
 		}
@@ -32,17 +32,17 @@ func RepoAccess(ctx Context) {
 			ctx.GetPermission().AccessMode = perm.AccessModeWrite
 		}
 
-		if err := ctx.GetRepository().LoadUnits(ctx.GetContext()); err != nil {
+		if err := ctx.Repository().LoadUnits(ctx.GetContext()); err != nil {
 			ctx.Error(http.StatusInternalServerError, "LoadUnits", err)
 			return
 		}
-		ctx.GetPermission().Units = ctx.GetRepository().Units
+		ctx.GetPermission().Units = ctx.Repository().Units
 		ctx.GetPermission().UnitsMode = make(map[unit.Type]perm.AccessMode)
-		for _, u := range ctx.GetRepository().Units {
+		for _, u := range ctx.Repository().Units {
 			ctx.GetPermission().UnitsMode[u.Type] = ctx.GetPermission().AccessMode
 		}
 	} else {
-		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.GetRepository(), ctx.Doer(), ctx.GetReducer())
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.Repository(), ctx.Doer(), ctx.GetReducer())
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 			return

@@ -233,7 +233,7 @@ func (ctx *APIContext) SetRepo(repo *Repository) {
 	ctx.repo = repo
 }
 
-func (ctx *APIContext) GetRepository() *repo_model.Repository {
+func (ctx *APIContext) Repository() *repo_model.Repository {
 	return ctx.Repo().Repository
 }
 

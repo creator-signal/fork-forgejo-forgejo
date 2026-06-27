@@ -16,13 +16,13 @@ func MustEnableIssues(ctx Context) {
 					"User in Repo has Permissions: %-+v",
 					ctx.Doer(),
 					unit.TypeIssues,
-					ctx.GetRepository(),
+					ctx.Repository(),
 					ctx.GetPermission())
 			} else {
 				log.Trace("Permission Denied: Anonymous user cannot read %-v in Repo %-v\n"+
 					"Anonymous user in Repo has Permissions: %-+v",
 					unit.TypeIssues,
-					ctx.GetRepository(),
+					ctx.Repository(),
 					ctx.GetPermission())
 			}
 		}

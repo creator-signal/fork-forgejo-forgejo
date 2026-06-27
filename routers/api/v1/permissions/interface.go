@@ -19,7 +19,7 @@ import (
 type Context interface {
 	GetContext() context.Context
 
-	GetRepository() *repo_model.Repository
+	Repository() *repo_model.Repository
 
 	Doer() *user_model.User
 
