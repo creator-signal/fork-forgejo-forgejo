@@ -362,9 +362,10 @@ function onKeydown(e: KeyboardEvent) {
     case 'Tab': {
       setTimeout(() => {
         const ks = document.querySelector('.keyboard-selected');
-        if (!ks) return;
-        if (ks.contains(document.activeElement)) return;
-        keyboardSelector(false, true);
+        if (!ks || ks.contains(document.activeElement)) return;
+        // FIX: highlight first item on `Tab+Shift` for repo issues and pulls
+        // page on Firefox 152.0.1
+        keyboardSelector(/* WTF*/ e.shiftKey, true);
       }, 50);
     }
   }
@@ -392,8 +393,7 @@ export function initUserShortcuts() {
     if (e.key === 'Tab' && e.shiftKey) {
       setTimeout(() => {
         const ks = document.querySelector('.keyboard-selected');
-        if (!ks) return;
-        if (ks.contains(document.activeElement)) return;
+        if (!ks || ks.contains(document.activeElement)) return;
         keyboardSelector(true, true);
       }, 50);
     }
