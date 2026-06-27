@@ -27,19 +27,19 @@ func RepoAccess(ctx Context) {
 		}
 
 		if task.IsForkPullRequest {
-			ctx.GetPermission().AccessMode = perm.AccessModeRead
+			ctx.Permission().AccessMode = perm.AccessModeRead
 		} else {
-			ctx.GetPermission().AccessMode = perm.AccessModeWrite
+			ctx.Permission().AccessMode = perm.AccessModeWrite
 		}
 
 		if err := ctx.Repository().LoadUnits(ctx.GetContext()); err != nil {
 			ctx.Error(http.StatusInternalServerError, "LoadUnits", err)
 			return
 		}
-		ctx.GetPermission().Units = ctx.Repository().Units
-		ctx.GetPermission().UnitsMode = make(map[unit.Type]perm.AccessMode)
+		ctx.Permission().Units = ctx.Repository().Units
+		ctx.Permission().UnitsMode = make(map[unit.Type]perm.AccessMode)
 		for _, u := range ctx.Repository().Units {
-			ctx.GetPermission().UnitsMode[u.Type] = ctx.GetPermission().AccessMode
+			ctx.Permission().UnitsMode[u.Type] = ctx.Permission().AccessMode
 		}
 	} else {
 		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx.GetContext(), ctx.Repository(), ctx.Doer(), ctx.GetReducer())
@@ -50,7 +50,7 @@ func RepoAccess(ctx Context) {
 		ctx.SetPermission(&permission)
 	}
 
-	if !ctx.GetPermission().HasAccess() {
+	if !ctx.Permission().HasAccess() {
 		ctx.NotFound()
 		return
 	}

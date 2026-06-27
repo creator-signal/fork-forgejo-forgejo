@@ -13,7 +13,7 @@ func ReqValidCommentID(ctx Context, comment *issues_model.Comment) {
 		return
 	}
 
-	if !ctx.GetPermission().CanReadIssuesOrPulls(comment.Issue.IsPull) {
+	if !ctx.Permission().CanReadIssuesOrPulls(comment.Issue.IsPull) {
 		ctx.NotFound()
 		return
 	}

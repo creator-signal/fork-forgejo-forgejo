@@ -14,7 +14,7 @@ func ReqRepoReader(ctx Context, unitType unit.Type) {
 		ctx.NotFound()
 		return
 	}
-	if !ctx.GetPermission().CanRead(unitType) && !IsUserRepoAdmin(ctx) && !IsUserSiteAdmin(ctx) {
+	if !ctx.Permission().CanRead(unitType) && !IsUserRepoAdmin(ctx) && !IsUserSiteAdmin(ctx) {
 		ctx.Error(http.StatusForbidden, "reqRepoReader", "user should have specific read permission or be a repo admin or a site admin")
 		return
 	}

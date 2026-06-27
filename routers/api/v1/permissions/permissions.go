@@ -113,7 +113,7 @@ func (o *Permissions) SetPackageAccessMode(packageAccessMode perm.AccessMode) {
 	o.packageAccessMode = packageAccessMode
 }
 
-func (o *Permissions) GetPermission() *access_model.Permission {
+func (o *Permissions) Permission() *access_model.Permission {
 	return o.permission
 }
 

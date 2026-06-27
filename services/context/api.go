@@ -237,7 +237,7 @@ func (ctx *APIContext) Repository() *repo_model.Repository {
 	return ctx.Repo().Repository
 }
 
-func (ctx *APIContext) GetPermission() *access_model.Permission {
+func (ctx *APIContext) Permission() *access_model.Permission {
 	return &ctx.Repo().Permission
 }
 

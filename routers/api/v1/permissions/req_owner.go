@@ -17,7 +17,7 @@ func ReqOwner(ctx Context, unitTypes []unit.Type) {
 		ctx.NotFound()
 		return
 	}
-	if !ctx.GetPermission().IsOwner() && !IsUserSiteAdmin(ctx) {
+	if !ctx.Permission().IsOwner() && !IsUserSiteAdmin(ctx) {
 		ctx.Error(http.StatusForbidden, "reqOwner", "user should be the owner of the repo")
 		return
 	}

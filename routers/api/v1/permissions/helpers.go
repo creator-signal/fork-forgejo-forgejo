@@ -20,9 +20,9 @@ func IsUserRepoAdmin(ctx Context) bool {
 	if !ctx.GetReducer().AllowAdminOverride() {
 		return false
 	}
-	return ctx.GetPermission().IsAdmin()
+	return ctx.Permission().IsAdmin()
 }
 
 func IsUserRepoWriter(ctx Context, unitTypes []unit.Type) bool {
-	return slices.ContainsFunc(unitTypes, ctx.GetPermission().CanWrite)
+	return slices.ContainsFunc(unitTypes, ctx.Permission().CanWrite)
 }

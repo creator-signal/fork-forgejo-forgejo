@@ -32,7 +32,7 @@ type Context interface {
 	GetPackageOwner() *user_model.User
 	GetPackageAccessMode() perm.AccessMode
 
-	GetPermission() *access_model.Permission
+	Permission() *access_model.Permission
 	SetPermission(*access_model.Permission)
 
 	IsSigned() bool

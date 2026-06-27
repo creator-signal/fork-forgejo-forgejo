@@ -10,7 +10,7 @@ import (
 )
 
 func ReqRepoBranchWriter(ctx Context, branch string) {
-	if !issues_model.CanMaintainerWriteToBranch(ctx.GetContext(), *ctx.GetPermission(), branch, ctx.Doer()) && !IsUserSiteAdmin(ctx) {
+	if !issues_model.CanMaintainerWriteToBranch(ctx.GetContext(), *ctx.Permission(), branch, ctx.Doer()) && !IsUserSiteAdmin(ctx) {
 		ctx.Error(http.StatusForbidden, "reqRepoBranchWriter", "user should have a permission to write to this branch")
 	}
 }
