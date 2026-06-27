@@ -43,7 +43,7 @@ type Context interface {
 	GetReducer() authz.AuthorizationReducer
 	SetReducer(authz.AuthorizationReducer)
 
-	GetAuthentication() auth.AuthenticationResult
+	Authentication() auth.AuthenticationResult
 
 	RequiredScopeCategories() []auth_model.AccessTokenScopeCategory
 	SetRequiredScopeCategories([]auth_model.AccessTokenScopeCategory)

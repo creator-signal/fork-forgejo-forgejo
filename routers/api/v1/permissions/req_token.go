@@ -9,7 +9,7 @@ import (
 
 func ReqToken(ctx Context) {
 	// If actions token is present
-	if ctx.GetAuthentication().ActionsTaskID().Has() {
+	if ctx.Authentication().ActionsTaskID().Has() {
 		return
 	}
 

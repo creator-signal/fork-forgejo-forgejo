@@ -14,8 +14,8 @@ import (
 )
 
 func RepoAccess(ctx Context) {
-	if ctx.Doer() != nil && ctx.Doer().ID == user_model.ActionsUserID && ctx.GetAuthentication().ActionsTaskID().Has() {
-		_, taskID := ctx.GetAuthentication().ActionsTaskID().Get()
+	if ctx.Doer() != nil && ctx.Doer().ID == user_model.ActionsUserID && ctx.Authentication().ActionsTaskID().Has() {
+		_, taskID := ctx.Authentication().ActionsTaskID().Get()
 		task, err := actions_model.GetTaskByID(ctx.GetContext(), taskID)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "actions_model.GetTaskByID", err)

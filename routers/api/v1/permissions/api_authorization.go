@@ -10,7 +10,7 @@ import (
 )
 
 func APIAuthorization(ctx Context) {
-	if hasScope, scope := ctx.GetAuthentication().Scope().Get(); hasScope {
+	if hasScope, scope := ctx.Authentication().Scope().Get(); hasScope {
 		publicOnly, err := scope.PublicOnly()
 		if err != nil {
 			ctx.Error(http.StatusForbidden, "tokenRequiresScope", "parsing public resource scope failed: "+err.Error())
@@ -19,7 +19,7 @@ func APIAuthorization(ctx Context) {
 		ctx.SetPublicOnly(publicOnly)
 	}
 
-	reducer := ctx.GetAuthentication().Reducer()
+	reducer := ctx.Authentication().Reducer()
 	if reducer != nil {
 		ctx.SetReducer(reducer)
 	} else {

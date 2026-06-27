@@ -217,10 +217,6 @@ func (ctx *APIContext) SetAuthentication(authentication auth.AuthenticationResul
 	ctx.authentication = authentication
 }
 
-func (ctx *APIContext) GetAuthentication() auth.AuthenticationResult {
-	return ctx.Authentication()
-}
-
 func (ctx *APIContext) GetUser() *user_model.User {
 	return ctx.User()
 }

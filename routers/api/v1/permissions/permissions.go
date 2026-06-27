@@ -145,7 +145,7 @@ func (o *Permissions) SetReducer(reducer authz.AuthorizationReducer) {
 	o.reducer = reducer
 }
 
-func (o *Permissions) GetAuthentication() auth.AuthenticationResult {
+func (o *Permissions) Authentication() auth.AuthenticationResult {
 	return o.authentication
 }
 
