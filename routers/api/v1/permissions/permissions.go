@@ -73,7 +73,7 @@ func (o *Permissions) SetDoer(doer *user_model.User) {
 	o.doer = doer
 }
 
-func (o *Permissions) GetUser() *user_model.User {
+func (o *Permissions) User() *user_model.User {
 	return o.user
 }
 

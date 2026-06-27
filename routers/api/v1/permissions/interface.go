@@ -23,7 +23,7 @@ type Context interface {
 
 	Doer() *user_model.User
 
-	GetUser() *user_model.User
+	User() *user_model.User
 
 	GetOrg() *org_model.Organization
 

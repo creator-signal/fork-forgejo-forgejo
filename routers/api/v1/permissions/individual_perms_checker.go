@@ -9,10 +9,10 @@ import (
 
 func IndividualPermsChecker(ctx Context) {
 	// org permissions have been checked in context.OrgAssignment(), but individual permissions haven't been checked.
-	if ctx.GetUser().IsIndividual() {
-		switch ctx.GetUser().Visibility {
+	if ctx.User().IsIndividual() {
+		switch ctx.User().Visibility {
 		case api.VisibleTypePrivate:
-			if ctx.Doer() == nil || (ctx.GetUser().ID != ctx.Doer().ID && !IsUserSiteAdmin(ctx)) {
+			if ctx.Doer() == nil || (ctx.User().ID != ctx.Doer().ID && !IsUserSiteAdmin(ctx)) {
 				ctx.NotFound("Visit Project", nil)
 				return
 			}
