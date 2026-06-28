@@ -21,7 +21,7 @@
   --attention-color: var(--color-thin-blue);
 }
 .attention-tip {
-  --attention-color: var(--color-success-text);
+  --attention-color: var(--color-thin-green);
 }
 .attention-important {
   --attention-color: var(--color-thin-violet);
@@ -30,5 +30,5 @@
   --attention-color: var(--color-warning-text);
 }
 .attention-caution {
-  --attention-color: var(--color-red-dark-1);
+  --attention-color: var(--color-thin-red);
 }
