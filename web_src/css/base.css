@@ -943,6 +943,11 @@ img.ui.avatar,
   border-radius: var(--border-radius);
 }
 
+.attention-header {
+  padding: 0.5em 0.75em !important;
+  color: var(--color-text) !important;
+}
+
 .attention-title {
   align-items: center;
   display: flex;
