@@ -1,9 +1,9 @@
 /* Copyright 2026 The Forgejo Authors. All rights reserved.
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-blockquote.attention-header {
-  padding: 0.5em 0.75em !important;
-  color: var(--color-text) !important;
+.markup blockquote.attention-header {
+  padding: 0.5em 0.75em;
+  color: var(--color-text);
   border-inline-start-color: var(--attention-color);
 }
 
