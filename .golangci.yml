@@ -320,9 +320,6 @@ linters:
       - path: services/issue/assignee.go
         linters:
           - nilnil
-      - path: routers/api/packages/conan/auth.go
-        linters:
-          - nilnil
       - path: services/issue/commit.go
         linters:
           - nilnil
