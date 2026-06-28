@@ -345,20 +345,24 @@ function onKeydown(e: KeyboardEvent) {
       document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       e.preventDefault();
       break;
-    case 'ArrowUp':
-      if (document.querySelector('#shortcuts .visible')) return;
+    case 'ArrowUp': {
+      const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
+      if (!dialog.open || dialog.querySelector('.visible')) return;
       (
         document.querySelector('#shortcuts .active')
           ?.previousElementSibling as HTMLElement
       )?.click();
       break;
-    case 'ArrowDown':
-      if (document.querySelector('#shortcuts .visible')) return;
+    }
+    case 'ArrowDown': {
+      const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
+      if (!dialog.open || dialog.querySelector('.visible')) return;
       (
         document.querySelector('#shortcuts .active')
           ?.nextElementSibling as HTMLElement
       )?.click();
       break;
+    }
     case 'Tab': {
       setTimeout(() => {
         const ks = document.querySelector('.keyboard-selected');
