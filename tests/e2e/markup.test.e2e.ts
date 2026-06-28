@@ -49,7 +49,7 @@ test('Attention formatting', async ({page}) => {
       expect(titleColor).toBe(iconColor);
       expect(ugcColor).not.toBe(titleColor);
     }));
-  }).toPass();
+  }).toPass({timeout: 3000});
 
   await screenshot(page);
 });
