@@ -65,6 +65,32 @@ func (g *Glob) Pattern() string {
 	return g.pattern
 }
 
+func requiresConnectionString(indexerType string) bool {
+	return (indexerType == "elasticsearch") || (indexerType == "meilisearch")
+}
+
+func buildConnectionString(sec ConfigSection) string {
+	connUrl := &url.URL{}
+	connUrl.Scheme = sec.Key("ISSUE_INDEXER_PROTOCOL").String()
+	connUrl.Host = sec.Key("ISSUE_INDEXER_HOST").String()
+	connUrl.Path = sec.Key("ISSUE_INDEXER_PATH").String()
+
+	username := sec.Key("ISSUE_INDEXER_USER").String()
+	passwd := loadSecret(sec, "ISSUE_INDEXER_PASSWD_URI", "ISSUE_INDEXER_PASSWD")
+	if passwd != "" {
+		// If password is set we need to generate the user info part of the URL, the username being empty/unset is a feature (for instance with meilisearch)
+		connUrl.User = url.UserPassword(username, passwd)
+	} else if username != "" {
+		// If password is not set but the username is we'll include the username in the URL
+		connUrl.User = url.User(username)
+	} else {
+		// Neither auth configs were set so don't generate that part of the connection string
+		connUrl.User = nil
+	}
+
+	return connUrl.String()
+}
+
 func loadIndexerFrom(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("indexer")
 	Indexer.IssueType = sec.Key("ISSUE_INDEXER_TYPE").MustString("bleve")
@@ -74,6 +100,10 @@ func loadIndexerFrom(rootCfg ConfigProvider) {
 	}
 	Indexer.IssueConnStr = sec.Key("ISSUE_INDEXER_CONN_STR").MustString(Indexer.IssueConnStr)
 
+	// If connection string is not directly issued try building it from config
+	if requiresConnectionString(Indexer.IssueType) && Indexer.IssueConnStr == "" {
+		Indexer.IssueConnStr = buildConnectionString(sec)
+	}
 	if Indexer.IssueType == "meilisearch" {
 		u, err := url.Parse(Indexer.IssueConnStr)
 		if err != nil {
