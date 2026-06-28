@@ -32,22 +32,24 @@ test('Attention formatting', async ({page}) => {
     'caution',
   ];
 
-  for (const attentionType of attentionTypes) {
-    const selector = `.markup blockquote.attention-header.attention-${attentionType}`;
-    expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('4px');
+  await expect(async () => {
+    await Promise.all(attentionTypes.map(async attentionType => {
+      const selector = `.markup blockquote.attention-header.attention-${attentionType}`;
+      expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('4px');
 
-    // Get all interesting colors
-    const borderColor = await page.locator(selector).evaluate((el) => getComputedStyle(el).borderInlineStartColor);
-    const titleColor = await page.locator(`${selector} > p.attention-title > strong`).evaluate((el) => getComputedStyle(el).color);
-    const iconColor = await page.locator(`${selector} > p.attention-title > svg`).evaluate((el) => getComputedStyle(el).color);
-    const ugcColor = await page.locator(`${selector} > p:not(.attention-title)`).evaluate((el) => getComputedStyle(el).color);
+      // Get all interesting colors
+      const borderColor = await page.locator(selector).evaluate((el) => getComputedStyle(el).borderInlineStartColor);
+      const titleColor = await page.locator(`${selector} > p.attention-title > strong`).evaluate((el) => getComputedStyle(el).color);
+      const iconColor = await page.locator(`${selector} > p.attention-title > svg`).evaluate((el) => getComputedStyle(el).color);
+      const ugcColor = await page.locator(`${selector} > p:not(.attention-title)`).evaluate((el) => getComputedStyle(el).color);
 
-    // It's difficult to reliably evaluate the actual colors, but checking that the
-    // colors are same for border/title/icon, and UGC is different is good enough
-    expect(borderColor).toBe(titleColor);
-    expect(titleColor).toBe(iconColor);
-    expect(ugcColor).not.toBe(titleColor);
-  }
+      // It's difficult to reliably evaluate the actual colors, but checking that the
+      // colors are same for border/title/icon, and UGC is different is good enough
+      expect(borderColor).toBe(titleColor);
+      expect(titleColor).toBe(iconColor);
+      expect(ugcColor).not.toBe(titleColor);
+    }));
+  }).toPass();
 
   await screenshot(page);
 });
