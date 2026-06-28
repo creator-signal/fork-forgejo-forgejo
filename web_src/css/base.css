@@ -943,13 +943,13 @@ img.ui.avatar,
   border-radius: var(--border-radius);
 }
 
-.attention-icon {
-  margin: auto 0.5em auto 0;
-}
-
 .attention-title {
   align-items: center;
   display: flex;
+
+  svg {
+    margin: auto 0.5em auto 0;
+  }
 }
 
 blockquote.attention-note {
