@@ -344,9 +344,6 @@ i.grey.icon.icon.icon.icon {
 .ui.yellow.label.pending-label {
   color: var(--color-warning-text) !important;
 }
-strong.attention-caution, svg.attention-caution {
-  color: var(--color-red-light);
-}
 .ui.basic.red.button {
   background-color: var(--color-red);
   color: var(--color-white);
