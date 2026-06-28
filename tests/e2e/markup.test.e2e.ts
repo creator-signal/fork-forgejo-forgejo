@@ -33,7 +33,7 @@ test('Attention formatting', async ({page}) => {
   ];
 
   await expect(async () => {
-    await Promise.all(attentionTypes.map(async attentionType => {
+    await Promise.all(attentionTypes.map(async (attentionType) => {
       const selector = `.markup blockquote.attention-header.attention-${attentionType}`;
       expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('4px');
 
