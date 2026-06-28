@@ -29,6 +29,13 @@
   --page-spacing: 16px; /* space between page elements */
   --page-margin-x: 32px; /* minimum space on left and right side of page */
   --button-spacing: 0.33rem;
+
+  /* Colors for thin elements: octicons, text, borders */
+  --color-thin-green: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-green));
+  --color-thin-red: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-red));
+  --color-thin-purple: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-purple));
+  --color-thin-orange: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-orange));
+  --color-thin-blue: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-blue));
 }
 
 @media (min-width: 768px) and (max-width: 1200px) {

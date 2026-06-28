@@ -176,6 +176,16 @@
   --color-orange-badge: #f2711c;
   --color-orange-badge-bg: #f2711c1a;
   --color-orange-badge-hover-bg: #f2711c4d;
+
+  /* A more declarative way for themes */
+  --thin-lightness: 0.5555;
+  --regular-chroma: 0.17;
+  --hue-green: 145deg;
+  --hue-red: 27deg;
+  --hue-purple: 298deg;
+  --hue-orange: 41deg;
+  --hue-blue: 260deg;
+
   /* target-based colors */
   --color-body: #ffffff;
   --color-box-header: #f1f3f5;
@@ -243,8 +253,6 @@
   --color-indicator-idle-20: #16a34a1a;
   --color-indicator-active: #2185d0;
   --color-indicator-active-20: #2185d033;
-  /* gitea theme legacy support */
-  --color-thin-blue: #1e78bb;
   accent-color: var(--color-accent);
   color-scheme: light;
 }
