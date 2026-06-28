@@ -245,6 +245,8 @@
   --color-indicator-idle-20: #16a34a1a;
   --color-indicator-active: #2185d0;
   --color-indicator-active-20: #2185d033;
+  /* gitea theme legacy support */
+  --color-thin-blue: var(--color-blue-light);
   accent-color: var(--color-accent);
   color-scheme: dark;
 }

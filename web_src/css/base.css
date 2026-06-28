@@ -945,10 +945,10 @@ img.ui.avatar,
 }
 
 blockquote.attention-note {
-  border-inline-start-color: var(--color-blue-dark-1);
+  border-inline-start-color: var(--color-thin-blue);
 }
 strong.attention-note, svg.attention-note {
-  color: var(--color-blue-dark-1);
+  color: var(--color-thin-blue);
 }
 
 blockquote.attention-tip {

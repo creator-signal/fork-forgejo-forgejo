@@ -196,6 +196,7 @@
   --color-orange-badge: #ea580c;
   --color-orange-badge-bg: #ea580c22;
   --color-orange-badge-hover-bg: #ea580c44;
+
   /* Colors for thin elements: octicons, text, borders */
   --thin-lightness: 0.68;
   --regular-chroma: 0.19;
@@ -203,6 +204,7 @@
   --color-thin-red: oklch(var(--thin-lightness) var(--regular-chroma) 27deg);
   --color-thin-purple: oklch(var(--thin-lightness) var(--regular-chroma) 298deg);
   --color-thin-orange: oklch(var(--thin-lightness) var(--regular-chroma) 41deg);
+  --color-thin-blue: oklch(var(--thin-lightness) var(--regular-chroma) 260deg);
 
   /* Ditto but when additional highlight is needed, e.g. on user interaction */
   --thin-lightness-highlight: 0.75;
@@ -347,9 +349,6 @@ i.grey.icon.icon.icon.icon {
 }
 strong.attention-important, svg.attention-important {
   color: var(--color-violet-light);
-}
-strong.attention-note, svg.attention-note {
-  color: var(--color-blue-light);
 }
 strong.attention-caution, svg.attention-caution {
   color: var(--color-red-light);
