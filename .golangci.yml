@@ -305,9 +305,6 @@ linters:
       - path: routers/web/repo/release.go
         linters:
           - nilnil
-      - path: routers/web/repo/setting/runners.go
-        linters:
-          - nilnil
       - path: routers/web/repo/setting/secrets.go
         linters:
           - nilnil
