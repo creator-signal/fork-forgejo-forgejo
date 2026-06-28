@@ -955,35 +955,35 @@ img.ui.avatar,
 blockquote.attention-note {
   border-inline-start-color: var(--color-thin-blue);
 }
-strong.attention-note, svg.attention-note {
+.attention-note {
   color: var(--color-thin-blue);
 }
 
 blockquote.attention-tip {
   border-inline-start-color: var(--color-success-text);
 }
-strong.attention-tip, svg.attention-tip {
+.attention-tip {
   color: var(--color-success-text);
 }
 
 blockquote.attention-important {
   border-inline-start-color: var(--color-thin-violet);
 }
-strong.attention-important, svg.attention-important {
+.attention-important {
   color: var(--color-thin-violet);
 }
 
 blockquote.attention-warning {
   border-inline-start-color: var(--color-warning-text);
 }
-strong.attention-warning, svg.attention-warning {
+.attention-warning {
   color: var(--color-warning-text);
 }
 
 blockquote.attention-caution {
   border-inline-start-color: var(--color-red-dark-1);
 }
-strong.attention-caution, svg.attention-caution {
+.attention-caution {
   color: var(--color-red-dark-1);
 }
 
