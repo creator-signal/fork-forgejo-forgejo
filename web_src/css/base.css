@@ -943,53 +943,36 @@ img.ui.avatar,
   border-radius: var(--border-radius);
 }
 
-.attention-header {
+blockquote.attention-header {
   padding: 0.5em 0.75em !important;
   color: var(--color-text) !important;
+  border-inline-start-color: var(--attention-color);
 }
 
 .attention-title {
   align-items: center;
   display: flex;
+  color: var(--attention-color);
 
   svg {
     margin: auto 0.5em auto 0;
   }
 }
 
-blockquote.attention-note {
-  border-inline-start-color: var(--color-thin-blue);
-}
 .attention-note {
-  color: var(--color-thin-blue);
-}
-
-blockquote.attention-tip {
-  border-inline-start-color: var(--color-success-text);
+  --attention-color: var(--color-thin-blue);
 }
 .attention-tip {
-  color: var(--color-success-text);
-}
-
-blockquote.attention-important {
-  border-inline-start-color: var(--color-thin-violet);
+  --attention-color: var(--color-success-text);
 }
 .attention-important {
-  color: var(--color-thin-violet);
-}
-
-blockquote.attention-warning {
-  border-inline-start-color: var(--color-warning-text);
+  --attention-color: var(--color-thin-violet);
 }
 .attention-warning {
-  color: var(--color-warning-text);
-}
-
-blockquote.attention-caution {
-  border-inline-start-color: var(--color-red-dark-1);
+  --attention-color: var(--color-warning-text);
 }
 .attention-caution {
-  color: var(--color-red-dark-1);
+  --attention-color: var(--color-red-dark-1);
 }
 
 .center:not(.popup) {
