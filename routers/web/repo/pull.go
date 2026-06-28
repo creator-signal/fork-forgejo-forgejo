@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -964,9 +965,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		var prevCommit, curCommit, nextCommit *git.Commit
 
 		// Iterate in reverse to properly map "previous" and "next" buttons
-		for i := len(prInfo.Commits) - 1; i >= 0; i-- {
-			commit := prInfo.Commits[i]
-
+		for _, commit := range slices.Backward(prInfo.Commits) {
 			if curCommit != nil {
 				nextCommit = commit
 				break
@@ -1527,6 +1526,7 @@ func MergePullRequest(ctx *context.Context) {
 				ctx.Flash.Error(ctx.Tr("repo.pulls.delete_after_merge.head_branch.insufficient_branch"))
 			default:
 				ctx.ServerError("DeleteBranchAfterMerge", err)
+				return
 			}
 
 			ctx.JSONRedirect(issue.Link())
@@ -1676,7 +1676,6 @@ func CompareAndPullRequestPost(ctx *context.Context) {
 			log.Error("Unexpected error of NewPullRequest: %T %s", err, err)
 			ctx.ServerError("CompareAndPullRequest", err)
 		}
-		ctx.ServerError("NewPullRequest", err)
 		return
 	}
 
@@ -1988,6 +1987,7 @@ func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.Pu
 	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
 	if err != nil {
 		ctx.ServerError("HasRunThatNeedApproval", err)
+		return
 	}
 	ctx.Data["SomePullRequestRunsNeedApproval"] = someRunsNeedApproval
 

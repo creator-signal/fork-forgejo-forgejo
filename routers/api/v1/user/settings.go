@@ -28,7 +28,7 @@ func GetUserSettings(ctx *context.APIContext) {
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
-	ctx.JSON(http.StatusOK, convert.User2UserSettings(ctx.Doer))
+	ctx.JSON(http.StatusOK, convert.User2UserSettings(ctx.Doer()))
 }
 
 // UpdateUserSettings updates settings in doer's account
@@ -68,10 +68,10 @@ func UpdateUserSettings(ctx *context.APIContext) {
 		EnableRepoUnitHints: optional.FromPtr(form.EnableRepoUnitHints),
 		EnableShortcuts:     optional.FromPtr(form.EnableShortcuts),
 	}
-	if err := user_service.UpdateUser(ctx, ctx.Doer, opts); err != nil {
+	if err := user_service.UpdateUser(ctx, ctx.Doer(), opts); err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, convert.User2UserSettings(ctx.Doer))
+	ctx.JSON(http.StatusOK, convert.User2UserSettings(ctx.Doer()))
 }
