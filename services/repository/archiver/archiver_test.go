@@ -129,5 +129,5 @@ func TestArchive_Basic(t *testing.T) {
 
 func TestErrUnknownArchiveFormat(t *testing.T) {
 	err := ErrUnknownArchiveFormat{RequestFormat: "master"}
-	assert.ErrorIs(t, err, ErrUnknownArchiveFormat{})
+	assert.True(t, IsUnknownArchiveFormat(err))
 }

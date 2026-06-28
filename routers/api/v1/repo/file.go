@@ -310,9 +310,9 @@ func archiveDownload(ctx *context.APIContext) {
 
 	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo().Repository.ID, ctx.Repo().GitRepo, strings.TrimSuffix(uri, ext), tp)
 	if err != nil {
-		if errors.Is(err, archiver_service.ErrUnknownArchiveFormat{}) {
+		if archiver_service.IsUnknownArchiveFormat(err) {
 			ctx.Error(http.StatusBadRequest, "unknown archive format", err)
-		} else if errors.Is(err, archiver_service.RepoRefNotFoundError{}) {
+		} else if archiver_service.IsRepoRefNotFound(err) {
 			ctx.Error(http.StatusNotFound, "unrecognized reference", err)
 		} else {
 			ctx.ServerError("archiver_service.NewRequest", err)
