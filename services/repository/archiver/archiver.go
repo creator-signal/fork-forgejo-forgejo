@@ -47,9 +47,9 @@ func (err ErrUnknownArchiveFormat) Error() string {
 	return fmt.Sprintf("unknown format: %s", err.RequestFormat)
 }
 
-// Is implements error
-func (ErrUnknownArchiveFormat) Is(err error) bool {
-	_, ok := err.(ErrUnknownArchiveFormat)
+// IsUnknownArchiveFormat checks for an UnknownArchiveFormat error
+func IsUnknownArchiveFormat(err error) bool {
+	_, ok := errors.AsType[ErrUnknownArchiveFormat](err)
 	return ok
 }
 
@@ -63,8 +63,9 @@ func (e RepoRefNotFoundError) Error() string {
 	return fmt.Sprintf("unrecognized repository reference: %s", e.RefName)
 }
 
-func (e RepoRefNotFoundError) Is(err error) bool {
-	_, ok := err.(RepoRefNotFoundError)
+// IsRepoRefNotFound checks for an RepoRefNotFound error
+func IsRepoRefNotFound(err error) bool {
+	_, ok := errors.AsType[RepoRefNotFoundError](err)
 	return ok
 }
 
