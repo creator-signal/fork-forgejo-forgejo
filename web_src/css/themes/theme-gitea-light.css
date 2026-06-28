@@ -102,7 +102,6 @@
   --color-olive-dark-1: #a3b816;
   --color-green-dark-1: #1ea73e;
   --color-teal-dark-1: #00a39c;
-  --color-blue-dark-1: #1e78bb;
   --color-violet-dark-1: #5a30b5;
   --color-purple-dark-1: #932eb4;
   --color-pink-dark-1: #db228a;
@@ -115,7 +114,6 @@
   --color-olive-dark-2: #91a313;
   --color-green-dark-2: #1a9537;
   --color-teal-dark-2: #00918a;
-  --color-blue-dark-2: #1a6aa6;
   --color-violet-dark-2: #502aa1;
   --color-purple-dark-2: #8229a0;
   --color-pink-dark-2: #c21e7b;
@@ -246,7 +244,7 @@
   --color-indicator-active: #2185d0;
   --color-indicator-active-20: #2185d033;
   /* gitea theme legacy support */
-  --color-thin-blue: var(--color-blue-dark-1);
+  --color-thin-blue: #1e78bb;
   accent-color: var(--color-accent);
   color-scheme: light;
 }
