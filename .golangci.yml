@@ -293,9 +293,6 @@ linters:
       - path: routers/api/packages/chef/auth.go
         linters:
           - nilnil
-      - path: routers/api/packages/container/auth.go
-        linters:
-          - nilnil
       - path: routers/api/packages/nuget/auth.go
         linters:
           - nilnil
