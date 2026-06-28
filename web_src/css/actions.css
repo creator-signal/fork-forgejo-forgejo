@@ -6,10 +6,6 @@
   overflow-inline: auto;
 }
 
-.runner-container .runner-ops > a {
-  margin-inline-start: 0.5em;
-}
-
 .runner-container .task-status-success {
   background-color: var(--color-green);
   color: var(--color-white);
