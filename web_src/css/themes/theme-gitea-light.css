@@ -89,7 +89,6 @@
   --color-olive-light: #d3e942;
   --color-green-light: #46de6a;
   --color-teal-light: #08fff4;
-  --color-violet-light: #8b67d7;
   --color-purple-light: #bb64d8;
   --color-pink-light: #e86bb1;
   --color-brown-light: #c58b66;
@@ -182,6 +181,7 @@
   --hue-green: 145deg;
   --hue-red: 27deg;
   --hue-purple: 298deg;
+  --hue-violet: 296deg;
   --hue-orange: 41deg;
   --hue-blue: 260deg;
 

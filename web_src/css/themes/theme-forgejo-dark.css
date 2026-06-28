@@ -107,7 +107,6 @@
   --color-olive-light: #839311;
   --color-green-light: #16a34a;
   --color-teal-light: #14b8a6;
-  --color-violet-light: #8b5cf6;
   --color-purple-light: #a855f7;
   --color-pink-light: #ec4899;
   --color-brown-light: #94674a;
@@ -200,6 +199,7 @@
   --hue-green: 145deg;
   --hue-red: 27deg;
   --hue-purple: 298deg;
+  --hue-violet: 293deg;
   --hue-orange: 41deg;
   --hue-blue: 260deg;
 
@@ -343,9 +343,6 @@ i.grey.icon.icon.icon.icon {
 }
 .ui.yellow.label.pending-label {
   color: var(--color-warning-text) !important;
-}
-strong.attention-important, svg.attention-important {
-  color: var(--color-violet-light);
 }
 strong.attention-caution, svg.attention-caution {
   color: var(--color-red-light);

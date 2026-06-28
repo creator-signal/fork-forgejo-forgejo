@@ -34,6 +34,7 @@
   --color-thin-green: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-green));
   --color-thin-red: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-red));
   --color-thin-purple: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-purple));
+  --color-thin-violet: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-violet));
   --color-thin-orange: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-orange));
   --color-thin-blue: oklch(var(--thin-lightness) var(--regular-chroma) var(--hue-blue));
 }
@@ -966,10 +967,10 @@ strong.attention-tip, svg.attention-tip {
 }
 
 blockquote.attention-important {
-  border-inline-start-color: var(--color-violet-dark-1);
+  border-inline-start-color: var(--color-thin-violet);
 }
 strong.attention-important, svg.attention-important {
-  color: var(--color-violet-dark-1);
+  color: var(--color-thin-violet);
 }
 
 blockquote.attention-warning {
