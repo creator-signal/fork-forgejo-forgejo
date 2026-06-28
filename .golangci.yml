@@ -326,9 +326,6 @@ linters:
       - path: services/issue/issue.go
         linters:
           - nilnil
-      - path: services/migrations/onedev.go
-        linters:
-          - nilnil
       - path: services/packages/cargo/index.go
         linters:
           - nilnil
