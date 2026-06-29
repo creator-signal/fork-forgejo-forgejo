@@ -197,7 +197,7 @@ func changeIssueCommentReaction(ctx *context.APIContext, form api.EditReactionOp
 		})
 	} else {
 		// DeleteIssueCommentReaction part
-		err := issues_model.DeleteCommentReaction(ctx, ctx.Doer().ID, comment.Issue.ID, comment.ID, form.Reaction)
+		err := issue_service.DeleteCommentReaction(ctx, ctx.Doer(), comment, form.Reaction)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "DeleteCommentReaction", err)
 			return
@@ -413,7 +413,7 @@ func changeIssueReaction(ctx *context.APIContext, form api.EditReactionOption, i
 		})
 	} else {
 		// DeleteIssueReaction part
-		err = issues_model.DeleteIssueReaction(ctx, ctx.Doer().ID, issue.ID, form.Reaction)
+		err = issue_service.DeleteIssueReaction(ctx, ctx.Doer(), issue, form.Reaction)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "DeleteIssueReaction", err)
 			return

@@ -556,6 +556,52 @@ func (_c *MockNotifier_DeleteIssue_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// DeleteReaction provides a mock function for the type MockNotifier
+func (_mock *MockNotifier) DeleteReaction(ctx context.Context, reaction *issues.Reaction) {
+	_mock.Called(ctx, reaction)
+	return
+}
+
+// MockNotifier_DeleteReaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteReaction'
+type MockNotifier_DeleteReaction_Call struct {
+	*mock.Call
+}
+
+// DeleteReaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - reaction *issues.Reaction
+func (_e *MockNotifier_Expecter) DeleteReaction(ctx, reaction any) *MockNotifier_DeleteReaction_Call {
+	return &MockNotifier_DeleteReaction_Call{Call: _e.mock.On("DeleteReaction", ctx, reaction)}
+}
+
+func (_c *MockNotifier_DeleteReaction_Call) Run(run func(ctx context.Context, reaction *issues.Reaction)) *MockNotifier_DeleteReaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *issues.Reaction
+		if args[1] != nil {
+			arg1 = args[1].(*issues.Reaction)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNotifier_DeleteReaction_Call) Return() *MockNotifier_DeleteReaction_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockNotifier_DeleteReaction_Call) RunAndReturn(run func(ctx context.Context, reaction *issues.Reaction)) *MockNotifier_DeleteReaction_Call {
+	_c.Run(run)
+	return _c
+}
+
 // DeleteRef provides a mock function for the type MockNotifier
 func (_mock *MockNotifier) DeleteRef(ctx context.Context, doer *user.User, repo1 *repo.Repository, refFullName git.RefName) {
 	_mock.Called(ctx, doer, repo1, refFullName)
@@ -1596,6 +1642,52 @@ func (_c *MockNotifier_NewPullRequest_Call) Return() *MockNotifier_NewPullReques
 }
 
 func (_c *MockNotifier_NewPullRequest_Call) RunAndReturn(run func(ctx context.Context, pr *issues.PullRequest, mentions []*user.User)) *MockNotifier_NewPullRequest_Call {
+	_c.Run(run)
+	return _c
+}
+
+// NewReaction provides a mock function for the type MockNotifier
+func (_mock *MockNotifier) NewReaction(ctx context.Context, reaction *issues.Reaction) {
+	_mock.Called(ctx, reaction)
+	return
+}
+
+// MockNotifier_NewReaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NewReaction'
+type MockNotifier_NewReaction_Call struct {
+	*mock.Call
+}
+
+// NewReaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - reaction *issues.Reaction
+func (_e *MockNotifier_Expecter) NewReaction(ctx, reaction any) *MockNotifier_NewReaction_Call {
+	return &MockNotifier_NewReaction_Call{Call: _e.mock.On("NewReaction", ctx, reaction)}
+}
+
+func (_c *MockNotifier_NewReaction_Call) Run(run func(ctx context.Context, reaction *issues.Reaction)) *MockNotifier_NewReaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *issues.Reaction
+		if args[1] != nil {
+			arg1 = args[1].(*issues.Reaction)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNotifier_NewReaction_Call) Return() *MockNotifier_NewReaction_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockNotifier_NewReaction_Call) RunAndReturn(run func(ctx context.Context, reaction *issues.Reaction)) *MockNotifier_NewReaction_Call {
 	_c.Run(run)
 	return _c
 }

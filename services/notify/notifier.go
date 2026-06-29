@@ -43,6 +43,9 @@ type Notifier interface {
 	IssueChangeLabels(ctx context.Context, doer *user_model.User, issue *issues_model.Issue,
 		addedLabels, removedLabels []*issues_model.Label)
 
+	NewReaction(ctx context.Context, reaction *issues_model.Reaction)
+	DeleteReaction(ctx context.Context, reaction *issues_model.Reaction)
+
 	NewPullRequest(ctx context.Context, pr *issues_model.PullRequest, mentions []*user_model.User)
 	MergePullRequest(ctx context.Context, doer *user_model.User, pr *issues_model.PullRequest)
 	AutoMergePullRequest(ctx context.Context, doer *user_model.User, pr *issues_model.PullRequest)
