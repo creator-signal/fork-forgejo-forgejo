@@ -14,7 +14,7 @@ func CheckForkDestination(ctx Context, organizationName *string) {
 	if organizationName == nil {
 		return
 	}
-	org, err := organization.GetOrgByName(ctx.GetContext(), *organizationName)
+	org, err := organization.GetOrgByName(ctx.Context(), *organizationName)
 	if err != nil {
 		if organization.IsErrOrgNotExist(err) {
 			ctx.Error(http.StatusUnprocessableEntity, "", err)
@@ -23,7 +23,7 @@ func CheckForkDestination(ctx Context, organizationName *string) {
 		}
 		return
 	}
-	isMember, err := org.IsOrgMember(ctx.GetContext(), ctx.GetDoer().ID)
+	isMember, err := org.IsOrgMember(ctx.Context(), ctx.Doer().ID)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsOrgMember", err)
 		return
@@ -32,7 +32,7 @@ func CheckForkDestination(ctx Context, organizationName *string) {
 		return
 	}
 	if !IsUserSiteAdmin(ctx) {
-		canCreate, err := org.CanCreateOrgRepo(ctx.GetContext(), ctx.GetDoer().ID)
+		canCreate, err := org.CanCreateOrgRepo(ctx.Context(), ctx.Doer().ID)
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "CanCreateOrgRepo", err)
 			return
