@@ -31,6 +31,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -669,6 +670,7 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 }
 
 func TestGiteaUploaderWithAvatar(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
 	unittest.PrepareTestEnv(t)
 	defer test.MockVariableValue(&setting.Migrations.AvatarFetchTimeout, 1*time.Second)()
 

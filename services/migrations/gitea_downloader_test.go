@@ -464,6 +464,7 @@ func TestBreakConditions(t *testing.T) {
 }
 
 func TestGiteaDownloaderAvatarURL(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITEA_READ_TOKEN")

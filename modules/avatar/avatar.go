@@ -14,7 +14,6 @@ import (
 	"image/png"
 	"io"
 	"net/http"
-	"strings"
 
 	"forgejo.org/modules/avatar/identicon"
 	"forgejo.org/modules/log"
@@ -160,11 +159,6 @@ func BestAvatarCachedSize(size int) int {
 
 // FetchExternalImageData As defensively as possible, attempt to load an image from a presumed external and untrusted URL
 func FetchExternalImageData(externalURL string, client *http.Client) (*bytes.Reader, error) {
-	// Go expects a absolute URL, so we must change a relative to an absolute one
-	if !strings.Contains(externalURL, "://") {
-		externalURL = fmt.Sprintf("%s%s", setting.AppURL, strings.TrimPrefix(externalURL, "/"))
-	}
-
 	resp, err := client.Get(externalURL)
 	if err != nil {
 		log.Warn("error when fetching external image from %s: %v", externalURL, err)
