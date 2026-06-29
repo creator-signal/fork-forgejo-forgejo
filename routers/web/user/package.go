@@ -264,7 +264,7 @@ func ViewPackageVersion(ctx *context.Context) {
 		})
 
 		ctx.Data["FlatpakRepoName"] = flatpak_module.GetRepoName(ctx.ContextUser.Name)
-		ctx.Data["FlatpakRepoURL"] = fmt.Sprintf("%sapi/packages/%s/container/flatpak/repo.flatpakrepo", setting.AppURL, ctx.ContextUser.LowerName)
+		ctx.Data["FlatpakRepoURL"] = flatpak_module.GetRepoInfoURL(ctx.ContextUser.Name)
 	default:
 		pvs, total, err = packages_model.SearchVersions(ctx, &packages_model.PackageSearchOptions{
 			Paginator:  db.NewAbsoluteListOptions(0, 5),

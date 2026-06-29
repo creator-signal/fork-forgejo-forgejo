@@ -26,7 +26,8 @@ type Flatpak struct {
 
 // Returns the name for the remote
 func GetRepoName(username string) string {
-	return fmt.Sprintf("%s-%s", strings.ToLower(setting.AppName), strings.ToLower(username))
+	appName := strings.ReplaceAll(setting.AppName, " ", "-")
+	return fmt.Sprintf("%s-%s", strings.ToLower(appName), strings.ToLower(username))
 }
 
 // Returns the oci+ URL for the repo
@@ -36,5 +37,6 @@ func GetRepoURL(username string) string {
 
 // Returns the URL to the .flatpakrepo file
 func GetRepoInfoURL(username string) string {
-	return fmt.Sprintf("%sapi/packages/%s/container/flatpak/repo.flatpakrepo", setting.AppURL, strings.ToLower(username))
+	appName := strings.ReplaceAll(setting.AppName, " ", "-")
+	return fmt.Sprintf("%sapi/packages/%s/container/flatpak/repo.flatpakrepo", appName, strings.ToLower(username))
 }
