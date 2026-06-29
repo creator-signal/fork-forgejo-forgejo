@@ -8,16 +8,16 @@ on:
       - labeled
 
 env:
-  RNA_VERSION: v1.6.1 # renovate: datasource=forgejo-releases depName=forgejo/release-notes-assistant registryUrl=https://code.forgejo.org
+  RNA_VERSION: v1.7.3 # renovate: datasource=forgejo-releases depName=forgejo/release-notes-assistant registryUrl=https://code.forgejo.org
 
 jobs:
   release-notes:
     if: ( vars.ROLE == 'forgejo-coding' ) && contains(github.event.pull_request.labels.*.name, 'worth a release-note')
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/ci:1'
+      image: 'data.forgejo.org/oci/ci:2'
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v6
+      - uses: https://data.forgejo.org/actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: event
         run: |

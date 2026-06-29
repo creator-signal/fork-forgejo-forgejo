@@ -67,7 +67,7 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 
 	apiPullRequest := &api.PullRequest{
 		ID:                      pr.ID,
-		URL:                     pr.Issue.HTMLURL(),
+		URL:                     pr.Issue.APIURL(ctx),
 		Index:                   pr.Index,
 		Poster:                  apiIssue.Poster,
 		Title:                   apiIssue.Title,
@@ -177,7 +177,6 @@ func ToAPIPullRequest(ctx context.Context, pr *issues_model.PullRequest, doer *u
 		}
 		apiPullRequest.Head.RepoID = pr.BaseRepoID
 		apiPullRequest.Head.Repository = apiPullRequest.Base.Repository
-		apiPullRequest.Head.Name = ""
 	}
 
 	if pr.HeadRepo != nil && pr.Flow == issues_model.PullRequestFlowGithub {

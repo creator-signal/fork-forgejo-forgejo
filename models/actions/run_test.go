@@ -11,14 +11,14 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/cache"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/modules/util"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetRunBefore(t *testing.T) {
-}
 
 func TestSetConcurrencyGroup(t *testing.T) {
 	run := ActionRun{}
@@ -51,6 +51,127 @@ func TestGetWorkflowPath(t *testing.T) {
 		WorkflowDirectory: ".some/path/to/workflows",
 	}
 	assert.Equal(t, ".some/path/to/workflows/ci.yml", run.WorkflowPath())
+}
+
+func TestGetCommitLink(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	defer test.MockVariableValue(&setting.AppSubURL, "/sub")()
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	run := ActionRun{
+		Repo:      repo,
+		CommitSHA: "a356d1f1f82945a039cd16d4ce0137bd55284e77",
+	}
+	assert.Equal(t, "/sub/user2/repo1/commit/a356d1f1f82945a039cd16d4ce0137bd55284e77", run.CommitLink())
+}
+
+func TestIsScheduledRun(t *testing.T) {
+	scheduledRun := ActionRun{
+		CommitSHA:    "a356d1f1f82945a039cd16d4ce0137bd55284e77",
+		TriggerEvent: "schedule",
+	}
+	pushRun := ActionRun{
+		CommitSHA:    "8f9b5c6ab342eb11d7422deecef7195b18058b90",
+		TriggerEvent: "push",
+	}
+
+	assert.True(t, scheduledRun.IsScheduledRun())
+	assert.False(t, pushRun.IsScheduledRun())
+}
+
+func TestIsManualRun(t *testing.T) {
+	manualRunRun := ActionRun{
+		CommitSHA:    "a356d1f1f82945a039cd16d4ce0137bd55284e77",
+		TriggerEvent: "workflow_dispatch",
+	}
+	pushRun := ActionRun{
+		CommitSHA:    "8f9b5c6ab342eb11d7422deecef7195b18058b90",
+		TriggerEvent: "push",
+	}
+
+	assert.True(t, manualRunRun.IsDispatchedRun())
+	assert.False(t, pushRun.IsDispatchedRun())
+}
+
+func TestActionRun_IsValid(t *testing.T) {
+	testCases := []struct {
+		name    string
+		run     ActionRun
+		isValid bool
+	}{
+		{
+			name:    "valid run",
+			run:     ActionRun{},
+			isValid: true,
+		},
+		{
+			name:    "with pre-execution error",
+			run:     ActionRun{PreExecutionErrorCode: ErrorCodeIncompleteRunsOnMissingOutput},
+			isValid: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.isValid, testCase.run.IsValid())
+		})
+	}
+}
+
+func TestActionRun_CanBeRerun(t *testing.T) {
+	testCases := []struct {
+		name       string
+		run        ActionRun
+		canBeRerun bool
+	}{
+		{
+			name:       "run with unknown status",
+			run:        ActionRun{Status: StatusUnknown},
+			canBeRerun: false,
+		},
+		{
+			name:       "successful run",
+			run:        ActionRun{Status: StatusSuccess},
+			canBeRerun: true,
+		},
+		{
+			name:       "failed run",
+			run:        ActionRun{Status: StatusFailure},
+			canBeRerun: true,
+		},
+		{
+			name:       "cancelled run",
+			run:        ActionRun{Status: StatusCancelled},
+			canBeRerun: true,
+		},
+		{
+			name:       "skipped run",
+			run:        ActionRun{Status: StatusSkipped},
+			canBeRerun: true,
+		},
+		{
+			name:       "waiting run",
+			run:        ActionRun{Status: StatusWaiting},
+			canBeRerun: false,
+		},
+		{
+			name:       "blocked run",
+			run:        ActionRun{Status: StatusBlocked},
+			canBeRerun: false,
+		},
+		{
+			name:       "with pre-execution error",
+			run:        ActionRun{PreExecutionErrorCode: ErrorCodeIncompleteRunsOnMissingOutput, Status: StatusSuccess},
+			canBeRerun: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.canBeRerun, testCase.run.CanBeRerun())
+		})
+	}
 }
 
 func TestRepoNumOpenActions(t *testing.T) {
@@ -105,7 +226,7 @@ func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
 		PullRequestPosterID: pullRequestPosterID,
 		Status:              StatusSuccess,
 	}
-	require.NoError(t, InsertRun(t.Context(), runDone, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runDone, nil))
 
 	unrelatedUser := int64(5)
 	runNotByPoster := &ActionRun{
@@ -114,7 +235,7 @@ func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
 		PullRequestPosterID: unrelatedUser,
 		Status:              StatusRunning,
 	}
-	require.NoError(t, InsertRun(t.Context(), runNotByPoster, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runNotByPoster, nil))
 
 	unrelatedRepository := int64(6)
 	runNotInTheSameRepository := &ActionRun{
@@ -123,7 +244,7 @@ func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
 		PullRequestPosterID: pullRequestPosterID,
 		Status:              StatusSuccess,
 	}
-	require.NoError(t, InsertRun(t.Context(), runNotInTheSameRepository, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runNotInTheSameRepository, nil))
 
 	for _, status := range []Status{StatusUnknown, StatusWaiting, StatusRunning} {
 		t.Run(fmt.Sprintf("%s", status), func(t *testing.T) {
@@ -133,7 +254,7 @@ func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
 				Status:              status,
 				PullRequestPosterID: pullRequestPosterID,
 			}
-			require.NoError(t, InsertRun(t.Context(), runNotDone, nil))
+			require.NoError(t, InsertRunWithoutNotification(t.Context(), runNotDone, nil))
 			runs, err := GetRunsNotDoneByRepoIDAndPullRequestPosterID(t.Context(), repoID, pullRequestPosterID)
 			require.NoError(t, err)
 			require.Len(t, runs, 1)
@@ -156,7 +277,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 		PullRequestID:       pullRequestID,
 		PullRequestPosterID: pullRequestPosterID,
 	}
-	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runDoesNotNeedApproval, nil))
 	unrelatedRepository := int64(6)
 	runNotInTheSameRepository := &ActionRun{
 		RepoID:              unrelatedRepository,
@@ -164,7 +285,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 		PullRequestPosterID: pullRequestPosterID,
 		NeedApproval:        true,
 	}
-	require.NoError(t, InsertRun(t.Context(), runNotInTheSameRepository, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runNotInTheSameRepository, nil))
 	unrelatedPullRequest := int64(3)
 	runNotInTheSamePullRequest := &ActionRun{
 		RepoID:              repoID,
@@ -172,7 +293,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 		PullRequestPosterID: pullRequestPosterID,
 		NeedApproval:        true,
 	}
-	require.NoError(t, InsertRun(t.Context(), runNotInTheSamePullRequest, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runNotInTheSamePullRequest, nil))
 
 	t.Run("HasRunThatNeedApproval is false", func(t *testing.T) {
 		has, err := HasRunThatNeedApproval(t.Context(), repoID, pullRequestID)
@@ -186,7 +307,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 		PullRequestPosterID: pullRequestPosterID,
 		NeedApproval:        true,
 	}
-	require.NoError(t, InsertRun(t.Context(), runNeedApproval, nil))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runNeedApproval, nil))
 
 	t.Run("HasRunThatNeedApproval is true", func(t *testing.T) {
 		has, err := HasRunThatNeedApproval(t.Context(), repoID, pullRequestID)
@@ -236,7 +357,7 @@ jobs:
 	require.NoError(t, err)
 	require.True(t, workflows[0].IncompleteMatrix) // must be set for this test scenario to be valid
 
-	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runDoesNotNeedApproval, workflows))
 
 	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
 	require.NoError(t, err)
@@ -270,7 +391,7 @@ jobs:
 	require.NoError(t, err)
 	require.True(t, workflows[0].IncompleteRunsOn) // must be set for this test scenario to be valid
 
-	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runDoesNotNeedApproval, workflows))
 
 	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
 	require.NoError(t, err)
@@ -314,7 +435,7 @@ jobs:
 `), nil
 		}))
 	require.NoError(t, err)
-	require.NoError(t, InsertRun(t.Context(), run, workflows))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), run, workflows))
 
 	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: run.ID})
 	require.NoError(t, err)
@@ -373,7 +494,7 @@ jobs:
 	require.NoError(t, err)
 	require.True(t, workflows[0].IncompleteWith) // must be set for this test scenario to be valid
 
-	require.NoError(t, InsertRun(t.Context(), runDoesNotNeedApproval, workflows))
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), runDoesNotNeedApproval, workflows))
 
 	jobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: runDoesNotNeedApproval.ID})
 	require.NoError(t, err)
@@ -501,4 +622,127 @@ func TestComputeRunStatus(t *testing.T) {
 		assert.NotContains(t, columns, "started")
 		assert.Contains(t, columns, "stopped")
 	})
+}
+
+func TestInsertRunJobs(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	pullRequestPosterID := int64(4)
+	repoID := int64(10)
+	pullRequestID := int64(2)
+	actionRun := &ActionRun{
+		RepoID:              repoID,
+		PullRequestID:       pullRequestID,
+		PullRequestPosterID: pullRequestPosterID,
+		CommitSHA:           "1421f75bc5474c69fdb1dc176bcb96d381f935dd",
+	}
+
+	workflowRaw := []byte(`
+jobs:
+  build:
+    runs-on: fedora
+  test:
+    runs-on: debian
+    steps: []
+`)
+	jobs, err := jobparser.Parse(workflowRaw, false)
+	require.NoError(t, err)
+
+	require.NoError(t, InsertRunWithoutNotification(t.Context(), actionRun, jobs))
+
+	insertedJobs, err := db.Find[ActionRunJob](t.Context(), FindRunJobOptions{RunID: actionRun.ID})
+	require.NoError(t, err)
+	require.Len(t, insertedJobs, 2)
+
+	assert.Equal(t, actionRun.ID, insertedJobs[0].RunID)
+	assert.Equal(t, actionRun.RepoID, insertedJobs[0].RepoID)
+	assert.Equal(t, actionRun.OwnerID, insertedJobs[0].OwnerID)
+	assert.Equal(t, actionRun.CommitSHA, insertedJobs[0].CommitSHA)
+	assert.Equal(t, actionRun.IsForkPullRequest, insertedJobs[0].IsForkPullRequest)
+	assert.Equal(t, "build", insertedJobs[0].Name)
+	assert.Equal(t, "build", insertedJobs[0].JobID)
+	assert.Empty(t, insertedJobs[0].Needs)
+	assert.Equal(t, []string{"fedora"}, insertedJobs[0].RunsOn)
+	assert.Equal(t, int64(1), insertedJobs[0].Attempt)
+	assert.Zero(t, insertedJobs[0].Started)
+	assert.Zero(t, insertedJobs[0].Stopped)
+	assert.Zero(t, insertedJobs[0].TaskID)
+	assert.Equal(t, StatusWaiting, insertedJobs[0].Status)
+
+	assert.Equal(t, actionRun.ID, insertedJobs[1].RunID)
+	assert.Equal(t, actionRun.RepoID, insertedJobs[1].RepoID)
+	assert.Equal(t, actionRun.OwnerID, insertedJobs[1].OwnerID)
+	assert.Equal(t, actionRun.CommitSHA, insertedJobs[1].CommitSHA)
+	assert.Equal(t, actionRun.IsForkPullRequest, insertedJobs[1].IsForkPullRequest)
+	assert.Equal(t, "test", insertedJobs[1].Name)
+	assert.Equal(t, "test", insertedJobs[1].JobID)
+	assert.Empty(t, insertedJobs[1].Needs)
+	assert.Equal(t, []string{"debian"}, insertedJobs[1].RunsOn)
+	assert.Equal(t, int64(1), insertedJobs[1].Attempt)
+	assert.Zero(t, insertedJobs[1].Started)
+	assert.Zero(t, insertedJobs[1].Stopped)
+	assert.Zero(t, insertedJobs[1].TaskID)
+	assert.Equal(t, StatusWaiting, insertedJobs[1].Status)
+}
+
+func TestActionRunLoadAttributes(t *testing.T) {
+	run := &ActionRun{
+		RepoID:        10,
+		TriggerUserID: 1000,
+	}
+	require.NoError(t, run.LoadAttributes(t.Context()))
+	assert.Equal(t, "ghost", run.TriggerUser.LowerName)
+}
+
+func TestGetRunByID(t *testing.T) {
+	const (
+		existingRunID    = 0xdeadbeef
+		nonexistingRunID = 0xffffffff
+	)
+
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	_, err := db.GetEngine(t.Context()).Insert(ActionRun{
+		ID: existingRunID,
+	})
+	require.NoError(t, err)
+
+	// ActionRun exists
+
+	run, err := GetRunByID(t.Context(), existingRunID)
+	require.NoError(t, err)
+	assert.NotNil(t, run)
+
+	// ActionRun does not exist
+
+	run, err = GetRunByID(t.Context(), nonexistingRunID)
+	require.ErrorIs(t, err, util.ErrNotExist)
+	assert.Nil(t, run)
+}
+
+func TestGetQueuedRunsByRepoID(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	fixtures := []*ActionRun{
+		{ID: 535681, Index: 1, RepoID: 62, OwnerID: 2, Status: StatusSuccess},
+		{ID: 535682, Index: 2, RepoID: 62, OwnerID: 2, Status: StatusRunning},
+		{ID: 535683, Index: 3, RepoID: 62, OwnerID: 2, Status: StatusWaiting},
+		{ID: 535684, Index: 4, RepoID: 62, OwnerID: 2, Status: StatusBlocked},
+		{ID: 535685, Index: 1, RepoID: 1, OwnerID: 2, Status: StatusBlocked},
+		{ID: 535686, Index: 2, RepoID: 1, OwnerID: 2, Status: StatusCancelled},
+	}
+	unittest.AssertSuccessfulInsert(t, fixtures)
+
+	runs, err := GetQueuedRunsByRepoID(t.Context(), 62)
+	require.NoError(t, err)
+
+	assert.Len(t, runs, 2)
+	assert.Equal(t, int64(535683), runs[0].ID)
+	assert.Equal(t, int64(535684), runs[1].ID)
+
+	runs, err = GetQueuedRunsByRepoID(t.Context(), 1)
+	require.NoError(t, err)
+
+	assert.Len(t, runs, 1)
+	assert.Equal(t, int64(535685), runs[0].ID)
 }

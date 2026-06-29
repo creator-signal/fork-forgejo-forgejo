@@ -8,13 +8,13 @@ import (
 
 	"forgejo.org/modules/setting"
 
+	"code.forgejo.org/xorm/xorm"
 	"xorm.io/builder"
-	"xorm.io/xorm"
 )
 
 const (
 	// DefaultMaxInSize represents default variables number on IN () in SQL
-	DefaultMaxInSize     = 50
+	DefaultMaxInSize     = 500
 	defaultFindSliceSize = 10
 )
 

@@ -445,7 +445,7 @@ index 0000000..6bb8f39
 `
 	diffBuilder.WriteString(diff)
 
-	for i := 0; i < 35; i++ {
+	for i := range 35 {
 		diffBuilder.WriteString("+line" + strconv.Itoa(i) + "\n")
 	}
 	diff = diffBuilder.String()
@@ -482,11 +482,11 @@ index 0000000..6bb8f39
 	diffBuilder.Reset()
 	diffBuilder.WriteString(diff)
 
-	for i := 0; i < 33; i++ {
+	for i := range 33 {
 		diffBuilder.WriteString("+line" + strconv.Itoa(i) + "\n")
 	}
 	diffBuilder.WriteString("+line33")
-	for i := 0; i < 512; i++ {
+	for range 512 {
 		diffBuilder.WriteString("0123456789ABCDEF")
 	}
 	diffBuilder.WriteByte('\n')
@@ -600,7 +600,7 @@ func TestDiff_LoadCommentsNoOutdated(t *testing.T) {
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	diff := setupDefaultDiff()
-	require.NoError(t, diff.LoadComments(db.DefaultContext, issue, user, false))
+	require.NoError(t, diff.LoadComments(db.DefaultContext, issue, user, false, ""))
 	assert.Len(t, diff.Files[0].Sections[0].Lines[0].Conversations, 2)
 }
 
@@ -610,7 +610,7 @@ func TestDiff_LoadCommentsWithOutdated(t *testing.T) {
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	diff := setupDefaultDiff()
-	require.NoError(t, diff.LoadComments(db.DefaultContext, issue, user, true))
+	require.NoError(t, diff.LoadComments(db.DefaultContext, issue, user, true, ""))
 	assert.Len(t, diff.Files[0].Sections[0].Lines[0].Conversations, 2)
 	assert.Len(t, diff.Files[0].Sections[0].Lines[0].Conversations[0], 2)
 	assert.Len(t, diff.Files[0].Sections[0].Lines[0].Conversations[1], 1)

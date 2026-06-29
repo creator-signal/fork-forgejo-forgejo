@@ -6,9 +6,11 @@ package git
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"forgejo.org/modules/log"
@@ -27,12 +29,7 @@ var ErrNotValidHook = errors.New("not a valid Git hook")
 
 // IsValidHookName returns true if given name is a valid Git hook.
 func IsValidHookName(name string) bool {
-	for _, hn := range hookNames {
-		if hn == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(hookNames, name)
 }
 
 // Hook represents a Git hook.
@@ -53,21 +50,28 @@ func GetHook(repoPath, name string) (*Hook, error) {
 		name: name,
 		path: path.Join(repoPath, "hooks", name+".d", name),
 	}
-	samplePath := filepath.Join(repoPath, "hooks", name+".sample")
-	if isFile(h.path) {
-		data, err := os.ReadFile(h.path)
-		if err != nil {
-			return nil, err
-		}
+
+	data, err := os.ReadFile(h.path)
+	if err == nil {
 		h.IsActive = true
 		h.Content = string(data)
-	} else if isFile(samplePath) {
-		data, err := os.ReadFile(samplePath)
-		if err != nil {
-			return nil, err
-		}
-		h.Sample = string(data)
+		return h, nil
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
 	}
+
+	// Hook not found, look for sample.
+	// This should be rare, since git init is called with empty --template.
+	samplePath := filepath.Join(repoPath, "hooks", name+".sample")
+	data, err = os.ReadFile(samplePath)
+	if err == nil {
+		h.Sample = string(data)
+		return h, nil
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	// neither hook, nor sample found
 	return h, nil
 }
 
@@ -103,10 +107,6 @@ func (h *Hook) Update() error {
 
 // ListHooks returns a list of Git hooks of given repository.
 func ListHooks(repoPath string) (_ []*Hook, err error) {
-	if !isDir(path.Join(repoPath, "hooks")) {
-		return nil, errors.New("hooks path does not exist")
-	}
-
 	hooks := make([]*Hook, len(hookNames))
 	for i, name := range hookNames {
 		hooks[i], err = GetHook(repoPath, name)

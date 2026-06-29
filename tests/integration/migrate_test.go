@@ -20,13 +20,13 @@ import (
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,14 +46,14 @@ func TestMigrateLocalPath(t *testing.T) {
 	err := os.Mkdir(lowercasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations.IsMigrateURLAllowed(lowercasePath, adminUser)
+	err = migrations_allowlist.IsMigrateURLAllowed(lowercasePath, adminUser)
 	require.NoError(t, err, "case lowercase path")
 
 	mixedcasePath := filepath.Join(basePath, "mIxeDCaSe")
 	err = os.Mkdir(mixedcasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations.IsMigrateURLAllowed(mixedcasePath, adminUser)
+	err = migrations_allowlist.IsMigrateURLAllowed(mixedcasePath, adminUser)
 	require.NoError(t, err, "case mixedcase path")
 
 	setting.ImportLocalPaths = old
@@ -63,7 +63,7 @@ func TestMigrate(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user2"
 		repoName := "repo1"
@@ -122,7 +122,7 @@ func TestMigrateWithIssueComments(t *testing.T) {
 		numComments := 21
 		defer test.MockVariableValue(&setting.API.MaxResponseItems, maxResponseItems)()
 
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user5"
 		repoName := "repo4"
@@ -194,13 +194,11 @@ func TestMigrateWithWiki(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-		repo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			WikiBranch: optional.Some("obscure-name"),
-		})
-		defer f()
+		repo := forgery.CreateRepository(t, nil, nil)
+		forgery.InitWiki(t, repo, "obscure-name")
+		user := repo.Owner
 
 		session := loginUser(t, user.Name)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeReadMisc)
@@ -252,7 +250,7 @@ func TestMigrateWithReleases(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user2"
 		repoName := "repo1"

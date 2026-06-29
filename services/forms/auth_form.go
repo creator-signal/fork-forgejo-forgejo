@@ -57,8 +57,8 @@ type AuthenticationForm struct {
 	PAMServiceName                string
 	PAMEmailDomain                string
 	Oauth2Provider                string
-	Oauth2Key                     string
-	Oauth2Secret                  string
+	Oauth2Key                     string `preprocess:"TrimSpace"`
+	Oauth2Secret                  string `preprocess:"TrimSpace"`
 	OpenIDConnectAutoDiscoveryURL string
 	Oauth2UseCustomURL            bool
 	Oauth2TokenURL                string
@@ -75,6 +75,8 @@ type AuthenticationForm struct {
 	Oauth2RestrictedGroup         string
 	Oauth2GroupTeamMap            string `binding:"ValidGroupTeamMap"`
 	Oauth2GroupTeamMapRemoval     bool
+	Oauth2DynGroupMaps            string `binding:"ValidDynGroupMaps"`
+	Oauth2DynGroupMapsRemoval     bool
 	Oauth2QuotaGroupClaimName     string
 	Oauth2QuotaGroupMap           string `binding:"ValidQuotaGroupMap"`
 	Oauth2QuotaGroupMapRemoval    bool

@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
+	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/optional"
@@ -178,6 +179,31 @@ func getTestCases() []struct {
 			name:  "OwnerSlashSearch",
 			opts:  &repo_model.SearchRepoOptions{Keyword: "user20/", ListOptions: db.ListOptions{Page: 1, PageSize: 10}, Private: true, OwnerID: 0},
 			count: 4,
+		},
+		{
+			name:  "OwnerAndName Single",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}}},
+			count: 1,
+		},
+		{
+			name:  "OwnerAndName Multiple",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}, {"user15", "big_test_public_2"}}},
+			count: 2,
+		},
+		{
+			name:  "OwnerAndName Miss",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{{"user15", "big_test_public_1"}, {"user15", "blah blah"}}},
+			count: 1,
+		},
+		{
+			name:  "OwnerAndName Empty",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, OwnerAndName: [][2]string{}},
+			count: 0,
+		},
+		{
+			name:  "ActionsEnabled",
+			opts:  &repo_model.SearchRepoOptions{ListOptions: db.ListOptions{Page: 1, PageSize: 10}, EnabledUnit: optional.Some(unit.TypeActions)},
+			count: 3,
 		},
 	}
 

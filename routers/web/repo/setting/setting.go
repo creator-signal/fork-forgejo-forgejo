@@ -38,7 +38,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/federation"
 	"forgejo.org/services/forms"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	mirror_service "forgejo.org/services/mirror"
 	repo_service "forgejo.org/services/repository"
 	wiki_service "forgejo.org/services/wiki"
@@ -396,8 +396,8 @@ func SettingsPost(ctx *context.Context) {
 
 	case "federation":
 		if !setting.Federation.Enabled {
-			ctx.NotFound("", nil)
 			ctx.Flash.Info(ctx.Tr("repo.settings.federation_not_enabled"))
+			ctx.NotFound("", nil)
 			return
 		}
 		followingRepos := strings.TrimSpace(form.FollowingRepos)
@@ -462,19 +462,19 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		u, err := git.GetRemoteURL(ctx, ctx.Repo.Repository.RepoPath(), pullMirror.GetRemoteName())
+		u, err := mirror_service.DecryptOrRecoverRemoteAddress(ctx, pullMirror)
 		if err != nil {
-			ctx.Data["Err_MirrorAddress"] = true
-			handleSettingRemoteAddrError(ctx, err, form)
+			ctx.ServerError("DecryptOrRecoverRemoteAddress", err)
 			return
 		}
+
 		if u.User != nil && form.MirrorPassword == "" && form.MirrorUsername == u.User.Username() {
 			form.MirrorPassword, _ = u.User.Password()
 		}
 
 		address, err := forms.ParseRemoteAddr(form.MirrorAddress, form.MirrorUsername, form.MirrorPassword)
 		if err == nil {
-			err = migrations.IsMigrateURLAllowed(address, ctx.Doer)
+			err = migrations_allowlist.IsMigrateURLAllowed(address, ctx.Doer)
 		}
 		if err != nil {
 			ctx.Data["Err_MirrorAddress"] = true
@@ -482,17 +482,25 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		if err := mirror_service.UpdateAddress(ctx, pullMirror, address); err != nil {
-			ctx.ServerError("UpdateAddress", err)
-			return
-		}
-		remoteAddress, err := util.SanitizeURL(address)
-		if err != nil {
+		if err := pullMirror.UpdateRemoteAddress(ctx, address); err != nil {
 			ctx.Data["Err_MirrorAddress"] = true
 			handleSettingRemoteAddrError(ctx, err, form)
 			return
 		}
-		pullMirror.RemoteAddress = remoteAddress
+
+		// Update the unencrypted address stored in the git config, so that future `git fetch` will access the right
+		// address. pullMirror.RemoteAddress is the sanitized no-creds version from UpdateRemoteAddress.
+		if maybeSanitizedURL, err := pullMirror.SanitizedRemoteAddress(); err != nil {
+			ctx.ServerError("SanitizedRemoteAddress", err)
+			return
+		} else if has, sanitizedURL := maybeSanitizedURL.Get(); !has {
+			// SanitizedRemoteAddress must be present after we just stored it
+			ctx.ServerError("SanitizedRemoteAddress", err)
+			return
+		} else if err := mirror_service.UpdateAddress(ctx, pullMirror, sanitizedURL); err != nil {
+			ctx.ServerError("UpdateAddress", err)
+			return
+		}
 
 		form.LFS = form.LFS && setting.LFS.StartServer
 
@@ -503,7 +511,7 @@ func SettingsPost(ctx *context.Context) {
 				ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_lfs_endpoint"), tplSettingsOptions, &form)
 				return
 			}
-			err = migrations.IsMigrateURLAllowed(ep.String(), ctx.Doer)
+			err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
 			if err != nil {
 				ctx.Data["Err_LFSEndpoint"] = true
 				handleSettingRemoteAddrError(ctx, err, form)
@@ -680,7 +688,7 @@ func SettingsPost(ctx *context.Context) {
 
 		address, err := forms.ParseRemoteAddr(form.PushMirrorAddress, form.PushMirrorUsername, form.PushMirrorPassword)
 		if err == nil {
-			err = migrations.IsPushMirrorURLAllowed(address, ctx.Doer)
+			err = migrations_allowlist.IsPushMirrorURLAllowed(address, ctx.Doer)
 		}
 		if err != nil {
 			ctx.Data["Err_PushMirrorAddress"] = true

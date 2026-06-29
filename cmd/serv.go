@@ -23,13 +23,13 @@ import (
 	"forgejo.org/models/perm"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/pprof"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/process"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
-	"forgejo.org/services/lfs"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/kballard/go-shellquote"
@@ -290,10 +290,9 @@ func runServ(ctx context.Context, c *cli.Command) error {
 			Op:     lfsVerb,
 			UserID: results.UserID,
 		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 		// Sign and get the complete encoded token as a string using the secret
-		tokenString, err := token.SignedString(setting.LFS.JWTSecretBytes)
+		tokenString, err := setting.LFS.SigningKey.JWT(claims)
 		if err != nil {
 			return fail(ctx, "Failed to sign JWT Token", "Failed to sign JWT token: %v", err)
 		}

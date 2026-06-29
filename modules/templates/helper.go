@@ -52,16 +52,17 @@ func NewFuncMap() template.FuncMap {
 
 		// -----------------------------------------------------------------
 		// html/template related functions
-		"dict":         dict, // it's lowercase because this name has been widely used. Our other functions should have uppercase names.
-		"Eval":         Eval,
-		"TrustHTML":    TrustHTML,
-		"HTMLFormat":   HTMLFormat,
-		"HTMLEscape":   HTMLEscape,
-		"QueryEscape":  QueryEscape,
-		"JSEscape":     JSEscapeSafe,
-		"SanitizeHTML": SanitizeHTML,
-		"URLJoin":      util.URLJoin,
-		"DotEscape":    DotEscape,
+		"dict":               dict, // it's lowercase because this name has been widely used. Our other functions should have uppercase names.
+		"Eval":               Eval,
+		"TrustHTML":          TrustHTML,
+		"HTMLFormat":         HTMLFormat,
+		"HTMLEscape":         HTMLEscape,
+		"QueryEscape":        QueryEscape,
+		"JSEscape":           JSEscapeSafe,
+		"SanitizeHTML":       SanitizeHTML,
+		"SanitizeHTMLStrict": SanitizeHTMLStrict,
+		"URLJoin":            util.URLJoin,
+		"DotEscape":          DotEscape,
 
 		"PathEscape":         url.PathEscape,
 		"PathEscapeSegments": util.PathEscapeSegments,
@@ -172,6 +173,7 @@ func NewFuncMap() template.FuncMap {
 			return !setting.ImportLocalPaths
 		},
 		"ThemeName": func(user *user_model.User) string {
+			// Guest user may not be nil on some pages, e.g. in org pages, so user.Theme check is also needed
 			if user == nil || user.Theme == "" {
 				return setting.UI.DefaultTheme
 			}
@@ -255,6 +257,10 @@ func TrustHTML(s any) template.HTML {
 // SanitizeHTML sanitizes the input by pre-defined markdown rules
 func SanitizeHTML(s string) template.HTML {
 	return template.HTML(markup.Sanitize(s))
+}
+
+func SanitizeHTMLStrict(s string) template.HTML {
+	return template.HTML(markup.SanitizeDescription(s))
 }
 
 func HTMLEscape(s any) template.HTML {

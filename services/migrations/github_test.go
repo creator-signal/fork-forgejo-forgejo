@@ -15,6 +15,9 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/google/go-github/v81/github"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +25,8 @@ import (
 )
 
 func TestGithubDownloaderFilterComments(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
@@ -125,6 +130,7 @@ func ratelimitInjectHandler(handler http.Handler, urlpattern *regexp.Regexp, eve
 }
 
 func TestGitHubDownloadRepo(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITHUB_READ_TOKEN")
@@ -163,24 +169,24 @@ func TestGitHubDownloadRepo(t *testing.T) {
 			Title:       "1.0.0",
 			Description: "Version 1",
 			Created:     time.Date(2025, 8, 7, 12, 48, 56, 0, time.UTC),
-			Updated:     timePtr(time.Date(2025, time.August, 12, 12, 34, 20, 0, time.UTC)),
+			Updated:     new(time.Date(2025, time.August, 12, 12, 34, 20, 0, time.UTC)),
 			State:       "open",
 		},
 		{
 			Title:       "0.9.0",
 			Description: "A milestone",
-			Deadline:    timePtr(time.Date(2025, 8, 1, 7, 0, 0, 0, time.UTC)),
+			Deadline:    new(time.Date(2025, 8, 1, 7, 0, 0, 0, time.UTC)),
 			Created:     time.Date(2025, 8, 7, 12, 54, 20, 0, time.UTC),
-			Updated:     timePtr(time.Date(2025, 8, 12, 11, 29, 52, 0, time.UTC)),
-			Closed:      timePtr(time.Date(2025, 8, 7, 12, 54, 38, 0, time.UTC)),
+			Updated:     new(time.Date(2025, 8, 12, 11, 29, 52, 0, time.UTC)),
+			Closed:      new(time.Date(2025, 8, 7, 12, 54, 38, 0, time.UTC)),
 			State:       "closed",
 		},
 		{
 			Title:       "1.1.0",
 			Description: "We can do that",
-			Deadline:    timePtr(time.Date(2025, 8, 31, 7, 0, 0, 0, time.UTC)),
+			Deadline:    new(time.Date(2025, 8, 31, 7, 0, 0, 0, time.UTC)),
 			Created:     time.Date(2025, 8, 7, 12, 50, 58, 0, time.UTC),
-			Updated:     timePtr(time.Date(2025, 8, 7, 12, 53, 15, 0, time.UTC)),
+			Updated:     new(time.Date(2025, 8, 7, 12, 53, 15, 0, time.UTC)),
 			State:       "open",
 		},
 	}, milestones)
@@ -372,8 +378,8 @@ func TestGitHubDownloadRepo(t *testing.T) {
 			State:      "closed",
 			Created:    time.Date(2025, time.August, 7, 13, 1, 36, 0, time.UTC),
 			Updated:    time.Date(2025, time.August, 12, 12, 47, 35, 0, time.UTC),
-			Closed:     timePtr(time.Date(2025, time.August, 7, 13, 2, 19, 0, time.UTC)),
-			MergedTime: timePtr(time.Date(2025, time.August, 7, 13, 2, 19, 0, time.UTC)),
+			Closed:     new(time.Date(2025, time.August, 7, 13, 2, 19, 0, time.UTC)),
+			MergedTime: new(time.Date(2025, time.August, 7, 13, 2, 19, 0, time.UTC)),
 			Labels: []*base.Label{
 				{
 					Name:        "bug",
@@ -489,6 +495,7 @@ func TestGithubMultiToken(t *testing.T) {
 }
 
 func TestGithubIssuePagination(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
 	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
 
 	token := os.Getenv("GITHUB_READ_TOKEN_NIGOROLL")

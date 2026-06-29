@@ -37,18 +37,18 @@ endif
 XGO_VERSION := go-1.21.x
 
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
-EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.6.1 # renovate: datasource=go
+EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.7.0 # renovate: datasource=go
 GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.9.2 # renovate: datasource=go
-GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1 # renovate: datasource=go
+GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.1 # renovate: datasource=go
 GXZ_PACKAGE ?= github.com/ulikunitz/xz/cmd/gxz@v0.5.15 # renovate: datasource=go
-SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.33.1 # renovate: datasource=go
+SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.34.0 # renovate: datasource=go
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
-GO_LICENSES_PACKAGE ?= github.com/google/go-licenses@v1.6.0 # renovate: datasource=go
+GO_LICENSES_PACKAGE ?= github.com/google/go-licenses/v2@v2.0.1 # renovate: datasource=go
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
-DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.42.0 # renovate: datasource=go
-ERRORTYPE_PACKAGE ?= fillmore-labs.com/errortype@v0.0.10 # renovate: datasource=go
-GOMOCK_PACKAGE ?= go.uber.org/mock/mockgen@v0.6.0 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@43.31.1 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.46.0 # renovate: datasource=go
+ERRORTYPE_PACKAGE ?= fillmore-labs.com/errortype@v0.0.11 # renovate: datasource=go
+RENOVATE_NPM_PACKAGE ?= renovate@43.241.2 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+MOCKERY_PACKAGE ?= github.com/vektra/mockery/v3@v3.7.1 # renovate: datasource=go
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
 DISPOSABLE_EMAILS_SHA ?= 0c27e671231d27cf66370034d7f6818037416989 # renovate: ...
@@ -75,6 +75,10 @@ MAKE_EVIDENCE_DIR := .make_evidence
 ifeq ($(RACE_ENABLED),true)
 	GOFLAGS += -race
 	GOTESTFLAGS += -race
+	# The test binary calls itself on each git hook
+	# When the race detector is enabled, don't wait 1s before exiting.
+	# https://go.dev/doc/articles/race_detector
+	GOTESTCOMPILEDRUNPREFIX += GORACE="atexit_sleep_ms=0"
 endif
 
 STORED_VERSION_FILE := VERSION
@@ -245,7 +249,7 @@ help:
 	@echo " - generate-license                 update license files"
 	@echo " - generate-gitignore               update gitignore files"
 	@echo " - generate-manpage                 generate manpage"
-	@echo " - generate-gomock                  generate gomock files"
+	@echo " - generate-mockery                 generate mockery files"
 	@echo " - generate-forgejo-api             generate the forgejo API from spec"
 	@echo " - forgejo-api-validate             check if the forgejo API matches the specs"
 	@echo " - generate-swagger                 generate the swagger spec from code comments"
@@ -439,7 +443,7 @@ lint-frontend: lint-js tsc lint-css
 lint-frontend-fix: lint-js-fix lint-css-fix
 
 .PHONY: lint-backend
-lint-backend: lint-go lint-go-vet lint-editorconfig lint-renovate lint-locale lint-locale-usage lint-disposable-emails
+lint-backend: lint-go lint-go-vet lint-editorconfig lint-renovate lint-locale lint-locale-usage lint-disposable-emails lint-single-response
 
 .PHONY: lint-backend-fix
 lint-backend-fix: lint-go-fix lint-go-vet lint-editorconfig lint-disposable-emails-fix
@@ -486,11 +490,23 @@ RUN_DEADCODE = $(GO) run $(DEADCODE_PACKAGE) -generated=false -f='{{println .Pat
 
 .PHONY: lint-go
 lint-go:
-	$(GO) run $(GOLANGCI_LINT_PACKAGE) run $(GOLANGCI_LINT_ARGS)
-	$(GO) run $(ERRORTYPE_PACKAGE) ./...
-	$(RUN_DEADCODE) > .cur-deadcode-out
-	@$(DIFF) .deadcode-out .cur-deadcode-out \
+	$(GO) run $(GOLANGCI_LINT_PACKAGE) run $(GOLANGCI_LINT_ARGS) \
 	|| (code=$$?; echo "Please run 'make lint-go-fix' and commit the result"; exit $${code})
+	$(RUN_DEADCODE) > .cur-deadcode-out
+	@$(DIFF) .deadcode-out .cur-deadcode-out >.deadcode.diff || true
+	@if grep -qE '^[+][^+]' .deadcode.diff ; then \
+		cat .deadcode.diff ; \
+		echo "Looks like you added dead code, please evaluate and remove or use it."; \
+		echo "If you are sure the dead code should stay around, please run 'make lint-go-fix',"; \
+		echo "commit the result and explain the reason in the commit message / PR description."; \
+		exit 1; \
+	fi
+	@if grep -qE '^[-][^-]' .deadcode.diff ; then \
+		cat .deadcode.diff ; \
+		echo "Looks like you removed dead code. Thank you!"; \
+		echo "Run 'make lint-go-fix' and commit the result to accept."; \
+	fi
+	$(GO) run $(ERRORTYPE_PACKAGE) ./...
 
 .PHONY: lint-go-fix
 lint-go-fix:
@@ -513,6 +529,10 @@ lint-disposable-emails:
 .PHONY: lint-disposable-emails-fix
 lint-disposable-emails-fix:
 	$(GO) run build/generate-disposable-email.go -r $(DISPOSABLE_EMAILS_SHA)
+
+.PHONY: lint-single-response
+lint-single-response:
+	$(GO) run ./build/lint-single-response/cmd ./...
 
 .PHONY: security-check
 security-check:
@@ -550,12 +570,12 @@ test: test-frontend test-backend
 .PHONY: test-backend
 test-backend: | compute-go-test-packages
 	@echo "Running go test with $(GOTESTFLAGS) -tags '$(TEST_TAGS)'..."
-	@TZ=UTC $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' $(GO_TEST_PACKAGES)
+	@TZ=UTC GITEA_ROOT="$(CURDIR)" $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' $(GO_TEST_PACKAGES)
 
 .PHONY: test-remote-cacher
 test-remote-cacher:
 	@echo "Running go test with $(GOTESTFLAGS) -tags '$(TEST_TAGS)'..."
-	@$(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' $(GO_TEST_REMOTE_CACHER_PACKAGES)
+	GITEA_ROOT="$(CURDIR)" $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' $(GO_TEST_REMOTE_CACHER_PACKAGES)
 
 .PHONY: test-frontend
 test-frontend: node_modules
@@ -580,7 +600,7 @@ test-check:
 .PHONY: test\#%
 test\#%: | compute-go-test-packages
 	@echo "Running go test with $(GOTESTFLAGS) -tags '$(TEST_TAGS)'..."
-	@TZ=UTC $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -run $(subst .,/,$*) $(GO_TEST_PACKAGES)
+	@TZ=UTC GITEA_ROOT="$(CURDIR)" $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -run $(subst .,/,$*) $(GO_TEST_PACKAGES)
 
 coverage-merge:
 	rm -fr coverage/merged ; mkdir -p coverage/merged
@@ -636,7 +656,9 @@ $(GO_LICENSE_FILE): go.mod go.sum
 	@rm -rf $(GO_LICENSE_TMP_DIR)
 
 generate-ini-sqlite:
-	sed -e 's|{{REPO_TEST_DIR}}|${REPO_TEST_DIR}|g' \
+	sed \
+		-e 's|{{REPO_TEST_DIR}}|$(or $(REPO_TEST_DIR),$(CURDIR)/)|g' \
+		-e 's|{{PROJECT_ROOT}}|$(CURDIR)|g' \
 		-e 's|{{TEST_LOGGER}}|$(or $(TEST_LOGGER),test$(COMMA)file)|g' \
 		-e 's|{{TEST_TYPE}}|$(or $(TEST_TYPE),integration)|g' \
 			tests/sqlite.ini.tmpl > tests/sqlite.ini
@@ -653,11 +675,13 @@ test-sqlite\#%: integrations.sqlite.test generate-ini-sqlite
 test-sqlite-migration:  migrations.sqlite.test migrations.individual.sqlite.test
 
 generate-ini-mysql:
-	sed -e 's|{{TEST_MYSQL_HOST}}|${TEST_MYSQL_HOST}|g' \
+	sed \
+		-e 's|{{TEST_MYSQL_HOST}}|${TEST_MYSQL_HOST}|g' \
 		-e 's|{{TEST_MYSQL_DBNAME}}|${TEST_MYSQL_DBNAME}|g' \
 		-e 's|{{TEST_MYSQL_USERNAME}}|${TEST_MYSQL_USERNAME}|g' \
 		-e 's|{{TEST_MYSQL_PASSWORD}}|${TEST_MYSQL_PASSWORD}|g' \
-		-e 's|{{REPO_TEST_DIR}}|${REPO_TEST_DIR}|g' \
+		-e 's|{{REPO_TEST_DIR}}|$(or $(REPO_TEST_DIR),$(CURDIR)/)|g' \
+		-e 's|{{PROJECT_ROOT}}|$(CURDIR)|g' \
 		-e 's|{{TEST_LOGGER}}|$(or $(TEST_LOGGER),test$(COMMA)file)|g' \
 		-e 's|{{TEST_TYPE}}|$(or $(TEST_TYPE),integration)|g' \
 			tests/mysql.ini.tmpl > tests/mysql.ini
@@ -674,12 +698,14 @@ test-mysql\#%: integrations.mysql.test generate-ini-mysql
 test-mysql-migration: migrations.mysql.test migrations.individual.mysql.test
 
 generate-ini-pgsql:
-	sed -e 's|{{TEST_PGSQL_HOST}}|${TEST_PGSQL_HOST}|g' \
+	sed \
+		-e 's|{{TEST_PGSQL_HOST}}|${TEST_PGSQL_HOST}|g' \
 		-e 's|{{TEST_PGSQL_DBNAME}}|${TEST_PGSQL_DBNAME}|g' \
 		-e 's|{{TEST_PGSQL_USERNAME}}|${TEST_PGSQL_USERNAME}|g' \
 		-e 's|{{TEST_PGSQL_PASSWORD}}|${TEST_PGSQL_PASSWORD}|g' \
 		-e 's|{{TEST_PGSQL_SCHEMA}}|${TEST_PGSQL_SCHEMA}|g' \
-		-e 's|{{REPO_TEST_DIR}}|${REPO_TEST_DIR}|g' \
+		-e 's|{{REPO_TEST_DIR}}|$(or $(REPO_TEST_DIR),$(CURDIR)/)|g' \
+		-e 's|{{PROJECT_ROOT}}|$(CURDIR)|g' \
 		-e 's|{{TEST_LOGGER}}|$(or $(TEST_LOGGER),test$(COMMA)file)|g' \
 		-e 's|{{TEST_TYPE}}|$(or $(TEST_TYPE),integration)|g' \
 		-e 's|{{TEST_STORAGE_TYPE}}|$(or $(TEST_STORAGE_TYPE),minio)|g' \
@@ -956,8 +982,8 @@ deps-tools:
 	$(GO) install $(XGO_PACKAGE)
 	$(GO) install $(GO_LICENSES_PACKAGE)
 	$(GO) install $(GOVULNCHECK_PACKAGE)
-	$(GO) install $(GOMOCK_PACKAGE)
 	$(GO) install $(ERRORTYPE_PACKAGE)
+	$(GO) install $(MOCKERY_PACKAGE)
 
 node_modules: package-lock.json
 	npm install --no-save
@@ -1012,9 +1038,9 @@ generate-license:
 generate-gitignore:
 	$(GO) run build/generate-gitignores.go
 
-.PHONY: generate-gomock
-generate-gomock:
-	$(GO) run $(GOMOCK_PACKAGE) -package mock -destination ./modules/queue/mock/redisuniversalclient.go forgejo.org/modules/nosql RedisClient
+.PHONY: generate-mockery
+generate-mockery:
+	$(GO) run $(MOCKERY_PACKAGE)
 
 .PHONY: generate-images
 generate-images: | node_modules

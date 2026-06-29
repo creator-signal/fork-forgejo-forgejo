@@ -88,6 +88,8 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		&user_model.UserOpenID{UID: u.ID},
 		&issues_model.Reaction{UserID: u.ID},
 		&organization.TeamUser{UID: u.ID},
+		&organization.TeamInvite{InviterID: u.ID},
+		&organization.TeamInvite{InvitedID: optional.Some(u.ID)},
 		&issues_model.Stopwatch{UserID: u.ID},
 		&user_model.Setting{UserID: u.ID},
 		&user_model.UserBadge{UserID: u.ID},
@@ -135,7 +137,7 @@ func deleteUser(ctx context.Context, u *user_model.User, purge bool) (err error)
 		}
 
 		// Delete Reactions
-		if err = issues_model.DeleteReaction(ctx, &issues_model.ReactionOptions{DoerID: u.ID}); err != nil {
+		if _, err = issues_model.DeleteReaction(ctx, &issues_model.ReactionOptions{DoerID: u.ID}); err != nil {
 			return err
 		}
 	}

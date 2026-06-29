@@ -154,6 +154,34 @@ func TestCutDiffAroundLine(t *testing.T) {
 	assert.Equal(t, expected, minusDiff)
 }
 
+func TestCutDiffAroundLineMultiRange(t *testing.T) {
+	// Simulate multi-line comment: lines 2-4 on new side (
+	// 	displayLine=4 -> last line of the comment
+	// context=3+2=5 -> 3 lines of context + 2 lines of the comment that are above the display line
+	// )
+	// This mirrors how services/pull/review.go computes the patch for multi-line comments:
+	//   displayLine = UnsignedDisplayLine() (last line of range)
+	//   contextLines = setting.UI.CodeCommentLines + extraLinesCount
+	result, err := CutDiffAroundLine(strings.NewReader(breakingDiff), 4, false, 5)
+	require.NoError(t, err)
+
+	// Should include lines 1-4 of the new side (--some comment, --some comment 2, -- some comment 3, create or replace...)
+	assert.Contains(t, result, "--some comment 2")
+	assert.Contains(t, result, "-- some comment 3")
+	assert.Contains(t, result, "create or replace procedure")
+
+	// Simulate single line (extraLinesCount=0): displayLine=2, context=3
+	singleResult, err := CutDiffAroundLine(strings.NewReader(breakingDiff), 2, false, 3)
+	require.NoError(t, err)
+	assert.Contains(t, singleResult, "--some comment 2")
+
+	// Multi-line on exampleDiff: lines 3-5 new side (displayLine=5, context=3+2=5)
+	multiResult, err := CutDiffAroundLine(strings.NewReader(exampleDiff), 5, false, 5)
+	require.NoError(t, err)
+	assert.Contains(t, multiResult, "Build Status")
+	assert.Contains(t, multiResult, "Docker Pulls")
+}
+
 func BenchmarkCutDiffAroundLine(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		CutDiffAroundLine(strings.NewReader(exampleDiff), 3, true, 3)
@@ -166,4 +194,289 @@ func TestParseDiffHunkString(t *testing.T) {
 	assert.Equal(t, 3, leftHunk)
 	assert.Equal(t, 19, rightLine)
 	assert.Equal(t, 5, rightHunk)
+}
+
+func TestFindAdjustedLineNumber(t *testing.T) {
+	commentCutDiff := `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -47,7 +47,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50`
+
+	t.Run("no additional changes", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..b21df3f 100644
+--- a/file1.md
++++ b/file1.md
+@@ -47,7 +47,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50
+ Line 51
+ Line 52
+ Line 53`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 50, Right: 50}, lineNumber)
+	})
+
+	t.Run("removed lines before location", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..c85b903 100644
+--- a/file1.md
++++ b/file1.md
+@@ -1,13 +1,3 @@
+-Line 1
+-Line 2
+-Line 3
+-Line 4
+-Line 5
+-Line 6
+-Line 7
+-Line 8
+-Line 9
+-Line 10
+ Line 11
+ Line 12
+ Line 13
+@@ -47,7 +37,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50
+ Line 51
+ Line 52
+ Line 53`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 50, Right: 40}, lineNumber)
+	})
+
+	t.Run("added lines before location", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..24b1aa6 100644
+--- a/file1.md
++++ b/file1.md
+@@ -8,6 +8,11 @@ Line 7
+ Line 8
+ Line 9
+ Line 10
++Line 10.1
++Line 10.2
++Line 10.3
++Line 10.4
++Line 10.5
+ Line 11
+ Line 12
+ Line 13
+@@ -47,7 +52,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50
+ Line 51
+ Line 52
+ Line 53`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 50, Right: 55}, lineNumber)
+	})
+
+	t.Run("added and removed in lines before location", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..d0cb63f 100644
+--- a/file1.md
++++ b/file1.md
+@@ -5,9 +5,11 @@ Line 4
+ Line 5
+ Line 6
+ Line 7
+-Line 8
+-Line 9
+-Line 10
++Line 10.1
++Line 10.2
++Line 10.3
++Line 10.4
++Line 10.5
+ Line 11
+ Line 12
+ Line 13
+@@ -47,7 +49,6 @@ Line 46
+ Line 47
+ Line 48
+ Line 49
+-Line 50
+ Line 51
+ Line 52
+ Line 53`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 50, Right: 52}, lineNumber)
+	})
+
+	t.Run("target line is an unchanged line right after a modification", func(t *testing.T) {
+		// The commented line (49) is a context line immediately following a modified line (48).
+		// The added ('+') line for the modification must be skipped while locating the old-side line,
+		// otherwise it would be matched against line 49 and wrongly reported as changed.
+		cutDiff := `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -46,4 +46,4 @@ Line 45
+ Line 46
+ Line 47
+-Line 48
++Line 48--modified
+ Line 49`
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..b21df3f 100644
+--- a/file1.md
++++ b/file1.md
+@@ -46,4 +46,4 @@ Line 45
+ Line 46
+ Line 47
+-Line 48
++Line 48--modified
+ Line 49
+ Line 50`
+		lineNumber, err := FindAdjustedLineNumber(cutDiff, 49, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 49, Right: 49}, lineNumber)
+	})
+
+	t.Run("changes above in the same hunk", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..f35a466 100644
+--- a/file1.md
++++ b/file1.md
+@@ -42,12 +42,6 @@ Line 41
+ Line 42
+ Line 43
+ Line 44
+-Line 45
+-Line 46
+-Line 47
+-Line 48
+-Line 49
+-Line 50
+ Line 51
+ Line 52
+ Line 53`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 50, Right: 45}, lineNumber)
+	})
+
+	t.Run("first line in diff", func(t *testing.T) {
+		commentCutDiff := `diff --git a/file1.md b/file1.md
+--- a/file1.md
++++ b/file1.md
+@@ -1,4 +1,3 @@
+-Line 1`
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..a490028 100644
+--- a/file1.md
++++ b/file1.md
+@@ -1,4 +1,3 @@
+-Line 1
+ Line 2
+ Line 3
+ Line 4`
+		lineNumber, err := FindAdjustedLineNumber(commentCutDiff, 1, strings.NewReader(diff))
+		require.NoError(t, err)
+		assert.Equal(t, LinePlacement{Left: 1, Right: 1}, lineNumber)
+	})
+
+	t.Run("adjusted line not found", func(t *testing.T) {
+		// "Line 50" is present here but it's no longer "-Line 50", so it should not be identified as present
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..09dd95a 100644
+--- a/file1.md
++++ b/file1.md
+@@ -42,10 +42,6 @@ Line 41
+ Line 42
+ Line 43
+ Line 44
+-Line 45
+-Line 46
+-Line 47
+-Line 48
+ Line 49
+ Line 50
+ Line 51`
+		_, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.ErrorIs(t, err, ErrLineNotFound)
+	})
+
+	t.Run("adjusted line hunk not present - not changed anymore", func(t *testing.T) {
+		diff := `diff --git a/file1.md b/file1.md
+index 2d203fb..d0cb63f 100644
+--- a/file1.md
++++ b/file1.md
+@@ -5,9 +5,11 @@ Line 4
+ Line 5
+ Line 6
+ Line 7
+-Line 8
+-Line 9
+-Line 10
++Line 10.1
++Line 10.2
++Line 10.3
++Line 10.4
++Line 10.5
+ Line 11
+ Line 12
+ Line 13`
+		_, err := FindAdjustedLineNumber(commentCutDiff, 50, strings.NewReader(diff))
+		require.ErrorIs(t, err, ErrLineNotFound)
+	})
+}
+
+func TestPatchRightSideContent(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		assert.Empty(t, PatchRightSideContent(""))
+	})
+
+	t.Run("single hunk with a replacement", func(t *testing.T) {
+		patch := "diff --git a/file1.md b/file1.md\n" +
+			"--- a/file1.md\n" +
+			"+++ b/file1.md\n" +
+			"@@ -48,3 +48,3 @@\n" +
+			" Line 48\n" +
+			" Line 49\n" +
+			"-Line 50\n" +
+			"+Line 50--modified"
+		assert.Equal(t, map[int64]string{
+			48: "Line 48",
+			49: "Line 49",
+			50: "Line 50--modified",
+		}, PatchRightSideContent(patch))
+	})
+
+	t.Run("added lines shift the right side", func(t *testing.T) {
+		patch := "@@ -10,2 +10,4 @@\n" +
+			" ctx\n" +
+			"+added a\n" +
+			"+added b\n" +
+			" after"
+		assert.Equal(t, map[int64]string{
+			10: "ctx",
+			11: "added a",
+			12: "added b",
+			13: "after",
+		}, PatchRightSideContent(patch))
+	})
+
+	t.Run("removed lines do not consume right-side numbers", func(t *testing.T) {
+		patch := "@@ -5,3 +5,1 @@\n" +
+			"-gone 1\n" +
+			"-gone 2\n" +
+			" kept"
+		assert.Equal(t, map[int64]string{5: "kept"}, PatchRightSideContent(patch))
+	})
 }

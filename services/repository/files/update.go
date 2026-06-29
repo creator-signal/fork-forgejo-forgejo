@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -47,15 +48,16 @@ type ChangeRepoFile struct {
 
 // ChangeRepoFilesOptions holds the repository files update options
 type ChangeRepoFilesOptions struct {
-	LastCommitID string
-	OldBranch    string
-	NewBranch    string
-	Message      string
-	Files        []*ChangeRepoFile
-	Author       *IdentityOptions
-	Committer    *IdentityOptions
-	Dates        *CommitDateOptions
-	Signoff      bool
+	LastCommitID            string
+	OldBranch               string
+	NewBranch               string
+	Message                 string
+	Files                   []*ChangeRepoFile
+	Author                  *IdentityOptions
+	Committer               *IdentityOptions
+	Dates                   *CommitDateOptions
+	Signoff                 bool
+	ForceOverwriteNewBranch bool
 }
 
 type RepoFileOptions struct {
@@ -135,7 +137,7 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 	// If we aren't branching to a new branch, make sure user can commit to the given branch
 	if opts.NewBranch != opts.OldBranch {
 		existingBranch, err := gitRepo.GetBranch(opts.NewBranch)
-		if existingBranch != nil {
+		if existingBranch != nil && !opts.ForceOverwriteNewBranch {
 			return nil, git_model.ErrBranchAlreadyExists{
 				BranchName: opts.NewBranch,
 			}
@@ -187,13 +189,7 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 			}
 
 			// Find the file we want to delete in the index
-			inFilelist := false
-			for _, indexFile := range filesInIndex {
-				if indexFile == file.TreePath {
-					inFilelist = true
-					break
-				}
-			}
+			inFilelist := slices.Contains(filesInIndex, file.TreePath)
 			if !inFilelist {
 				return nil, models.ErrRepoFileDoesNotExist{
 					Path: file.TreePath,
@@ -268,7 +264,7 @@ func ChangeRepoFiles(ctx context.Context, repo *repo_model.Repository, doer *use
 	}
 
 	// Then push this tree to NewBranch
-	if err := t.Push(doer, commitHash, opts.NewBranch); err != nil {
+	if err := t.Push(doer, commitHash, opts.NewBranch, opts.ForceOverwriteNewBranch); err != nil {
 		log.Error("%T %v", err, err)
 		return nil, err
 	}
@@ -390,11 +386,9 @@ func CreateOrUpdateFile(ctx context.Context, t *TemporaryUploadRepository, file 
 	}
 	// If is a new file (not updating) then the given path shouldn't exist
 	if file.Operation == "create" {
-		for _, indexFile := range filesInIndex {
-			if indexFile == file.TreePath {
-				return models.ErrRepoFileAlreadyExists{
-					Path: file.TreePath,
-				}
+		if slices.Contains(filesInIndex, file.TreePath) {
+			return models.ErrRepoFileAlreadyExists{
+				Path: file.TreePath,
 			}
 		}
 	}

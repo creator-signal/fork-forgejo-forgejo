@@ -74,7 +74,7 @@ body {
   tab-size: var(--tab-size);
   display: flex;
   flex-direction: column;
-  overflow-x: visible;
+  overflow-inline: visible;
   overflow-wrap: break-word;
   text-autospace: normal;
   text-spacing-trim: normal;
@@ -255,7 +255,8 @@ h1.error-code {
 }
 
 ::selection,
-relative-time::part(relative-time)::selection {
+relative-time::part(relative-time)::selection,
+absolute-date::part(absolute-date)::selection {
   background: var(--color-selection-bg);
   color: var(--color-selection-fg);
 }
@@ -361,6 +362,11 @@ a.label,
   background: var(--color-hover);
 }
 
+.ui.search > .results .content {
+  padding: 0;
+  background: none;
+}
+
 .inline-code-block {
   padding: 2px 4px;
   border-radius: .24em;
@@ -385,7 +391,7 @@ a.label,
 }
 
 .ui.menu .item > .svg {
-  margin-right: 0.35em;
+  margin-inline-end: 0.35em;
 }
 
 .ui.menu .dropdown.item:hover,
@@ -474,7 +480,7 @@ a.label,
   margin-bottom: -0.25rem;
 }
 .ui.dropdown .menu > .item > svg {
-  margin-right: .78rem; /* use the same margin as for <img> */
+  margin-inline-end: .78rem; /* use the same margin as for <img> */
 }
 
 .ui.selection.dropdown .menu > .item {
@@ -503,9 +509,8 @@ a.label,
 
 /* extend fomantic style '.ui.dropdown > .text > img' to include svg.img */
 .ui.dropdown > .text > .img {
-  margin-left: 0;
+  margin-inline: 0 0.78571429rem;
   float: none;
-  margin-right: 0.78571429rem;
 }
 
 .ui.dropdown > .text > .description,
@@ -516,13 +521,11 @@ a.label,
 /* replace item margin on secondary menu items with gap and remove both the
    negative margins on the menu as well as margin on the items */
 .ui.secondary.menu {
-  margin-left: 0;
-  margin-right: 0;
+  margin-inline: 0;
   gap: .35714286em;
 }
 .ui.secondary.menu .item {
-  margin-left: 0;
-  margin-right: 0;
+  margin-inline: 0;
 }
 
 .ui.secondary.menu .dropdown.item:hover,
@@ -764,15 +767,15 @@ img.ui.avatar,
 }
 
 .ui .text.left {
-  text-align: left !important;
+  text-align: start !important;
 }
 
 .ui .text.right {
-  text-align: right !important;
+  text-align: end !important;
 }
 
 .ui .text.truncate {
-  overflow-x: hidden;
+  overflow-inline: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
@@ -783,14 +786,13 @@ img.ui.avatar,
 }
 
 .ui .message > ul {
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
   display: table;
-  text-align: left;
+  text-align: start;
 }
 
 .ui .header > i + .content {
-  padding-left: 0.75rem;
+  padding-inline-start: 0.75rem;
   vertical-align: middle;
 }
 
@@ -803,7 +805,7 @@ img.ui.avatar,
 }
 
 .ui .form .sub.field {
-  margin-left: 25px;
+  margin-inline-start: 25px;
 }
 
 .ui .button.truncate {
@@ -813,11 +815,11 @@ img.ui.avatar,
   text-overflow: ellipsis;
   vertical-align: top;
   white-space: nowrap;
-  margin-right: 6px;
+  margin-inline-end: 6px;
 }
 
 .ui.status.buttons .svg {
-  margin-right: 4px;
+  margin-inline-end: 4px;
 }
 
 .ui.inline.delete-button {
@@ -897,14 +899,13 @@ img.ui.avatar,
 }
 
 .ui.pagination.menu.narrow .item {
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-inline: 8px;
   min-width: 1em;
   text-align: center;
 }
 
 .ui.pagination.menu.narrow .item .icon {
-  margin-right: 0;
+  margin-inline-end: 0;
 }
 
 .ui.floating.dropdown .overflow.menu .scrolling.menu.items {
@@ -928,7 +929,7 @@ img.ui.avatar,
 
 .color-preview {
   display: inline-block;
-  margin-left: 0.4em;
+  margin-inline-start: 0.4em;
   height: 0.67em;
   width: 0.67em;
   border-radius: var(--border-radius);
@@ -944,35 +945,35 @@ img.ui.avatar,
 }
 
 blockquote.attention-note {
-  border-left-color: var(--color-blue-dark-1);
+  border-inline-start-color: var(--color-blue-dark-1);
 }
 strong.attention-note, svg.attention-note {
   color: var(--color-blue-dark-1);
 }
 
 blockquote.attention-tip {
-  border-left-color: var(--color-success-text);
+  border-inline-start-color: var(--color-success-text);
 }
 strong.attention-tip, svg.attention-tip {
   color: var(--color-success-text);
 }
 
 blockquote.attention-important {
-  border-left-color: var(--color-violet-dark-1);
+  border-inline-start-color: var(--color-violet-dark-1);
 }
 strong.attention-important, svg.attention-important {
   color: var(--color-violet-dark-1);
 }
 
 blockquote.attention-warning {
-  border-left-color: var(--color-warning-text);
+  border-inline-start-color: var(--color-warning-text);
 }
 strong.attention-warning, svg.attention-warning {
   color: var(--color-warning-text);
 }
 
 blockquote.attention-caution {
-  border-left-color: var(--color-red-dark-1);
+  border-inline-start-color: var(--color-red-dark-1);
 }
 strong.attention-caution, svg.attention-caution {
   color: var(--color-red-dark-1);
@@ -985,6 +986,7 @@ strong.attention-caution, svg.attention-caution {
 overflow-menu {
   border-bottom: 1px solid var(--color-secondary) !important;
   display: flex;
+  overflow-inline: auto;
 }
 
 overflow-menu .overflow-menu-items {
@@ -1002,7 +1004,7 @@ overflow-menu .overflow-menu-items .item > .svg {
 }
 
 overflow-menu .ui.label {
-  margin-left: 7px !important; /* save some space */
+  margin-inline-start: 7px !important; /* save some space */
 }
 
 .activity-bar-graph {
@@ -1052,7 +1054,7 @@ overflow-menu .ui.label {
 
 .lines-num {
   padding: 0 8px;
-  text-align: right !important;
+  text-align: end !important;
   color: var(--color-text-light-2);
   width: 1%;
   font-family: var(--fonts-monospace);
@@ -1099,7 +1101,7 @@ overflow-menu .ui.label {
 .lines-code ol li {
   display: block;
   width: calc(100% - 1ch);
-  padding-left: 1ch;
+  padding-inline-start: 1ch;
 }
 
 .code-inner {
@@ -1150,7 +1152,7 @@ overflow-menu .ui.label {
 .blame-avatar {
   display: flex;
   align-items: center;
-  margin-right: 4px;
+  margin-inline-end: 4px;
 }
 
 .top-line-blame {
@@ -1195,7 +1197,7 @@ table th[data-sortt-desc]:hover {
 
 table th[data-sortt-asc] .svg,
 table th[data-sortt-desc] .svg {
-  margin-left: 0.25rem;
+  margin-inline-start: 0.25rem;
 }
 
 .ui.dropdown .menu .item {
@@ -1285,7 +1287,7 @@ table th[data-sortt-desc] .svg {
 .flash-error details code,
 .flash-warning details code {
   display: block;
-  text-align: left;
+  text-align: start;
 }
 
 .truncated-item-container {
@@ -1314,7 +1316,7 @@ table th[data-sortt-desc] .svg {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-left: 1em;
+  margin-inline-start: 1em;
 }
 
 .precolors .color {
@@ -1335,13 +1337,13 @@ table th[data-sortt-desc] .svg {
 
 .ui.dropdown.mini.button,
 .ui.dropdown.tiny.button {
-  padding-right: 20px;
+  padding-inline-end: 20px;
 }
 .ui.dropdown.button {
-  padding-right: 22px;
+  padding-inline-end: 22px;
 }
 .ui.dropdown.large.button {
-  padding-right: 24px;
+  padding-inline-end: 24px;
 }
 
 /* Gitea uses SVG images instead of Fomantic builtin "<i>" font icons, so we need to reset the icon styles */
@@ -1364,11 +1366,11 @@ table th[data-sortt-desc] .svg {
 }
 
 .ui.ui.dropdown > .dropdown.icon {
-  right: 0.5em;
+  inset-inline-end: 0.5em;
 }
 
 .ui.ui.dropdown > .remove.icon {
-  right: 2em;
+  inset-inline-end: 2em;
 }
 
 .btn,

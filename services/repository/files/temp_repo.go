@@ -128,7 +128,7 @@ func (t *TemporaryUploadRepository) LsFiles(filenames ...string) ([]string, erro
 	}
 
 	fileList := make([]string, 0, len(filenames))
-	for _, line := range bytes.Split(stdOut.Bytes(), []byte{'\000'}) {
+	for line := range bytes.SplitSeq(stdOut.Bytes(), []byte{'\000'}) {
 		fileList = append(fileList, string(line))
 	}
 
@@ -189,7 +189,7 @@ func (t *TemporaryUploadRepository) HashObject(content io.Reader) (string, error
 
 // AddObjectToIndex adds the provided object hash to the index with the provided mode and path
 func (t *TemporaryUploadRepository) AddObjectToIndex(mode, objectHash, objectPath string) error {
-	if _, _, err := git.NewCommand(t.ctx, "update-index", "--add", "--replace", "--cacheinfo").AddDynamicArguments(mode, objectHash, objectPath).RunStdString(&git.RunOpts{Dir: t.basePath}); err != nil {
+	if _, _, err := git.NewCommand(t.ctx, "update-index", "--add", "--replace", "--cacheinfo").AddDynamicArguments(mode + "," + objectHash + "," + objectPath).RunStdString(&git.RunOpts{Dir: t.basePath}); err != nil {
 		stderr := err.Error()
 		if matched, _ := regexp.MatchString(".*Invalid path '.*", stderr); matched {
 			return models.ErrFilePathInvalid{
@@ -298,12 +298,13 @@ func (t *TemporaryUploadRepository) CommitTreeWithDate(parent string, author, co
 }
 
 // Push the provided commitHash to the repository branch by the provided user
-func (t *TemporaryUploadRepository) Push(doer *user_model.User, commitHash, branch string) error {
+func (t *TemporaryUploadRepository) Push(doer *user_model.User, commitHash, branch string, force bool) error {
 	// Because calls hooks we need to pass in the environment
 	env := repo_module.PushingEnvironment(doer, t.repo)
 	if err := git.Push(t.ctx, t.basePath, git.PushOptions{
 		Remote: t.repo.RepoPath(),
 		Branch: strings.TrimSpace(commitHash) + ":" + git.BranchPrefix + strings.TrimSpace(branch),
+		Force:  force,
 		Env:    env,
 	}); err != nil {
 		if git.IsErrPushOutOfDate(err) {

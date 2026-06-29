@@ -6,6 +6,7 @@ package actions
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -72,6 +73,7 @@ func IDTokenContexter() func(next http.Handler) http.Handler {
 			if err != nil {
 				log.Error("Error runner api parsing custom claims: %v", err)
 				ctx.Error(http.StatusInternalServerError, "Error runner api parsing custom claims")
+				return
 			}
 
 			task, err := actions.GetTaskByID(req.Context(), authorizationTokenClaims.TaskID)
@@ -99,6 +101,13 @@ func IDTokenContexter() func(next http.Handler) http.Handler {
 				return
 			}
 
+			generateIDTokenScp := fmt.Sprintf("generate_id_token:%d:%d", task.Job.RunID, task.Job.ID)
+			scp := strings.Split(authorizationTokenClaims.Scp, " ")
+			if !slices.Contains(scp, generateIDTokenScp) {
+				ctx.Error(http.StatusForbidden, "missing scp generate_id_token")
+				return
+			}
+
 			audience := req.URL.Query().Get("audience")
 			if audience == "" {
 				// Default to organization that owns the repo if no audience is provided
@@ -121,6 +130,7 @@ func generateIDToken(ctx *IDTokenContext) {
 	err := json.Unmarshal(inrec, &claims)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "Error generating token")
+		return
 	}
 	now := time.Now()
 
@@ -134,6 +144,7 @@ func generateIDToken(ctx *IDTokenContext) {
 	signedToken, err := jwtSigningKey.JWT(claims)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "Error signing token")
+		return
 	}
 
 	resp := IDTokenResponse{

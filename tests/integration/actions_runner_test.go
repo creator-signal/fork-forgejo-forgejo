@@ -150,6 +150,26 @@ func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
 	return resp.Msg.Task
 }
 
+func (r *mockRunner) maybeFetchTaskWithTaskCapacity(t *testing.T, taskCapacity int64) (*runnerv1.Task, []*runnerv1.Task) {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		TaskCapacity: &taskCapacity,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task, resp.Msg.AdditionalTasks
+}
+
+func (r *mockRunner) maybeFetchSingleTask(t *testing.T, handle *string) *runnerv1.Task {
+	resp, err := r.client.runnerServiceClient.FetchSingleTask(t.Context(), connect.NewRequest(&runnerv1.FetchSingleTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		Handle:       handle,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task
+}
+
 func (r *mockRunner) fetchTask(t *testing.T, timeout ...time.Duration) *runnerv1.Task {
 	fetchTimeout := 10 * time.Second
 	if len(timeout) > 0 {
@@ -201,6 +221,10 @@ type mockTaskOutcome struct {
 	result  runnerv1.Result
 	outputs map[string]string
 	logRows []*runnerv1.LogRow
+	// stepStates, when non-nil, is included in the final UpdateTask's
+	// TaskState.Steps. Lets tests exercise per-step LogIndex/LogLength
+	// (and other StepState fields) without reaching into the DB directly.
+	stepStates []*runnerv1.StepState
 }
 
 func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTaskOutcome) {
@@ -232,6 +256,7 @@ func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTa
 			Id:        task.Id,
 			Result:    outcome.result,
 			StoppedAt: timestamppb.Now(),
+			Steps:     outcome.stepStates,
 		},
 	}))
 	require.NoError(t, err)

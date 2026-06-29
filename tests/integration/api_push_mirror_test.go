@@ -26,14 +26,14 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	mirror_service "forgejo.org/services/mirror"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,7 +49,7 @@ func testAPIPushMirror(t *testing.T, u *url.URL) {
 	defer test.MockProtect(&mirror_service.AddPushMirrorRemote)()
 	defer test.MockProtect(&repo_model.DeletePushMirrors)()
 
-	require.NoError(t, migrations.Init())
+	require.NoError(t, migrations_allowlist.Init())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -153,7 +153,7 @@ func testAPIPushMirrorBranchFilter(t *testing.T, u *url.URL) {
 	defer test.MockProtect(&mirror_service.AddPushMirrorRemote)()
 	defer test.MockProtect(&repo_model.DeletePushMirrors)()
 
-	require.NoError(t, migrations.Init())
+	require.NoError(t, migrations_allowlist.Init())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -306,19 +306,14 @@ func TestAPIPushMirrorSSH(t *testing.T) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 		assert.False(t, srcRepo.HasWiki())
 		session := loginUser(t, user.Name)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
-		pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:         optional.Some("push-mirror-test"),
-			AutoInit:     optional.Some(false),
-			EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
-		})
-		defer f()
+		pushToRepo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 
 		sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
 

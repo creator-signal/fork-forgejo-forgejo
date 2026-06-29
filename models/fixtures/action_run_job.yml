@@ -6,7 +6,7 @@
   commit_sha: c2d72f548424103f01ee1dc02889c1e2bff816b0
   is_fork_pull_request: false
   name: job_2
-  attempt: 1
+  attempt: 3
   job_id: job_2
   task_id: 47
   status: 1
@@ -152,6 +152,7 @@
   is_fork_pull_request: false
   name: job_2
   attempt: 1
+  handle: 18e9cf40-c2f6-409f-b832-b945ea7dc79b
   job_id: job_2
   task_id: 47
   status: 5
@@ -167,6 +168,7 @@
   is_fork_pull_request: false
   name: job_2
   attempt: 2
+  handle: a723d3e3-49a1-4e6b-947f-e987e60bfbd6
   job_id: job_2
   task_id: 47
   status: 5
@@ -182,6 +184,7 @@
   is_fork_pull_request: false
   name: job_2
   attempt: 1
+  handle: 40317a2f-2f00-4a82-8cc4-57347989a493
   job_id: job_2
   task_id: 47
   status: 5
@@ -196,7 +199,7 @@
   commit_sha: 985f0301dba5e7b34be866819cd15ad3d8f508ee
   is_fork_pull_request: false
   name: job_2
-  attempt: 0
+  attempt: 1
   job_id: job_2
   task_id: null
   status: 5

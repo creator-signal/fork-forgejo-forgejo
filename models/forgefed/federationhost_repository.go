@@ -16,6 +16,31 @@ func init() {
 	db.RegisterModel(new(FederationHost))
 }
 
+func CountFederationHosts(ctx context.Context) (int64, error) {
+	return db.GetEngine(ctx).Count(FederationHost{})
+}
+
+func FindFederationHosts(ctx context.Context, opts db.ListOptions) (hosts []*FederationHost, err error) {
+	sess := db.GetEngine(ctx)
+
+	if opts.PageSize > 0 {
+		sess = db.SetSessionPagination(sess, &opts)
+	}
+
+	err = sess.Find(&hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, host := range hosts {
+		if res, err := validation.IsValid(host); !res {
+			return nil, err
+		}
+	}
+
+	return hosts, nil
+}
+
 func GetFederationHost(ctx context.Context, ID int64) (*FederationHost, error) {
 	log.Trace("GetFederationHost: %v", ID)
 	host := new(FederationHost)
@@ -32,13 +57,13 @@ func GetFederationHost(ctx context.Context, ID int64) (*FederationHost, error) {
 	return host, nil
 }
 
-func findFederationHostFromDB(ctx context.Context, searchKey, searchValue string) (*FederationHost, error) {
+func findFederationHostFromDB(ctx context.Context, searchKey string, searchValue ...any) (*FederationHost, error) {
 	host := new(FederationHost)
-	has, err := db.GetEngine(ctx).Where(searchKey, searchValue).Get(host)
+	has, err := db.GetEngine(ctx).Where(searchKey, searchValue...).Get(host)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, nil
+		return nil, ErrFederationHostNotFound{SearchKey: searchKey, SearchValue: fmt.Sprintf("%v", searchValue)}
 	}
 	if res, err := validation.IsValid(host); !res {
 		return nil, err
@@ -47,17 +72,7 @@ func findFederationHostFromDB(ctx context.Context, searchKey, searchValue string
 }
 
 func FindFederationHostByFqdnAndPort(ctx context.Context, fqdn string, port uint16) (*FederationHost, error) {
-	host := new(FederationHost)
-	has, err := db.GetEngine(ctx).Where("host_fqdn=? AND host_port=?", fqdn, port).Get(host)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, nil
-	}
-	if res, err := validation.IsValid(host); !res {
-		return nil, err
-	}
-	return host, nil
+	return findFederationHostFromDB(ctx, "host_fqdn=? AND host_port=?", fqdn, port)
 }
 
 func FindFederationHostByKeyID(ctx context.Context, keyID string) (*FederationHost, error) {

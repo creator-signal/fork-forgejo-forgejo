@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -101,8 +102,8 @@ func NewPullRequest(ctx context.Context, repo *repo_model.Repository, issue *iss
 
 		data := issues_model.PushActionContent{IsForcePush: false}
 		data.CommitIDs = make([]string, 0, len(compareInfo.Commits))
-		for i := len(compareInfo.Commits) - 1; i >= 0; i-- {
-			data.CommitIDs = append(data.CommitIDs, compareInfo.Commits[i].ID.String())
+		for _, c := range slices.Backward(compareInfo.Commits) {
+			data.CommitIDs = append(data.CommitIDs, c.ID.String())
 		}
 
 		dataJSON, err := json.Marshal(data)
@@ -263,22 +264,17 @@ func ChangeTargetBranch(ctx context.Context, pr *issues_model.PullRequest, doer 
 	return nil
 }
 
-func checkForInvalidation(ctx context.Context, requests issues_model.PullRequestList, repoID int64, doer *user_model.User, branch string) error {
+func checkForInvalidation(ctx context.Context, requests issues_model.PullRequestList, repoID int64, doer *user_model.User, newCommitID string) error {
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryByIDCtx: %w", err)
 	}
-	gitRepo, err := gitrepo.OpenRepository(ctx, repo)
-	if err != nil {
-		return fmt.Errorf("gitrepo.OpenRepository: %w", err)
-	}
 	go func() {
 		// FIXME: graceful: We need to tell the manager we're doing something...
-		err := InvalidateCodeComments(ctx, requests, doer, gitRepo, branch)
+		err := InvalidateCodeComments(ctx, requests, doer, repo, newCommitID)
 		if err != nil {
 			log.Error("PullRequestList.InvalidateCodeComments: %v", err)
 		}
-		gitRepo.Close()
 	}()
 	return nil
 }
@@ -340,7 +336,7 @@ func TestPullRequest(ctx context.Context, doer *user_model.User, repoID, olderTh
 		if err = requests.LoadAttributes(ctx); err != nil {
 			log.Error("PullRequestList.LoadAttributes: %v", err)
 		}
-		if invalidationErr := checkForInvalidation(ctx, requests, repoID, doer, branch); invalidationErr != nil {
+		if invalidationErr := checkForInvalidation(ctx, requests, repoID, doer, newCommitID); invalidationErr != nil {
 			log.Error("checkForInvalidation: %v", invalidationErr)
 		}
 		if err == nil {
@@ -539,7 +535,7 @@ func CloseBranchPulls(ctx context.Context, doer *user_model.User, repoID int64, 
 	}
 
 	prs = append(prs, prs2...)
-	if err := issues_model.PullRequestList(prs).LoadAttributes(ctx); err != nil {
+	if err := prs.LoadAttributes(ctx); err != nil {
 		return err
 	}
 
@@ -569,7 +565,7 @@ func CloseRepoBranchesPulls(ctx context.Context, doer *user_model.User, repo *re
 			return err
 		}
 
-		if err = issues_model.PullRequestList(prs).LoadAttributes(ctx); err != nil {
+		if err = prs.LoadAttributes(ctx); err != nil {
 			return err
 		}
 
@@ -670,9 +666,7 @@ func GetSquashMergeCommitMessages(ctx context.Context, pr *issues_model.PullRequ
 
 	// commits list is in reverse chronological order
 	first := true
-	for i := len(commits) - 1; i >= 0; i-- {
-		commit := commits[i]
-
+	for _, commit := range slices.Backward(commits) {
 		if setting.Repository.PullRequest.PopulateSquashCommentWithCommitMessages {
 			maxSize := setting.Repository.PullRequest.DefaultMergeMessageSize
 			if maxSize < 0 || stringBuilder.Len() < maxSize {

@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package user
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	activities_model "forgejo.org/models/activities"
@@ -201,6 +203,7 @@ func NotificationStatusPost(ctx *context.Context) {
 	if !ctx.FormBool("noredirect") {
 		url := fmt.Sprintf("%s/notifications?page=%s", setting.AppSubURL, url.QueryEscape(ctx.FormString("page")))
 		ctx.Redirect(url, http.StatusSeeOther)
+		return
 	}
 
 	getNotifications(ctx)
@@ -226,10 +229,7 @@ func NotificationPurgePost(ctx *context.Context) {
 
 // NotificationSubscriptions returns the list of subscribed issues
 func NotificationSubscriptions(ctx *context.Context) {
-	page := ctx.FormInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	sortType := ctx.FormString("sort")
 	ctx.Data["SortType"] = sortType
@@ -263,11 +263,14 @@ func NotificationSubscriptions(ctx *context.Context) {
 	var labelIDs []int64
 	selectedLabels := ctx.FormString("labels")
 	ctx.Data["Labels"] = selectedLabels
-	if len(selectedLabels) > 0 && selectedLabels != "0" {
+	if len(selectedLabels) > 0 {
 		var err error
 		labelIDs, err = base.StringsToInt64s(strings.Split(selectedLabels, ","))
 		if err != nil {
 			ctx.Flash.Error(ctx.Tr("invalid_data", selectedLabels), true)
+		}
+		if slices.Contains(labelIDs, 0) {
+			labelIDs = []int64{0}
 		}
 	}
 
@@ -358,10 +361,7 @@ func NotificationSubscriptions(ctx *context.Context) {
 
 // NotificationWatching returns the list of watching repos
 func NotificationWatching(ctx *context.Context) {
-	page := ctx.FormInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	keyword := ctx.FormTrim("q")
 	ctx.Data["Keyword"] = keyword

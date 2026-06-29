@@ -259,6 +259,8 @@ func ToPublicKey(apiLink string, key *asymkey_model.PublicKey) *api.PublicKey {
 		Title:       key.Name,
 		Fingerprint: key.Fingerprint,
 		Created:     key.CreatedUnix.AsTime(),
+		Updated:     key.UpdatedUnix.AsTime(),
+		Verified:    key.Verified,
 	}
 }
 
@@ -346,6 +348,7 @@ func ToOrganization(ctx context.Context, org *organization.Organization) *api.Or
 		Location:                  org.Location,
 		Visibility:                org.Visibility.String(),
 		RepoAdminChangeTeamAccess: org.RepoAdminChangeTeamAccess,
+		Created:                   org.CreatedUnix.AsTime(),
 	}
 }
 
@@ -397,10 +400,30 @@ func ToTeams(ctx context.Context, teams []*organization.Team, loadOrgs bool) ([]
 }
 
 // ToAnnotatedTag convert git.Tag to api.AnnotatedTag
-func ToAnnotatedTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag, c *git.Commit) (*api.AnnotatedTag, error) {
+func ToAnnotatedTag(ctx context.Context, gitRepo *git.Repository, repo *repo_model.Repository, t *git.Tag, c *git.Commit) (*api.AnnotatedTag, error) {
 	archiveDownloadCount, err := repo_model.GetArchiveDownloadCountForTagName(ctx, repo.ID, t.Name)
 	if err != nil {
 		return nil, err
+	}
+
+	// Use the tag's own signature if the tag is signed, otherwise fall back to commit signature.
+	var verification *api.PayloadCommitVerification
+	if t.Signature != nil {
+		verif := asymkey_model.ParseTagWithSignature(ctx, gitRepo, t)
+		verification = &api.PayloadCommitVerification{
+			Verified:  verif.Verified,
+			Reason:    verif.Reason,
+			Signature: t.Signature.Signature,
+			Payload:   t.Signature.Payload,
+		}
+		if verif.SigningUser != nil {
+			verification.Signer = &api.PayloadUser{
+				Name:  verif.SigningUser.Name,
+				Email: verif.SigningEmail,
+			}
+		}
+	} else {
+		verification = ToVerification(ctx, c)
 	}
 
 	return &api.AnnotatedTag{
@@ -410,7 +433,7 @@ func ToAnnotatedTag(ctx context.Context, repo *repo_model.Repository, t *git.Tag
 		Message:              t.Message,
 		URL:                  util.URLJoin(repo.APIURL(), "git/tags", t.ID.String()),
 		Tagger:               ToCommitUser(t.Tagger),
-		Verification:         ToVerification(ctx, c),
+		Verification:         verification,
 		ArchiveDownloadCount: archiveDownloadCount,
 	}, nil
 }

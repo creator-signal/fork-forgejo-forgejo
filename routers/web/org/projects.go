@@ -48,10 +48,7 @@ func Projects(ctx *context.Context) {
 
 	isShowClosed := strings.ToLower(ctx.FormTrim("state")) == "closed"
 	keyword := ctx.FormTrim("q")
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	var projectType project_model.Type
 	if ctx.ContextUser.IsOrganization() {
@@ -380,8 +377,10 @@ func ViewProject(ctx *context.Context) {
 
 			if len(referencedIDs) > 0 {
 				if linkedPrs, err := issues_model.Issues(ctx, &issues_model.IssuesOptions{
-					IssueIDs: referencedIDs,
-					IsPull:   optional.Some(true),
+					IssueIDs:  referencedIDs,
+					IsPull:    optional.Some(true),
+					User:      ctx.Doer,
+					AllPublic: !ctx.IsSigned,
 				}); err == nil {
 					linkedPrsMap[issue.ID] = linkedPrs
 				}

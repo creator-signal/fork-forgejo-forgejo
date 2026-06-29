@@ -151,8 +151,8 @@ func (l *loader) buildFixtureFile(fixturePath string) (*fixtureFile, error) {
 			switch v := value.(type) {
 			case string:
 				// Try to decode hex.
-				if strings.HasPrefix(v, "0x") {
-					value, err = hex.DecodeString(strings.TrimPrefix(v, "0x"))
+				if after, ok := strings.CutPrefix(v, "0x"); ok {
+					value, err = hex.DecodeString(after)
 					if err != nil {
 						return nil, err
 					}
@@ -211,8 +211,7 @@ func (l *loader) Load() error {
 	tableDeleted := make(container.Set[string])
 
 	// Issue deletes first, in reverse of insertion order, to maintain foreign key constraints.
-	for i := len(l.fixtureFiles) - 1; i >= 0; i-- {
-		fixture := l.fixtureFiles[i]
+	for _, fixture := range slices.Backward(l.fixtureFiles) {
 		if !tableDeleted.Contains(fixture.name) {
 			if _, err := tx.Exec(fmt.Sprintf("DELETE FROM %s", l.quoteKeyword(fixture.name))); err != nil {
 				return fmt.Errorf("cannot delete table %s: %w", fixture.name, err)

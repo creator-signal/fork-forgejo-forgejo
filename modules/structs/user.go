@@ -34,9 +34,9 @@ type User struct {
 	// Is the user an administrator
 	IsAdmin bool `json:"is_admin"`
 	// swagger:strfmt date-time
-	LastLogin time.Time `json:"last_login,omitempty"`
+	LastLogin time.Time `json:"last_login"`
 	// swagger:strfmt date-time
-	Created time.Time `json:"created,omitempty"`
+	Created time.Time `json:"created"`
 	// Is user restricted
 	Restricted bool `json:"restricted"`
 	// Is user active
@@ -92,7 +92,7 @@ type UserSettings struct {
 // swagger:model
 type UserSettingsOptions struct {
 	FullName            *string `json:"full_name" binding:"MaxSize(100)"`
-	Website             *string `json:"website" binding:"OmitEmpty;ValidUrl;MaxSize(255)"`
+	Website             *string `json:"website" binding:"OmitEmpty;ValidSiteUrl;MaxSize(255)"`
 	Description         *string `json:"description" binding:"MaxSize(255)"`
 	Location            *string `json:"location" binding:"MaxSize(50)"`
 	Pronouns            *string `json:"pronouns" binding:"MaxSize(50)"`

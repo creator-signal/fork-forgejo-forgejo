@@ -28,7 +28,7 @@ func doCheckRepositoryEmptyStatus(ctx APITestContext, isEmpty bool) func(*testin
 
 func doAddChangesToCheckout(dstPath, filename string) func(*testing.T) {
 	return func(t *testing.T) {
-		require.NoError(t, os.WriteFile(filepath.Join(dstPath, filename), []byte(fmt.Sprintf("# Testing Repository\n\nOriginally created in: %s at time: %v", dstPath, time.Now())), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dstPath, filename), fmt.Appendf(nil, "# Testing Repository\n\nOriginally created in: %s at time: %v", dstPath, time.Now()), 0o644))
 		require.NoError(t, git.AddChanges(dstPath, true))
 		signature := git.Signature{
 			Email: "test@example.com",
@@ -154,7 +154,9 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("AddChanges", doAddChangesToCheckout(dstPath, "CHANGES2.md"))
 
-			t.Run("FailToPush", doGitPushTestRepositoryFail(dstPath, "origin", "master"))
+			t.Run("FailToPush", func(t *testing.T) {
+				doGitPushTestRepositoryFail(t, dstPath, "origin", "master")
+			})
 
 			otherSSHURL := createSSHUrl(otherCtx.GitPath(), u)
 			dstOtherPath := t.TempDir()

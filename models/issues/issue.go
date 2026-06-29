@@ -80,7 +80,10 @@ func (err ErrIssueWasClosed) Error() string {
 	return fmt.Sprintf("Issue [%d] %d was already closed", err.ID, err.Index)
 }
 
-var ErrIssueAlreadyChanged = util.NewInvalidArgumentErrorf("the issue is already changed")
+var (
+	ErrIssueAlreadyChanged = util.NewInvalidArgumentErrorf("the issue is already changed")
+	ErrNoPosterSetOnIssue  = errors.New("the issue has no poster")
+)
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
@@ -386,7 +389,14 @@ func (issue *Issue) APIURL(ctx context.Context) string {
 			return ""
 		}
 	}
-	return fmt.Sprintf("%s/issues/%d", issue.Repo.APIURL(), issue.Index)
+
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		path = "issues"
+	}
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.APIURL(), path, issue.Index)
 }
 
 // HTMLURL returns the absolute URL to this issue.

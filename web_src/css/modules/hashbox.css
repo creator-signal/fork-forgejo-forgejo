@@ -14,7 +14,6 @@
   font-family: var(--fonts-monospace);
   font-size: 13px;
   font-weight: var(--font-weight-normal);
-  line-height: 1;
 }
 
 .primary.sha.label {
@@ -24,16 +23,16 @@
 }
 
 .sha.label .shortsha {
-  padding: 0.33rem 0.5rem;
+  padding: 0.1rem 0.5rem;
 }
 
 .sha.label .signature {
   color: var(--color-text);
   background: var(--color-light);
-  padding: 0.25rem 0.33rem;
-  border-left: 1px solid var(--color-light-border);
-  border-top-right-radius: inherit;
-  border-bottom-right-radius: inherit;
+  padding: 0.15rem 0.33rem;
+  border-inline-start: 1px solid var(--color-light-border);
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
 }
 
 .sha.label .signature-author {
@@ -53,7 +52,7 @@
 }
 
 .sha.label.isSigned.isWarning .signature {
-  border-left: 1px solid var(--color-red-badge);
+  border-inline-start: 1px solid var(--color-red-badge);
   color: var(--color-red-badge);
 }
 
@@ -67,7 +66,7 @@
 }
 
 .sha.label.isSigned.isVerified .signature {
-  border-left: 1px solid var(--color-green-badge);
+  border-inline-start: 1px solid var(--color-green-badge);
   color: var(--color-green-badge);
 }
 
@@ -81,7 +80,7 @@
 }
 
 .sha.label.isSigned.isVerifiedUntrusted .signature {
-  border-left: 1px solid var(--color-yellow-badge);
+  border-inline-start: 1px solid var(--color-yellow-badge);
   color: var(--color-yellow-badge);
 }
 
@@ -95,7 +94,7 @@
 }
 
 .sha.label.isSigned.isVerifiedUnmatched .signature {
-  border-left: 1px solid var(--color-orange-badge);
+  border-inline-start: 1px solid var(--color-orange-badge);
   color: var(--color-orange-badge);
 }
 

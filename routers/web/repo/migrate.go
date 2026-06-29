@@ -25,6 +25,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	"forgejo.org/services/task"
 )
 
@@ -184,7 +185,7 @@ func MigratePost(ctx *context.Context) {
 
 	remoteAddr, err := forms.ParseRemoteAddr(form.CloneAddr, form.AuthUsername, form.AuthPassword)
 	if err == nil {
-		err = migrations.IsMigrateURLAllowed(remoteAddr, ctx.Doer)
+		err = migrations_allowlist.IsMigrateURLAllowed(remoteAddr, ctx.Doer)
 	}
 	if err != nil {
 		ctx.Data["Err_CloneAddr"] = true
@@ -201,7 +202,7 @@ func MigratePost(ctx *context.Context) {
 			ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_lfs_endpoint"), tpl, &form)
 			return
 		}
-		err = migrations.IsMigrateURLAllowed(ep.String(), ctx.Doer)
+		err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
 		if err != nil {
 			ctx.Data["Err_LFSEndpoint"] = true
 			handleMigrateRemoteAddrError(ctx, err, tpl, form)
@@ -269,7 +270,6 @@ func setMigrationContextData(ctx *context.Context, serviceType structs.GitServic
 func MigrateRetryPost(ctx *context.Context) {
 	ok, err := quota_model.EvaluateForUser(ctx, ctx.Repo.Repository.OwnerID, quota_model.LimitSubjectSizeReposAll)
 	if err != nil {
-		log.Error("quota_model.EvaluateForUser: %v", err)
 		ctx.ServerError("quota_model.EvaluateForUser", err)
 		return
 	}
@@ -287,7 +287,6 @@ func MigrateRetryPost(ctx *context.Context) {
 	}
 
 	if err := task.RetryMigrateTask(ctx, ctx.Repo.Repository.ID); err != nil {
-		log.Error("Retry task failed: %v", err)
 		ctx.ServerError("task.RetryMigrateTask", err)
 		return
 	}

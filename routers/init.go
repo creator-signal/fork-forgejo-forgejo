@@ -33,7 +33,7 @@ import (
 	"forgejo.org/routers/private"
 	web_routers "forgejo.org/routers/web"
 	actions_service "forgejo.org/services/actions"
-	"forgejo.org/services/auth"
+	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/oauth2"
 	"forgejo.org/services/automerge"
 	"forgejo.org/services/cron"
@@ -43,7 +43,7 @@ import (
 	"forgejo.org/services/mailer"
 	mailer_incoming "forgejo.org/services/mailer/incoming"
 	markup_service "forgejo.org/services/markup"
-	migrations_service "forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	mirror_service "forgejo.org/services/mirror"
 	pull_service "forgejo.org/services/pull"
 	release_service "forgejo.org/services/release"
@@ -92,8 +92,6 @@ func syncAppConfForGit(ctx context.Context) error {
 	}
 
 	if updated {
-		log.Info("re-sync repository hooks ...")
-		mustInitCtx(ctx, repo_service.SyncRepositoryHooks)
 		return system.AppState.Set(ctx, runtimeState)
 	}
 	return nil
@@ -152,7 +150,7 @@ func InitWebInstalled(ctx context.Context) {
 	mustInit(pull_service.Init)
 	mustInit(automerge.Init)
 	mustInit(task.Init)
-	mustInit(migrations_service.Init)
+	mustInit(migrations_allowlist.Init)
 	eventsource.GetManager().Init()
 	mustInitCtx(ctx, mailer_incoming.Init)
 
@@ -160,7 +158,7 @@ func InitWebInstalled(ctx context.Context) {
 
 	mustInitCtx(ctx, ssh.Init)
 
-	auth.Init()
+	auth_method.Init()
 	mustInit(svg.Init)
 
 	actions_service.Init()

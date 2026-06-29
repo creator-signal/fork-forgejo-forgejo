@@ -5,7 +5,9 @@ package actions
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	actions_model "forgejo.org/models/actions"
@@ -28,6 +30,12 @@ type DetectedWorkflow struct {
 	Content             []byte
 	EventDetectionError error
 	NeedApproval        actions_model.ApprovalType
+}
+
+// GetWorkflowPath returns the full path to the workflow from the repository root, for example,
+// .forgejo/workflows/test.yaml.
+func (wf *DetectedWorkflow) GetWorkflowPath() string {
+	return fmt.Sprintf("%s/%s", wf.EntryDirectory, wf.EntryName)
 }
 
 func init() {
@@ -509,7 +517,7 @@ func matchPullRequestEvent(gitRepo *git.Repository, commit *git.Commit, prPayloa
 				matchTimes++
 			}
 		case "paths":
-			filesChanged, err := headCommit.GetFilesChangedSinceCommit(prPayload.PullRequest.Base.Ref)
+			filesChanged, err := headCommit.GetFilesChangedSinceCommit(prPayload.PullRequest.MergeBase)
 			if err != nil {
 				log.Error("GetFilesChangedSinceCommit [commit_sha1: %s]: %v", headCommit.ID.String(), err)
 			} else {
@@ -522,7 +530,7 @@ func matchPullRequestEvent(gitRepo *git.Repository, commit *git.Commit, prPayloa
 				}
 			}
 		case "paths-ignore":
-			filesChanged, err := headCommit.GetFilesChangedSinceCommit(prPayload.PullRequest.Base.Ref)
+			filesChanged, err := headCommit.GetFilesChangedSinceCommit(prPayload.PullRequest.MergeBase)
 			if err != nil {
 				log.Error("GetFilesChangedSinceCommit [commit_sha1: %s]: %v", headCommit.ID.String(), err)
 			} else {
@@ -602,11 +610,8 @@ func matchPullRequestReviewEvent(prPayload *api.PullRequestPayload, evt *jobpars
 
 			matched := false
 			for _, val := range vals {
-				for _, action := range actions {
-					if glob.MustCompile(val, '/').Match(action) {
-						matched = true
-						break
-					}
+				if slices.ContainsFunc(actions, glob.MustCompile(val, '/').Match) {
+					matched = true
 				}
 				if matched {
 					break
@@ -651,11 +656,8 @@ func matchPullRequestReviewCommentEvent(prPayload *api.PullRequestPayload, evt *
 
 			matched := false
 			for _, val := range vals {
-				for _, action := range actions {
-					if glob.MustCompile(val, '/').Match(action) {
-						matched = true
-						break
-					}
+				if slices.ContainsFunc(actions, glob.MustCompile(val, '/').Match) {
+					matched = true
 				}
 				if matched {
 					break

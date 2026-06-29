@@ -108,7 +108,7 @@ func TestActions_CmdForgejo_Actions(t *testing.T) {
 			},
 		} {
 			t.Run(testCase.testName, func(t *testing.T) {
-				uuid, err := runMainAppWithStdin(testCase.stdin, "forgejo-cli", "actions", "register", testCase.secretOption(), "--scope=org26")
+				uuid, err := tests.RunMainAppWithStdin(testCase.stdin, "forgejo-cli", "actions", "register", testCase.secretOption(), "--scope=org26")
 				require.NoError(t, err)
 				assert.Equal(t, expecteduuid, uuid)
 			})
@@ -183,7 +183,7 @@ func TestActions_CmdForgejo_Actions(t *testing.T) {
 				//
 				// Run twice to verify it is idempotent
 				//
-				for i := 0; i < 2; i++ {
+				for range 2 {
 					uuid, err := runMainApp("forgejo-cli", cmd...)
 					require.NoError(t, err)
 					if assert.Equal(t, testCase.uuid, uuid) {

@@ -74,16 +74,7 @@ func fromRunJobModelToResponse(job []*actions_model.ActionRunJob, labels []strin
 	var res []*structs.ActionRunJob
 	for i := range job {
 		if len(labels) == 0 || labels[0] == "" && len(job[i].RunsOn) == 0 || job[i].ItRunsOn(labels) {
-			res = append(res, &structs.ActionRunJob{
-				ID:      job[i].ID,
-				RepoID:  job[i].RepoID,
-				OwnerID: job[i].OwnerID,
-				Name:    job[i].Name,
-				Needs:   job[i].Needs,
-				RunsOn:  job[i].RunsOn,
-				TaskID:  job[i].TaskID,
-				Status:  job[i].Status.String(),
-			})
+			res = append(res, convert.ToActionRunJob(job[i]))
 		}
 	}
 	return res
@@ -106,6 +97,7 @@ func ListRunners(ctx *context.APIContext, ownerID, repoID int64) {
 		OwnerID:     ownerID,
 		RepoID:      repoID,
 		ListOptions: listOptions,
+		WithVisible: ctx.FormBool("visible"),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "FindCountRunners", map[string]string{})
@@ -138,7 +130,7 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
-	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
+	runner, err := actions_model.GetVisibleRunnerByID(ctx, runnerID, ownerID, repoID)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "GetRunnerNotFound", err)
@@ -147,14 +139,11 @@ func GetRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		}
 		return
 	}
-	if !runner.Editable(ownerID, repoID) {
-		ctx.Error(http.StatusNotFound, "RunnerEdit", "No permission to get this runner")
-		return
-	}
 
 	actionRunner, err := convert.ToActionRunner(runner)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ToActionRunner", err)
+		return
 	}
 	ctx.JSON(http.StatusOK, actionRunner)
 }
@@ -177,6 +166,7 @@ func RegisterRunner(ctx *context.APIContext, ownerID, repoID int64) {
 	runner.GenerateToken()
 	if err := actions_model.CreateRunner(ctx, runner); err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateRunner", err)
+		return
 	}
 
 	response := &structs.RegisterRunnerResponse{
@@ -198,7 +188,7 @@ func DeleteRunner(ctx *context.APIContext, ownerID, repoID, runnerID int64) {
 		ctx.Error(http.StatusUnprocessableEntity, "", fmt.Errorf("ownerID and repoID should not be both set: %d and %d", ownerID, repoID))
 		return
 	}
-	runner, err := actions_model.GetRunnerByID(ctx, runnerID)
+	runner, err := actions_model.GetVisibleRunnerByID(ctx, runnerID, ownerID, repoID)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "DeleteRunnerNotFound", err)

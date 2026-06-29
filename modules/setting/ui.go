@@ -21,6 +21,7 @@ var UI = struct {
 	PackagesPagingNum     int
 	GraphMaxCommitNum     int
 	CodeCommentLines      int
+	MaxCodeCommentLines   int
 	ReactionMaxUserNum    int
 	MaxDisplayFileSize    int64
 	ShowUserEmail         bool
@@ -55,10 +56,12 @@ var UI = struct {
 	} `ini:"ui.csv"`
 
 	Admin struct {
-		UserPagingNum   int
-		RepoPagingNum   int
-		NoticePagingNum int
-		OrgPagingNum    int
+		UserPagingNum           int
+		RepoPagingNum           int
+		NoticePagingNum         int
+		OrgPagingNum            int
+		FederationHostPagingNum int
+		FederationUserPagingNum int
 	} `ini:"ui.admin"`
 	User struct {
 		RepoPagingNum int
@@ -79,6 +82,7 @@ var UI = struct {
 	PackagesPagingNum:   20,
 	GraphMaxCommitNum:   100,
 	CodeCommentLines:    4,
+	MaxCodeCommentLines: 50,
 	ReactionMaxUserNum:  10,
 	MaxDisplayFileSize:  8388608,
 	DefaultTheme:        `forgejo-auto`,
@@ -114,15 +118,19 @@ var UI = struct {
 		MaxRows:     2500,
 	},
 	Admin: struct {
-		UserPagingNum   int
-		RepoPagingNum   int
-		NoticePagingNum int
-		OrgPagingNum    int
+		UserPagingNum           int
+		RepoPagingNum           int
+		NoticePagingNum         int
+		OrgPagingNum            int
+		FederationHostPagingNum int
+		FederationUserPagingNum int
 	}{
-		UserPagingNum:   50,
-		RepoPagingNum:   50,
-		NoticePagingNum: 25,
-		OrgPagingNum:    50,
+		UserPagingNum:           50,
+		RepoPagingNum:           50,
+		NoticePagingNum:         25,
+		OrgPagingNum:            50,
+		FederationHostPagingNum: 50,
+		FederationUserPagingNum: 50,
 	},
 	User: struct {
 		RepoPagingNum int

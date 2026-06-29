@@ -16,18 +16,18 @@ test.describe('Pull: Toggle WIP', () => {
   const prTitle = 'pull5';
 
   async function toggle_wip_to({page}: {page: Page}, should: boolean) {
-    await page.waitForLoadState('domcontentloaded');
+    const loadPromise = page.waitForEvent('load');
     if (should) {
       await page.getByText('Still in progress?').click();
     } else {
       await page.getByText('Ready for review?').click();
     }
+    await loadPromise;
   }
 
   async function check_wip({page}: {page: Page}, is: boolean) {
     const elemTitle = 'h1';
     const stateLabel = '.issue-state-label';
-    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator(elemTitle)).toContainText(prTitle);
     await expect(page.locator(elemTitle)).toContainText('#5');
     const wipRegex = /(wip|\[WIP\])/i;
@@ -43,16 +43,16 @@ test.describe('Pull: Toggle WIP', () => {
   async function setTitle({page}: {page: Page}, title: string) {
     await page.locator('#issue-title-edit-show').click();
     await page.locator('#issue-title-editor input').fill(title);
+    const loadPromise = page.waitForEvent('load');
     await page.getByText('Save').click();
+    await loadPromise;
   }
 
   test.beforeEach(async ({page}) => {
     const response = await page.goto('/user2/repo1/pulls/5');
     expect(response?.status()).toBe(200); // Status OK
     // ensure original title
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(prTitle);
-    await page.getByText('Save').click();
+    await setTitle({page}, prTitle);
     await check_wip({page}, false);
   });
 
@@ -66,11 +66,8 @@ test.describe('Pull: Toggle WIP', () => {
   });
 
   test('manual edit', async ({page}) => {
-    await page.goto('/user2/repo1/pulls/5');
     // manually edit title to another prefix
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(`[WIP] ${prTitle}`);
-    await page.getByText('Save').click();
+    await setTitle({page}, `[WIP] ${prTitle}`);
     await check_wip({page}, true);
     // remove again
     await toggle_wip_to({page}, false);
@@ -78,12 +75,9 @@ test.describe('Pull: Toggle WIP', () => {
   });
 
   test('maximum title length', async ({page}) => {
-    await page.goto('/user2/repo1/pulls/5');
     // check maximum title length is handled gracefully
     const maxLenStr = prTitle + 'a'.repeat(240);
-    await page.locator('#issue-title-edit-show').click();
-    await page.locator('#issue-title-editor input').fill(maxLenStr);
-    await page.getByText('Save').click();
+    await setTitle({page}, maxLenStr);
     await expect(page.locator('h1')).toContainText(maxLenStr);
     await check_wip({page}, false);
     await toggle_wip_to({page}, true);
@@ -95,7 +89,6 @@ test.describe('Pull: Toggle WIP', () => {
   });
 
   test('wip prefix casing', async ({page}) => {
-    await page.goto('/user2/repo1/pulls/5');
     await setTitle({page}, `wIP:${prTitle}`);
     await expect(page.locator('h1')).toContainText(`wIP:${prTitle}`);
     await check_wip({page}, true);
@@ -378,4 +371,24 @@ test('Issue: Reference', async ({page}) => {
   await expect(page.locator('.ui.reference .truncate')).toContainText(
     'user2/repo1#1',
   );
+
+  await page.getByRole('button', {name: 'Copy'}).click();
+
+  await expect(async () => {
+    const reference = await page.evaluate(() => navigator.clipboard.readText());
+    expect(reference).toBe('user2/repo1#1');
+  }).toPass();
+});
+
+test('Issue: Watch URL Retention', async ({page}) => {
+  const response = await page.goto('/user2/repo1/pulls/5');
+  expect(response?.status()).toBe(200);
+
+  const button = page.locator('.ui.watching button');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
 });

@@ -14,8 +14,10 @@ import (
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/queue"
+	"forgejo.org/modules/structs"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
 	"xorm.io/builder"
@@ -61,27 +63,25 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 		return fmt.Errorf("checkJobsOfRun for runID %d hit recursion limit %d", runID, recursionCount)
 	}
 
+	var jobs actions_model.ActionJobList
 	jobs, err := db.Find[actions_model.ActionRunJob](ctx, actions_model.FindRunJobOptions{RunID: runID})
 	if err != nil {
 		return err
 	}
-	if err := db.WithTx(ctx, func(ctx context.Context) error {
-		idToJobs := make(map[string][]*actions_model.ActionRunJob, len(jobs))
-		for _, job := range jobs {
-			idToJobs[job.JobID] = append(idToJobs[job.JobID], job)
-		}
 
-		updates := newJobStatusResolver(jobs).Resolve()
+	var updates map[int64]actions_model.Status
+	if err := db.WithTx(ctx, func(ctx context.Context) error {
+		updates = newJobStatusResolver(jobs).Resolve()
 		for _, job := range jobs {
 			if status, ok := updates[job.ID]; ok {
 				job.Status = status
 				updateColumns := []string{"status"}
 
-				if status == actions_model.StatusWaiting {
-					behaviour, err := tryHandleIncompleteMatrix(ctx, job, jobs)
+				if status.IsWaiting() {
+					behaviour, err := prepareJobForEmitting(ctx, job, jobs)
 					switch behaviour {
 					case behaviourError:
-						return fmt.Errorf("error in tryHandleIncompleteMatrix: %w", err)
+						return fmt.Errorf("error in prepareJobForEmitting: %w", err)
 
 					case behaviourExecuteJob:
 						// Intentional blank case -- proceed with updating the status of the job to waiting.
@@ -94,8 +94,12 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 					case behaviourIgnoreAllJobsInRun:
 						// Stop processing any other jobs in this run.
 						return nil
+
+					case behaviorSkipJob:
+						// "status" is already a column that we're updating, so we can just switch the target status to skipped.
+						job.Status = actions_model.StatusSkipped
 					}
-				} else if status == actions_model.StatusSuccess || status == actions_model.StatusFailure {
+				} else if status.IsSuccess() || status.IsFailure() || status.IsSkipped() {
 					// Transition to these states can be triggered by workflow call outer jobs
 					additionalColumns, err := tryHandleWorkflowCallOuterJob(ctx, job)
 					if err != nil {
@@ -115,15 +119,16 @@ func checkJobsOfRun(ctx context.Context, runID int64, recursionCount int) error 
 	}); err != nil {
 		return err
 	}
+
 	CreateCommitStatus(ctx, jobs...)
 
-	// tryHandleIncompleteMatrix can create new jobs in this run which may initially be persisted in the DB as blocked
+	// prepareJobForEmitting can create new jobs in this run which may initially be persisted in the DB as blocked
 	// because they have non-empty `needs`. In that case, we need to recursively run the job emitter so that new jobs
 	// are recognized as having their `needs` completed and be set as unblocked. Check if any new jobs were created and
-	// rerun the job emitter if so.
+	// rerun the job emitter if so. The same is necessary if updates completed jobs that unblocked other jobs.
 	if hasNewJobs, err := actions_model.RunHasOtherJobs(ctx, runID, jobs); err != nil {
 		return fmt.Errorf("RunHasOtherJobs error: %w", err)
-	} else if hasNewJobs {
+	} else if hasNewJobs || len(updates) > 0 {
 		return checkJobsOfRun(ctx, runID, recursionCount+1)
 	}
 
@@ -135,6 +140,10 @@ type jobStatusResolver struct {
 	needs    map[int64][]int64
 	jobMap   map[int64]*actions_model.ActionRunJob
 }
+
+// unknownJobID stores the ID of an unknown job that might be referenced in the workflow. The ID can be any number as
+// long it does not match the ID of an existing job.
+var unknownJobID int64 = -1
 
 func newJobStatusResolver(jobs actions_model.ActionJobList) *jobStatusResolver {
 	idToJobs := make(map[string][]*actions_model.ActionRunJob, len(jobs))
@@ -149,8 +158,14 @@ func newJobStatusResolver(jobs actions_model.ActionJobList) *jobStatusResolver {
 	for _, job := range jobs {
 		statuses[job.ID] = job.Status
 		for _, need := range job.Needs {
-			for _, v := range idToJobs[need] {
-				needs[job.ID] = append(needs[job.ID], v.ID)
+			neededJobs, ok := idToJobs[need]
+			if ok {
+				for _, v := range neededJobs {
+					needs[job.ID] = append(needs[job.ID], v.ID)
+				}
+			} else {
+				// Handles the case of an unknown job being referenced in `needs`, for example, `needs: ["unknown"]`.
+				needs[job.ID] = append(needs[job.ID], unknownJobID)
 			}
 		}
 	}
@@ -163,41 +178,29 @@ func newJobStatusResolver(jobs actions_model.ActionJobList) *jobStatusResolver {
 
 func (r *jobStatusResolver) Resolve() map[int64]actions_model.Status {
 	ret := map[int64]actions_model.Status{}
-	for i := 0; i < len(r.statuses); i++ {
-		updated := r.resolve()
-		if len(updated) == 0 {
-			return ret
-		}
-		for k, v := range updated {
-			ret[k] = v
-			r.statuses[k] = v
-		}
-	}
-	return ret
-}
-
-func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
-	ret := map[int64]actions_model.Status{}
 	for id, status := range r.statuses {
 		if status != actions_model.StatusBlocked {
 			continue
 		}
-		allDone, allSucceed := true, true
+		allDone, allSucceedOrSkip, allSkip := true, true, true
 		for _, need := range r.needs[id] {
 			needStatus := r.statuses[need]
 			if !needStatus.IsDone() {
 				allDone = false
 			}
-			if needStatus.In(actions_model.StatusFailure, actions_model.StatusCancelled, actions_model.StatusSkipped) {
-				allSucceed = false
+			if needStatus.In(actions_model.StatusFailure, actions_model.StatusCancelled) {
+				allSucceedOrSkip = false
+			}
+			if !needStatus.IsSkipped() {
+				allSkip = false
 			}
 		}
 		if allDone {
 			if isWorkflowCallOuterJob, _ := r.jobMap[id].IsWorkflowCallOuterJob(); isWorkflowCallOuterJob {
 				// If the dependent job was a workflow call outer job, then options aren't waiting/skipped, but rather
-				// success/failure.  checkJobsOfRun will do additional work in these cases to "finish" the workflow call
-				// job as well.
-				if allSucceed {
+				// success/skip/failure.  checkJobsOfRun will do additional work in these cases to "finish" the workflow
+				// call job as well.
+				if allSucceedOrSkip {
 					isIncompleteMatrix, _, _ := r.jobMap[id].HasIncompleteMatrix()
 					isIncompleteWith, _, _, _ := r.jobMap[id].HasIncompleteWith()
 					if isIncompleteMatrix || isIncompleteWith {
@@ -205,9 +208,15 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 						// inner jobs are done.  But if the job is incomplete, that means that the `needs` that were
 						// required to define the job are done, and now the job can be expanded with the missing values
 						// that come from `${{ needs... }}`.  By putting this job into `Waiting` state, it will go into
-						// `tryHandleIncompleteMatrix` to be reparsed, replaced with a full job definition, with new
-						// `needs` that contain its inner jobs:
+						// `prepareJobForEmitting` to be reparsed, replaced with a full job definition, with new `needs`
+						// that contain its inner jobs:
 						ret[id] = actions_model.StatusWaiting
+					} else if allSkip {
+						// All of the inner jobs are skipped -- this most likely occurs because an outer job's `if:`
+						// condition was false, and that condition was populated to all the inner jobs.  Even if that's
+						// not the case, it's effectively true that the reusable workflow was skipped if all the inner
+						// jobs had their own `if:` conditions that were skipped.
+						ret[id] = actions_model.StatusSkipped
 					} else {
 						// This job is done by virtue of its inner jobs being done successfully.
 						ret[id] = actions_model.StatusSuccess
@@ -216,25 +225,10 @@ func (r *jobStatusResolver) resolve() map[int64]actions_model.Status {
 					ret[id] = actions_model.StatusFailure
 				}
 			} else {
-				if allSucceed {
-					ret[id] = actions_model.StatusWaiting
-				} else {
-					// Check if the job has an "if" condition
-					hasIf := false
-					if wfJobs, _ := jobparser.Parse(r.jobMap[id].WorkflowPayload, false); len(wfJobs) == 1 {
-						_, wfJob := wfJobs[0].Job()
-						hasIf = len(wfJob.If.Value) > 0
-					}
-
-					if hasIf {
-						// act_runner will check the "if" condition
-						ret[id] = actions_model.StatusWaiting
-					} else {
-						// If the "if" condition is empty and not all dependent jobs completed successfully,
-						// the job should be skipped.
-						ret[id] = actions_model.StatusSkipped
-					}
-				}
+				// All the `needs` of this job are done.  We could now go to waiting or skipped, dependent on the `if`
+				// condition of the new job.  Don't evaluate that here -- set it to waiting, and `prepareJobForEmitting`
+				// will perform a full evaluation of the if clause to determine if it should be skipped.
+				ret[id] = actions_model.StatusWaiting
 			}
 		}
 	}
@@ -255,11 +249,16 @@ const (
 
 	// behaviourIgnoreAllJobsInRun indicates that something went wrong and all jobs in the run should now be ignored.
 	behaviourIgnoreAllJobsInRun
+
+	// behaviorSkipJob indicates that the job should be marked as skipped as the 'if' evaluation returned false.
+	behaviorSkipJob
 )
 
-// Invoked once a job has all its `needs` parameters met and is ready to transition to waiting, this may expand the
-// job's `strategy.matrix` into multiple new jobs.
-func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.ActionRunJob, jobsInRun []*actions_model.ActionRunJob) (behaviour, error) {
+// Invoked once a job has all its `needs` parameters met and is ready to transition to waiting. May expand the job's
+// `strategy.matrix` into multiple new jobs, may compute a calculated `runs-on` field, may expand reusable workflows,
+// and may evaluate `if` to see if the job should be skipped -- all things that could change based upon `${{ needs...
+// }}` outputs and results, which are now available.
+func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.ActionRunJob, jobsInRun []*actions_model.ActionRunJob) (behaviour, error) {
 	incompleteMatrix, _, err := blockedJob.HasIncompleteMatrix()
 	if err != nil {
 		return behaviourError, fmt.Errorf("job HasIncompleteMatrix: %w", err)
@@ -275,26 +274,22 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 		return behaviourError, fmt.Errorf("job HasIncompleteWith: %w", err)
 	}
 
-	if !incompleteMatrix && !incompleteRunsOn && !incompleteWith {
-		// Not relevant to attempt re-parsing the job if it wasn't marked as Incomplete[...] previously.
-		return behaviourExecuteJob, nil
-	}
-
 	if err := blockedJob.LoadRun(ctx); err != nil {
-		return behaviourError, fmt.Errorf("failure LoadRun in tryHandleIncompleteMatrix: %w", err)
+		return behaviourError, fmt.Errorf("failure LoadRun in prepareJobForEmitting: %w", err)
 	}
 
 	// Compute jobOutputs for all the other jobs required as needed by this job:
 	jobOutputs := make(map[string]map[string]string, len(jobsInRun))
+	jobResults := make(map[string]string, len(jobsInRun))
 	for _, job := range jobsInRun {
 		if !slices.Contains(blockedJob.Needs, job.JobID) {
 			// Only include jobs that are in the `needs` of the blocked job.
 			continue
 		} else if !job.Status.IsDone() {
 			// Unexpected: `job` is needed by `blockedJob` but it isn't done; `jobStatusResolver` shouldn't be calling
-			// `tryHandleIncompleteMatrix` in this case.
+			// `prepareJobForEmitting` in this case.
 			return behaviourError, fmt.Errorf(
-				"jobStatusResolver attempted to tryHandleIncompleteMatrix for a job (id=%d) with an incomplete 'needs' job (id=%d)", blockedJob.ID, job.ID)
+				"jobStatusResolver attempted to prepareJobForEmitting for a job (id=%d) with an incomplete 'needs' job (id=%d)", blockedJob.ID, job.ID)
 		}
 
 		outputs, err := actions_model.FindTaskOutputByTaskID(ctx, job.TaskID)
@@ -307,6 +302,12 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 			outputsMap[v.OutputKey] = v.OutputValue
 		}
 		jobOutputs[job.JobID] = outputsMap
+		jobResults[job.JobID] = job.Status.String()
+	}
+
+	vars, err := actions_model.GetVariablesOfRun(ctx, blockedJob.Run)
+	if err != nil {
+		return behaviourError, fmt.Errorf("failure GetVariablesOfRun in prepareJobForEmitting: %w", err)
 	}
 
 	// Re-parse the blocked job, providing all the other completed jobs' outputs, to turn this incomplete job into
@@ -315,10 +316,14 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 	defer expandCleanup()
 	newJobWorkflows, err := jobparser.Parse(blockedJob.WorkflowPayload, false,
 		jobparser.WithJobOutputs(jobOutputs),
+		jobparser.WithJobResults(jobResults),
 		jobparser.WithWorkflowNeeds(blockedJob.Needs),
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+		jobparser.WithVars(vars),
+		jobparser.WithInputs(getRunInputs(blockedJob.Run)),
+		jobparser.WithGitContext(generateGiteaContextForRun(blockedJob.Run)),
 	)
 	if err != nil {
 		// Reparsing errors are quite rare here since we were already able to parse this workflow in the past to
@@ -335,6 +340,31 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 		return behaviourIgnoreAllJobsInRun, nil
 	}
 
+	if !incompleteMatrix && !incompleteRunsOn && !incompleteWith {
+		// We did not need to reparse this job in order to expand it into new workflows.  But, as we've provided all the
+		// necessary parsing context to the job, we can use this opportunity to perform an evaluation of the job's 'if'
+		// clause within the server, and we might be able to skip this job.
+
+		if len(newJobWorkflows) != 1 {
+			// This case shouldn't happen, but we'll ignore our attempt to evaluate the if block:
+			return behaviourExecuteJob, nil
+		}
+
+		swf := newJobWorkflows[0]
+		_, job := swf.Job()
+
+		ifPassed, err := job.EvaluateIf()
+		if errors.Is(err, jobparser.ErrCannotEvaluateInJobParser) {
+			// Fallback to sending the job to a runner.
+			return behaviourExecuteJob, nil
+		} else if err != nil {
+			return behaviourError, err
+		} else if !ifPassed {
+			return behaviorSkipJob, nil
+		}
+		return behaviourExecuteJob, nil
+	}
+
 	// Even though every job in the `needs` list is done, perform a consistency check if the job was still unable to be
 	// evaluated into a fully complete job with the correct matrix and runs-on values. Evaluation errors here need to be
 	// reported back to the user for them to correct their workflow, so we slip this notification into
@@ -347,6 +377,14 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 		jobID, job := swf.Job()
 		if jobID == blockedJob.JobID {
 			if swf.IncompleteMatrix {
+				if cascadeSkip(swf.IncompleteMatrixNeeds, jobResults) {
+					// This job has an incomplete matrix.  It is incomplete because it has `${{ needs.x... }}` where x
+					// is a skipped job.  Skip this job as well.
+					//
+					// Theoretically this job could have `if: always()` and expect to be executed... but that's
+					// contradictory with having a matrix that relies on a needed job that was skipped.
+					return behaviorSkipJob, nil
+				}
 				errorCode, errorDetails := persistentIncompleteMatrixError(blockedJob, swf.IncompleteMatrixNeeds)
 				if err := FailRunPreExecutionError(ctx, blockedJob.Run, errorCode, errorDetails); err != nil {
 					return behaviourError, fmt.Errorf("setting run into PreExecutionError state failed: %w", err)
@@ -354,6 +392,11 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 				// `FailRunPreExecutionError` will mark all the pending runs in the job failed; ignore all of them.
 				return behaviourIgnoreAllJobsInRun, nil
 			} else if swf.IncompleteRunsOn {
+				if cascadeSkip(swf.IncompleteRunsOnNeeds, jobResults) {
+					// This job has an incomplete runs-on.  It is incomplete because it has `${{ needs.x... }}` where x
+					// is a skipped job.  Skip this job as well.
+					return behaviorSkipJob, nil
+				}
 				errorCode, errorDetails := persistentIncompleteRunsOnError(blockedJob, swf.IncompleteRunsOnNeeds, swf.IncompleteRunsOnMatrix)
 				if err := FailRunPreExecutionError(ctx, blockedJob.Run, errorCode, errorDetails); err != nil {
 					return behaviourError, fmt.Errorf("setting run into PreExecutionError state failed: %w", err)
@@ -361,6 +404,11 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 				// `FailRunPreExecutionError` will mark all the pending runs in the job failed; ignore all of them.
 				return behaviourIgnoreAllJobsInRun, nil
 			} else if swf.IncompleteWith {
+				if cascadeSkip(swf.IncompleteWithNeeds, jobResults) {
+					// This job has an incomplete with.  It is incomplete because it has `${{ needs.x... }}` where x is
+					// a skipped job.  Skip this job as well.
+					return behaviorSkipJob, nil
+				}
 				errorCode, errorDetails := persistentIncompleteWithError(blockedJob, swf.IncompleteWithNeeds, swf.IncompleteWithMatrix)
 				if err := FailRunPreExecutionError(ctx, blockedJob.Run, errorCode, errorDetails); err != nil {
 					return behaviourError, fmt.Errorf("setting run into PreExecutionError state failed: %w", err)
@@ -386,8 +434,7 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 	}
 
 	err = db.WithTx(ctx, func(ctx context.Context) error {
-		err := actions_model.InsertRunJobs(ctx, blockedJob.Run, newJobWorkflows)
-		if err != nil {
+		if err := actions_model.InsertRunJobs(ctx, blockedJob.Run, newJobWorkflows); err != nil {
 			return fmt.Errorf("failure in InsertRunJobs: %w", err)
 		}
 
@@ -419,6 +466,23 @@ func tryHandleIncompleteMatrix(ctx context.Context, blockedJob *actions_model.Ac
 	}
 	// job was deleted after it was replaced with one-or-more new jobs, so ignore it.
 	return behaviourIgnoreJob, nil
+}
+
+func cascadeSkip(incompleteNeeds *jobparser.IncompleteNeeds, jobResults map[string]string) bool {
+	if incompleteNeeds == nil {
+		return false
+	}
+	requiredJob := incompleteNeeds.Job
+	requiredJobResult, present := jobResults[requiredJob]
+	if !present {
+		// Can't find the status of the needed job.
+		return false
+	}
+	if requiredJobResult != actions_model.StatusSkipped.String() {
+		// The needed job wasn't skipped, so don't cascade the skip to the dependent job.
+		return false
+	}
+	return true
 }
 
 func persistentIncompleteMatrixError(job *actions_model.ActionRunJob, incompleteNeeds *jobparser.IncompleteNeeds) (actions_model.PreExecutionError, []any) {
@@ -597,7 +661,6 @@ func tryHandleWorkflowCallOuterJob(ctx context.Context, job *actions_model.Actio
 	)
 
 	// Insert a placeholder task with all the computed outputs
-	job.Attempt++
 	actionTask, err := actions_model.CreatePlaceholderTask(ctx, job, outputs)
 	if err != nil {
 		return nil, fmt.Errorf("failure to insert placeholder task: %w", err)
@@ -607,4 +670,19 @@ func tryHandleWorkflowCallOuterJob(ctx context.Context, job *actions_model.Actio
 	// Update previously incremented attempt field as well.
 	job.TaskID = actionTask.ID
 	return []string{"task_id", "attempt"}, nil
+}
+
+func getRunInputs(run *actions_model.ActionRun) map[string]any {
+	// workflow_dispatch inputs are stored in the event payload
+	var dispatchPayload *structs.WorkflowDispatchPayload
+	err := json.Unmarshal([]byte(run.EventPayload), &dispatchPayload)
+	if err != nil {
+		return nil
+	}
+	// transition from map[string]string to map[string]any...
+	inputs := make(map[string]any, len(dispatchPayload.Inputs))
+	for k, v := range dispatchPayload.Inputs {
+		inputs[k] = v
+	}
+	return inputs
 }

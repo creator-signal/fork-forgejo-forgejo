@@ -23,9 +23,9 @@
 }
 
 .markup .anchor {
-  float: left;
-  padding-right: 4px;
-  margin-left: -20px;
+  float: inline-start;
+  padding-inline-end: 4px;
+  margin-inline-start: -20px;
   color: inherit;
 }
 
@@ -144,7 +144,7 @@
 
 .markup ul,
 .markup ol {
-  padding-left: 2em;
+  padding-inline-start: 2em;
 }
 
 .markup ul.no-list,
@@ -162,16 +162,17 @@
 }
 
 .markup .task-list-item input[type="checkbox"] {
-  margin: 0 .4em .25em -1.4em;
+  margin-block-end: 0.25rem;
+  margin-inline-start: -1.4rem;
   padding: 0;
 }
 
 .markup ol .task-list-item input[type="checkbox"] {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 .markup .task-list-item input[type="checkbox"] + p {
-  margin-left: -0.2em;
+  margin-inline-start: -0.2em;
   display: inline;
 }
 
@@ -181,51 +182,6 @@
 
 .markup .task-list-item + .task-list-item {
   margin-top: 4px;
-}
-
-.markup input[type="checkbox"] {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  position: relative;
-  border: 1px solid var(--color-secondary);
-  border-radius: var(--border-radius);
-  background: var(--color-input-background);
-  height: 14px;
-  width: 14px;
-  opacity: 1 !important; /* override fomantic on edit preview */
-  pointer-events: auto !important; /* override fomantic on edit preview */
-  vertical-align: middle !important; /* override fomantic on edit preview */
-  -webkit-print-color-adjust: exact;
-  color-adjust: exact;
-}
-
-.markup input[type="checkbox"]:not([disabled]):hover,
-.markup input[type="checkbox"]:not([disabled]):active {
-  border-color: var(--color-primary);
-}
-
-.markup input[type="checkbox"]::after {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--color-text);
-  mask-size: cover;
-  -webkit-mask-size: cover;
-}
-
-.markup input[type="checkbox"]:checked::after {
-  content: "";
-  mask-image: var(--checkbox-mask-checked);
-  -webkit-mask-image: var(--checkbox-mask-checked);
-  -webkit-print-color-adjust: exact;
-  color-adjust: exact;
-}
-
-.markup input[type="checkbox"]:indeterminate::after {
-  content: "";
-  mask-image: var(--checkbox-mask-indeterminate);
-  -webkit-mask-image: var(--checkbox-mask-indeterminate);
 }
 
 .markup ul ul,
@@ -267,10 +223,10 @@
 }
 
 .markup blockquote {
-  margin-left: 0;
+  margin-inline-start: 0;
   padding: 0 15px;
   color: var(--color-text-light-2);
-  border-left: 0.25em solid var(--color-secondary);
+  border-inline-start: 0.25em solid var(--color-secondary);
 }
 
 .markup blockquote > :first-child {
@@ -328,12 +284,12 @@
 
 .markup img[align="right"],
 .markup video[align="right"] {
-  padding-left: 20px;
+  padding-inline-start: 20px;
 }
 
 .markup img[align="left"],
 .markup video[align="left"] {
-  padding-right: 28px;
+  padding-inline-end: 28px;
 }
 
 .markup .emoji {
@@ -347,7 +303,7 @@
 
 .markup span.frame > span {
   display: block;
-  float: left;
+  float: inline-start;
   width: auto;
   padding: 7px;
   margin: 13px 0 0;
@@ -358,7 +314,7 @@
 .markup span.frame span img,
 .markup span.frame span video {
   display: block;
-  float: left;
+  float: inline-start;
 }
 
 .markup span.frame span span {
@@ -397,19 +353,19 @@
   display: block;
   margin: 13px 0 0;
   overflow: hidden;
-  text-align: right;
+  text-align: end;
 }
 
 .markup span.align-right span img,
 .markup span.align-right span video {
   margin: 0;
-  text-align: right;
+  text-align: end;
 }
 
 .markup span.float-left {
   display: block;
-  float: left;
-  margin-right: 13px;
+  float: inline-start;
+  margin-inline-end: 13px;
   overflow: hidden;
 }
 
@@ -419,8 +375,8 @@
 
 .markup span.float-right {
   display: block;
-  float: right;
-  margin-left: 13px;
+  float: inline-end;
+  margin-inline-start: 13px;
   overflow: hidden;
 }
 
@@ -428,7 +384,7 @@
   display: block;
   margin: 13px auto 0;
   overflow: hidden;
-  text-align: right;
+  text-align: end;
 }
 
 .markup code,
@@ -508,15 +464,15 @@
 .markup .ui.list .list,
 .markup ol.ui.list ol,
 .markup ul.ui.list ul {
-  padding-left: 2em;
+  padding-inline-start: 2em;
 }
 
 .file-revisions-btn {
   display: block;
-  float: left;
+  float: inline-start;
   margin-bottom: 2px !important;
   padding: 11px !important;
-  margin-right: 10px !important;
+  margin-inline-end: 10px !important;
 }
 
 .file-revisions-btn i {
@@ -538,20 +494,20 @@
   display: block !important; /* override fomantic .ui.form .error.message {display: none} */
   border: none !important;
   margin-bottom: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-bottom-right-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
   box-shadow: none !important;
   font-size: 85% !important;
   white-space: pre-wrap !important;
   padding: 0.5rem 1rem !important;
-  text-align: left !important;
+  text-align: start !important;
 }
 
 .markup-block-error + pre {
   border-top: none !important;
   margin-top: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
+  border-top-left-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
+  border-top-right-radius: 0 !important; /* stylelint-disable-line logical-css/require-logical-properties */
 }
 
 .file-view.markup {

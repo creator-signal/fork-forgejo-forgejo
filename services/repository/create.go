@@ -97,8 +97,8 @@ func prepareRepoCommit(ctx context.Context, repo *repo_model.Repository, tmpDir,
 	// .gitignore
 	if len(opts.Gitignores) > 0 {
 		var buf bytes.Buffer
-		names := strings.Split(opts.Gitignores, ",")
-		for _, name := range names {
+		names := strings.SplitSeq(opts.Gitignores, ",")
+		for name := range names {
 			data, err = options.Gitignore(name)
 			if err != nil {
 				return fmt.Errorf("GetRepoInitFile[%s]: %w", name, err)
@@ -308,7 +308,7 @@ func CreateRepositoryDirectly(ctx context.Context, doer, u *user_model.User, opt
 		return nil
 	}); err != nil {
 		if rollbackRepo != nil {
-			if errDelete := DeleteRepositoryDirectly(ctx, doer, rollbackRepo.ID); errDelete != nil {
+			if errDelete := DeleteRepositoryDirectly(ctx, rollbackRepo.ID, DeleteRepositoryOpts{}); errDelete != nil {
 				log.Error("Rollback deleteRepository: %v", errDelete)
 			}
 		}

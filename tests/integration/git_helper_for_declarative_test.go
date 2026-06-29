@@ -143,7 +143,7 @@ func doGitInitTestRepository(dstPath string, objectFormat git.ObjectFormat) func
 		// forcibly set default branch to master
 		_, _, err := git.NewCommand(git.DefaultContext, "symbolic-ref", "HEAD", git.BranchPrefix+"master").RunStdString(&git.RunOpts{Dir: dstPath})
 		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(filepath.Join(dstPath, "README.md"), []byte(fmt.Sprintf("# Testing Repository\n\nOriginally created in: %s", dstPath)), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dstPath, "README.md"), fmt.Appendf(nil, "# Testing Repository\n\nOriginally created in: %s", dstPath), 0o644))
 		require.NoError(t, git.AddChanges(dstPath, true))
 		signature := git.Signature{
 			Email: "test@example.com",
@@ -182,19 +182,18 @@ func doGitPushTestRepository(dstPath string, args ...string) func(*testing.T) {
 	}
 }
 
-func doGitPushTestRepositoryFail(dstPath string, args ...string) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		_, _, err := git.NewCommand(git.DefaultContext, "push").AddArguments(git.ToTrustedCmdArgs(args)...).RunStdString(&git.RunOpts{Dir: dstPath})
-		require.Error(t, err)
-	}
+func doGitPushTestRepositoryFail(t *testing.T, dstPath string, args ...string) (stderr string) {
+	t.Helper()
+	_, stderr, err := git.NewCommand(git.DefaultContext, "push").AddArguments(git.ToTrustedCmdArgs(args)...).RunStdString(&git.RunOpts{Dir: dstPath})
+	require.Error(t, err)
+	return stderr
 }
 
 func doGitAddSomeCommits(dstPath, branch string) func(*testing.T) {
 	return func(t *testing.T) {
 		doGitCheckoutBranch(dstPath, branch)(t)
 
-		require.NoError(t, os.WriteFile(filepath.Join(dstPath, fmt.Sprintf("file-%s.txt", branch)), []byte(fmt.Sprintf("file %s", branch)), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dstPath, fmt.Sprintf("file-%s.txt", branch)), fmt.Appendf(nil, "file %s", branch), 0o644))
 		require.NoError(t, git.AddChanges(dstPath, true))
 		signature := git.Signature{
 			Email: "test@test.test",

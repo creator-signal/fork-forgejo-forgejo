@@ -7,6 +7,7 @@
 package repo
 
 import (
+	stdCtx "context"
 	"errors"
 	"fmt"
 	"html"
@@ -14,8 +15,10 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"forgejo.org/models"
 	actions_model "forgejo.org/models/actions"
@@ -530,6 +533,11 @@ func PrepareMergedViewPullInfo(ctx *context.Context, issue *issues_model.Issue) 
 		}
 	}
 
+	PrepareViewPullInfoActions(ctx, pull)
+	if ctx.Written() {
+		return nil
+	}
+
 	return compareInfo
 }
 
@@ -957,9 +965,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		var prevCommit, curCommit, nextCommit *git.Commit
 
 		// Iterate in reverse to properly map "previous" and "next" buttons
-		for i := len(prInfo.Commits) - 1; i >= 0; i-- {
-			commit := prInfo.Commits[i]
-
+		for _, commit := range slices.Backward(prInfo.Commits) {
 			if curCommit != nil {
 				nextCommit = commit
 				break
@@ -1025,7 +1031,11 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		}
 
 		endCommitID = commitID
-		startCommitID = prInfo.MergeBase
+		if prevCommit != nil {
+			startCommitID = prevCommit.ID.String()
+		} else {
+			startCommitID = prInfo.MergeBase
+		}
 		ctx.Data["IsShowingAllCommits"] = false
 	} else if willShowSpecifiedCommitRange {
 		if len(specifiedEndCommit) > 0 {
@@ -1097,24 +1107,9 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		"numberOfViewedFiles": diff.NumViewedFiles,
 	}
 
-	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool)); err != nil {
+	if err = diff.LoadComments(ctx, issue, ctx.Doer, ctx.Data["ShowOutdatedComments"].(bool), endCommitID); err != nil {
 		ctx.ServerError("LoadComments", err)
 		return
-	}
-
-	for _, file := range diff.Files {
-		for _, section := range file.Sections {
-			for _, line := range section.Lines {
-				for _, comments := range line.Conversations {
-					for _, comment := range comments {
-						if err := comment.LoadAttachments(ctx); err != nil {
-							ctx.ServerError("LoadAttachments", err)
-							return
-						}
-					}
-				}
-			}
-		}
 	}
 
 	pb, err := git_model.GetFirstMatchProtectedBranchRule(ctx, pull.BaseRepoID, pull.BaseBranch)
@@ -1330,7 +1325,8 @@ func MergePullRequest(ctx *context.Context) {
 	pr.Issue = issue
 	pr.Issue.Repo = ctx.Repo.Repository
 
-	manuallyMerged := repo_model.MergeStyle(form.Do) == repo_model.MergeStyleManuallyMerged
+	mergeStyle := repo_model.MergeStyle(form.Do)
+	manuallyMerged := mergeStyle == repo_model.MergeStyleManuallyMerged
 
 	mergeCheckType := pull_service.MergeCheckTypeGeneral
 	if form.MergeWhenChecksSucceed {
@@ -1341,7 +1337,7 @@ func MergePullRequest(ctx *context.Context) {
 	}
 
 	// start with merging by checking
-	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge); err != nil {
+	if err := pull_service.CheckPullMergeable(ctx, ctx.Doer, &ctx.Repo.Permission, pr, mergeCheckType, form.ForceMerge, mergeStyle); err != nil {
 		switch {
 		case errors.Is(err, pull_service.ErrIsClosed):
 			if issue.IsPull {
@@ -1420,7 +1416,15 @@ func MergePullRequest(ctx *context.Context) {
 		}
 	}
 
-	if err := pull_service.Merge(ctx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
+	// If the HTTP request is cancelled by the user agent, don't stop work. We've started a merge and need to finish all
+	// the related work. All usage of `ctx` throughout the rest of this function should be only for error handling or UI
+	// interactions, and all effective work should use `workCtx` instead.
+	workCtx, cancelWorkCtx := stdCtx.WithTimeout(
+		stdCtx.WithoutCancel(ctx),
+		time.Duration(setting.Git.Timeout.Default)*time.Second)
+	defer cancelWorkCtx()
+
+	if err := pull_service.Merge(workCtx, pr, ctx.Doer, ctx.Repo.GitRepo, repo_model.MergeStyle(form.Do), form.HeadCommitID, message, false); err != nil {
 		if models.IsErrInvalidMergeStyle(err) {
 			ctx.JSONError(ctx.Tr("repo.pulls.invalid_merge_option"))
 		} else if models.IsErrMergeConflicts(err) {
@@ -1491,7 +1495,7 @@ func MergePullRequest(ctx *context.Context) {
 	}
 	log.Trace("Pull request merged: %d", pr.ID)
 
-	if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
+	if err := stopTimerIfAvailable(workCtx, ctx.Doer, issue); err != nil {
 		ctx.ServerError("stopTimerIfAvailable", err)
 		return
 	}
@@ -1504,7 +1508,7 @@ func MergePullRequest(ctx *context.Context) {
 			headRepo = ctx.Repo.GitRepo
 		} else {
 			var err error
-			headRepo, err = gitrepo.OpenRepository(ctx, pr.HeadRepo)
+			headRepo, err = gitrepo.OpenRepository(workCtx, pr.HeadRepo)
 			if err != nil {
 				ctx.ServerError(fmt.Sprintf("OpenRepository[%s]", pr.HeadRepo.FullName()), err)
 				return
@@ -1512,7 +1516,7 @@ func MergePullRequest(ctx *context.Context) {
 			defer headRepo.Close()
 		}
 
-		if err := repo_service.DeleteBranchAfterMerge(ctx, ctx.Doer, pr, headRepo); err != nil {
+		if err := repo_service.DeleteBranchAfterMerge(workCtx, ctx.Doer, pr, headRepo); err != nil {
 			switch {
 			case errors.Is(err, repo_service.ErrBranchIsDefault):
 				ctx.Flash.Error(ctx.Tr("repo.pulls.delete_after_merge.head_branch.is_default"))
@@ -1522,6 +1526,7 @@ func MergePullRequest(ctx *context.Context) {
 				ctx.Flash.Error(ctx.Tr("repo.pulls.delete_after_merge.head_branch.insufficient_branch"))
 			default:
 				ctx.ServerError("DeleteBranchAfterMerge", err)
+				return
 			}
 
 			ctx.JSONRedirect(issue.Link())
@@ -1557,7 +1562,7 @@ func CancelAutoMergePullRequest(ctx *context.Context) {
 	ctx.Redirect(issue.HTMLURL())
 }
 
-func stopTimerIfAvailable(ctx *context.Context, user *user_model.User, issue *issues_model.Issue) error {
+func stopTimerIfAvailable(ctx stdCtx.Context, user *user_model.User, issue *issues_model.Issue) error {
 	if issues_model.StopwatchExists(ctx, user.ID, issue.ID) {
 		if err := issues_model.CreateOrStopIssueStopwatch(ctx, user, issue); err != nil {
 			return err
@@ -1671,7 +1676,6 @@ func CompareAndPullRequestPost(ctx *context.Context) {
 			log.Error("Unexpected error of NewPullRequest: %T %s", err, err)
 			ctx.ServerError("CompareAndPullRequest", err)
 		}
-		ctx.ServerError("NewPullRequest", err)
 		return
 	}
 
@@ -1983,6 +1987,7 @@ func PrepareViewPullInfoActionsTrust(ctx *context.Context, pull *issues_model.Pu
 	someRunsNeedApproval, err := actions_model.HasRunThatNeedApproval(ctx, pull.Issue.RepoID, pull.ID)
 	if err != nil {
 		ctx.ServerError("HasRunThatNeedApproval", err)
+		return
 	}
 	ctx.Data["SomePullRequestRunsNeedApproval"] = someRunsNeedApproval
 

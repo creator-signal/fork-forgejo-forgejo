@@ -5,12 +5,13 @@ package actions
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
-	"forgejo.org/modules/timeutil"
 )
 
 func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus actions_model.Status) error {
@@ -20,20 +21,7 @@ func killRun(ctx context.Context, run *actions_model.ActionRun, newStatus action
 			return err
 		}
 		for _, job := range jobs {
-			oldStatus := job.Status
-			if oldStatus.IsDone() {
-				continue
-			}
-			if job.TaskID == 0 {
-				job.Status = newStatus
-				job.Stopped = timeutil.TimeStampNow()
-				_, err := actions_model.UpdateRunJobWithoutNotification(ctx, job, nil, "status", "stopped")
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			if err := StopTask(ctx, job.TaskID, newStatus); err != nil {
+			if err := cancelSingleJob(ctx, job, newStatus); err != nil {
 				return err
 			}
 		}
@@ -97,11 +85,17 @@ func FailRunPreExecutionError(ctx context.Context, run *actions_model.ActionRun,
 
 // Perform pre-execution checks that would affect the ability for a job to reach an executing stage.
 func consistencyCheckRun(ctx context.Context, run *actions_model.ActionRun) error {
+	var jobs actions_model.ActionJobList
 	jobs, err := actions_model.GetRunJobsByRunID(ctx, run.ID)
 	if err != nil {
 		return err
 	}
+	validJobIDs := jobs.GetJobIDs()
 	for _, job := range jobs {
+		if unknownJobIDs, ok := job.AllNeedsExist(validJobIDs); !ok {
+			return FailRunPreExecutionError(ctx, run, actions_model.ErrorCodeUnknownJobInNeeds,
+				[]any{job.JobID, strings.Join(unknownJobIDs, ", ")})
+		}
 		if stop, err := checkJobWillRevisit(ctx, job); err != nil {
 			return err
 		} else if stop {
@@ -196,4 +190,113 @@ func checkJobRunsOnStaticMatrixError(ctx context.Context, job *actions_model.Act
 	}
 
 	return true, nil
+}
+
+// DeleteRun removes a particular run including all associated artifacts, jobs, tasks, and logs. The run has to be
+// completed for the operation to succeed.
+func DeleteRun(ctx context.Context, runID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		run, err := actions_model.GetRunByID(ctx, runID)
+		if err != nil {
+			return fmt.Errorf("unable to load run %d: %w", runID, err)
+		}
+
+		if !run.Status.IsDone() {
+			return fmt.Errorf("cannot delete run %d because it has not completed yet", run.ID)
+		}
+
+		err = actions_model.SetArtifactsOfRunDeleted(ctx, runID)
+		if err != nil {
+			return fmt.Errorf("unable to delete artifacts of run %d: %w", run.ID, err)
+		}
+
+		err = deleteJobsOfRun(ctx, run.ID)
+		if err != nil {
+			return fmt.Errorf("unable to delete jobs of run %d: %w", run.ID, err)
+		}
+
+		return actions_model.DeleteRun(ctx, run.ID)
+	})
+}
+
+// PrioritizeRun marks the workflow run identified by the given ID as prioritized and recalculates the priority of each
+// run in the queue.
+func PrioritizeRun(ctx context.Context, run *actions_model.ActionRun) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if run == nil {
+			return errors.New("run is nil")
+		}
+
+		if run.Prioritize {
+			// Run is already prioritized. There is nothing left to do.
+			return nil
+		}
+
+		run.Prioritize = true
+		if err := actions_model.UpdateRunWithoutNotification(ctx, run, "prioritize"); err != nil {
+			return fmt.Errorf("could not update workflow run %d to prioritize: %w", run.ID, err)
+		}
+
+		if err := recalculateRunPriorities(ctx, run.RepoID); err != nil {
+			return fmt.Errorf("could not recalculate workflow run priorities of repository %d: %w", run.RepoID, err)
+		}
+		return nil
+	})
+}
+
+// DeprioritizeRun removes the prioritized mark from a workflow run, if present, and recalculates the priority of each
+// run in the queue.
+func DeprioritizeRun(ctx context.Context, run *actions_model.ActionRun) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		if run == nil {
+			return errors.New("run is nil")
+		}
+
+		if !run.Prioritize {
+			// Run is already not prioritized. There is nothing left to do.
+			return nil
+		}
+
+		run.Prioritize = false
+		if err := actions_model.UpdateRunWithoutNotification(ctx, run, "prioritize"); err != nil {
+			return fmt.Errorf("could not update workflow run %d to deprioritize: %w", run.ID, err)
+		}
+
+		if err := recalculateRunPriorities(ctx, run.RepoID); err != nil {
+			return fmt.Errorf("could not recalculate workflow run priorities of repository %d: %w", run.RepoID, err)
+		}
+
+		return nil
+	})
+}
+
+// recalculateRunPriorities recalculates the priority of all queued workflow runs that belong to the given repository.
+var recalculateRunPriorities = func(ctx context.Context, repoID int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		runs, err := actions_model.GetQueuedRunsByRepoID(ctx, repoID)
+		if err != nil {
+			return fmt.Errorf("could not read pending workflow runs of repository %d: %w", repoID, err)
+		}
+
+		strategy := actions_model.DefaultPrioritizationStrategy{}
+		updatedRuns, err := strategy.PrioritizeRuns(runs)
+		if err != nil {
+			return fmt.Errorf("failed to prioritize pending workflow runs of repository %d: %w", repoID, err)
+		}
+
+		for _, run := range runs {
+			if !updatedRuns.Contains(run.ID) {
+				continue
+			}
+
+			if err = actions_model.UpdateRunWithoutNotification(ctx, run, "priority"); err != nil {
+				return fmt.Errorf("failed to update reprioritized workflow run %d: %w", run.ID, err)
+			}
+		}
+
+		// In the future notify webhook listeners. Pass *all* runs, not only updated runs to provide listeners a
+		// complete view.
+
+		return nil
+	})
 }

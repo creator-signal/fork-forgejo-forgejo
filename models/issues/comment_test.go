@@ -52,15 +52,32 @@ func TestFetchCodeConversations(t *testing.T) {
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	res, err := issues_model.FetchCodeConversations(db.DefaultContext, issue, user, false)
+	_, err := issues_model.CreateReaction(t.Context(), &issues_model.ReactionOptions{
+		Type:      "eyes",
+		DoerID:    2,
+		IssueID:   issue.ID,
+		CommentID: 4,
+	})
 	require.NoError(t, err)
-	assert.Contains(t, res, "README.md")
-	assert.Contains(t, res["README.md"], int64(4))
-	assert.Len(t, res["README.md"][4], 1)
-	assert.Equal(t, int64(4), res["README.md"][4][0][0].ID)
+	require.NoError(t, issues_model.MarkConversation(t.Context(),
+		unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 4}),
+		user, true))
+
+	res, err := issues_model.FetchCodeConversations(db.DefaultContext, issue, user, false, "")
+	require.NoError(t, err)
+	require.Contains(t, res, "README.md")
+	require.Contains(t, res["README.md"], int64(4))
+	require.Len(t, res["README.md"][4], 1)
+	require.Len(t, res["README.md"][4][0], 1)
+	comment := res["README.md"][4][0][0]
+	assert.Equal(t, int64(4), comment.ID)
+	assert.NotNil(t, comment.ResolveDoer)
+	require.Len(t, comment.Reactions, 1)
+	r := comment.Reactions[0]
+	assert.NotNil(t, r.User)
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	res, err = issues_model.FetchCodeConversations(db.DefaultContext, issue, user2, false)
+	res, err = issues_model.FetchCodeConversations(db.DefaultContext, issue, user2, false, "")
 	require.NoError(t, err)
 	assert.Len(t, res, 1)
 }
@@ -133,4 +150,60 @@ func Test_UpdateIssueNumComments(t *testing.T) {
 	require.NoError(t, issues_model.UpdateIssueNumComments(db.DefaultContext, issue2.ID))
 	issue2 = unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	assert.Equal(t, 1, issue2.NumComments)
+}
+
+func TestDisplayLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     int64
+		count    int64
+		expected int64
+	}{
+		{"positive single line", 10, 0, 10},
+		{"positive multi-line", 7, 2, 9},
+		{"positive large range", 1, 49, 50},
+		{"negative single line", -10, 0, -10},
+		{"negative multi-line", -7, 2, -9},
+		{"negative large range", -1, 49, -50},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &issues_model.Comment{Line: tc.line, ExtraLinesCount: tc.count}
+			assert.Equal(t, tc.expected, c.DisplayLine())
+		})
+	}
+}
+
+func TestUnsignedDisplayLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     int64
+		count    int64
+		expected uint64
+	}{
+		{"positive single line", 10, 0, 10},
+		{"positive multi-line", 7, 2, 9},
+		{"negative single line", -10, 0, 10},
+		{"negative multi-line", -7, 2, 9},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &issues_model.Comment{Line: tc.line, ExtraLinesCount: tc.count}
+			assert.Equal(t, tc.expected, c.UnsignedDisplayLine())
+		})
+	}
+}
+
+func TestCheckLineRangeValid_SingleLine(t *testing.T) {
+	// ExtraLinesCount=0 should return true immediately without any git operations
+	c := &issues_model.Comment{Line: 10, ExtraLinesCount: 0}
+	valid, err := c.CheckLineRangeValid(t.Context(), nil, "any-commit-id")
+	require.NoError(t, err)
+	assert.True(t, valid)
+
+	// Negative line, ExtraLinesCount=0
+	c2 := &issues_model.Comment{Line: -5, ExtraLinesCount: 0}
+	valid2, err := c2.CheckLineRangeValid(t.Context(), nil, "any-commit-id")
+	require.NoError(t, err)
+	assert.True(t, valid2)
 }

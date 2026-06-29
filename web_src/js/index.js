@@ -2,7 +2,6 @@
 import './bootstrap.js';
 
 import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
-import {initScopedAccessTokenCategories} from './features/scoped-access-token-selector.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';
 
 import {initGlobalCopyToClipboardListener} from './features/clipboard.js';
@@ -65,6 +64,7 @@ import {initOrgTeamSearchRepoBox} from './features/org-team.js';
 import {initUserAuthWebAuthn, initUserAuthWebAuthnRegister} from './features/user-auth-webauthn.js';
 import {initRepoRelease, initRepoReleaseNew} from './features/repo-release.js';
 import {initRepoEditor} from './features/repo-editor.js';
+import {initAddOrgMemberButton} from './features/add-org-member.ts';
 import {initCompSearchUserBox} from './features/comp/SearchUserBox.js';
 import {initInstall} from './features/install.js';
 import {initCompWebHookEditor} from './features/comp/WebHookEditor.js';
@@ -90,6 +90,7 @@ import {initRepositorySearch} from './features/repo-search.js';
 import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
 import {initModalClose} from './modules/modal.ts';
+import {initAuthorizedIntegrationClaimRuleEditor} from './features/authorized-integration.js';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -153,6 +154,7 @@ onDomReady(() => {
   initRepoEllipsisButton();
   initRepoDiffCommitBranchesAndTags();
   initRepoEditor();
+  initAddOrgMemberButton();
   initRepoGraphGit();
   initRepoIssueContentHistory();
   initRepoIssueDue();
@@ -192,9 +194,9 @@ onDomReady(() => {
   initUserAuthWebAuthnRegister();
   initUserAuth();
   initRepoDiffView();
-  initScopedAccessTokenCategories();
   initColorPickers();
   initModalClose();
+  initAuthorizedIntegrationClaimRuleEditor();
 
   // Deactivate CSS-only noJS usability supplements
   document.body.classList.remove('no-js');

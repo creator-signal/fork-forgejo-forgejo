@@ -20,7 +20,7 @@ import (
 	"forgejo.org/services/convert"
 )
 
-func handleLockListOut(ctx *context.Context, repo *repo_model.Repository, lock *git_model.LFSLock, err error) {
+func handleLockListOut(ctx *context.Context, lock *git_model.LFSLock, err error) {
 	if err != nil {
 		if git_model.IsErrLFSLockNotExist(err) {
 			ctx.JSON(http.StatusOK, api.LFSLockList{
@@ -30,12 +30,6 @@ func handleLockListOut(ctx *context.Context, repo *repo_model.Repository, lock *
 		}
 		ctx.JSON(http.StatusInternalServerError, api.LFSLockError{
 			Message: "unable to list locks : Internal Server Error",
-		})
-		return
-	}
-	if repo.ID != lock.RepoID {
-		ctx.JSON(http.StatusOK, api.LFSLockList{
-			Locks: []*api.LFSLock{},
 		})
 		return
 	}
@@ -64,7 +58,7 @@ func GetListLockHandler(ctx *context.Context) {
 		return
 	}
 
-	authenticated := authenticate(ctx, repository, rv.Authorization, true, false)
+	authenticated := authenticate(ctx, repository, true, false)
 	if !authenticated {
 		ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
 		ctx.JSON(http.StatusUnauthorized, api.LFSLockError{
@@ -74,10 +68,7 @@ func GetListLockHandler(ctx *context.Context) {
 	}
 	ctx.Resp.Header().Set("Content-Type", lfs_module.MediaType)
 
-	cursor := ctx.FormInt("cursor")
-	if cursor < 0 {
-		cursor = 0
-	}
+	cursor := max(ctx.FormInt("cursor"), 0)
 	limit := ctx.FormInt("limit")
 	if limit > setting.LFS.LocksPagingNum && setting.LFS.LocksPagingNum > 0 {
 		limit = setting.LFS.LocksPagingNum
@@ -93,11 +84,11 @@ func GetListLockHandler(ctx *context.Context) {
 			})
 			return
 		}
-		lock, err := git_model.GetLFSLockByID(ctx, v)
+		lock, err := git_model.GetLFSLockByIDAndRepo(ctx, v, repository.ID)
 		if err != nil && !git_model.IsErrLFSLockNotExist(err) {
 			log.Error("Unable to get lock with ID[%s]: Error: %v", v, err)
 		}
-		handleLockListOut(ctx, repository, lock, err)
+		handleLockListOut(ctx, lock, err)
 		return
 	}
 
@@ -107,7 +98,7 @@ func GetListLockHandler(ctx *context.Context) {
 		if err != nil && !git_model.IsErrLFSLockNotExist(err) {
 			log.Error("Unable to get lock for repository %-v with path %s: Error: %v", repository, path, err)
 		}
-		handleLockListOut(ctx, repository, lock, err)
+		handleLockListOut(ctx, lock, err)
 		return
 	}
 
@@ -138,7 +129,6 @@ func GetListLockHandler(ctx *context.Context) {
 func PostLockHandler(ctx *context.Context) {
 	userName := ctx.Params("username")
 	repoName := strings.TrimSuffix(ctx.Params("reponame"), ".git")
-	authorization := ctx.Req.Header.Get("Authorization")
 
 	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, userName, repoName)
 	if err != nil {
@@ -156,7 +146,7 @@ func PostLockHandler(ctx *context.Context) {
 		return
 	}
 
-	authenticated := authenticate(ctx, repository, authorization, true, true)
+	authenticated := authenticate(ctx, repository, true, true)
 	if !authenticated {
 		ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
 		ctx.JSON(http.StatusUnauthorized, api.LFSLockError{
@@ -210,7 +200,6 @@ func PostLockHandler(ctx *context.Context) {
 func VerifyLockHandler(ctx *context.Context) {
 	userName := ctx.Params("username")
 	repoName := strings.TrimSuffix(ctx.Params("reponame"), ".git")
-	authorization := ctx.Req.Header.Get("Authorization")
 
 	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, userName, repoName)
 	if err != nil {
@@ -228,7 +217,7 @@ func VerifyLockHandler(ctx *context.Context) {
 		return
 	}
 
-	authenticated := authenticate(ctx, repository, authorization, true, true)
+	authenticated := authenticate(ctx, repository, true, true)
 	if !authenticated {
 		ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
 		ctx.JSON(http.StatusUnauthorized, api.LFSLockError{
@@ -239,10 +228,7 @@ func VerifyLockHandler(ctx *context.Context) {
 
 	ctx.Resp.Header().Set("Content-Type", lfs_module.MediaType)
 
-	cursor := ctx.FormInt("cursor")
-	if cursor < 0 {
-		cursor = 0
-	}
+	cursor := max(ctx.FormInt("cursor"), 0)
 	limit := ctx.FormInt("limit")
 	if limit > setting.LFS.LocksPagingNum && setting.LFS.LocksPagingNum > 0 {
 		limit = setting.LFS.LocksPagingNum
@@ -281,7 +267,6 @@ func VerifyLockHandler(ctx *context.Context) {
 func UnLockHandler(ctx *context.Context) {
 	userName := ctx.Params("username")
 	repoName := strings.TrimSuffix(ctx.Params("reponame"), ".git")
-	authorization := ctx.Req.Header.Get("Authorization")
 
 	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, userName, repoName)
 	if err != nil {
@@ -299,7 +284,7 @@ func UnLockHandler(ctx *context.Context) {
 		return
 	}
 
-	authenticated := authenticate(ctx, repository, authorization, true, true)
+	authenticated := authenticate(ctx, repository, true, true)
 	if !authenticated {
 		ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
 		ctx.JSON(http.StatusUnauthorized, api.LFSLockError{

@@ -319,7 +319,7 @@ func TestTotal_RenderWiki(t *testing.T) {
 
 	answers := testAnswers(util.URLJoin(FullURL, "wiki"), util.URLJoin(FullURL, "wiki", "raw"))
 
-	for i := 0; i < len(sameCases); i++ {
+	for i := range sameCases {
 		line, err := markdown.RenderString(&markup.RenderContext{
 			Ctx: git.DefaultContext,
 			Links: markup.Links{
@@ -363,7 +363,7 @@ func TestTotal_RenderString(t *testing.T) {
 
 	answers := testAnswers(util.URLJoin(FullURL, "src", "master"), util.URLJoin(FullURL, "media", "master"))
 
-	for i := 0; i < len(sameCases); i++ {
+	for i := range sameCases {
 		line, err := markdown.RenderString(&markup.RenderContext{
 			Ctx: git.DefaultContext,
 			Links: markup.Links{
@@ -1487,4 +1487,62 @@ func TestCallout(t *testing.T) {
 	test("> [!WARNING]\n> Bad stuff is brewing here", `<blockquote class="attention-header attention-warning"><p class="attention-title"><strong class="attention-warning">Warning</strong></p>
 <p>Bad stuff is brewing here</p>
 </blockquote>`)
+}
+
+func TestCodeblockLanguageTransformation(t *testing.T) {
+	test := func(input, expected string) {
+		buffer, err := markdown.RenderString(&markup.RenderContext{Ctx: git.DefaultContext}, input)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(string(buffer)))
+	}
+
+	// No transformation
+	test(
+		"```rust\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre>`)
+
+	// Comma stripped
+	test(
+		"```rust,ignore\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre>`)
+
+	// Pandoc stripping
+	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
+	test(
+		"```haskell {.numberLines}\n"+
+			"qsort []     = []\n"+
+			"qsort (x:xs) = qsort (filter (< x) xs) ++ [x] ++\n"+
+			"               qsort (filter (>= x) xs)\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
+<span class="nf">qsort</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span> <span class="o">++</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">++</span>
+               <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&gt;=</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span>
+</code></pre>`)
+
+	// Pandoc language extracting
+	// https://pandoc.org/MANUAL.html#extension-fenced_code_attributes
+	test(
+		"```   { #mycode .numberLines .haskell startFrom=\"100\" }   \n"+
+			"qsort []     = []\n"+
+			"qsort (x:xs) = qsort (filter (< x) xs) ++ [x] ++\n"+
+			"               qsort (filter (>= x) xs)\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
+<span class="nf">qsort</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span> <span class="o">++</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">++</span>
+               <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&gt;=</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span>
+</code></pre>`)
+
+	// No language identifier
+	test(
+		"```\n"+
+			"fn main() {}\n"+
+			"```",
+		`<pre class="code-block"><code class="chroma language-text display">fn main() {}
+</code></pre>`)
 }

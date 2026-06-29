@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -275,6 +276,129 @@ func CutDiffAroundLine(originalDiff io.Reader, line int64, old bool, numbersOfLi
 	newHunk[headerLines] = fmt.Sprintf("@@ -%d,%d +%d,%d @@",
 		oldBegin, oldNumOfLines, newBegin, newNumOfLines)
 	return strings.Join(newHunk, "\n"), nil
+}
+
+// PatchRightSideContent parses a unified diff patch (such as a stored code-comment
+// Patch) and returns the content of each line on the right (new) side, keyed by its
+// new line number. Added ('+') and context (' ') lines are included; removed ('-')
+// lines and the "\ No newline at end of file" marker are skipped. It lets callers
+// recover the file content captured when a comment was created, to detect whether
+// the commented lines were changed afterwards.
+func PatchRightSideContent(patch string) map[int64]string {
+	result := make(map[int64]string)
+	scanner := bufio.NewScanner(strings.NewReader(patch))
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+
+	var rightLine int64
+	inHunk := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "@@") {
+			submatches := hunkRegex.FindStringSubmatch(line)
+			if submatches == nil {
+				inHunk = false
+				continue
+			}
+			for i, name := range hunkRegex.SubexpNames() {
+				if name == "beginNew" {
+					rightLine, _ = strconv.ParseInt(submatches[i], 10, 64)
+				}
+			}
+			inHunk = rightLine > 0
+			continue
+		}
+		if !inHunk || len(line) == 0 {
+			continue
+		}
+		switch line[0] {
+		case '+', ' ':
+			result[rightLine] = line[1:]
+			rightLine++
+		case '-', '\\':
+			// '-' is left-only; '\' is the "no newline at end of file" marker
+			break
+		default:
+			// a non-hunk line (e.g. the next "diff --git" header); stop this hunk
+			inHunk = false
+		}
+	}
+	return result
+}
+
+var ErrLineNotFound = errors.New("line not found in diff")
+
+type LinePlacement struct {
+	Left  int64
+	Right int64
+}
+
+// Find the line of code where an old line of code from an old patch is, if present, in a new patch. Given a cutDiff
+// (from CutDiffAroundLine) and the line of code that it was cut from, and, given a single-file diff from the commit
+// where that patch came into a new head, this routine will read through the diff and identify the new line number. It
+// will only return successful if the line is exactly the same as the original line, but just placed in a new location
+// due to added or removed lines in the diff before the target line of code.
+func FindAdjustedLineNumber(cutDiff string, originalLine int64, fullDiff io.Reader) (LinePlacement, error) {
+	cutDiffSplit := strings.Split(cutDiff, "\n")
+	if len(cutDiffSplit) == 0 {
+		return LinePlacement{}, errors.New("cutDiff has no contents")
+	}
+	endOfCutDiff := cutDiffSplit[len(cutDiffSplit)-1]
+
+	scanner := bufio.NewScanner(fullDiff)
+	inHunk := false // used to skip header lines before the first hunk
+	leftLine := int64(-1)
+	rightLine := int64(-1)
+
+	for scanner.Scan() {
+		lineText := scanner.Text()
+		if strings.HasPrefix(lineText, "@@") {
+			// A map with named groups of our regex to recognize them later more easily
+			submatches := hunkRegex.FindStringSubmatch(lineText)
+			groups := make(map[string]string)
+			for i, name := range hunkRegex.SubexpNames() {
+				if i != 0 && name != "" {
+					groups[name] = submatches[i]
+				}
+			}
+			beginLeft, _ := strconv.ParseInt(groups["beginOld"], 10, 64)
+			beginRight, _ := strconv.ParseInt(groups["beginNew"], 10, 64)
+			leftLine = beginLeft
+			rightLine = beginRight
+			inHunk = true
+		} else if inHunk {
+			// Added ('+') lines exist only on the right side of the diff and have no left-side line
+			// number. Skip them before testing the target, otherwise a target line that immediately
+			// follows a removed line would be matched against the inserted line's text and wrongly
+			// reported as changed.
+			if len(lineText) > 0 && lineText[0] == '+' {
+				rightLine++
+				continue
+			}
+			if leftLine == originalLine {
+				if lineText != endOfCutDiff {
+					return LinePlacement{}, fmt.Errorf(
+						"line was adjusted from index %d to %d, but contents changed from %q to %q: %w",
+						originalLine, leftLine, endOfCutDiff, lineText, ErrLineNotFound)
+				}
+				return LinePlacement{Left: leftLine, Right: rightLine}, nil
+			}
+			switch lineText[0] {
+			case '-':
+				leftLine++
+			case '\\':
+				// Should be the end-of-file with "\ No newline at end of file" -- nothing to do here.
+				break
+			default:
+				rightLine++
+				leftLine++
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return LinePlacement{}, err
+	}
+
+	return LinePlacement{}, fmt.Errorf("line is no longer in diff: %w", ErrLineNotFound)
 }
 
 // GetAffectedFiles returns the affected files between two commits

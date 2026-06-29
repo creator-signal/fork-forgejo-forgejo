@@ -30,7 +30,7 @@ func GetRegistrationToken(ctx *context.APIContext) {
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
 
-	shared.GetRegistrationToken(ctx, ctx.Doer.ID, 0)
+	shared.GetRegistrationToken(ctx, ctx.Doer().ID, 0)
 }
 
 // SearchActionRunJobs returns a list of actions jobs filtered by the provided parameters
@@ -52,7 +52,7 @@ func SearchActionRunJobs(ctx *context.APIContext) {
 	//     "$ref": "#/responses/unauthorized"
 	//   "403":
 	//     "$ref": "#/responses/forbidden"
-	shared.GetActionRunJobs(ctx, ctx.Doer.ID, 0)
+	shared.GetActionRunJobs(ctx, ctx.Doer().ID, 0)
 }
 
 // ListRunners returns the user's runners
@@ -63,6 +63,10 @@ func ListRunners(ctx *context.APIContext) {
 	// produces:
 	// - application/json
 	// parameters:
+	// - name: visible
+	//   in: query
+	//   description: whether to include all visible runners (true) or only those that are directly owned by the user (false)
+	//   type: boolean
 	// - name: page
 	//   in: query
 	//   description: page number of results to return (1-based)
@@ -80,7 +84,7 @@ func ListRunners(ctx *context.APIContext) {
 	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	shared.ListRunners(ctx, ctx.Doer.ID, 0)
+	shared.ListRunners(ctx, ctx.Doer().ID, 0)
 }
 
 // GetRunner gets a particular runner that belongs to the user
@@ -105,7 +109,7 @@ func GetRunner(ctx *context.APIContext) {
 	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	shared.GetRunner(ctx, ctx.Doer.ID, 0, ctx.ParamsInt64("runner_id"))
+	shared.GetRunner(ctx, ctx.Doer().ID, 0, ctx.ParamsInt64("runner_id"))
 }
 
 // RegisterRunner registers a new user-level runner
@@ -132,7 +136,7 @@ func RegisterRunner(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	shared.RegisterRunner(ctx, ctx.Doer.ID, 0)
+	shared.RegisterRunner(ctx, ctx.Doer().ID, 0)
 }
 
 // DeleteRunner deletes a particular user-level runner
@@ -157,5 +161,5 @@ func DeleteRunner(ctx *context.APIContext) {
 	//     "$ref": "#/responses/unauthorized"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	shared.DeleteRunner(ctx, ctx.Doer.ID, 0, ctx.ParamsInt64("runner_id"))
+	shared.DeleteRunner(ctx, ctx.Doer().ID, 0, ctx.ParamsInt64("runner_id"))
 }

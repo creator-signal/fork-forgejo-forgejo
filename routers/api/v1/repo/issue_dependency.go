@@ -57,12 +57,12 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	// If this issue's repository does not enable dependencies then there can be no dependencies by default
-	if !ctx.Repo.Repository.IsDependenciesEnabled(ctx) {
+	if !ctx.Repo().Repository.IsDependenciesEnabled(ctx) {
 		ctx.NotFound()
 		return
 	}
 
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrIssueNotExist(err) {
 			ctx.NotFound("IsErrIssueNotExist", err)
@@ -73,15 +73,12 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	}
 
 	// 1. We must be able to read this issue
-	if !ctx.Repo.CanReadIssuesOrPulls(issue.IsPull) {
+	if !ctx.Repo().CanReadIssuesOrPulls(issue.IsPull) {
 		ctx.NotFound()
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	limit := ctx.FormInt("limit")
 	if limit == 0 {
 		limit = setting.API.DefaultPagingNum
@@ -89,7 +86,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		limit = setting.API.MaxResponseItems
 	}
 
-	canWrite := ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull)
+	canWrite := ctx.Repo().CanWriteIssuesOrPulls(issue.IsPull)
 
 	blockerIssues := make([]*issues_model.Issue, 0, limit)
 
@@ -104,7 +101,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 	}
 
 	repoPerms := make(map[int64]access_model.Permission)
-	repoPerms[ctx.Repo.Repository.ID] = ctx.Repo.Permission
+	repoPerms[ctx.Repo().Repository.ID] = ctx.Repo().Permission
 	for _, blocker := range blockersInfo {
 		// Get the permissions for this repository
 		// If the repo ID exists in the map, return the exist permissions
@@ -115,7 +112,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 			perm = existPerm
 		} else {
 			var err error
-			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &blocker.Repository, ctx.Doer, ctx.Reducer)
+			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &blocker.Repository, ctx.Doer(), ctx.Reducer())
 			if err != nil {
 				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
 				return
@@ -154,7 +151,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		blockerIssues = append(blockerIssues, &blocker.Issue)
 	}
 
-	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, blockerIssues))
+	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer(), blockerIssues))
 }
 
 // CreateIssueDependency create a new issue dependencies
@@ -211,12 +208,12 @@ func CreateIssueDependency(ctx *context.APIContext) {
 		return
 	}
 
-	createIssueDependency(ctx, target, dependency, ctx.Repo.Permission, *dependencyPerm)
+	createIssueDependency(ctx, target, dependency, ctx.Repo().Permission, *dependencyPerm)
 	if ctx.Written() {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer, target))
+	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer(), target))
 }
 
 // RemoveIssueDependency remove an issue dependency
@@ -273,12 +270,12 @@ func RemoveIssueDependency(ctx *context.APIContext) {
 		return
 	}
 
-	removeIssueDependency(ctx, target, dependency, ctx.Repo.Permission, *dependencyPerm)
+	removeIssueDependency(ctx, target, dependency, ctx.Repo().Permission, *dependencyPerm)
 	if ctx.Written() {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer, target))
+	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer(), target))
 }
 
 // GetIssueBlocks list issues that are blocked by this issue
@@ -327,15 +324,12 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Repo.CanReadIssuesOrPulls(issue.IsPull) {
+	if !ctx.Repo().CanReadIssuesOrPulls(issue.IsPull) {
 		ctx.NotFound()
 		return
 	}
 
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 	limit := ctx.FormInt("limit")
 	if limit <= 1 {
 		limit = setting.API.DefaultPagingNum
@@ -353,7 +347,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 	var issues []*issues_model.Issue
 
 	repoPerms := make(map[int64]access_model.Permission)
-	repoPerms[ctx.Repo.Repository.ID] = ctx.Repo.Permission
+	repoPerms[ctx.Repo().Repository.ID] = ctx.Repo().Permission
 
 	for i, depMeta := range deps {
 		if i < skip || i >= max {
@@ -369,7 +363,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 			perm = existPerm
 		} else {
 			var err error
-			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &depMeta.Repository, ctx.Doer, ctx.Reducer)
+			perm, err = access_model.GetUserRepoPermissionWithReducer(ctx, &depMeta.Repository, ctx.Doer(), ctx.Reducer())
 			if err != nil {
 				ctx.ServerError("GetUserRepoPermissionWithReducer", err)
 				return
@@ -385,7 +379,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 		issues = append(issues, &depMeta.Issue)
 	}
 
-	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer, issues))
+	ctx.JSON(http.StatusOK, convert.ToAPIIssueList(ctx, ctx.Doer(), issues))
 }
 
 // CreateIssueBlocking block the issue given in the body by the issue in path
@@ -438,12 +432,12 @@ func CreateIssueBlocking(ctx *context.APIContext) {
 		return
 	}
 
-	createIssueDependency(ctx, target, dependency, *targetPerm, ctx.Repo.Permission)
+	createIssueDependency(ctx, target, dependency, *targetPerm, ctx.Repo().Permission)
 	if ctx.Written() {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer, dependency))
+	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer(), dependency))
 }
 
 // RemoveIssueBlocking unblock the issue given in the body by the issue in path
@@ -496,16 +490,16 @@ func RemoveIssueBlocking(ctx *context.APIContext) {
 		return
 	}
 
-	removeIssueDependency(ctx, target, dependency, *targetPerm, ctx.Repo.Permission)
+	removeIssueDependency(ctx, target, dependency, *targetPerm, ctx.Repo().Permission)
 	if ctx.Written() {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer, dependency))
+	ctx.JSON(http.StatusCreated, convert.ToAPIIssue(ctx, ctx.Doer(), dependency))
 }
 
 func getParamsIssue(ctx *context.APIContext) *issues_model.Issue {
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if issues_model.IsErrIssueNotExist(err) {
 			ctx.NotFound("IsErrIssueNotExist", err)
@@ -514,13 +508,13 @@ func getParamsIssue(ctx *context.APIContext) *issues_model.Issue {
 		}
 		return nil
 	}
-	issue.Repo = ctx.Repo.Repository
+	issue.Repo = ctx.Repo().Repository
 	return issue
 }
 
 func getFormIssue(ctx *context.APIContext, form *api.IssueMeta) *issues_model.Issue {
 	var repo *repo_model.Repository
-	if form.Owner != ctx.Repo.Repository.OwnerName || form.Name != ctx.Repo.Repository.Name {
+	if form.Owner != ctx.Repo().Repository.OwnerName || form.Name != ctx.Repo().Repository.Name {
 		if !setting.Service.AllowCrossRepositoryDependencies {
 			ctx.JSON(http.StatusBadRequest, "CrossRepositoryDependencies not enabled")
 			return nil
@@ -536,7 +530,7 @@ func getFormIssue(ctx *context.APIContext, form *api.IssueMeta) *issues_model.Is
 			return nil
 		}
 	} else {
-		repo = ctx.Repo.Repository
+		repo = ctx.Repo().Repository
 	}
 
 	issue, err := issues_model.GetIssueByIndex(ctx, repo.ID, form.Index)
@@ -553,11 +547,11 @@ func getFormIssue(ctx *context.APIContext, form *api.IssueMeta) *issues_model.Is
 }
 
 func getPermissionForRepo(ctx *context.APIContext, repo *repo_model.Repository) *access_model.Permission {
-	if repo.ID == ctx.Repo.Repository.ID {
-		return &ctx.Repo.Permission
+	if repo.ID == ctx.Repo().Repository.ID {
+		return &ctx.Repo().Permission
 	}
 
-	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
+	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer(), ctx.Reducer())
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 		return nil
@@ -585,7 +579,7 @@ func createIssueDependency(ctx *context.APIContext, target, dependency *issues_m
 		return
 	}
 
-	err := issues_model.CreateIssueDependency(ctx, ctx.Doer, target, dependency)
+	err := issues_model.CreateIssueDependency(ctx, ctx.Doer(), target, dependency)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateIssueDependency", err)
 		return
@@ -611,7 +605,7 @@ func removeIssueDependency(ctx *context.APIContext, target, dependency *issues_m
 		return
 	}
 
-	err := issues_model.RemoveIssueDependency(ctx, ctx.Doer, target, dependency, issues_model.DependencyTypeBlockedBy)
+	err := issues_model.RemoveIssueDependency(ctx, ctx.Doer(), target, dependency, issues_model.DependencyTypeBlockedBy)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "CreateIssueDependency", err)
 		return

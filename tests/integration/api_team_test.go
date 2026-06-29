@@ -17,7 +17,10 @@ import (
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	"forgejo.org/services/convert"
 	"forgejo.org/tests"
 
@@ -43,7 +46,18 @@ func TestAPITeam(t *testing.T) {
 	DecodeJSON(t, resp, &apiTeam)
 	assert.Equal(t, team.ID, apiTeam.ID)
 	assert.Equal(t, team.Name, apiTeam.Name)
-	assert.Equal(t, convert.ToOrganization(db.DefaultContext, org), apiTeam.Organization)
+
+	toOrg := convert.ToOrganization(db.DefaultContext, org)
+	assert.Equal(t, toOrg.ID, apiTeam.Organization.ID)
+	assert.Equal(t, toOrg.AvatarURL, apiTeam.Organization.AvatarURL)
+	assert.Equal(t, toOrg.Name, apiTeam.Organization.Name)
+	assert.Equal(t, toOrg.FullName, apiTeam.Organization.FullName)
+	assert.Equal(t, toOrg.Description, apiTeam.Organization.Description)
+	assert.Equal(t, toOrg.Website, apiTeam.Organization.Website)
+	assert.Equal(t, toOrg.Location, apiTeam.Organization.Location)
+	assert.Equal(t, toOrg.Visibility, apiTeam.Organization.Visibility)
+	assert.Equal(t, toOrg.RepoAdminChangeTeamAccess, apiTeam.Organization.RepoAdminChangeTeamAccess)
+	assert.Equal(t, toOrg.Created.Local(), apiTeam.Organization.Created.Local())
 
 	// non team member user will not access the teams details
 	teamUser2 := unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{ID: 3})
@@ -472,4 +486,40 @@ func TestAPIGetTeamRepoAccessTokenResources(t *testing.T) {
 			MakeRequest(t, req, http.StatusNotFound)
 		})
 	})
+}
+
+func TestAPIAddMemberDirectly(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, false)()
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeWriteOrganization)
+
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+	req := NewRequestf(t, "PUT", "/api/v1/teams/%d/members/%s", team.ID, user5.Name).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	isMember, err := organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, user5.ID)
+	require.NoError(t, err)
+	assert.True(t, isMember)
+}
+
+func TestAPIAddMemberGeneratesInvite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, true)()
+
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeWriteOrganization)
+
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+	req := NewRequestf(t, "PUT", "/api/v1/teams/%d/members/%s", team.ID, user5.Name).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNoContent)
+
+	isMember, err := organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, user5.ID)
+	require.NoError(t, err)
+	assert.False(t, isMember)
+	unittest.AssertExistsAndLoadBean(t, &organization.TeamInvite{TeamID: team.ID, InviterID: 1, InvitedID: optional.Some(user5.ID)})
 }

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
@@ -422,6 +424,7 @@ func handleWorkflows(
 				jobparser.SupportIncompleteRunsOn(),
 				jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(commit)),
 				jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+				jobparser.WithGitContext(generateGiteaContextForRun(run)),
 			)
 			if err != nil {
 				log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)
@@ -447,11 +450,13 @@ func handleWorkflows(
 		err = db.WithTx(ctx, func(ctx context.Context) error {
 			// Transaction avoids any chance of a run being picked up in a Waiting state when we're about to put it into
 			// a PreExecutionError a millisecond later.
-			if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
-				return err
+			if err := InsertRun(ctx, run, jobs); err != nil {
+				return fmt.Errorf("InsertRun: %w", err)
 			}
 			if errorCode != 0 {
-				return FailRunPreExecutionError(ctx, run, errorCode, errorDetails)
+				if err := FailRunPreExecutionError(ctx, run, errorCode, errorDetails); err != nil {
+					return fmt.Errorf("FailRunPreExecutionError: %w", err)
+				}
 			}
 			return nil
 		})
@@ -574,18 +579,33 @@ func handleSchedules(
 			continue
 		}
 
+		now := time.Now()
+		specs := make([]*actions_model.ActionScheduleSpec, 0, len(schedules))
+		for _, schedule := range schedules {
+			scheduleSpec, err := actions_model.NewActionScheduleSpec(schedule.Cron, optional.FromNonDefault(schedule.TimeZone), now)
+			if err != nil {
+				return err
+			}
+			specs = append(specs, scheduleSpec)
+		}
+
+		title := workflow.Name
+		if len(title) < 1 {
+			title = dwf.GetWorkflowPath()
+		}
+
 		run := &actions_model.ActionSchedule{
-			Title:             strings.SplitN(commit.CommitMessage, "\n", 2)[0],
+			Title:             title,
 			RepoID:            input.Repo.ID,
 			OwnerID:           input.Repo.OwnerID,
 			WorkflowID:        dwf.EntryName,
 			WorkflowDirectory: dwf.EntryDirectory,
 			TriggerUserID:     user_model.ActionsUserID,
-			Ref:               input.Repo.DefaultBranch,
+			Ref:               input.Ref.String(),
 			CommitSHA:         commit.ID.String(),
 			Event:             input.Event,
 			EventPayload:      string(p),
-			Specs:             schedules,
+			Specs:             specs,
 			Content:           dwf.Content,
 		}
 		crons = append(crons, run)
@@ -622,7 +642,8 @@ func DetectAndHandleSchedules(ctx context.Context, repo *repo_model.Repository) 
 	// We need a notifyInput to call handleSchedules
 	// if repo is a mirror, commit author maybe an external user,
 	// so we use action user as the Doer of the notifyInput
-	notifyInput := newNotifyInputForSchedules(repo)
+	notifyInput := newNotifyInputForSchedules(repo).
+		WithRef(git.RefNameFromBranch(repo.DefaultBranch).String())
 
 	return handleSchedules(ctx, scheduleWorkflows, commit, notifyInput, repo.DefaultBranch)
 }

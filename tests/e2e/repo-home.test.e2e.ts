@@ -12,6 +12,8 @@ import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
 
+test.use({user: 'user2'});
+
 test('Language stats bar', async ({browser}) => {
   // This test doesn't need JS and runs a little faster without it
   const context = await browser.newContext({javaScriptEnabled: false});
@@ -54,4 +56,38 @@ test('Branch selector commit icon', async ({page}) => {
   await page.goto('/user2/repo1/src/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d');
   await expect(page.locator('.branch-dropdown-button svg.octicon-git-commit')).toBeVisible();
   await expect(page.locator('.branch-dropdown-button')).toHaveText('65f1bf27bc');
+});
+
+test('Star and unstar', async ({page}) => {
+  const response = await page.goto('/user2/repo1');
+  expect(response?.status()).toBe(200);
+
+  const starButton = page.locator('button[aria-label="Star"], button[aria-label="Unstar"]');
+  await starButton.click();
+
+  await expect(
+    page.locator('button[aria-label="Star"]:focus, button[aria-label="Unstar"]:focus'),
+  ).toBeVisible();
+
+  expect(page.url()).not.toContain('/star');
+  expect(page.url()).not.toContain('/unstar');
+
+  await starButton.click();
+  expect(page.url()).not.toContain('/star');
+  expect(page.url()).not.toContain('/unstar');
+});
+
+test('Watch/unwatch button URL retention', async ({page}) => {
+  const response = await page.goto('/user2/repo1');
+  expect(response?.status()).toBe(200);
+
+  const button = page.locator('button[aria-label="Watch"], button[aria-label="Unwatch"]');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
+
+  await button.click();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
 });

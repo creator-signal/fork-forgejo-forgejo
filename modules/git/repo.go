@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
@@ -46,9 +45,9 @@ func (repo *Repository) parsePrettyFormatLogToList(logs []byte) ([]*Commit, erro
 		return commits, nil
 	}
 
-	parts := bytes.Split(logs, []byte{'\n'})
+	parts := bytes.SplitSeq(logs, []byte{'\n'})
 
-	for _, commitID := range parts {
+	for commitID := range parts {
 		commit, err := repo.GetCommit(string(commitID))
 		if err != nil {
 			return nil, err
@@ -72,7 +71,10 @@ func InitRepository(ctx context.Context, repoPath string, bare bool, objectForma
 		return err
 	}
 
-	cmd := NewCommand(ctx, "init")
+	cmd := NewCommand(ctx, "init",
+		// Set template to an empty string so that example hooks, and other info files are not created
+		"--template", "",
+	)
 
 	if !IsValidObjectFormat(objectFormatName) {
 		return fmt.Errorf("invalid object format: %s", objectFormatName)
@@ -109,16 +111,17 @@ func (repo *Repository) IsEmpty() (bool, error) {
 
 // CloneRepoOptions options when clone a repository
 type CloneRepoOptions struct {
-	Timeout       time.Duration
-	Mirror        bool
-	Bare          bool
-	Quiet         bool
-	Branch        string
-	Shared        bool
-	NoCheckout    bool
-	Depth         int
-	Filter        string
-	SkipTLSVerify bool
+	Timeout              time.Duration
+	Mirror               bool
+	Bare                 bool
+	Quiet                bool
+	Branch               string
+	Shared               bool
+	NoCheckout           bool
+	Depth                int
+	Filter               string
+	SkipTLSVerify        bool
+	ProhibitHTTPRedirect bool
 }
 
 // Clone clones original repository to target path.
@@ -141,44 +144,13 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 		envs = proxy.EnvWithProxy(parsedFromURL)
 	}
 
-	fromURL := from
-	sanitizedFrom := from
+	sanitizedFrom := util.SanitizeCredentialURLs(from)
 
-	// If the clone URL has credentials, build a credential file for usage by git-credential-store
-	// to prevent credential leak in the process list.
-	// https://git-scm.com/docs/git-credential-store#_storage_format
-	// credential.helper adjustment must be set before the git subcommand
-	if strings.Contains(from, "://") && strings.Contains(from, "@") {
-		sanitizedFrom = util.SanitizeCredentialURLs(from)
-		if parsedFromURL != nil {
-			credentialsFile, err := os.CreateTemp("", "forgejo-clone-credentials-")
-			if err != nil {
-				return err
-			}
-			credentialsPath := credentialsFile.Name()
-
-			defer func() {
-				_ = credentialsFile.Close()
-				if err := util.Remove(credentialsPath); err != nil {
-					log.Warn("Unable to remove temporary file %q: %v", credentialsPath, err)
-				}
-			}()
-			_, err = credentialsFile.Write([]byte(parsedFromURL.String()))
-			if err != nil {
-				return err
-			}
-			err = credentialsFile.Close()
-			if err != nil {
-				return err
-			}
-
-			cmd.AddArguments("-c").AddDynamicArguments("credential.helper=store --file=" + credentialsPath)
-
-			// remove the password from the URL argument
-			parsedFromURL.User = url.User(parsedFromURL.User.Username())
-			fromURL = parsedFromURL.String()
-		}
+	fromURL, cleanup, err := cmd.AddAuthCredentialHelperForRemote(from)
+	if err != nil {
+		return err
 	}
+	defer cleanup()
 
 	cmd.AddArguments("clone")
 
@@ -209,6 +181,9 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 	if len(opts.Branch) > 0 {
 		cmd.AddArguments("-b").AddDynamicArguments(opts.Branch)
 	}
+	if opts.ProhibitHTTPRedirect {
+		cmd.AddArguments("-c", "http.followRedirects=false")
+	}
 
 	cmd.SetDescription(fmt.Sprintf("clone branch %s from %s to %s (shared: %t, mirror: %t, depth: %d)", opts.Branch, sanitizedFrom, to, opts.Shared, opts.Mirror, opts.Depth))
 	cmd.AddDashesAndList(fromURL, to)
@@ -231,18 +206,25 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 
 // PushOptions options when push to remote
 type PushOptions struct {
-	Remote         string
-	Branch         string
-	Force          bool
-	Mirror         bool
-	Env            []string
-	Timeout        time.Duration
-	PrivateKeyPath string
+	Remote               string
+	Branch               string
+	Force                bool
+	Mirror               bool
+	Env                  []string
+	Timeout              time.Duration
+	PrivateKeyPath       string
+	ProhibitHTTPRedirect bool
 }
 
 // Push pushs local commits to given remote branch.
 func Push(ctx context.Context, repoPath string, opts PushOptions) error {
-	cmd := NewCommand(ctx, "push")
+	cmd := NewCommand(ctx)
+
+	if opts.ProhibitHTTPRedirect {
+		cmd.AddArguments("-c", "http.followRedirects=false")
+	}
+
+	cmd.AddArguments("push")
 
 	if opts.PrivateKeyPath != "" {
 		// Preserve the behavior that existing environments are used if no

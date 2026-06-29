@@ -34,6 +34,7 @@ func TestRepoCommits(t *testing.T) {
 	commitURL, exists := doc.doc.Find("#commits-table tbody tr td.sha a").Attr("href")
 	assert.True(t, exists)
 	assert.NotEmpty(t, commitURL)
+	doc.AssertElement(t, ".repo-path", false)
 }
 
 func doTestRepoCommitWithStatus(t *testing.T, state string, classes ...string) {
@@ -146,7 +147,7 @@ func TestRepoCommitsStatusParallel(t *testing.T) {
 	assert.NotEmpty(t, commitURL)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(parentT *testing.T, i int) {
 			parentT.Run(fmt.Sprintf("ParallelCreateStatus_%d", i), func(t *testing.T) {
@@ -203,4 +204,18 @@ func TestRepoCommitsStatusMultiple(t *testing.T) {
 	// Check that the data-tippy="commit-statuses" (for trigger) and commit-status (svg) are present
 	sel := doc.doc.Find("#commits-table tbody tr td.message [data-tippy=\"commit-statuses\"] .commit-status")
 	assert.Equal(t, 1, sel.Length())
+}
+
+func TestCreateCommitStatusNonExistingSHA(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	ctx := NewAPITestContext(t, "user2", "repo1", auth_model.AccessTokenScopeWriteRepository)
+	ctx.ExpectedCode = http.StatusNotFound
+
+	t.Run("NonExistingSHA", doAPICreateCommitStatus(ctx, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", api.CreateStatusOption{
+		State:       api.CommitStatusPending,
+		TargetURL:   "http://test.ci/",
+		Description: "",
+		Context:     "testci",
+	}))
 }

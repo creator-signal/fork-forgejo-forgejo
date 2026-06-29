@@ -4,6 +4,7 @@ import ActionRunStatus from './ActionRunStatus.vue';
 import ActionJobStepList from './ActionJobStepList.vue';
 import {toggleElem} from '../utils/dom.js';
 import {GET, POST, DELETE} from '../modules/fetch.js';
+import {showErrorToast} from '../modules/toast.js';
 
 export default {
   name: 'RepoActionView',
@@ -82,11 +83,14 @@ export default {
         title: '',
         titleHTML: '',
         status: '',
+        description: '',
         canCancel: false,
         canApprove: false,
         canRerun: false,
+        canDelete: false,
         done: false,
         preExecutionError: '',
+        preExecutioWarnings: [], // array of strings
         jobs: [
           // {
           //   id: 0,
@@ -97,8 +101,6 @@ export default {
           // },
         ],
         commit: {
-          localeCommit: '',
-          localePushedBy: '',
           localeWorkflow: '',
           localeAllRuns: '',
           shortSHA: '',
@@ -125,10 +127,10 @@ export default {
         ],
         // All available attempts for the job we're currently viewing.
         //
-        // initial value here is configured so that currentingViewingMostRecentAttempt() -> true on the default `data()`, so that the
+        // initial value here is configured so that currentlyViewingMostRecentAttempt() -> true on the default `data()`, so that the
         // initial render (before `loadJob`'s first execution is complete) doesn't display "You are viewing an
         // out-of-date run..."
-        allAttempts: new Array(parseInt(this.attemptNumber)).fill({index: 0, time_since_started_html: '', status: 'success', status_diagnostics: []}),
+        allAttempts: [],
       },
     };
   },
@@ -139,19 +141,19 @@ export default {
     },
 
     displayOtherJobs() {
-      return this.currentingViewingMostRecentAttempt;
+      return this.currentlyViewingMostRecentAttempt;
     },
 
     canApprove() {
-      return this.currentingViewingMostRecentAttempt && this.run.canApprove;
+      return this.currentlyViewingMostRecentAttempt && this.run.canApprove;
     },
 
     canCancel() {
-      return this.currentingViewingMostRecentAttempt && this.run.canCancel;
+      return this.currentlyViewingMostRecentAttempt && this.run.canCancel;
     },
 
     canRerun() {
-      return this.currentingViewingMostRecentAttempt && this.run.canRerun;
+      return this.currentlyViewingMostRecentAttempt && this.run.canRerun;
     },
 
     viewingAttemptNumber() {
@@ -168,11 +170,13 @@ export default {
       return attempt || fallback;
     },
 
-    currentingViewingMostRecentAttempt() {
-      if (!this.currentJob.allAttempts) {
+    currentlyViewingMostRecentAttempt() {
+      if (!this.currentJob.allAttempts || this.currentJob.allAttempts.length === 0) {
         return true;
       }
-      return this.viewingAttemptNumber === this.currentJob.allAttempts.length;
+
+      const mostRecentAttemptNumber = this.currentJob.allAttempts[0].number;
+      return this.viewingAttemptNumber === mostRecentAttemptNumber;
     },
 
     displayGearDropdown() {
@@ -198,6 +202,10 @@ export default {
         return this.viewingAttempt.status_diagnostics;
       }
       return this.currentJob.details;
+    },
+
+    hasWarnings() {
+      return this.run.preExecutionWarnings && this.run.preExecutionWarnings.length > 0;
     },
   },
 
@@ -234,6 +242,21 @@ export default {
         // never happen because the interval will have been disabled)
         this.loadJob();
       }
+    },
+
+    async deleteRun() {
+      if (!window.confirm(this.locale.confirmDelete)) {
+        return;
+      }
+
+      const response = await POST(`${this.run.link}/delete`);
+
+      if (response.ok) {
+        window.location.href = this.workflowURL;
+        return;
+      }
+
+      showErrorToast(this.locale.deleteError, {duration: 5000});
     },
 
     // cancel a run
@@ -453,7 +476,7 @@ export default {
 </script>
 <template>
   <div class="ui container fluid padded action-view-container" :class="{ 'interval-pending': intervalID }">
-    <div class="action-view-header job-out-of-date-warning" v-if="!currentingViewingMostRecentAttempt">
+    <div class="action-view-header job-out-of-date-warning" v-if="!currentlyViewingMostRecentAttempt">
       <div class="ui warning message">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <span v-html="viewingOutOfDateRunLabel"/>
@@ -473,6 +496,9 @@ export default {
           {{ locale.approve }}
         </button>
         <div class="action-info-summary-actions" v-else>
+          <button id="delete-run" class="ui basic small compact button red" @click="deleteRun()" v-if="run.canDelete">
+            {{ locale.delete }}
+          </button>
           <button class="ui basic small compact button red" @click="cancelRun()" v-if="canCancel">
             {{ locale.cancel }}
           </button>
@@ -482,10 +508,8 @@ export default {
         </div>
       </div>
       <div class="action-summary">
-        {{ run.commit.localeCommit }}
-        <a class="muted" :href="run.commit.link">{{ run.commit.shortSHA }}</a>
-        {{ run.commit.localePushedBy }}
-        <a class="muted" :href="run.commit.pusher.link">{{ run.commit.pusher.displayName }}</a>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span v-html="run.description"/>
         <span class="ui label tw-max-w-full" v-if="run.commit.shortSHA">
           <span v-if="run.commit.branch.isDeleted" class="gt-ellipsis tw-line-through" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</span>
           <a v-else class="gt-ellipsis" :href="run.commit.branch.link" :data-tooltip-content="run.commit.branch.name">{{ run.commit.branch.name }}</a>
@@ -493,13 +517,20 @@ export default {
       </div>
       <div class="action-summary">
         {{ run.commit.localeWorkflow }}
-        <a class="muted" :href="workflowSourceURL">{{ workflowName }}</a> <span>(<a class="muted" :href="workflowURL">{{ run.commit.localeAllRuns }}</a>)</span>
+        <a :href="workflowSourceURL">{{ workflowName }}</a> <span>(<a :href="workflowURL">{{ run.commit.localeAllRuns }}</a>)</span>
       </div>
       <div class="ui error message pre-execution-error" v-if="run.preExecutionError">
         <div class="header">
           {{ locale.preExecutionError }}
         </div>
         {{ run.preExecutionError }}
+      </div>
+      <div class="ui warning message pre-execution-error" v-if="hasWarnings">
+        <div class="header">
+          {{ locale.preExecutionWarning }}
+        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-for="warning in run.preExecutionWarnings" :key="warning" v-html="warning"/>
       </div>
     </div>
     <div class="action-view-body">
@@ -524,12 +555,17 @@ export default {
           </div>
           <ul class="job-artifacts-list">
             <li class="job-artifacts-item" v-for="artifact in artifacts" :key="artifact.name">
-              <a class="job-artifacts-link" target="_blank" :href="actionsURL+'/runs/'+runID+'/artifacts/'+artifact.name">
+              <div v-if="artifact.status === 'expired'">
                 <SvgIcon name="octicon-file" class="ui text black job-artifacts-icon"/>{{ artifact.name }}
-              </a>
-              <a v-if="run.canDeleteArtifact" @click="deleteArtifact(artifact.name)" class="job-artifacts-delete">
-                <SvgIcon name="octicon-trash" class="ui text black job-artifacts-icon"/>
-              </a>
+              </div>
+              <template v-if="artifact.status !== 'expired'">
+                <a class="job-artifacts-link" target="_blank" :href="actionsURL+'/runs/'+runID+'/artifacts/'+artifact.name">
+                  <SvgIcon name="octicon-file" class="ui text black job-artifacts-icon"/>{{ artifact.name }}
+                </a>
+                <a v-if="run.canDeleteArtifact" @click="deleteArtifact(artifact.name)" class="job-artifacts-delete">
+                  <SvgIcon name="octicon-trash" class="ui text black job-artifacts-icon"/>
+                </a>
+              </template>
             </li>
           </ul>
         </div>
@@ -639,7 +675,7 @@ export default {
   display: flex;
   align-items: center;
   gap: var(--button-spacing);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .action-info-summary-actions > button {
@@ -657,12 +693,12 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-left: 28px;
+  margin-inline-start: 28px;
 }
 
 @media (max-width: 767.98px) {
   .action-commit-summary {
-    margin-left: 0;
+    margin-inline-start: 0;
     margin-top: 8px;
   }
 }
@@ -676,7 +712,7 @@ export default {
   position: sticky;
   top: 12px;
   max-height: 100vh;
-  overflow-y: auto;
+  overflow-block: auto;
   background: var(--color-body);
   z-index: 2; /* above .job-info-header */
 }
@@ -702,12 +738,12 @@ export default {
 }
 
 .job-artifacts-list {
-  padding-left: 12px;
+  padding-inline-start: 12px;
   list-style: none;
 }
 
 .job-artifacts-icon {
-  padding-right: 3px;
+  padding-inline-end: 3px;
 }
 
 .job-brief-list {
@@ -828,7 +864,7 @@ export default {
 }
 
 .action-view-right .ui.dropdown.dark-dropdown .menu > .divider {
-  border-top-color: var(--color-console-menu-border);
+  border-block-start-color: var(--color-console-menu-border);
 }
 
 .action-view-right .ui.pointing.dropdown.dark-dropdown > .menu:not(.hidden)::after {

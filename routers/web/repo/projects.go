@@ -57,10 +57,7 @@ func Projects(ctx *context.Context) {
 	isShowClosed := strings.ToLower(ctx.FormTrim("state")) == "closed"
 	keyword := ctx.FormTrim("q")
 	repo := ctx.Repo.Repository
-	page := ctx.FormInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(ctx.FormInt("page"), 1)
 
 	ctx.Data["OpenCount"] = repo.NumOpenProjects
 	ctx.Data["ClosedCount"] = repo.NumClosedProjects
@@ -358,8 +355,10 @@ func ViewProject(ctx *context.Context) {
 
 			if len(referencedIDs) > 0 {
 				if linkedPrs, err := issues_model.Issues(ctx, &issues_model.IssuesOptions{
-					IssueIDs: referencedIDs,
-					IsPull:   optional.Some(true),
+					IssueIDs:  referencedIDs,
+					IsPull:    optional.Some(true),
+					User:      ctx.Doer,
+					AllPublic: !ctx.IsSigned,
 				}); err == nil {
 					linkedPrsMap[issue.ID] = linkedPrs
 				}
@@ -403,7 +402,7 @@ func UpdateIssueProject(ctx *context.Context) {
 		return
 	}
 	if _, err := issues.LoadRepositories(ctx); err != nil {
-		ctx.ServerError("LoadProjects", err)
+		ctx.ServerError("LoadRepositories", err)
 		return
 	}
 
@@ -650,6 +649,7 @@ func MoveIssues(ctx *context.Context) {
 	form := &movedIssuesForm{}
 	if err = json.NewDecoder(ctx.Req.Body).Decode(&form); err != nil {
 		ctx.ServerError("DecodeMovedIssuesForm", err)
+		return
 	}
 
 	issueIDs := make([]int64, 0, len(form.Issues))

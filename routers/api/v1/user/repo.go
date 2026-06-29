@@ -24,7 +24,7 @@ func listUserRepos(ctx *context.APIContext, u *user_model.User, private bool) {
 		Private:              private,
 		ListOptions:          opts,
 		OrderBy:              "id ASC",
-		AuthorizationReducer: ctx.Reducer,
+		AuthorizationReducer: ctx.Reducer(),
 	})
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserRepositories", err)
@@ -38,12 +38,12 @@ func listUserRepos(ctx *context.APIContext, u *user_model.User, private bool) {
 
 	apiRepos := make([]*api.Repository, 0, len(repos))
 	for i := range repos {
-		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repos[i], ctx.Doer, ctx.Reducer)
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repos[i], ctx.Doer(), ctx.Reducer())
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
 			return
 		}
-		if ctx.IsSigned && ctx.IsUserSiteAdmin() || permission.HasAccess() {
+		if ctx.IsSigned() && ctx.IsUserSiteAdmin() || permission.HasAccess() {
 			apiRepos = append(apiRepos, convert.ToRepo(ctx, repos[i], permission))
 		}
 	}
@@ -80,8 +80,8 @@ func ListUserRepos(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	private := ctx.IsSigned
-	listUserRepos(ctx, ctx.ContextUser, private)
+	private := ctx.IsSigned()
+	listUserRepos(ctx, ctx.User(), private)
 }
 
 // ListMyRepos - list the repositories you own or have access to.
@@ -117,11 +117,11 @@ func ListMyRepos(ctx *context.APIContext) {
 
 	opts := &repo_model.SearchRepoOptions{
 		ListOptions:          utils.GetListOptions(ctx),
-		Actor:                ctx.Doer,
-		OwnerID:              ctx.Doer.ID,
-		Private:              ctx.IsSigned,
+		Actor:                ctx.Doer(),
+		OwnerID:              ctx.Doer().ID,
+		Private:              ctx.IsSigned(),
 		IncludeDescription:   true,
-		AuthorizationReducer: ctx.Reducer,
+		AuthorizationReducer: ctx.Reducer(),
 	}
 	orderBy := ctx.FormTrim("order_by")
 	switch orderBy {
@@ -150,14 +150,16 @@ func ListMyRepos(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "LoadOwner", err)
 			return
 		}
-		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer, ctx.Reducer)
+		permission, err := access_model.GetUserRepoPermissionWithReducer(ctx, repo, ctx.Doer(), ctx.Reducer())
 		if err != nil {
 			ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
+			return
 		} else if !permission.HasAccess() {
 			// It shouldn't happen that a repo is returned from SearchRepository which we have no access to at all. Due
 			// to the pagination of the API it doesn't make sense to skip it, as we wouldn't be giving the right number
 			// of results back to the API consumer.
 			ctx.Error(http.StatusInternalServerError, "InvalidAuthorizationReducer", "Repository was available from SearchRepository, but not readable.")
+			return
 		}
 		results[i] = convert.ToRepo(ctx, repo, permission)
 	}
@@ -194,5 +196,5 @@ func ListOrgRepos(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	listUserRepos(ctx, ctx.Org.Organization.AsUser(), ctx.IsSigned)
+	listUserRepos(ctx, ctx.Org().Organization.AsUser(), ctx.IsSigned())
 }

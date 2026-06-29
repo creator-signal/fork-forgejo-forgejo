@@ -15,10 +15,10 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
+	"forgejo.org/services/migrations/allowlist"
 )
 
 var (
@@ -153,6 +153,7 @@ type PagurePRResponse struct {
 	Requests []struct {
 		Branch         string     `json:"branch"`
 		BranchFrom     string     `json:"branch_from"`
+		CommitStart    string     `json:"commit_start"`
 		CommitStop     string     `json:"commit_stop"`
 		DateCreated    string     `json:"date_created"`
 		FullURL        string     `json:"full_url"`
@@ -237,14 +238,10 @@ func NewPagureDownloader(ctx context.Context, baseURL *url.URL, token, repoName 
 	}
 
 	downloader := &PagureDownloader{
-		ctx:      ctx,
-		baseURL:  baseURL,
-		repoName: repoName,
-		client: &http.Client{
-			Transport: &http.Transport{
-				Proxy: proxy.Proxy(),
-			},
-		},
+		ctx:                   ctx,
+		baseURL:               baseURL,
+		repoName:              repoName,
+		client:                allowlist.NewMigrationHTTPClient(),
 		token:                 token,
 		privateIssuesOnlyRepo: privateIssuesOnlyRepo,
 		userMap:               make(map[string]*PagureUser),
@@ -560,7 +557,7 @@ func (d *PagureDownloader) GetPullRequests(page, perPage int) ([]*base.PullReque
 		}
 		mergedtime := processDate(&pr.ClosedAt)
 
-		err = d.callAPI("/api/0/"+d.repoName+"/c/"+pr.CommitStop+"/info", nil, &commit)
+		err = d.callAPI("/api/0/"+d.repoName+"/c/"+pr.CommitStart+"/info", nil, &commit)
 		if err != nil {
 			return nil, false, err
 		}

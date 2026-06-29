@@ -13,7 +13,7 @@
 		</div>
 		<div class="repo-topics tw-my-2" id="repo-topics">
 			{{range .Topics}}
-				<a class="repo-topic ui large label" href="{{AppSubUrl}}/explore/repos?q={{.Name}}&topic=1">{{.Name}}</a>
+				<a class="repo-topic ui large label" href="{{AppSubUrl}}/explore/repos?q={{.}}&topic=1">{{.}}</a>
 			{{end}}
 			{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
 				<button id="manage_topic" class="btn interact-fg tw-text-12">{{ctx.Locale.Tr "repo.topic.manage_topics"}}</button>
@@ -22,13 +22,8 @@
 		{{end}}
 		{{if and .Permission.IsAdmin (not .Repository.IsArchived)}}
 		<div class="ui form tw-hidden tw-flex tw-gap-2 tw-my-2" id="topic_edit">
-			<div class="ui fluid multiple search selection dropdown tw-flex-wrap tw-flex-1">
-				<input type="hidden" name="topics" value="{{range $i, $v := .Topics}}{{.Name}}{{if Eval $i "+" 1 "<" (len $.Topics)}},{{end}}{{end}}">
-				{{range .Topics}}
-					{{/* keep the same layout as Fomantic UI generated labels */}}
-					<a class="ui label transition visible tw-cursor-default tw-inline-block" data-value="{{.Name}}">{{.Name}}{{svg "octicon-x" 16 "delete icon"}}</a>
-				{{end}}
-				<div class="text"></div>
+			<div class="tw-flex-1">
+				<input type="text" id="topic-input" name="topics" value="{{StringUtils.Join .Topics ","}}">
 			</div>
 			<div>
 				<button class="ui basic button" id="cancel_topic_edit">{{ctx.Locale.Tr "cancel"}}</button>
@@ -102,20 +97,7 @@
 						{{ctx.Locale.Tr "repo.use_template"}}
 					</a>
 				{{end}}
-				{{if (not $isHomepage)}}
-					<span class="breadcrumb repo-path tw-ml-1">
-						<a class="section" href="{{.RepoLink}}/src/{{.BranchNameSubURL}}" title="{{.Repository.Name}}">{{StringUtils.EllipsisString .Repository.Name 30}}</a>
-						{{- range $i, $v := .TreeNames -}}
-							<span class="breadcrumb-divider">/</span>
-							{{- if eq $i $l -}}
-								<span class="active section" title="{{$v}}">{{$v}}</span>
-								<button class="btn interact-fg tw-p-2" data-clipboard-text="{{$.TreePath}}" data-tooltip-content="{{ctx.Locale.Tr "copy_path"}}">{{svg "octicon-copy" 14}}</button>
-							{{- else -}}
-								{{$p := index $.Paths $i}}<span class="section"><a href="{{$.BranchLink}}/{{PathEscapeSegments $p}}" title="{{$v}}">{{$v}}</a></span>
-							{{- end -}}
-						{{- end -}}
-					</span>
-				{{end}}
+				{{template "repo/filepath" .}}
 			</div>
 			<div class="tw-flex tw-items-center max-[390px]:tw-w-full">
 				<!-- Only show clone panel in repository home page -->
@@ -160,8 +142,10 @@
 			</div>
 		</div>
 
-		{{template "repo/code/recently_pushed_new_branches" .}}
-		{{template "repo/code/fork_sync_message" .}}
+		{{if (not .Repository.IsArchived)}}
+			{{template "repo/code/recently_pushed_new_branches" .}}
+			{{template "repo/code/fork_sync_message" .}}
+		{{end}}
 
 		{{if .IsViewFile}}
 			{{template "repo/view_file" .}}

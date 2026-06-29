@@ -119,6 +119,13 @@ func SlackTextFormatter(s string) string {
 	return s
 }
 
+var slackPayloadFormatter = webhookPayloadFormatter{
+	linkFormatter: SlackLinkFormatter,
+	nameFormatter: SlackNameFormatter,
+	withSender:    true,
+	withRepoName:  true,
+}
+
 // SlackNameFormatter puts the name into an inline code block.
 // This way names do not trigger unwanted message notifications, as users usually don't want to get notified about their own actions.
 func SlackNameFormatter(name string) string {
@@ -174,7 +181,7 @@ func (s slackConvertor) Fork(p *api.ForkPayload) (SlackPayload, error) {
 
 // Issue implements payloadConvertor Issue method
 func (s slackConvertor) Issue(p *api.IssuePayload) (SlackPayload, error) {
-	text, issueTitle, attachmentText, color := getIssuesPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, attachmentText, color := slackPayloadFormatter.getIssuesPayloadInfo(p)
 
 	var attachments []SlackAttachment
 	if attachmentText != "" {
@@ -193,7 +200,7 @@ func (s slackConvertor) Issue(p *api.IssuePayload) (SlackPayload, error) {
 
 // IssueComment implements payloadConvertor IssueComment method
 func (s slackConvertor) IssueComment(p *api.IssueCommentPayload) (SlackPayload, error) {
-	text, issueTitle, color := getIssueCommentPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, color := slackPayloadFormatter.getIssueCommentPayloadInfo(p)
 
 	return s.createPayload(text, []SlackAttachment{{
 		Color:     fmt.Sprintf("%x", color),
@@ -205,20 +212,20 @@ func (s slackConvertor) IssueComment(p *api.IssueCommentPayload) (SlackPayload, 
 
 // Wiki implements payloadConvertor Wiki method
 func (s slackConvertor) Wiki(p *api.WikiPayload) (SlackPayload, error) {
-	text, _, _ := getWikiPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, _, _ := slackPayloadFormatter.getWikiPayloadInfo(p, true)
 
 	return s.createPayload(text, nil), nil
 }
 
 // Release implements payloadConvertor Release method
 func (s slackConvertor) Release(p *api.ReleasePayload) (SlackPayload, error) {
-	text, _ := getReleasePayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, _ := slackPayloadFormatter.getReleasePayloadInfo(p)
 
 	return s.createPayload(text, nil), nil
 }
 
 func (s slackConvertor) Package(p *api.PackagePayload) (SlackPayload, error) {
-	text, _ := getPackagePayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, _ := slackPayloadFormatter.getPackagePayloadInfo(p)
 
 	return s.createPayload(text, nil), nil
 }
@@ -245,13 +252,13 @@ func (s slackConvertor) Push(p *api.PushPayload) (SlackPayload, error) {
 	branchLink := SlackLinkToRef(p.Repo.HTMLURL, p.Ref)
 	text := fmt.Sprintf("[%s:%s] %s pushed by %s", p.Repo.FullName, branchLink, commitString, SlackNameFormatter(p.Pusher.UserName))
 
-	var attachmentText string
+	var attachmentText strings.Builder
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackShortTextFormatter(commit.Message), SlackNameFormatter(commit.Author.Name))
+		fmt.Fprintf(&attachmentText, "%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackShortTextFormatter(commit.Message), SlackNameFormatter(commit.Author.Name))
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
-			attachmentText += "\n"
+			attachmentText.WriteString("\n")
 		}
 	}
 
@@ -259,13 +266,13 @@ func (s slackConvertor) Push(p *api.PushPayload) (SlackPayload, error) {
 		Color:     s.Color,
 		Title:     p.Repo.HTMLURL,
 		TitleLink: p.Repo.HTMLURL,
-		Text:      attachmentText,
+		Text:      attachmentText.String(),
 	}}), nil
 }
 
 // PullRequest implements payloadConvertor PullRequest method
 func (s slackConvertor) PullRequest(p *api.PullRequestPayload) (SlackPayload, error) {
-	text, issueTitle, attachmentText, color := getPullRequestPayloadInfo(p, SlackLinkFormatter, SlackNameFormatter, true)
+	text, issueTitle, attachmentText, color := slackPayloadFormatter.getPullRequestPayloadInfo(p)
 
 	var attachments []SlackAttachment
 	if attachmentText != "" {
@@ -316,7 +323,7 @@ func (s slackConvertor) Repository(p *api.RepositoryPayload) (SlackPayload, erro
 }
 
 func (s slackConvertor) Action(p *api.ActionPayload) (SlackPayload, error) {
-	text, _ := getActionPayloadInfo(p, SlackLinkFormatter)
+	text, _ := slackPayloadFormatter.getActionPayloadInfo(p)
 
 	return s.createPayload(text, nil), nil
 }

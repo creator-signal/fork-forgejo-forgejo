@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -21,22 +22,22 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
-	"forgejo.org/modules/optional"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	doctor "forgejo.org/services/doctor"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	mirror_service "forgejo.org/services/mirror"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -89,7 +90,7 @@ func TestMirrorPush(t *testing.T) {
 func testMirrorPush(t *testing.T, u *url.URL) {
 	defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 
-	require.NoError(t, migrations.Init())
+	require.NoError(t, migrations_allowlist.Init())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -99,7 +100,7 @@ func testMirrorPush(t *testing.T, u *url.URL) {
 	})
 	require.NoError(t, err)
 
-	ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+	ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 
 	doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape(mirrorRepo.Name)), user.LowerName, userPassword)(t)
 	doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape("does-not-matter")), user.LowerName, userPassword)(t)
@@ -221,19 +222,14 @@ func TestSSHPushMirror(t *testing.T) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 		assert.False(t, srcRepo.HasWiki())
 		sess := loginUser(t, user.Name)
 
-		pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:         optional.Some("push-mirror-misc-test"),
-			AutoInit:     optional.Some(false),
-			EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
-		})
-		defer f()
+		pushToRepo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 		sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
 
 		t.Run("Mutual exclusive", func(t *testing.T) {
@@ -286,12 +282,7 @@ func TestSSHPushMirror(t *testing.T) {
 		testMirrorPush := func(t *testing.T, srcRepo *repo_model.Repository, expectedSHA string) {
 			t.Helper()
 
-			pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-				Name:         optional.Some("push-mirror-test"),
-				AutoInit:     optional.Some(false),
-				EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
-			})
-			defer f()
+			pushToRepo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 			sshURL := fmt.Sprintf("ssh://%s@%s/%s.git", setting.SSH.User, net.JoinHostPort(setting.SSH.ListenHost, strconv.Itoa(setting.SSH.ListenPort)), pushToRepo.FullName())
 
 			var pushMirror *repo_model.PushMirror
@@ -398,16 +389,15 @@ func TestPushMirrorBranchFilterWebUI(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		sess := loginUser(t, user.Name)
 
-		mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-		defer f()
+		mirrorRepo := forgery.CreateRepository(t, user, nil)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 
@@ -499,14 +489,14 @@ func TestPushMirrorBranchFilterIntegration(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		sess := loginUser(t, user.Name)
 		token := getTokenForLoggedInUser(t, sess, auth_model.AccessTokenScopeAll)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape("foo"))
 		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/push_mirrors", user.LowerName, srcRepo.Name)
@@ -588,19 +578,15 @@ func TestPushMirrorSettings(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 		srcRepo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
 		assert.False(t, srcRepo.HasWiki())
 		sess := loginUser(t, user.Name)
-		pushToRepo, _, f := tests.CreateDeclarativeRepoWithOptions(t, user, tests.DeclarativeRepoOptions{
-			Name:         optional.Some("push-mirror-test"),
-			AutoInit:     optional.Some(false),
-			EnabledUnits: optional.Some([]unit.Type{unit.TypeCode}),
-		})
-		defer f()
+
+		pushToRepo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{})
 
 		t.Run("Adding", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -663,7 +649,7 @@ func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -682,7 +668,7 @@ func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 		_, _, err = git.NewCommand(git.DefaultContext, "update-ref", "refs/heads/hotfix-123", "refs/heads/master").RunStdString(&git.RunOpts{Dir: testRepoPath})
 		require.NoError(t, err)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = sess
 
 		t.Run("Create push mirror with branch filter and trigger sync", func(t *testing.T) {
@@ -897,17 +883,16 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		session := loginUser(t, user.Name)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeAll)
 
-		mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-		defer f()
+		mirrorRepo := forgery.CreateRepository(t, user, nil)
 
-		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name)
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
 		ctx.Session = session
 		remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 		urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/push_mirrors", user.Name, srcRepo.Name)
@@ -941,8 +926,7 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// Create another mirror repo for this test
-			mirrorRepo2, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-			defer f()
+			mirrorRepo2 := forgery.CreateRepository(t, user, nil)
 			remoteAddress2 := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo2.Name))
 
 			// Create push mirror with empty branch filter via web UI
@@ -967,8 +951,7 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// Create another mirror repo for this test
-			mirrorRepo3, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-			defer f()
+			mirrorRepo3 := forgery.CreateRepository(t, user, nil)
 			remoteAddress3 := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo3.Name))
 
 			// Create push mirror with complex branch filter via web UI
@@ -994,8 +977,7 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// Create another mirror repo for this test
-			mirrorRepo4, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-			defer f()
+			mirrorRepo4 := forgery.CreateRepository(t, user, nil)
 			remoteAddress4 := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo4.Name))
 
 			// First create a push mirror via API with initial branch filter
@@ -1111,5 +1093,102 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 
 			htmlDoc.AssertElement(t, "#push_mirror_branch_filter", true)
 		})
+	})
+}
+
+func TestMirrorPushFailOnRedirect(t *testing.T) {
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "127.0.0.1"
+	migrations_allowlist.Init()
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+	}()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+		// Target repo that the mirror may go into...
+		mirrorRepo, err := repo_service.CreateRepositoryDirectly(db.DefaultContext, user, user, repo_service.CreateRepoOptions{
+			Name: "test-push-mirror-address-check",
+		})
+		require.NoError(t, err)
+
+		// Actual HTTP server that the mirror will go into, which will attempt to redirect to the mirrorRepo
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// w.Header().Set("Location", "https://example.com/some-user/some-repo.git")
+			targetLocation := fmt.Sprintf("%s%s/%s%s", u.String(), mirrorRepo.OwnerName, mirrorRepo.Name, r.RequestURI)
+			t.Logf("targetLocation = %q", targetLocation)
+			w.Header().Set("Location", targetLocation)
+			w.WriteHeader(301)
+		}))
+		t.Cleanup(s.Close)
+
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
+		doCreatePushMirror(ctx, s.URL, user.LowerName, userPassword)(t)
+
+		mirrors, _, err := repo_model.GetPushMirrorsByRepoID(db.DefaultContext, srcRepo.ID, db.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, mirrors, 1)
+
+		// Regardless of whether http.followRedirects is set or not, this sync will fail -- auth doesn't get sent to the
+		// new redirected URL (great!) and would fail with a 401 -- so to ensure that we're hitting the
+		// http.followRedirects=false case, check the error log output and ensure it has the expected git error.
+		lc, cleanup := test.NewLogChecker(log.DEFAULT, log.ERROR)
+		lc.Filter("The requested URL returned error: 301") // expected git error
+		lc.StopMark("SyncPushMirror")
+		defer cleanup()
+
+		ok := mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.False(t, ok, "expected push mirror sync to fail due to redirect")
+
+		logFiltered, _ := lc.Check(5 * time.Second)
+		assert.True(t, logFiltered[0], "expected migration error output")
+	})
+}
+
+// Verifies that a push mirror which was created while the remote address was permitted will fail to sync if the
+// AllowedDomains configuration later changes such that the remote URL is no longer permitted.
+func TestMirrorPushAddressCheck(t *testing.T) {
+	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
+	prev := setting.Migrations.AllowedDomains
+	setting.Migrations.AllowedDomains = "127.0.0.1"
+	migrations_allowlist.Init()
+	defer func() {
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+	}()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		srcRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+		mirrorRepo, err := repo_service.CreateRepositoryDirectly(db.DefaultContext, user, user, repo_service.CreateRepoOptions{
+			Name: "test-push-mirror-address-check",
+		})
+		require.NoError(t, err)
+
+		ctx := NewAPITestContext(t, user.LowerName, srcRepo.Name, auth_model.AccessTokenScopeReadRepository)
+
+		// Create the push mirror while localhost is still an allowed migration domain.
+		doCreatePushMirror(ctx, fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(ctx.Username), url.PathEscape(mirrorRepo.Name)), user.LowerName, userPassword)(t)
+
+		mirrors, _, err := repo_model.GetPushMirrorsByRepoID(db.DefaultContext, srcRepo.ID, db.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, mirrors, 1)
+
+		// The push should succeed while localhost is permitted.
+		ok := mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.True(t, ok, "expected push mirror sync to succeed while the remote URL is permitted")
+
+		// Reset the allowed domains to the default, which does not permit localhost.
+		setting.Migrations.AllowedDomains = prev
+		migrations_allowlist.Init()
+
+		// Re-triggering the push mirror should now fail because the remote URL is no longer permitted.
+		ok = mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
+		assert.False(t, ok, "expected push mirror sync to fail because the remote URL is no longer permitted")
 	})
 }
