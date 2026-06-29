@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -241,7 +242,8 @@ func fallbackImage() image.Image {
 func (c *Card) fetchExternalImage(url string) (image.Image, bool) {
 	// Use a short timeout; in the event of any failure we'll be logging and returning a placeholder, but we don't want
 	// this rendering process to be slowed down
-	bodyBuffer, err := avatar.FetchExternalImageData(url, 1*time.Second)
+	client := &http.Client{Timeout: 1 * time.Second}
+	bodyBuffer, err := avatar.FetchExternalImageData(url, client)
 	if err != nil {
 		return nil, false
 	}

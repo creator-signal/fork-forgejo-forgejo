@@ -9,20 +9,16 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	_ "image/gif"  // for processing gif images
+	_ "image/jpeg" // for processing jpeg images
 	"image/png"
 	"io"
 	"net/http"
 	"strings"
-	"time"
-
-	_ "image/gif"  // for processing gif images
-	_ "image/jpeg" // for processing jpeg images
 
 	"forgejo.org/modules/avatar/identicon"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
-
 	"golang.org/x/image/draw"
 
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -163,14 +159,7 @@ func BestAvatarCachedSize(size int) int {
 }
 
 // FetchExternalImageData As defensively as possible, attempt to load an image from a presumed external and untrusted URL
-func FetchExternalImageData(externalURL string, timeout time.Duration) (*bytes.Reader, error) {
-	client := &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			Proxy: proxy.Proxy(),
-		},
-	}
-
+func FetchExternalImageData(externalURL string, client *http.Client) (*bytes.Reader, error) {
 	// Go expects a absolute URL, so we must change a relative to an absolute one
 	if !strings.Contains(externalURL, "://") {
 		externalURL = fmt.Sprintf("%s%s", setting.AppURL, strings.TrimPrefix(externalURL, "/"))

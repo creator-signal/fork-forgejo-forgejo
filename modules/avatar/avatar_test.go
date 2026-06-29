@@ -295,7 +295,8 @@ func Test_FetchExternalImageData(t *testing.T) {
 			logChecker.Filter(testCase.expectedLog).StopMark(stopMark)
 			defer cleanup()
 
-			img, err := FetchExternalImageData(server.URL+testCase.url, 1*time.Second)
+			client := &http.Client{Timeout: 1 * time.Second}
+			img, err := FetchExternalImageData(server.URL+testCase.url, client)
 
 			if testCase.expectedSuccess {
 				require.NoError(t, err, "expected success from fetchExternalImage")

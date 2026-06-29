@@ -1044,7 +1044,9 @@ func (g *GiteaLocalUploader) remapExternalUser(source user_model.ExternalUserMig
 }
 
 func (g *GiteaLocalUploader) migrateRepositoryAvatar(avatarURL string) error {
-	byteBuffer, err := avatar.FetchExternalImageData(avatarURL, setting.Migrations.AvatarFetchTimeout)
+	client := allowlist.NewMigrationHTTPClient()
+	client.Timeout = setting.Migrations.AvatarFetchTimeout
+	byteBuffer, err := avatar.FetchExternalImageData(avatarURL, client)
 	if err != nil {
 		return err
 	}

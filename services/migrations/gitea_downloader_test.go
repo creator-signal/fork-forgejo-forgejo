@@ -478,7 +478,7 @@ func TestGiteaDownloaderAvatarURL(t *testing.T) {
 		gitea_sdk.SetToken(token),
 		gitea_sdk.SetBasicAuth("", ""),
 		gitea_sdk.SetContext(t.Context()),
-		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+		gitea_sdk.SetHTTPClient(allowlist.NewMigrationHTTPClient()),
 	)
 	require.NoError(t, err, "Could not create Client")
 
