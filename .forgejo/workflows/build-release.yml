@@ -164,7 +164,7 @@ jobs:
 
       - name: build container & release
         if: ${{ secrets.TOKEN != '' }}
-        uses: https://data.forgejo.org/forgejo/forgejo-build-publish/build@c131a10d0dab056dc39c7df7923feaf92c41609a # v5.7.1
+        uses: https://data.forgejo.org/forgejo/forgejo-build-publish/build@c219f52c4d9a15f8f9f979111b1b79801f6857f3 # v5.7.3
         with:
           forgejo: "${{ env.GITHUB_SERVER_URL }}"
           owner: "${{ env.GITHUB_REPOSITORY_OWNER }}"
@@ -183,7 +183,7 @@ jobs:
 
       - name: build rootless container
         if: ${{ secrets.TOKEN != '' }}
-        uses: https://data.forgejo.org/forgejo/forgejo-build-publish/build@c131a10d0dab056dc39c7df7923feaf92c41609a # v5.7.1
+        uses: https://data.forgejo.org/forgejo/forgejo-build-publish/build@c219f52c4d9a15f8f9f979111b1b79801f6857f3 # v5.7.3
         with:
           forgejo: "${{ env.GITHUB_SERVER_URL }}"
           owner: "${{ env.GITHUB_REPOSITORY_OWNER }}"
