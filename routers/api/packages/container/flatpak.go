@@ -53,7 +53,7 @@ func getFlatpakPackageVersion(ctx *context.Context) (bool, *packages_model.Packa
 	}
 
 	if metadata.Type != container_module.TypeFlatpak || metadata.Flatpak == nil {
-		apiError(ctx, http.StatusBadGateway, fmt.Errorf("Not an Flatpak"))
+		apiError(ctx, http.StatusBadGateway, fmt.Errorf("Not a Flatpak"))
 		return false, nil, nil
 	}
 
