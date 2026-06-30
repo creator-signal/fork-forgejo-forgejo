@@ -35,7 +35,7 @@ func GenerateActionsRunnerToken(ctx *context.PrivateContext) {
 		return
 	}
 
-	owner, repo, err := parseScope(ctx, genRequest.Scope)
+	owner, repo, err := ParseScope(ctx, genRequest.Scope)
 	if err != nil {
 		log.Error("parseScope failed: %v", err)
 		ctx.JSON(http.StatusInternalServerError, private.Response{
@@ -77,10 +77,6 @@ func GenerateActionsRunnerToken(ctx *context.PrivateContext) {
 }
 
 func ParseScope(ctx gocontext.Context, scope string) (ownerID, repoID int64, err error) {
-	return parseScope(ctx, scope)
-}
-
-func parseScope(ctx gocontext.Context, scope string) (ownerID, repoID int64, err error) {
 	ownerID = 0
 	repoID = 0
 	if scope == "" {
