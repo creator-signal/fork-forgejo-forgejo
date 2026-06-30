@@ -77,28 +77,24 @@ func GenerateActionsRunnerToken(ctx *context.PrivateContext) {
 }
 
 func ParseScope(ctx gocontext.Context, scope string) (ownerID, repoID int64, err error) {
-	ownerID = 0
-	repoID = 0
 	if scope == "" {
-		return ownerID, repoID, nil
+		return 0, 0, nil
 	}
 
 	ownerName, repoName, found := strings.Cut(scope, "/")
 
 	u, err := user_model.GetUserByName(ctx, ownerName)
 	if err != nil {
-		return ownerID, repoID, err
+		return 0, 0, err
 	}
-	ownerID = u.ID
 
 	if !found {
-		return ownerID, repoID, nil
+		return u.ID, 0, nil
 	}
 
 	r, err := repo_model.GetRepositoryByName(ctx, u.ID, repoName)
 	if err != nil {
-		return ownerID, repoID, err
+		return 0, 0, err
 	}
-	repoID = r.ID
-	return ownerID, repoID, nil
+	return 0, r.ID, nil
 }
