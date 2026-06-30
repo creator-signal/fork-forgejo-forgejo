@@ -338,7 +338,22 @@ function onKeydown(e: KeyboardEvent) {
     case 'y': {
       const perma = document.querySelector<HTMLAnchorElement>('#permalink-btn');
       if (!perma) return;
-      navigator.clipboard.writeText(perma.href);
+      const msg = document.querySelector('#permalink-msg');
+      msg.classList.toggle('tw-hidden');
+      msg.toggleAttribute('aria-hidden');
+      const fn = (error: boolean) => {
+        const el = msg.querySelector(error ? '.error' : '.success');
+        el.classList.toggle('tw-hidden');
+        setTimeout(() => {
+          msg.classList.toggle('tw-hidden');
+          msg.toggleAttribute('aria-hidden');
+          el.classList.toggle('tw-hidden');
+        }, 1000);
+      };
+      navigator.clipboard
+        .writeText(perma.href)
+        .then(() => fn(false))
+        .catch(() => fn(true));
       break;
     }
     case '/':
