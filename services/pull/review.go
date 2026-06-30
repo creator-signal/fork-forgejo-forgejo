@@ -356,7 +356,7 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			// The anchored commit may be gone (e.g. force-push before a migration), so the hunk
 			// can't be produced. Store the comment without context, like the importer.
 			log.Warn("CreateCodeComment: storing comment without diff context: %v", err)
-			patch, err = "", nil
+			patch = ""
 		}
 	}
 	return issues_model.CreateComment(ctx, &issues_model.CreateCommentOptions{
