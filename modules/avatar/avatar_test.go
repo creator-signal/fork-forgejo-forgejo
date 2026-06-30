@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 
@@ -295,7 +296,12 @@ func Test_FetchExternalImageData(t *testing.T) {
 			logChecker.Filter(testCase.expectedLog).StopMark(stopMark)
 			defer cleanup()
 
-			client := &http.Client{Timeout: 1 * time.Second}
+			client := &http.Client{
+				Timeout: 1 * time.Second,
+				Transport: &http.Transport{
+					Proxy: proxy.Proxy(),
+				},
+			}
 			img, err := FetchExternalImageData(server.URL+testCase.url, client)
 
 			if testCase.expectedSuccess {

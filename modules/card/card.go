@@ -19,7 +19,9 @@ import (
 
 	"forgejo.org/modules/avatar"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
+
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/draw"
@@ -243,7 +245,12 @@ func fallbackImage() image.Image {
 func (c *Card) fetchExternalImage(url string) (image.Image, bool) {
 	// Use a short timeout; in the event of any failure we'll be logging and returning a placeholder, but we don't want
 	// this rendering process to be slowed down
-	client := &http.Client{Timeout: 1 * time.Second}
+	client := &http.Client{
+		Timeout: 1 * time.Second,
+		Transport: &http.Transport{
+			Proxy: proxy.Proxy(),
+		},
+	}
 
 	// FetchExternalImageData expects a absolute URL, so we must change a relative to an absolute one
 	if !strings.Contains(url, "://") {

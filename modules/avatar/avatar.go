@@ -9,15 +9,17 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/gif"  // for processing gif images
-	_ "image/jpeg" // for processing jpeg images
 	"image/png"
 	"io"
 	"net/http"
 
+	_ "image/gif"  // for processing gif images
+	_ "image/jpeg" // for processing jpeg images
+
 	"forgejo.org/modules/avatar/identicon"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+
 	"golang.org/x/image/draw"
 
 	_ "golang.org/x/image/webp" // for processing webp images
