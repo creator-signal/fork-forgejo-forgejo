@@ -80,7 +80,7 @@
 
 		<div class="ui attached table segment">
 			<table class="ui very basic striped fixed table single line">
-				<tbody>
+				<tbody class="kb-nav">
 					{{range .Branches}}
 						<tr>
 							<td class="eight wide">
@@ -92,7 +92,7 @@
 								<p class="info">{{ctx.Locale.Tr "repo.branch.deleted_by" .DBBranch.DeletedBy.Name}} {{DateUtils.TimeSince .DBBranch.DeletedUnix}}</p>
 							{{else}}
 								<div class="flex-text-block">
-									<a class="gt-ellipsis" href="{{$.RepoLink}}/src/branch/{{PathEscapeSegments .DBBranch.Name}}">{{.DBBranch.Name}}</a>
+									<a class="kb-nav-item gt-ellipsis" href="{{$.RepoLink}}/src/branch/{{PathEscapeSegments .DBBranch.Name}}">{{.DBBranch.Name}}</a>
 									{{if .IsProtected}}
 										<span data-tooltip-content="{{ctx.Locale.Tr "repo.settings.protected_branch"}}">{{svg "octicon-shield-lock"}}</span>
 									{{end}}

@@ -12,15 +12,15 @@
 		{{$canReadReleases := $.Permission.CanRead $.UnitTypeReleases}}
 		<div class="ui attached table segment">
 			<table class="ui very basic striped fixed table single line" id="tags-table">
-				<tbody class="tag-list">
+				<tbody class="kb-nav tag-list">
 					{{range $idx, $release := .Releases}}
 						<tr>
 							<td class="tag">
 								<h3 class="release-tag-name tw-mb-2 tw-flex">
 									{{if $canReadReleases}}
-										<a class="tw-flex tw-items-center" href="{{$.RepoLink}}/releases/tag/{{.TagName | PathEscapeSegments}}" rel="nofollow">{{.TagName}}</a>
+										<a class="kb-nav-item tw-flex tw-items-center" href="{{$.RepoLink}}/releases/tag/{{.TagName | PathEscapeSegments}}" rel="nofollow">{{.TagName}}</a>
 									{{else}}
-										<a class="tw-flex tw-items-center" href="{{$.RepoLink}}/src/tag/{{.TagName | PathEscapeSegments}}" rel="nofollow">{{.TagName}}</a>
+										<a class="kb-nav-item tw-flex tw-items-center" href="{{$.RepoLink}}/src/tag/{{.TagName | PathEscapeSegments}}" rel="nofollow">{{.TagName}}</a>
 									{{end}}
 									{{template "repo/tag/verification_box" (dict "ctxData" $ "release" $release)}}
 								</h3>

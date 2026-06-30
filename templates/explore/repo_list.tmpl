@@ -1,4 +1,4 @@
-<div class="flex-list">
+<div class="kb-nav flex-list">
 	{{range .Repos}}
 		<div class="flex-item">
 			<div class="flex-item-leading">
@@ -10,7 +10,7 @@
 						{{if and (or $.PageIsExplore $.PageIsProfileStarList) .Owner}}
 						<a class="text primary name" href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a>/
 						{{end}}
-						<a class="text primary name" href="{{.Link}}">{{.Name}}</a>
+						<a class="kb-nav-item text primary name" href="{{.Link}}">{{.Name}}</a>
 						<span>
 							{{if .IsArchived}}
 								<span class="ui label">{{ctx.Locale.Tr "repo.desc.archived"}}</span>

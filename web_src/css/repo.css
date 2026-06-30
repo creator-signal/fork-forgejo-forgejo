@@ -1311,10 +1311,6 @@ citation-information .tab:not(.active) {
   margin: 0;
 }
 
-.repository #commits-table.ui.basic.striped.table tbody tr:nth-child(2n) {
-  background-color: var(--color-light) !important;
-}
-
 .repository .data-table {
   width: 100%;
 }

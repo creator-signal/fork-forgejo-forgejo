@@ -1,4 +1,4 @@
-<div class="flex-list run-list">
+<div class="kb-nav flex-list run-list">
 	{{if not .Runs}}
 	<div class="empty-placeholder">
 		{{svg "octicon-no-entry" 48}}
@@ -12,7 +12,7 @@
 			</div>
 			<div class="flex-item-main">
 				<div class="flex-item-title">
-					<a title="{{.Title}}" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">
+					<a class="kb-nav-item" title="{{.Title}}" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">
 						{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "actions.runs.empty_commit_message"}}{{end}}
 					</a>
 					{{if .Prioritize}}<span class="ui label">{{ctx.Locale.Tr "actions.runs.prioritized_run"}}</span>{{end}}

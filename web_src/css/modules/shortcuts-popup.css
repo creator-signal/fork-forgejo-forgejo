@@ -1,5 +1,5 @@
 .keyboard-selected {
-  background-color: var(--color-hover);
+  background-color: var(--color-hover) !important;
   box-shadow: inset 2px 0 0 var(--color-primary);
 }
 

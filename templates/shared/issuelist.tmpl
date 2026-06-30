@@ -1,4 +1,4 @@
-<div id="issue-list" class="flex-list">
+<div id="issue-list" class="kb-nav flex-list">
 	{{$approvalCounts := .ApprovalCounts}}
 	{{range .Issues}}
 		<div class="flex-item">
@@ -13,7 +13,7 @@
 			<div class="flex-item-main">
 				<div class="flex-item-header">
 					<div class="flex-item-title">
-						<a class="tw-no-underline issue-title" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">{{RenderRefIssueTitle $.Context .Title}}</a>
+						<a class="kb-nav-item tw-no-underline issue-title" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">{{RenderRefIssueTitle $.Context .Title}}</a>
 						{{if .IsPull}}
 							{{if (index $.CommitStatuses .PullRequest.ID)}}
 								{{template "repo/commit_statuses" dict "Status" (index $.CommitLastStatus .PullRequest.ID) "Statuses" (index $.CommitStatuses .PullRequest.ID)}}

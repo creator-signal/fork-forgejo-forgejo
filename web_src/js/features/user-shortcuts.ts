@@ -15,13 +15,7 @@ type PageType = (typeof Page)[keyof typeof Page];
 
 let goto_state = false;
 let where: PageType = Page.Homepage;
-const list = document.querySelector(`\
-#issue-list,\
-#notification_table,\
-#repo-files-table tbody,\
-.milestone-list,\
-.wiki-pages-list tbody\
-`);
+const list = document.querySelector('.kb-nav');
 
 function keyboardSelector(up: boolean, tab: boolean) {
   const rows = Array.from(list?.children ?? []) as HTMLElement[];
@@ -32,7 +26,7 @@ function keyboardSelector(up: boolean, tab: boolean) {
   if (cur === -1) {
     const idx = up ? rows.length - 1 : 0;
     rows[idx].classList.add('keyboard-selected');
-    const anchor = rows[idx].querySelector('a');
+    const anchor = rows[idx].querySelector<HTMLAnchorElement>('.kb-nav-item');
     if (!anchor) return;
     anchor.scrollIntoView({block: 'center'});
     anchor.focus();
@@ -51,7 +45,7 @@ function keyboardSelector(up: boolean, tab: boolean) {
       el.classList.remove('keyboard-selected');
       return;
     }
-  } else el.querySelector('a')?.focus();
+  } else el.querySelector<HTMLAnchorElement>('.kb-nav-item')?.focus();
   if (rows[cur] === el) return;
   el.classList.add('keyboard-selected');
   el.scrollIntoView({block: 'center'});

@@ -71,7 +71,7 @@
 					</div>
 					</div>
 				</div>
-				<div class="milestone-list">
+				<div class="kb-nav milestone-list">
 					{{range .Milestones}}
 						<li class="milestone-card">
 							<div class="milestone-header">
@@ -80,7 +80,7 @@
 										{{.Repo.FullName}}
 									</span>
 									{{svg "octicon-milestone" 16}}
-									<a class="muted" href="{{.Repo.Link}}/milestone/{{.ID}}">{{.Name}}</a>
+									<a class="kb-nav-item muted" href="{{.Repo.Link}}/milestone/{{.ID}}">{{.Name}}</a>
 								</h3>
 								<div class="tw-flex tw-items-center">
 									<span class="tw-mr-2">{{.Completeness}}%</span>

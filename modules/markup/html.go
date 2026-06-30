@@ -1474,7 +1474,7 @@ func genDefaultLinkProcessor(defaultLink string) processor {
 		node.DataAtom = atom.A
 		node.Attr = []html.Attribute{
 			{Key: "href", Val: defaultLink},
-			{Key: "class", Val: "default-link muted"},
+			{Key: "class", Val: "kb-nav-item default-link muted"},
 		}
 		node.FirstChild, node.LastChild = ch, ch
 	}

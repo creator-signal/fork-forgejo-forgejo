@@ -19,10 +19,10 @@
 			<td class="text grey right age repo-files-table-latest-commit-cell tw-py-0">{{if .LatestCommit}}{{if .LatestCommit.Committer}}{{DateUtils.TimeSince .LatestCommit.Committer.When}}{{end}}{{end}}</td>
 		</tr>
 	</thead>
-	<tbody>
+	<tbody class="kb-nav">
 		{{if .HasParentPath}}
 			<tr class="has-parent">
-				<td colspan="3"><a class="muted" href="{{.BranchLink}}{{if .ParentPath}}{{PathEscapeSegments .ParentPath}}{{end}}">{{svg "octicon-reply" 16 "tw-mr-2"}}..</a></td>
+				<td colspan="3"><a class="muted kb-nav-item" href="{{.BranchLink}}{{if .ParentPath}}{{PathEscapeSegments .ParentPath}}{{end}}">{{svg "octicon-reply" 16 "tw-mr-2"}}..</a></td>
 			</tr>
 		{{end}}
 		{{range $item := .Files}}
@@ -36,14 +36,14 @@
 							{{$refURL := $submodule.ResolveUpstreamURL $.Repository.HTMLURL}}
 							{{$icon := (svg "octicon-file-submodule" 16 "tw-mr-2")}}
 							{{if $refURL}}
-								<a class="muted" href="{{$refURL}}">{{$icon}}{{$entry.Name}}</a><span class="at">@</span><a href="{{$refURL}}/commit/{{PathEscape $submodule.Commit.String}}">{{ShortSha $submodule.Commit.String}}</a>
+								<a class="muted kb-nav-item" href="{{$refURL}}">{{$icon}}{{$entry.Name}}</a><span class="at">@</span><a href="{{$refURL}}/commit/{{PathEscape $submodule.Commit.String}}">{{ShortSha $submodule.Commit.String}}</a>
 							{{else}}
 								{{$icon}}{{$entry.Name}}<span class="at">@</span>{{ShortSha $submodule.Commit.String}}
 							{{end}}
 						{{else}}
 							{{if $entry.IsDir}}
 								{{$subJumpablePathName := $entry.GetSubJumpablePathName}}
-								<a class="muted" href="{{$.TreeLink}}/{{PathEscapeSegments $subJumpablePathName}}" title="{{$subJumpablePathName}}">
+								<a class="muted kb-nav-item" href="{{$.TreeLink}}/{{PathEscapeSegments $subJumpablePathName}}" title="{{$subJumpablePathName}}">
 									{{$subJumpablePathFields := StringUtils.Split $subJumpablePathName "/"}}
 									{{$subJumpablePathFieldLast := (Eval (len $subJumpablePathFields) "-" 1)}}
 									{{svg "octicon-file-directory-fill" 16 "tw-mr-2" -}}
@@ -55,7 +55,7 @@
 									{{end}}
 								</a>
 							{{else}}
-								<a class="muted" href="{{$.TreeLink}}/{{PathEscapeSegments $entry.Name}}" title="{{$entry.Name}}">{{svg (printf "octicon-%s" (EntryIcon $entry)) 16 "tw-mr-2"}}{{$entry.Name}}</a>
+								<a class="muted kb-nav-item" href="{{$.TreeLink}}/{{PathEscapeSegments $entry.Name}}" title="{{$entry.Name}}">{{svg (printf "octicon-%s" (EntryIcon $entry)) 16 "tw-mr-2"}}{{$entry.Name}}</a>
 							{{end}}
 						{{end}}
 					</span>

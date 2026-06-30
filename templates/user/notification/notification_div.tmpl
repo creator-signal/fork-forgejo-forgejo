@@ -27,7 +27,7 @@
 			</div>
 		</div>
 		<div class="tw-p-0">
-			<div id="notification_table">
+			<div id="notification_table" class="kb-nav">
 				{{if not .Notifications}}
 					<div class="tw-flex tw-items-center tw-flex-col tw-p-4">
 						{{svg "octicon-inbox" 56 "tw-mb-4"}}
@@ -47,7 +47,7 @@
 									{{svg "octicon-repo" 16 "text grey"}}
 								{{end}}
 							</div>
-							<a class="notifications-link tw-flex tw-flex-1 tw-flex-col silenced" href="{{.Link ctx}}">
+							<a class="kb-nav-item notifications-link tw-flex tw-flex-1 tw-flex-col silenced" href="{{.Link ctx}}">
 								<div class="notifications-top-row tw-text-13 tw-break-anywhere">
 									{{.Repository.FullName}} {{if .Issue}}<span class="text light-3">#{{.Issue.Index}}</span>{{end}}
 									{{if eq .Status 3}}

@@ -17,13 +17,13 @@
 		{{template "repo/issue/filters" .}}
 
 		<!-- milestone list -->
-		<div class="milestone-list">
+		<div class="kb-nav milestone-list">
 			{{range .Milestones}}
 				<li class="milestone-card">
 					<div class="milestone-header">
 						<h3>
 							{{svg "octicon-milestone" 16}}
-							<a class="muted" href="{{$.RepoLink}}/milestone/{{.ID}}">{{.Name}}</a>
+							<a class="kb-nav-item muted" href="{{$.RepoLink}}/milestone/{{.ID}}">{{.Name}}</a>
 						</h3>
 						<div class="tw-flex tw-items-center">
 							<span class="tw-mr-2">{{.Completeness}}%</span>
