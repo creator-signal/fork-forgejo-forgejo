@@ -11,10 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "doerregular")
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -32,5 +28,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 			}),
 			error: "token is required",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "doerregular")
 	},
 })

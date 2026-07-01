@@ -15,14 +15,6 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 	unitType := signature[1].(unit_model.Type)
 	unit := unitsTypeToString(unitType)
 	signatureStringToFunctionTest[signatureString] = functionTest{
-		sequenceFilter: []string{
-			"APIAuthorization",
-			"RepoAccess",
-			signatureString,
-		},
-		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data)
-		},
 		testCases: []*testCase{
 			{
 				data: newTestData(map[string]string{}),
@@ -42,6 +34,14 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 			// 	}),
 			// 	error: "user should have specific read permission or be a repo admin or a site admin",
 			// },
+		},
+		sequenceFilter: []string{
+			"APIAuthorization",
+			"RepoAccess",
+			signatureString,
+		},
+		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+			fixtureDisableUnits(t, permissions, data)
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

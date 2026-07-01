@@ -10,10 +10,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "doeradmin")
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -26,5 +22,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 			}),
 			error: "user should be the site admin",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "doeradmin")
 	},
 })

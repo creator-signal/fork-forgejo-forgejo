@@ -11,12 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
-	protectSettingsBool: []*bool{
-		&setting.DisableWebhooks,
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableWebhooks = data.Get("DisableWebhooks") == "true"
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}),
@@ -27,5 +21,11 @@ var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
 			}),
 			error: "webhooks disabled by administrator",
 		},
+	},
+	protectSettingsBool: []*bool{
+		&setting.DisableWebhooks,
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		setting.DisableWebhooks = data.Get("DisableWebhooks") == "true"
 	},
 })

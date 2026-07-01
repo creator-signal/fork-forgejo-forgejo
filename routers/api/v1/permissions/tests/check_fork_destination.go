@@ -16,30 +16,6 @@ import (
 )
 
 var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, functionTest{
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		require.True(t, data.Has("forkOrg"))
-		if data.Get("forkOrg") == "unknownOrg" {
-			return
-		}
-		require.True(t, data.Has("forkOrgOwner"))
-		name := data.Get("forkOrg")
-		owner := data.Get("forkOrgOwner")
-		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
-
-		if data.Has("team") {
-			fixtureCreateTeam(t, org, data.Get("doer"), &forgery.CreateTeamOptions{
-				Name:             data.Get("team"),
-				CanCreateOrgRepo: data.Get("teamCanCreateOrgRepo") != "false",
-
-				Mode: perm.AccessModeWrite,
-			})
-		}
-	},
-	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		forkOrg := data.Get("forkOrg")
-		t.Logf("calling CheckForkDestination(ctx, %s)", forkOrg)
-		apiv1_permissions.CheckForkDestination(ctx, &forkOrg)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -87,5 +63,29 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 			}),
 			error: "org does not exist",
 		},
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		require.True(t, data.Has("forkOrg"))
+		if data.Get("forkOrg") == "unknownOrg" {
+			return
+		}
+		require.True(t, data.Has("forkOrgOwner"))
+		name := data.Get("forkOrg")
+		owner := data.Get("forkOrgOwner")
+		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
+
+		if data.Has("team") {
+			fixtureCreateTeam(t, org, data.Get("doer"), &forgery.CreateTeamOptions{
+				Name:             data.Get("team"),
+				CanCreateOrgRepo: data.Get("teamCanCreateOrgRepo") != "false",
+
+				Mode: perm.AccessModeWrite,
+			})
+		}
+	},
+	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
+		forkOrg := data.Get("forkOrg")
+		t.Logf("calling CheckForkDestination(ctx, %s)", forkOrg)
+		apiv1_permissions.CheckForkDestination(ctx, &forkOrg)
 	},
 })

@@ -13,31 +13,6 @@ import (
 )
 
 var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIsIssue, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("issue", "issueOne")
-		data.SetDefault("issueAuthor", "issueAuthor")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
-		if data.Has("pullRequest") {
-			require.True(t, data.Has("pullRequestBranch"))
-			fixtureCreateBranch(t, permissions, data.Get("pullRequestBranch"))
-			require.True(t, data.Has("pullRequestAuthor"))
-			require.True(t, data.Has("pullRequest"))
-			fixtureCreatePullRequest(t, permissions, data)
-			require.Equal(t, data.Get("issue"), data.Get("pullRequest"))
-		} else {
-			fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
-			fixtureSetIssue(t, permissions, data)
-		}
-	},
-	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		t.Helper()
-		index := fixtureGetIssue(t, data).Index
-		t.Logf("calling MustEnableLocalIssuesIfIsIssue(ctx, %d)", index)
-		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, index)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -69,5 +44,30 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 				"disable-units":     "repo.issues",
 			}),
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("issue", "issueOne")
+		data.SetDefault("issueAuthor", "issueAuthor")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureDisableUnits(t, permissions, data)
+		if data.Has("pullRequest") {
+			require.True(t, data.Has("pullRequestBranch"))
+			fixtureCreateBranch(t, permissions, data.Get("pullRequestBranch"))
+			require.True(t, data.Has("pullRequestAuthor"))
+			require.True(t, data.Has("pullRequest"))
+			fixtureCreatePullRequest(t, permissions, data)
+			require.Equal(t, data.Get("issue"), data.Get("pullRequest"))
+		} else {
+			fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
+			fixtureSetIssue(t, permissions, data)
+		}
+	},
+	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
+		t.Helper()
+		index := fixtureGetIssue(t, data).Index
+		t.Logf("calling MustEnableLocalIssuesIfIsIssue(ctx, %d)", index)
+		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, index)
 	},
 })

@@ -11,16 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
-	protectSettingsBool: []*bool{
-		&setting.DisableGitHooks,
-	},
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "doeradmin")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableGitHooks = data.Get("DisableGitHooks") == "true"
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -34,5 +24,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 			}),
 			error: "must be allowed to edit Git hooks",
 		},
+	},
+	protectSettingsBool: []*bool{
+		&setting.DisableGitHooks,
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "doeradmin")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		setting.DisableGitHooks = data.Get("DisableGitHooks") == "true"
 	},
 })

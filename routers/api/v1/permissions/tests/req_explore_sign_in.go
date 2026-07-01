@@ -11,19 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "regularuser")
-	},
-	protectSettingsBool: []*bool{
-		&setting.Service.RequireSignInView,
-		&setting.Service.Explore.RequireSigninView,
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetDoer(t, permissions, data)
-		setting.Service.RequireSignInView = data.Get("Service.RequireSignInView") == "true"
-		setting.Service.Explore.RequireSigninView = data.Get("Service.Explore.RequireSigninView") == "true"
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -44,5 +31,18 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 			}),
 			error: "you must be signed in",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "regularuser")
+	},
+	protectSettingsBool: []*bool{
+		&setting.Service.RequireSignInView,
+		&setting.Service.Explore.RequireSigninView,
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureSetDoer(t, permissions, data)
+		setting.Service.RequireSignInView = data.Get("Service.RequireSignInView") == "true"
+		setting.Service.Explore.RequireSigninView = data.Get("Service.Explore.RequireSigninView") == "true"
 	},
 })

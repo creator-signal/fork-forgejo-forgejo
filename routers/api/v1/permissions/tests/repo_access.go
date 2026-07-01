@@ -11,13 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("repository", "userowner/repositorypublic")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetRepository(t, permissions, data)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -72,5 +65,12 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 				"task.IsForkPullRequest": "true",
 			}),
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("repository", "userowner/repositorypublic")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureSetRepository(t, permissions, data)
 	},
 })

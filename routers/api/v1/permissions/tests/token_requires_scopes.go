@@ -43,6 +43,31 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 	readscope := strings.Join(scopes, ",")
 	t.Logf("%s scopes %s", signatureString, readscope)
 	signatureStringToFunctionTest[signatureString] = functionTest{
+		testCases: []*testCase{
+			{
+				data: newTestData(map[string]string{
+					"doer":  "doerregular",
+					"scope": readscope,
+					"level": "read",
+				}),
+			},
+			{
+				data: newTestData(map[string]string{
+					"doer":  "doerregular",
+					"scope": readscope,
+					"level": "write",
+				}),
+				error: "token does not have at least one of required scope(s)",
+			},
+			{
+				data: newTestData(map[string]string{
+					"doer":  "doerregular",
+					"scope": "read:misc",
+					"level": "read",
+				}),
+				error: "token does not have at least one of required scope(s)",
+			},
+		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
 			data.SetDefault("repository", "userowner/repositorypublic")
@@ -68,31 +93,6 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 			categories := args[0].([]auth_model.AccessTokenScopeCategory)
 			t.Logf("calling TokenRequiresScopes(ctx, %v, %v)", categories, level)
 			apiv1_permissions.TokenRequiresScopes(ctx, categories, level)
-		},
-		testCases: []*testCase{
-			{
-				data: newTestData(map[string]string{
-					"doer":  "doerregular",
-					"scope": readscope,
-					"level": "read",
-				}),
-			},
-			{
-				data: newTestData(map[string]string{
-					"doer":  "doerregular",
-					"scope": readscope,
-					"level": "write",
-				}),
-				error: "token does not have at least one of required scope(s)",
-			},
-			{
-				data: newTestData(map[string]string{
-					"doer":  "doerregular",
-					"scope": "read:misc",
-					"level": "read",
-				}),
-				error: "token does not have at least one of required scope(s)",
-			},
 		},
 	}
 })

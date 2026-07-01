@@ -12,21 +12,6 @@ import (
 
 var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testing.T, signatureString string, signature []any) {
 	signatureStringToFunctionTest[signatureString] = functionTest{
-		sequenceFilter: []string{
-			"APIAuthorization",
-			signatureString,
-		},
-		fulfillNeeds: func(t *testing.T, data *testData) {
-			t.Helper()
-			data.SetDefault("doer", "doerregular")
-			if data.Get("packageOwner") == "doer" {
-				data.Set("packageOwner", data.Get("doer"))
-			}
-			data.SetDefault("packageOwner", data.Get("doer"))
-		},
-		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureSetPackageOwner(t, permissions, data)
-		},
 		testCases: []*testCase{
 			{
 				data: newTestData(map[string]string{
@@ -41,6 +26,21 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 				}),
 				error: "user should have specific permission or be a site admin",
 			},
+		},
+		sequenceFilter: []string{
+			"APIAuthorization",
+			signatureString,
+		},
+		fulfillNeeds: func(t *testing.T, data *testData) {
+			t.Helper()
+			data.SetDefault("doer", "doerregular")
+			if data.Get("packageOwner") == "doer" {
+				data.Set("packageOwner", data.Get("doer"))
+			}
+			data.SetDefault("packageOwner", data.Get("doer"))
+		},
+		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+			fixtureSetPackageOwner(t, permissions, data)
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

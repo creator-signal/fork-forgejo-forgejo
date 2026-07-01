@@ -8,11 +8,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
-	sequenceFilter: []string{
-		"APIAuthorization",
-		"RepoAccess",
-		"ReqAnyRepoReader",
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -35,6 +30,11 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 		// 	}),
 		// 	error: "Denied",
 		// },
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"RepoAccess",
+		"ReqAnyRepoReader",
 	},
 },
 )

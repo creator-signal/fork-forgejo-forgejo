@@ -11,16 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "regularuser")
-		data.SetDefault("Service.EnableReverseProxyAuthAPI", "true")
-		data.SetDefault("authentication", "proxy")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetDoer(t, permissions, data)
-		setting.Service.EnableReverseProxyAuthAPI = data.Get("Service.EnableReverseProxyAuthAPI") == "true"
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -52,5 +42,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			}),
 			error: "auth method not allowed",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "regularuser")
+		data.SetDefault("Service.EnableReverseProxyAuthAPI", "true")
+		data.SetDefault("authentication", "proxy")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureSetDoer(t, permissions, data)
+		setting.Service.EnableReverseProxyAuthAPI = data.Get("Service.EnableReverseProxyAuthAPI") == "true"
 	},
 })

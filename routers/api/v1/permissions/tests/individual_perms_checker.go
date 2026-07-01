@@ -11,17 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("user", data.Get("doer"))
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.Has("user") && data.Get("user") != "anonymous" {
-			name := data.Get("user")
-			fixtureCreateUser(t, &user_model.User{Name: name})
-			permissions.SetUser(fixtureGetUser(t, name))
-		}
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -41,5 +30,16 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 			}),
 			error: "Visit Project",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("user", data.Get("doer"))
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.Has("user") && data.Get("user") != "anonymous" {
+			name := data.Get("user")
+			fixtureCreateUser(t, &user_model.User{Name: name})
+			permissions.SetUser(fixtureGetUser(t, name))
+		}
 	},
 })

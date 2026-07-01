@@ -10,13 +10,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.MustEnableIssuesOrPulls, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.Set("repository-init", "true")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -33,5 +26,12 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableIssuesOrPulls, function
 			}),
 			error: "Not Found",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.Set("repository-init", "true")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureDisableUnits(t, permissions, data)
 	},
 })

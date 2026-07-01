@@ -37,54 +37,6 @@ var categoryStringToCategory = map[string]auth_model.AccessTokenScopeCategory{
 }
 
 var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, functionTest{
-	sequenceFilter: []string{
-		"APIAuthorization",
-		"CheckTokenPublicOnly",
-	},
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		data.SetDefault("doer", "regularuser")
-		data.SetDefault("repository", "regularuser/repositorypublic")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.Has("user") {
-			fixtureCreateUser(t, &user_model.User{Name: data.Get("user")})
-		}
-		if data.Has("org") {
-			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.Get("doer")})
-		}
-		if data.Has("packageOwner") {
-			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner")})
-		}
-		if data.Has("requiredScopeCategories") {
-			var categories []auth_model.AccessTokenScopeCategory
-			for categoryString := range strings.SplitSeq(data.Get("requiredScopeCategories"), ",") {
-				categories = append(categories, categoryStringToCategory[categoryString])
-			}
-			permissions.SetRequiredScopeCategories(categories)
-		}
-		fixtureSetRepository(t, permissions, data)
-	},
-	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		t.Helper()
-		var user *user_model.User
-		if data.Has("user") {
-			user = fixtureGetUser(t, data.Get("user"))
-		}
-		var org *org_model.Organization
-		if data.Has("org") {
-			if data.Has("orgAsUser") {
-				user = fixtureGetUser(t, data.Get("org"))
-			} else {
-				org = fixtureGetOrg(t, data.Get("org"))
-			}
-		}
-		var packageOwner *user_model.User
-		if data.Has("packageOwner") {
-			packageOwner = fixtureGetUser(t, data.Get("packageOwner"))
-		}
-		t.Logf("calling CheckTokenPublicOnly(ctx, %+v, %+v, %+v)", user, org, packageOwner)
-		apiv1_permissions.CheckTokenPublicOnly(ctx, user, org.AsUser(), packageOwner)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}),
@@ -209,5 +161,53 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			}),
 			error: "token scope is limited to public packages",
 		},
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"CheckTokenPublicOnly",
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		data.SetDefault("doer", "regularuser")
+		data.SetDefault("repository", "regularuser/repositorypublic")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.Has("user") {
+			fixtureCreateUser(t, &user_model.User{Name: data.Get("user")})
+		}
+		if data.Has("org") {
+			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.Get("doer")})
+		}
+		if data.Has("packageOwner") {
+			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner")})
+		}
+		if data.Has("requiredScopeCategories") {
+			var categories []auth_model.AccessTokenScopeCategory
+			for categoryString := range strings.SplitSeq(data.Get("requiredScopeCategories"), ",") {
+				categories = append(categories, categoryStringToCategory[categoryString])
+			}
+			permissions.SetRequiredScopeCategories(categories)
+		}
+		fixtureSetRepository(t, permissions, data)
+	},
+	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
+		t.Helper()
+		var user *user_model.User
+		if data.Has("user") {
+			user = fixtureGetUser(t, data.Get("user"))
+		}
+		var org *org_model.Organization
+		if data.Has("org") {
+			if data.Has("orgAsUser") {
+				user = fixtureGetUser(t, data.Get("org"))
+			} else {
+				org = fixtureGetOrg(t, data.Get("org"))
+			}
+		}
+		var packageOwner *user_model.User
+		if data.Has("packageOwner") {
+			packageOwner = fixtureGetUser(t, data.Get("packageOwner"))
+		}
+		t.Logf("calling CheckTokenPublicOnly(ctx, %+v, %+v, %+v)", user, org, packageOwner)
+		apiv1_permissions.CheckTokenPublicOnly(ctx, user, org.AsUser(), packageOwner)
 	},
 })

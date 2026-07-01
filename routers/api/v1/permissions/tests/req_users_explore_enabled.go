@@ -11,12 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionTest{
-	protectSettingsBool: []*bool{
-		&setting.Service.Explore.DisableUsersPage,
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.Service.Explore.DisableUsersPage = data.Get("Service.Explore.DisableUsersPage") == "true"
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}),
@@ -27,5 +21,11 @@ var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionT
 			}),
 			error: "Not Found",
 		},
+	},
+	protectSettingsBool: []*bool{
+		&setting.Service.Explore.DisableUsersPage,
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		setting.Service.Explore.DisableUsersPage = data.Get("Service.Explore.DisableUsersPage") == "true"
 	},
 })

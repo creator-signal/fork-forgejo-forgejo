@@ -14,37 +14,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
-	sequenceFilter: []string{
-		"APIAuthorization",
-		"TokenRequiresScopes",
-		"ReqOrgOwnership",
-	},
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("org", "ReqOrgOwnershipOrg")
-		data.SetDefault("setOrg", "true")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.Get("doer")
-		if data.Has("orgOwner") {
-			orgOwner = data.Get("orgOwner")
-		}
-		var org *org_model.Organization
-		if data.Has("org") {
-			fixtureCreateUser(t, &user_model.User{Name: orgOwner})
-			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: orgOwner})
-		}
-
-		if data.Get("setOrg") == "true" {
-			permissions.SetOrganization(org)
-		}
-
-		if data.Get("setTeam") == "true" {
-			team, err := org_model.GetTeam(t.Context(), org.ID, org_model.OwnerTeamName)
-			require.NoError(t, err)
-			permissions.SetTeam(team)
-		}
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -96,5 +65,36 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			}),
 			error: "reqOrgOwnership: unprepared context",
 		},
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"TokenRequiresScopes",
+		"ReqOrgOwnership",
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("org", "ReqOrgOwnershipOrg")
+		data.SetDefault("setOrg", "true")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		orgOwner := data.Get("doer")
+		if data.Has("orgOwner") {
+			orgOwner = data.Get("orgOwner")
+		}
+		var org *org_model.Organization
+		if data.Has("org") {
+			fixtureCreateUser(t, &user_model.User{Name: orgOwner})
+			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: orgOwner})
+		}
+
+		if data.Get("setOrg") == "true" {
+			permissions.SetOrganization(org)
+		}
+
+		if data.Get("setTeam") == "true" {
+			team, err := org_model.GetTeam(t.Context(), org.ID, org_model.OwnerTeamName)
+			require.NoError(t, err)
+			permissions.SetTeam(team)
+		}
 	},
 })

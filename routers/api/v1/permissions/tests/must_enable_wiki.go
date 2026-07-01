@@ -10,9 +10,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.MustEnableWiki, functionTest{
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -28,5 +25,8 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableWiki, functionTest{
 			}),
 			error: "Not Found",
 		},
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		fixtureDisableUnits(t, permissions, data)
 	},
 })

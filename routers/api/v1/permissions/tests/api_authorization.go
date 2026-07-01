@@ -11,6 +11,18 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
+	testCases: []*testCase{
+		{
+			data: newTestData(map[string]string{
+				"doer": "anonymous",
+			}),
+		},
+		{
+			data: newTestData(map[string]string{
+				"doer": "doerregular",
+			}),
+		},
+	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetDefault("doer", "doerregular")
@@ -25,17 +37,5 @@ var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 			fixtureSetRepository(t, permissions, data)
 		}
 		fixtureSetDoer(t, permissions, data)
-	},
-	testCases: []*testCase{
-		{
-			data: newTestData(map[string]string{
-				"doer": "anonymous",
-			}),
-		},
-		{
-			data: newTestData(map[string]string{
-				"doer": "doerregular",
-			}),
-		},
 	},
 })

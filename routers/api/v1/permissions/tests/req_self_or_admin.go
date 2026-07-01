@@ -11,20 +11,6 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
-	fulfillNeeds: func(t *testing.T, data *testData) {
-		t.Helper()
-		data.SetDefault("doer", "doeradmin")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.Has("user") && data.Get("user") != "anonymous" {
-			name := data.Get("user")
-			user := permissions.User()
-			if user == nil {
-				fixtureCreateUser(t, &user_model.User{Name: name})
-				permissions.SetUser(fixtureGetUser(t, name))
-			}
-		}
-	},
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
@@ -44,5 +30,19 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 			}),
 			error: "doer should be the site admin or be same as the contextUser",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("doer", "doeradmin")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.Has("user") && data.Get("user") != "anonymous" {
+			name := data.Get("user")
+			user := permissions.User()
+			if user == nil {
+				fixtureCreateUser(t, &user_model.User{Name: name})
+				permissions.SetUser(fixtureGetUser(t, name))
+			}
+		}
 	},
 })
