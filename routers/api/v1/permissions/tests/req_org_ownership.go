@@ -19,12 +19,12 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 		"TokenRequiresScopes",
 		"ReqOrgOwnership",
 	},
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetDefault("org", "ReqOrgOwnershipOrg")
 		data.SetDefault("setOrg", "true")
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		orgOwner := data.Get("doer")
 		if data.Has("orgOwner") {
 			orgOwner = data.Get("orgOwner")
@@ -45,28 +45,28 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			permissions.SetTeam(team)
 		}
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":    "ReqOrgOwnershipOrg",
 				"setOrg": "true",
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":   "doeradmin",
 				"setOrg": "true",
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":    "ReqOrgOwnershipOrg",
 				"doer":   "regularuser",
 				"setOrg": "true",
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"doer":     "regularuser",
@@ -75,14 +75,14 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			error: "Must be an organization owner",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":     "ReqOrgOwnershipOrg",
 				"doer":    "regularuser",
 				"setTeam": "true",
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"doer":     "regularuser",
@@ -91,7 +91,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			error: "Not Found",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"setOrg": "true",
 			}),
 			error: "reqOrgOwnership: unprepared context",

@@ -14,15 +14,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
 	protectSettingsBool: []*bool{
 		&setting.DisableWebhooks,
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		setting.DisableWebhooks = data.Get("DisableWebhooks") == "true"
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{}),
+			data: newTestData(map[string]string{}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"DisableWebhooks": "true",
 			}),
 			error: "webhooks disabled by administrator",

@@ -16,18 +16,18 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		"RepoAccess",
 		"ReqValidCommentID",
 	},
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetDefault("issue", "issueOne")
 		data.SetDefault("issueAuthor", "issueAuthor")
 		data.SetDefault("comment", "comment for ReqValidCommentID")
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
 		fixtureSetIssue(t, permissions, data)
 		fixtureCreateComment(t, permissions, data)
 	},
-	call: func(t *testing.T, ctx apiv1_permissions.Context, data *fixtureData, _ []any) {
+	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
 		comment := fixtureGetComment(t, data)
 		if data.Has("NilIssue") {
@@ -39,9 +39,9 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		t.Logf("calling ReqValidCommentID(ctx, %+v)", comment)
 		apiv1_permissions.ReqValidCommentID(ctx, comment)
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":        "doerregular",
 				"repository":  "userowner/repositorypublic",
 				"issue":       "issueOne",
@@ -52,7 +52,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// This fixture is unreachable because this permissions function is always used after
 		// a RepoAccess that enforces the same restriction for non admin users
 		// {
-		// 	data: newFixtureData(map[string]string{
+		// 	data: newTestData(map[string]string{
 		// 		"doer":        "doerregular",
 		// 		"repository":  "userowner/repositoryprivate",
 		// 		"issue":       "issueOne",
@@ -62,7 +62,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// 	error: "Not Found",
 		// },
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":        "doerregular",
 				"repository":  "userowner/repositorypublic",
 				"issue":       "issueOne",
@@ -74,7 +74,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 			error: "Not Found",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":        "doerregular",
 				"repository":  "userowner/repositorypublic",
 				"issue":       "issueOne",

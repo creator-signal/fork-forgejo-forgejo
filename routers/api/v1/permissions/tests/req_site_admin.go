@@ -10,18 +10,18 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetDefault("doer", "doeradmin")
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer": "doeradmin",
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer": "regularuser",
 			}),
 			error: "user should be the site admin",

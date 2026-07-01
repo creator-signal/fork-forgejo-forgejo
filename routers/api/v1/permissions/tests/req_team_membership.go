@@ -19,12 +19,12 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 		"TokenRequiresScopes",
 		"ReqTeamMembership",
 	},
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetDefault("org", "ReqTeamMembership")
 		data.SetDefault("team", org_model.OwnerTeamName)
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		orgOwner := data.Get("doer")
 		if data.Has("orgOwner") {
 			orgOwner = data.Get("orgOwner")
@@ -45,22 +45,22 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			permissions.SetTeam(team)
 		}
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer": "doeradmin",
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -69,7 +69,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -79,7 +79,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Must be a team member",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -89,7 +89,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Not Found",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org": "ReqTeamMembership",
 			}),
 			error: "reqTeamMembership: unprepared context",

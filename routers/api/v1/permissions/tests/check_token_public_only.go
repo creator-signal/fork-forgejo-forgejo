@@ -41,11 +41,11 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		"APIAuthorization",
 		"CheckTokenPublicOnly",
 	},
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		data.SetDefault("doer", "regularuser")
 		data.SetDefault("repository", "regularuser/repositorypublic")
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {
 			fixtureCreateUser(t, &user_model.User{Name: data.Get("user")})
 		}
@@ -64,7 +64,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		}
 		fixtureSetRepository(t, permissions, data)
 	},
-	call: func(t *testing.T, ctx apiv1_permissions.Context, data *fixtureData, _ []any) {
+	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
 		var user *user_model.User
 		if data.Has("user") {
@@ -85,25 +85,25 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		t.Logf("calling CheckTokenPublicOnly(ctx, %+v, %+v, %+v)", user, org, packageOwner)
 		apiv1_permissions.CheckTokenPublicOnly(ctx, user, org.AsUser(), packageOwner)
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{}),
+			data: newTestData(map[string]string{}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository": "userowner/repositorypublic",
 				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositorypublic",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryRepository,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositoryprivate",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryRepository,
@@ -111,14 +111,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public repos",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositorypublic",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryIssue,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositoryprivate",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryIssue,
@@ -126,14 +126,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public issues",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositorypublic",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryNotification,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"repository":              "userowner/repositoryprivate",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryNotification,
@@ -141,14 +141,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public notifications",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"user":                    "regularuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryUser,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"user":                    "privateuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryUser,
@@ -156,14 +156,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public users",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"user":                    "regularuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryActivityPub,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"user":                    "privateuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryActivityPub,
@@ -171,14 +171,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public activitypub",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":                     "regularorg",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryOrganization,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":                     "privateorg",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryOrganization,
@@ -186,7 +186,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public orgs",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"org":                     "privateorg",
 				"orgAsUser":               "true",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
@@ -195,14 +195,14 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public orgs",
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"packageOwner":            "regularuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryPackage,
 			}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"packageOwner":            "privateuser",
 				"scope":                   fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 				"requiredScopeCategories": categoryPackage,

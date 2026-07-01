@@ -14,15 +14,15 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableAttachments, functionTe
 	protectSettingsBool: []*bool{
 		&setting.Attachment.Enabled,
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		setting.Attachment.Enabled = data.Get("Attachment.Enabled") != "false"
 	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{}),
+			data: newTestData(map[string]string{}),
 		},
 		{
-			data: newFixtureData(map[string]string{
+			data: newTestData(map[string]string{
 				"Attachment.Enabled": "false",
 			}),
 			error: "Not Found",
