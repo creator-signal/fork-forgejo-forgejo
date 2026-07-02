@@ -17,10 +17,20 @@ import (
 
 func getSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[string]string, error) {
 	secrets, err := getSecretsOfJob(ctx, task.Job)
+	if err != nil {
+		// getSecretsOfJob returns a nil map alongside its error. Returning early
+		// avoids an "assignment to entry in nil map" panic on the writes below,
+		// which would otherwise take down every FetchTask call whenever loading
+		// the job's run, repo or secrets fails.
+		return nil, err
+	}
+	if secrets == nil {
+		secrets = make(map[string]string)
+	}
 	secrets["GITHUB_TOKEN"] = task.Token
 	secrets["GITEA_TOKEN"] = task.Token
 	secrets["FORGEJO_TOKEN"] = task.Token
-	return secrets, err
+	return secrets, nil
 }
 
 func getSecretsOfJob(ctx context.Context, job *actions_model.ActionRunJob) (map[string]string, error) {

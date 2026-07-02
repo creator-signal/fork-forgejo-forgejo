@@ -106,3 +106,24 @@ func TestGetSecretsOfJob(t *testing.T) {
 		})
 	}
 }
+
+// getSecretsOfJob returns a nil map together with its error. getSecretsOfTask
+// must not write the automatic *_TOKEN entries into that nil map, otherwise it
+// panics with "assignment to entry in nil map" and takes down FetchTask.
+func TestGetSecretsOfTask(t *testing.T) {
+	// An unparseable WorkflowPayload makes IsWorkflowCallInnerJob (the first
+	// call in getSecretsOfJob) fail before any database access, so this
+	// exercises the error path without fixtures.
+	task := &actions_model.ActionTask{
+		Token: "0123456789",
+		Job: &actions_model.ActionRunJob{
+			WorkflowPayload: []byte("name: []\nincomplete_runs_on: true"),
+		},
+	}
+
+	assert.NotPanics(t, func() {
+		secrets, err := getSecretsOfTask(t.Context(), task)
+		require.Error(t, err)
+		assert.Nil(t, secrets)
+	})
+}
