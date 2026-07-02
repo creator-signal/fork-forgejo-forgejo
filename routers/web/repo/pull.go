@@ -1069,7 +1069,12 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 	var methodWithError string
 	var diff *gitdiff.Diff
 
-	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum, files...)
+	var diffFileMetadata []*gitdiff.DiffFileMetadata
+	if willShowSpecifiedCommit {
+		diffFileMetadata, err = gitdiff.GetDiffNameStatus(ctx, gitRepo, "", endCommitID, setting.UI.DiffPagingNum, files...)
+	} else {
+		diffFileMetadata, err = gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum, files...)
+	}
 	if err != nil {
 		methodWithError = "GetDiffNameStatus"
 		ctx.ServerError(methodWithError, err)
