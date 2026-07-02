@@ -800,26 +800,17 @@ func TestGetFileNames(t *testing.T) {
 
 func TestGetDiffMetadata(t *testing.T) {
 	tests := []struct {
-		name      string
-		review    *pull_model.ReviewState
-		paginator *paginator.Paginator
-		prInfo    *git.CompareInfo
-		want      *DiffMetadata
-		wantErr   bool
+		name               string
+		review             *pull_model.ReviewState
+		paginator          *paginator.Paginator
+		totalNumberOfFiles int
+		want               *DiffMetadata
 	}{
 		{
-			name:    "nil prInfo returns error",
-			review:  nil,
-			prInfo:  nil,
-			wantErr: true,
-		},
-		{
-			name:      "no review",
-			review:    nil,
-			paginator: paginator.New(100, 20, 1, 5),
-			prInfo: &git.CompareInfo{
-				NumFiles: 100,
-			},
+			name:               "no review",
+			review:             nil,
+			paginator:          paginator.New(100, 20, 1, 5),
+			totalNumberOfFiles: 100,
 			want: &DiffMetadata{
 				HasNext:            true,
 				CurrentPage:        1,
@@ -835,10 +826,8 @@ func TestGetDiffMetadata(t *testing.T) {
 					"c.go": pull_model.Unviewed,
 				},
 			},
-			paginator: paginator.New(50, 20, 2, 5),
-			prInfo: &git.CompareInfo{
-				NumFiles: 50,
-			},
+			paginator:          paginator.New(50, 20, 2, 5),
+			totalNumberOfFiles: 50,
 			want: &DiffMetadata{
 				HasNext:             true,
 				CurrentPage:         2,
@@ -850,11 +839,7 @@ func TestGetDiffMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetDiffMetadata(tt.review, tt.paginator, tt.prInfo)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
+			got, err := GetDiffMetadata(tt.review, tt.paginator, tt.totalNumberOfFiles)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

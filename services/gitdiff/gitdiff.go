@@ -1201,13 +1201,9 @@ type DiffMetadata struct {
 	NumberOfViewedFiles int
 }
 
-func GetDiffMetadata(review *pull_model.ReviewState, paginator *paginator.Paginator, prInfo *git.CompareInfo) (*DiffMetadata, error) {
-	if prInfo == nil {
-		return nil, errors.New("prInfo cannot be null")
-	}
-
+func GetDiffMetadata(review *pull_model.ReviewState, paginator *paginator.Paginator, totalNumberOfFiles int) (*DiffMetadata, error) {
 	diffMetadata := &DiffMetadata{}
-	diffMetadata.TotalNumberOfFiles = prInfo.NumFiles
+	diffMetadata.TotalNumberOfFiles = totalNumberOfFiles
 	if review != nil {
 		for _, v := range review.UpdatedFiles {
 			if v == pull_model.Viewed {
