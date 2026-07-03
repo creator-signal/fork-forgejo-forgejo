@@ -348,6 +348,10 @@ func SearchRepositoryCondition(opts *SearchRepoOptions) builder.Cond {
 		cond = cond.And(builder.Eq{"is_private": value})
 	}
 
+	if has, value := opts.IsPrivate.Get(); has {
+		cond = cond.And(builder.Eq{"is_private": value})
+	}
+
 	if has, value := opts.Template.Get(); has {
 		cond = cond.And(builder.Eq{"is_template": value})
 	}

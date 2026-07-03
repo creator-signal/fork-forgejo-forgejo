@@ -1,6 +1,5 @@
-
 function pollingOk() {
-	return document.visibilityState === 'visible' && noActiveDropdowns();
+  return document.visibilityState === 'visible' && noActiveDropdowns();
 }
 
 // Intent: If the "Actor" or "Status" dropdowns are currently open and being navigated, or the workflow dispatch
@@ -9,23 +8,21 @@ function pollingOk() {
 //
 // Can't inline this into the `hx-trigger` above because using a left-brace ('[') breaks htmx's trigger parsing.
 function noActiveDropdowns() {
-	if (document.querySelector('[aria-expanded=true]') !== null || document.querySelector('details[open]') !== null) {
-		return false;
-	}
-	const dropdownForm = document.querySelector('#branch-dropdown-form');
-	if (dropdownForm !== null && dropdownForm.checkVisibility())
-		return false;
-	return true;
+  if (document.querySelector('[aria-expanded=true]') !== null || document.querySelector('details[open]') !== null) {
+    return false;
+  }
+  const dropdownForm = document.getElementById('branch-dropdown-form');
+  return !dropdownForm?.checkVisibility();
 }
 
-document.addEventListener("visibilitychange", () => {
+document.addEventListener('visibilitychange', () => {
   if (pollingOk()) {
-    htmx.trigger("#repo-actions-list", "poll-now");
+    htmx.trigger('#repo-actions-list', 'poll-now');
   }
 });
 
 setInterval(() => {
   if (pollingOk()) {
-    htmx.trigger("#repo-actions-list", "poll-now");
+    htmx.trigger('#repo-actions-list', 'poll-now');
   }
 }, 30000);

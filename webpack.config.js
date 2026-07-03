@@ -118,34 +118,34 @@ export default {
       fileURLToPath(new URL('web_src/css/index.css', import.meta.url)),
     ],
     windowconfig: [
-        fileURLToPath(new URL('web_src/js/windowconfig.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/windowconfig.js', import.meta.url)),
     ],
     branchdropdown: [
-        fileURLToPath(new URL('web_src/js/branchdropdown.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/branchdropdown.js', import.meta.url)),
     ],
     markdownload: [
-        fileURLToPath(new URL('web_src/js/markdownload.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/markdownload.js', import.meta.url)),
     ],
     clonerepos: [
-        fileURLToPath(new URL('web_src/js/clonerepos.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/clonerepos.js', import.meta.url)),
     ],
     dispatch: [
-        fileURLToPath(new URL('web_src/js/dispatch.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/dispatch.js', import.meta.url)),
     ],
     diff: [
-        fileURLToPath(new URL('web_src/js/diff.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/diff.js', import.meta.url)),
     ],
     pull: [
-        fileURLToPath(new URL('web_src/js/pull.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/pull.js', import.meta.url)),
     ],
     repolist: [
-        fileURLToPath(new URL('web_src/js/repolist.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/repolist.js', import.meta.url)),
     ],
     list: [
-        fileURLToPath(new URL('web_src/js/list.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/list.js', import.meta.url)),
     ],
     refocus: [
-        fileURLToPath(new URL('web_src/js/refocus.js', import.meta.url)),
+      fileURLToPath(new URL('web_src/js/refocus.js', import.meta.url)),
     ],
     webcomponents: [
       fileURLToPath(new URL('web_src/js/webcomponents/index.js', import.meta.url)),
