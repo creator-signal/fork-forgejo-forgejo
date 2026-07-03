@@ -1465,7 +1465,6 @@ jobs:
 			{
 				name: "workflow_dispatch",
 				fn: func(t testing.TB, owner *user_model.User, repo *repo_model.Repository) *actions_model.ActionRun {
-
 					gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
 					require.NoError(t, err)
 					defer gitRepo.Close()

@@ -5,7 +5,6 @@ package actions
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
