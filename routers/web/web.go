@@ -438,6 +438,7 @@ var (
 	reqRepoCodeWriter          = context.RequireRepoWriter(unit.TypeCode)
 	canEnableEditor            = context.CanEnableEditor()
 	reqRepoCodeReader          = context.RequireRepoReader(unit.TypeCode)
+	reqRepoWebIDEReader        = context.RequireRepoReader(unit.TypeWebIDE)
 	reqRepoReleaseWriter       = context.RequireRepoWriter(unit.TypeReleases)
 	reqRepoReleaseReader       = context.RequireRepoReader(unit.TypeReleases)
 	reqRepoWikiWriter          = context.RequireRepoWriter(unit.TypeWiki)
@@ -1474,6 +1475,19 @@ func registerRoutes(m *web.Route) {
 				m.Post("/upload-remove", web.Bind(forms.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 			}, repo.MustBeEditable, repo.MustBeAbleToUpload)
 		}, context.RepoRef(), canEnableEditor, context.RepoMustNotBeArchived())
+
+		// Web IDE (browser-based VS Code): read-only shell + FileSystemProvider reads,
+		// plus a write endpoint that reuses the exact editor guard chain (mirror/
+		// archived/quota/branch-writer) so authorization matches the existing editor.
+		m.Group("", func() {
+			m.Get("/ide", repo.IDE)
+			m.Get("/_ide/tree", repo.IDETree)
+			m.Get("/_ide/blob", repo.IDEBlob)
+			m.Post("/_ide/commit",
+				canEnableEditor, context.RepoMustNotBeArchived(), repo.MustBeEditable, reqRepoCodeWriter,
+				context.EnforceQuotaWeb(quota_model.LimitSubjectSizeReposAll, context.QuotaTargetRepo),
+				repo.IDECommit)
+		}, repo.MustEnableWebIDE, reqRepoWebIDEReader, repo.MustBeNotEmpty, context.RepoRef())
 
 		m.Group("/branches", func() {
 			m.Group("/_new", func() {

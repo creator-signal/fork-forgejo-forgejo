@@ -209,6 +209,8 @@ type EditRepoOption struct {
 	HasPackages *bool `json:"has_packages,omitempty"`
 	// either `true` to enable actions unit, or `false` to disable them.
 	HasActions *bool `json:"has_actions,omitempty"`
+	// either `true` to enable the Web IDE unit, or `false` to disable it.
+	HasWebIDE *bool `json:"has_web_ide,omitempty"`
 	// either `true` to ignore whitespace for conflicts, or `false` to not ignore whitespace.
 	IgnoreWhitespaceConflicts *bool `json:"ignore_whitespace_conflicts,omitempty"`
 	// either `true` to allow merging pull requests with a merge commit, or `false` to prevent merging pull requests with merge commits.

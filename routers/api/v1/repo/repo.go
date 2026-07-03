@@ -1103,6 +1103,17 @@ func updateRepoUnits(ctx *context.APIContext, owner string, repo *repo_model.Rep
 		}
 	}
 
+	if opts.HasWebIDE != nil && setting.Repository.WebIDE.Enabled && !unit_model.TypeWebIDE.UnitGlobalDisabled() {
+		if *opts.HasWebIDE {
+			units = append(units, repo_model.RepoUnit{
+				RepoID: repo.ID,
+				Type:   unit_model.TypeWebIDE,
+			})
+		} else {
+			deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeWebIDE)
+		}
+	}
+
 	if len(units)+len(deleteUnitTypes) > 0 {
 		if err := repo_service.UpdateRepositoryUnits(ctx, repo, units, deleteUnitTypes); err != nil {
 			ctx.Error(http.StatusInternalServerError, "UpdateRepositoryUnits", err)

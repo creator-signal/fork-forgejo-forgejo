@@ -86,6 +86,11 @@
 							{{svg "octicon-pencil"}}
 						</span>
 					{{end}}
+					{{if and .EnableWebIDE ($.Permission.CanRead $.UnitTypeWebIDE)}}
+						<a class="btn-octicon" href="{{.RepoLink}}/ide?ref={{.BranchName}}&amp;path={{PathEscapeSegments .TreePath}}" data-tooltip-content="{{ctx.Locale.Tr "repo.webide.open_with"}}">
+							{{svg "octicon-code-square"}}
+						</a>
+					{{end}}
 					{{if .CanDeleteFile}}
 						<a class="btn-octicon btn-octicon-danger" href="{{.RepoLink}}/_delete/{{PathEscapeSegments .BranchName}}/{{PathEscapeSegments .TreePath}}" data-tooltip-content="{{.DeleteFileTooltip}}">
 							{{svg "octicon-trash"}}

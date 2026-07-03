@@ -1,0 +1,59 @@
+{{/* Full-screen Web IDE shell: standalone (no repo chrome) so vscode-web owns the viewport. The bundle mounts into #repo-webide using its data-* attributes. */}}
+<!DOCTYPE html>
+<html lang="{{ctx.Locale.Lang}}" data-theme="{{.SignedUser.Theme}}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="referrer" content="no-referrer">
+	<title>{{.Title}}</title>
+	<link rel="icon" href="{{AssetUrlPrefix}}/img/favicon.svg" type="image/svg+xml">
+	<style>
+		html, body { margin: 0; height: 100%; background: #1e1e1e; color: #ccc;
+			font-family: -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; }
+		.webide-shell { display: flex; flex-direction: column; height: 100vh; }
+		.webide-bar { flex: 0 0 auto; display: flex; align-items: center; gap: .5rem;
+			height: 40px; padding: 0 12px; background: #333; border-bottom: 1px solid #000;
+			font-size: 13px; }
+		.webide-bar a { color: #4daafc; text-decoration: none; }
+		.webide-bar a:hover { text-decoration: underline; }
+		.webide-bar .sep { color: #666; }
+		.webide-bar .grow { flex: 1 1 auto; }
+		#repo-webide { flex: 1 1 auto; min-height: 0; display: flex; align-items: center;
+			justify-content: center; text-align: center; padding: 2rem; }
+		#repo-webide .muted { color: #888; max-width: 40rem; }
+		#repo-webide code { background: #2d2d2d; padding: .1rem .35rem; border-radius: 3px; }
+	</style>
+</head>
+<body>
+	<div class="webide-shell">
+		<div class="webide-bar">
+			<a href="{{.RepoLink}}" title="{{ctx.Locale.Tr "repo.code"}}">&larr; {{.Repository.FullName}}</a>
+			<span class="sep">/</span>
+			<span>{{ctx.Locale.Tr "repo.webide"}}</span>
+			<span class="sep">@</span>
+			<span>{{.WebIDERef}}</span>
+			{{if .WebIDEOpenPath}}<span class="sep">·</span><span>{{.WebIDEOpenPath}}</span>{{end}}
+			<span class="grow"></span>
+		</div>
+		<div id="repo-webide"
+			data-repo-link="{{.RepoLink}}"
+			data-owner="{{.Repository.OwnerName}}"
+			data-repo="{{.Repository.Name}}"
+			data-ref="{{.WebIDERef}}"
+			data-open-path="{{.WebIDEOpenPath}}"
+			data-default-branch="{{.Repository.DefaultBranch}}"
+			data-can-write="{{if .CanWriteCode}}true{{else}}false{{end}}"
+			data-tree-url="{{.RepoLink}}/_ide/tree"
+			data-blob-url="{{.RepoLink}}/_ide/blob"
+			data-commit-url="{{.RepoLink}}/_ide/commit">
+			<div class="muted">
+				<h2>{{ctx.Locale.Tr "repo.webide"}}</h2>
+				<p>{{ctx.Locale.Tr "repo.webide.desc"}}</p>
+				{{if .WebIDEOpenPath}}<p>Requested file: <code>{{.WebIDEOpenPath}}</code></p>{{end}}
+				<p>Full-screen shell is live. Editor bundle not yet vendored (Phase 4).
+				Backend routes are live: <code>_ide/tree</code>, <code>_ide/blob</code>, <code>_ide/commit</code>.</p>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

@@ -186,6 +186,7 @@ type RepoUnitSettingForm struct {
 	EnablePackages                        bool
 	EnablePulls                           bool
 	EnableActions                         bool
+	EnableWebIDE                          bool
 	PullsIgnoreWhitespace                 bool
 	PullsAllowMerge                       bool
 	PullsAllowRebase                      bool

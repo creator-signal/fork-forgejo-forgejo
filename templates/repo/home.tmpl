@@ -115,6 +115,9 @@
 								{{if .CitationFile}}
 									<a class="item citation-link" href="{{$.RepoLink}}/src/branch/{{$.BranchName}}/{{$.CitationFile}}">{{svg "octicon-cross-reference" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.cite_this_repo"}}</a>
 								{{end}}
+								{{if and .EnableWebIDE ($.Permission.CanRead $.UnitTypeWebIDE)}}
+									<a class="item" href="{{$.RepoLink}}/ide">{{svg "octicon-code-square" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.webide.open_with"}}</a>
+								{{end}}
 								{{range .OpenWithEditorApps}}
 									<a class="item js-clone-url-editor" data-href-template="{{.OpenURL}}">{{.IconHTML}}{{ctx.Locale.Tr "repo.open_with_editor" .DisplayName}}</a>
 								{{end}}

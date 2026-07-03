@@ -60,6 +60,18 @@
 		</div>
 	{{end}}
 
+	{{if .EnableWebIDE}}
+		{{$isWebIDEEnabled := .Repository.UnitEnabled $.Context $.UnitTypeWebIDE}}
+		{{$isWebIDEGlobalDisabled := .UnitTypeWebIDE.UnitGlobalDisabled}}
+		<div class="inline field">
+			<label>{{ctx.Locale.Tr "repo.webide"}}</label>
+			<div class="ui checkbox{{if $isWebIDEGlobalDisabled}} disabled{{end}}"{{if $isWebIDEGlobalDisabled}} data-tooltip-content="{{ctx.Locale.Tr "repo.unit_disabled"}}"{{end}}>
+				<input class="enable-system" name="enable_web_ide" type="checkbox" {{if $isWebIDEEnabled}}checked{{end}}>
+				<label>{{ctx.Locale.Tr "repo.settings.webide_desc"}}</label>
+			</div>
+		</div>
+	{{end}}
+
 	<div class="divider"></div>
 
 	<div class="field">

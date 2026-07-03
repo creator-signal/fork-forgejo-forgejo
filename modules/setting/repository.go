@@ -69,6 +69,12 @@ var (
 			LineWrapExtensions []string
 		} `ini:"-"`
 
+		// Repository Web IDE (browser-based VS Code) settings
+		WebIDE struct {
+			Enabled         bool
+			MaxEditableSize int64 // max size (bytes) of a file editable in the browser IDE; larger files are read-only/download
+		} `ini:"-"`
+
 		// Repository upload settings
 		Upload struct {
 			Enabled      bool
@@ -189,6 +195,15 @@ var (
 			LineWrapExtensions []string
 		}{
 			LineWrapExtensions: strings.Split(".txt,.md,.markdown,.mdown,.mkd,.livemd,", ","),
+		},
+
+		// Repository Web IDE settings
+		WebIDE: struct {
+			Enabled         bool
+			MaxEditableSize int64
+		}{
+			Enabled:         false,
+			MaxEditableSize: 1 << 20, // 1 MiB
 		},
 
 		// Repository upload settings
@@ -319,6 +334,8 @@ func loadRepositoryFrom(rootCfg ConfigProvider) {
 		log.Fatal("Failed to map Repository settings: %v", err)
 	} else if err = rootCfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
 		log.Fatal("Failed to map Repository.Editor settings: %v", err)
+	} else if err = rootCfg.Section("repository.webide").MapTo(&Repository.WebIDE); err != nil {
+		log.Fatal("Failed to map Repository.WebIDE settings: %v", err)
 	} else if err = rootCfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
 		log.Fatal("Failed to map Repository.Upload settings: %v", err)
 	} else if err = rootCfg.Section("repository.local").MapTo(&Repository.Local); err != nil {

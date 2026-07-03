@@ -33,6 +33,7 @@ const (
 	TypeProjects                    // 8 Projects
 	TypePackages                    // 9 Packages
 	TypeActions                     // 10 Actions
+	TypeWebIDE                      // 11 Web IDE (browser-based VS Code)
 )
 
 // Value returns integer value for unit type
@@ -62,6 +63,8 @@ func (u Type) String() string {
 		return "TypePackages"
 	case TypeActions:
 		return "TypeActions"
+	case TypeWebIDE:
+		return "TypeWebIDE"
 	}
 	return fmt.Sprintf("Unknown Type %d", u)
 }
@@ -83,6 +86,7 @@ var (
 		TypeProjects,
 		TypePackages,
 		TypeActions,
+		TypeWebIDE,
 	}
 
 	// DefaultRepoUnits contains default units for regular repos
@@ -214,6 +218,7 @@ func LoadUnitConfig() error {
 		TypeProjects,
 		TypePackages,
 		TypeActions,
+		TypeWebIDE,
 	} {
 		// If unit is globally disabled, ignore it.
 		if unit.UnitGlobalDisabled() {
@@ -374,6 +379,15 @@ var (
 		perm.AccessModeOwner,
 	}
 
+	UnitWebIDE = Unit{
+		TypeWebIDE,
+		"webide",
+		"repo.webide",
+		"/ide",
+		8,
+		perm.AccessModeOwner,
+	}
+
 	// Units contains all the units
 	Units = map[Type]Unit{
 		TypeCode:            UnitCode,
@@ -386,6 +400,7 @@ var (
 		TypeProjects:        UnitProjects,
 		TypePackages:        UnitPackages,
 		TypeActions:         UnitActions,
+		TypeWebIDE:          UnitWebIDE,
 	}
 )
 

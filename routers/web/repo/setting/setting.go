@@ -252,6 +252,19 @@ func UnitsPost(ctx *context.Context) {
 		deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeActions)
 	}
 
+	// Only touch the Web IDE unit when the feature is enabled instance-wide, so
+	// saving repo settings while it is off never wipes an existing unit (matches the API).
+	if setting.Repository.WebIDE.Enabled && !unit_model.TypeWebIDE.UnitGlobalDisabled() {
+		if form.EnableWebIDE {
+			units = append(units, repo_model.RepoUnit{
+				RepoID: repo.ID,
+				Type:   unit_model.TypeWebIDE,
+			})
+		} else {
+			deleteUnitTypes = append(deleteUnitTypes, unit_model.TypeWebIDE)
+		}
+	}
+
 	if form.EnablePulls && !unit_model.TypePullRequests.UnitGlobalDisabled() {
 		units = append(units, repo_model.RepoUnit{
 			RepoID: repo.ID,
