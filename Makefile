@@ -130,6 +130,9 @@ WEBPACK_CONFIGS := webpack.config.js tailwind.config.js
 WEBPACK_DEST := public/assets/js/index.js public/assets/css/index.css
 WEBPACK_DEST_ENTRIES := public/assets/js public/assets/css public/assets/fonts
 
+WEBIDE_SOURCES := $(shell find web_src/webide/src -type f) web_src/webide/package.json web_src/webide/package-lock.json web_src/webide/vite.config.ts web_src/webide/index.html
+WEBIDE_DEST := public/assets/webide/index.html
+
 BINDATA_DEST := modules/migration/bindata.go modules/public/bindata.go modules/options/bindata.go modules/templates/bindata.go
 BINDATA_HASH := $(addsuffix .hash,$(BINDATA_DEST))
 
@@ -854,10 +857,20 @@ install: $(wildcard *.go) | verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) install -v -tags '$(TAGS)' -ldflags '$(LDFLAGS)'
 
 .PHONY: build
-build: frontend backend
+build: frontend webide backend
 
 .PHONY: frontend
 frontend: $(WEBPACK_DEST)
+
+# Web IDE (monaco-vscode-api) bundle — a separate vite build, deliberately kept
+# out of the webpack `frontend` target but wired into `build`/`release` so the
+# bindata step embeds public/assets/webide. `npm ci` for a frozen, reproducible
+# install from the committed lockfile.
+$(WEBIDE_DEST): $(WEBIDE_SOURCES)
+	cd web_src/webide && npm ci && npm run build
+
+.PHONY: webide
+webide: $(WEBIDE_DEST)
 
 .PHONY: backend
 backend: go-check generate-backend $(EXECUTABLE)
@@ -888,10 +901,10 @@ static-executable: $(GO_SOURCES) $(TAGS_PREREQ) | verify-version
 	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) build $(GOFLAGS) $(EXTRA_GOFLAGS) -tags 'netgo osusergo $(TAGS)' -ldflags '-linkmode external -extldflags "-static" $(LDFLAGS)' -o $(EXECUTABLE)
 
 .PHONY: release
-release: frontend generate release-linux release-copy release-compress vendor release-sources release-check
+release: frontend webide generate release-linux release-copy release-compress vendor release-sources release-check
 
 # just the sources, with all assets builtin and frontend resources generated
-sources-tarbal: frontend generate vendor release-sources release-check
+sources-tarbal: frontend webide generate vendor release-sources release-check
 
 $(DIST_DIRS):
 	mkdir -p $(DIST_DIRS)

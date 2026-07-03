@@ -19,6 +19,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/public"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
 	files_service "forgejo.org/services/repository/files"
@@ -89,8 +90,16 @@ func IDE(ctx *context.Context) {
 	}
 	openPath := cleanIDEPath(ctx.FormString("path"))
 
+	// Base commit of ref: sent back on commit as last_commit_id so the service
+	// can conflict-detect updates/deletes (blob SHAs aren't exposed to the client).
+	baseCommit := ""
+	if c, err := ctx.Repo.GitRepo.GetCommit(ref); err == nil {
+		baseCommit = c.ID.String()
+	}
+
 	ctx.Data["WebIDERef"] = ref
 	ctx.Data["WebIDEOpenPath"] = openPath
+	ctx.Data["WebIDEBaseCommit"] = baseCommit
 	ctx.Data["CanWriteCode"] = ctx.Repo.CanWrite(unit.TypeCode)
 	ctx.PageData["webide"] = map[string]any{
 		"repoLink":        ctx.Repo.RepoLink,
@@ -98,12 +107,28 @@ func IDE(ctx *context.Context) {
 		"repo":            ctx.Repo.Repository.Name,
 		"ref":             ref,
 		"path":            openPath,
+		"baseCommit":      baseCommit,
 		"defaultBranch":   ctx.Repo.Repository.DefaultBranch,
 		"canWrite":        ctx.Repo.CanWrite(unit.TypeCode),
 		"maxEditableSize": setting.Repository.WebIDE.MaxEditableSize,
 	}
 
 	ctx.HTML(http.StatusOK, tplWebIDE)
+}
+
+// IDEApp serves the vendored workbench index.html with no-cache, so a rebuilt
+// frontend is never served stale. The hashed JS/CSS it references keep their
+// normal long cache (they are immutable).
+func IDEApp(ctx *context.Context) {
+	data, err := public.AssetFS().ReadFile("assets", "webide", "index.html")
+	if err != nil {
+		ctx.NotFound("IDEApp", err)
+		return
+	}
+	ctx.Resp.Header().Set("Content-Type", "text/html; charset=utf-8")
+	ctx.Resp.Header().Set("Cache-Control", "no-cache, private, max-age=0, must-revalidate")
+	ctx.Resp.WriteHeader(http.StatusOK)
+	_, _ = ctx.Resp.Write(data)
 }
 
 // IDETree lists one directory level (metadata only) for the FileSystemProvider.

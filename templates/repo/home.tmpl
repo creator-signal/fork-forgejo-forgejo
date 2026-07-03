@@ -92,6 +92,12 @@
 					</button>
 				{{end}}
 
+				{{if and .EnableWebIDE ($.Permission.CanRead $.UnitTypeWebIDE)}}
+					<a href="{{.RepoLink}}/ide?ref={{.BranchName}}" class="ui compact basic button">
+						{{svg "octicon-code-square" 14}} {{ctx.Locale.Tr "repo.webide"}}
+					</a>
+				{{end}}
+
 				{{if and $isHomepage (.Repository.IsTemplate)}}
 					<a role="button" class="ui primary compact button" href="{{AppSubUrl}}/repo/create?template_id={{.Repository.ID}}">
 						{{ctx.Locale.Tr "repo.use_template"}}

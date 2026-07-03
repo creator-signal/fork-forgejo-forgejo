@@ -73,9 +73,11 @@ cpu.out
 /public/assets/js
 /public/assets/css
 /public/assets/fonts
+/public/assets/webide
 /public/assets/img/avatar
 /vendor
 /web_src/fomantic/node_modules
+/web_src/webide/node_modules
 /web_src/fomantic/build/*
 !/web_src/fomantic/build/semantic.js
 !/web_src/fomantic/build/semantic.css

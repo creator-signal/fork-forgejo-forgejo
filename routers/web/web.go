@@ -1481,6 +1481,7 @@ func registerRoutes(m *web.Route) {
 		// archived/quota/branch-writer) so authorization matches the existing editor.
 		m.Group("", func() {
 			m.Get("/ide", repo.IDE)
+			m.Get("/_ide/app", repo.IDEApp)
 			m.Get("/_ide/tree", repo.IDETree)
 			m.Get("/_ide/blob", repo.IDEBlob)
 			m.Post("/_ide/commit",
