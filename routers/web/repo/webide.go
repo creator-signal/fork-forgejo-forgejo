@@ -6,10 +6,10 @@ package repo
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -19,6 +19,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/json"
 	"forgejo.org/modules/public"
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/context"
@@ -52,7 +53,7 @@ type webIDEBlob struct {
 }
 
 // webIDERef resolves ?ref= to a commit, defaulting to the repo default branch.
-func webIDERef(ctx *context.Context) (*git.Commit, string, bool) {
+func webIDERef(ctx *context.Context) (*git.Commit, bool) {
 	ref := ctx.FormString("ref")
 	if ref == "" {
 		ref = ctx.Repo.Repository.DefaultBranch
@@ -64,9 +65,9 @@ func webIDERef(ctx *context.Context) (*git.Commit, string, bool) {
 		} else {
 			ctx.ServerError("GetCommit", err)
 		}
-		return nil, ref, false
+		return nil, false
 	}
-	return commit, ref, true
+	return commit, true
 }
 
 // IDE renders the full-screen Web IDE shell.
@@ -133,7 +134,7 @@ func IDEApp(ctx *context.Context) {
 
 // IDETree lists one directory level (metadata only) for the FileSystemProvider.
 func IDETree(ctx *context.Context) {
-	commit, _, ok := webIDERef(ctx)
+	commit, ok := webIDERef(ctx)
 	if !ok {
 		return
 	}
@@ -174,7 +175,7 @@ func IDETree(ctx *context.Context) {
 
 // IDEBlob returns file content for the editor, or streams raw bytes (LFS-aware) when download/oversized/binary.
 func IDEBlob(ctx *context.Context) {
-	commit, _, ok := webIDERef(ctx)
+	commit, ok := webIDERef(ctx)
 	if !ok {
 		return
 	}
@@ -256,12 +257,7 @@ func isEditableText(buf []byte) bool {
 	if !utf8.Valid(buf) {
 		return false
 	}
-	for _, b := range buf {
-		if b == 0 {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(buf, 0)
 }
 
 // cleanIDEPath normalizes a request path and rejects traversal and .git components.
@@ -270,7 +266,7 @@ func cleanIDEPath(p string) string {
 	if p == "." {
 		return ""
 	}
-	for _, seg := range strings.Split(p, "/") {
+	for seg := range strings.SplitSeq(p, "/") {
 		if strings.EqualFold(seg, ".git") {
 			return ""
 		}
