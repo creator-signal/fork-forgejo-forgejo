@@ -27,7 +27,7 @@ func run(pass *analysis.Pass) (any, error) {
 	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	cfgs := pass.ResultOf[ctrlflow.Analyzer].(*ctrlflow.CFGs)
 
-	webFuncs := map[string]map[string]any{
+	terminatingFuncs := map[string]map[string]any{
 		"*forgejo.org/services/context.APIContext": {
 			"Error":                 true,
 			"InternalServerError":   true,
@@ -56,6 +56,11 @@ func run(pass *analysis.Pass) (any, error) {
 			"RenderWithErr":         true,
 			"ServerError":           true,
 		},
+		"forgejo.org/routers/api/v1/permissions.Context": {
+			"Error":               true,
+			"InternalServerError": true,
+			"NotFound":            true,
+		},
 		// Future: RedirectToUser does not accept a ctx LHS, but rather a first parameter -- needs different
 		// implementation of detection, or, refactoring: "RedirectToUser": true,
 	}
@@ -74,13 +79,13 @@ func run(pass *analysis.Pass) (any, error) {
 			if cfg == nil {
 				return true
 			}
-			inspectFunction(cfg, pass, webFuncs)
+			inspectFunction(cfg, pass, terminatingFuncs)
 		case *ast.FuncLit:
 			cfg := cfgs.FuncLit(fn)
 			if cfg == nil {
 				return true
 			}
-			inspectFunction(cfg, pass, webFuncs)
+			inspectFunction(cfg, pass, terminatingFuncs)
 		}
 		return false
 	})
@@ -88,7 +93,7 @@ func run(pass *analysis.Pass) (any, error) {
 	return nil, nil //nolint:nilnil
 }
 
-func inspectFunction(cfg *cfg.CFG, pass *analysis.Pass, webFuncs map[string]map[string]any) {
+func inspectFunction(cfg *cfg.CFG, pass *analysis.Pass, terminatingFuncs map[string]map[string]any) {
 	for _, block := range cfg.Blocks {
 		for nodeIdx, node := range block.Nodes {
 			ast.Inspect(node, func(n ast.Node) bool {
@@ -134,7 +139,7 @@ func inspectFunction(cfg *cfg.CFG, pass *analysis.Pass, webFuncs map[string]map[
 				}
 				callType := fnSig.Recv().Type().String()
 
-				typeMap, inTypeMap := webFuncs[callType]
+				typeMap, inTypeMap := terminatingFuncs[callType]
 				if inTypeMap {
 					callName := selector.Sel.Name
 					_, inFuncMap := typeMap[callName]

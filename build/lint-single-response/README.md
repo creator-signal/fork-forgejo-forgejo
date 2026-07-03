@@ -12,13 +12,15 @@ if err != nil {
 ctx.JSON(http.StatusOK, resp)
 ```
 
-In order to detect these cases, lint-single-response contains a list of functions that deliver a web response.  When any of those functions are used within a function, the control flow must not perform any work after the function is invoked -- it can only return and exit the function.
+In order to detect these cases, lint-single-response contains a list of functions that deliver a web response, which we'll call terminating functions.  The current list of such functions is in the `singleresponse.go` file, in the `terminatingFuncs` constant.
+
+When a terminating function is used, the control flow of the calling function must not perform any work after the terminating function is invoked -- the control flow can only exit, via `return` or via reaching the end of the calling function.
 
 Methods named `Test...` are omitted from analysis, as this naming scheme suggests a test case where an error would have no user impact, and such methods sometimes invoke web response methods in unusual but safe patterns.
 
 ## Limitations
 
-lint-single-response only works within the control-flow of a single function.  If a web handler calls another function that invokes `ctx.Error(...)`, then there is no guarantee that the web handler doesn't go on to do more work.  This could be addressed in the future but would require a multi-pass analysis -- all functions that invoke web responses would need to be identified, then all functions that invoke those functions would need to be identified, recursively, until no new functions are identified.  And then lint-single-response's current behaviour would need to be implemented against that entire set of functions.
+lint-single-response only works within the control-flow of a single function.  If a web handler calls another function that invokes a terminating function, then there is no guarantee that the web handler doesn't go on to do more work.  This could be addressed in the future but would require a multi-pass analysis -- all functions that invoke terminating functions would need to be identified, then all functions that invoke those functions would need to be identified, recursively, until no new functions are identified.  And then lint-single-response's current behaviour would need to be implemented against that entire set of functions.
 
 ## Usage
 
