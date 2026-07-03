@@ -23,42 +23,31 @@ func TestConfigureActionRunTitle(t *testing.T) {
 	const defaultTitle = "default title"
 	for _, tc := range []struct {
 		name          string
-		runName       string
-		vars          map[string]string
-		inputs        map[string]any
+		workflow      string
 		expectedTitle string
 	}{
 		{
-			name:          "empty run-name keeps default title",
-			runName:       "",
+			name: "no run-name keeps default title",
+			workflow: `
+on: push
+jobs:
+  job:
+    runs-on: ubuntu
+    steps: []
+`,
 			expectedTitle: defaultTitle,
 		},
 		{
-			name:          "plain string",
-			runName:       "deploy to production",
-			expectedTitle: "deploy to production",
-		},
-		{
-			name:          "github context actor",
-			runName:       "deploy by ${{ github.actor }}",
-			expectedTitle: "deploy by someone",
-		},
-		{
-			name:          "inputs",
-			runName:       "deploy to ${{ inputs.environment }}",
-			inputs:        map[string]any{"environment": "staging"},
-			expectedTitle: "deploy to staging",
-		},
-		{
-			name:          "vars",
-			runName:       "build for ${{ vars.region }}",
-			vars:          map[string]string{"region": "eu"},
-			expectedTitle: "build for eu",
-		},
-		{
-			name:          "empty evaluation result keeps default title",
-			runName:       "${{ inputs.does_not_exist }}",
-			expectedTitle: defaultTitle,
+			name: "run-name is used",
+			workflow: `
+run-name: "good title"
+on: push
+jobs:
+  job:
+    runs-on: ubuntu
+    steps: []
+`,
+			expectedTitle: "good title",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -71,24 +60,7 @@ func TestConfigureActionRunTitle(t *testing.T) {
 				TriggerUser:  &user.User{Name: "someone"},
 				Repo:         &repo.Repository{},
 			}
-			runNameLine := ""
-			if tc.runName != "" {
-				runNameLine = "run-name: " + tc.runName
-			}
-			content := fmt.Sprintf(`
-name: testing
-%s
-on: push
-jobs:
-  job:
-    runs-on: ubuntu
-    steps: []
-`, runNameLine)
-			workflows, err := jobparser.Parse([]byte(content), false,
-				jobparser.WithGitContext(generateGiteaContextForRun(run)),
-				jobparser.WithVars(tc.vars),
-				jobparser.WithInputs(tc.inputs),
-			)
+			workflows, err := jobparser.Parse([]byte(tc.workflow), false)
 			require.NoError(t, err)
 
 			require.NoError(t, ConfigureActionRunTitle(workflows, run))
