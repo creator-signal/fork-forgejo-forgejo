@@ -147,23 +147,23 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["CurrentURL"] = setting.AppSubURL + req.URL.RequestURI()
 			ctx.Data["Link"] = ctx.Link
 
-            i18n := map[string]string{
-                "copy_success":       ctx.Locale.TrString("copy_success"),
-                "copy_error":         ctx.Locale.TrString("copy_error"),
-                "error_occurred":     ctx.Locale.TrString("error.occurred"),
-                "network_error":      ctx.Locale.TrString("error.network_error"),
-                "remove_label_str":   ctx.Locale.TrString("remove_label_str"),
-                "modal_confirm":      ctx.Locale.TrString("modal.confirm"),
-                "modal_cancel":       ctx.Locale.TrString("modal.cancel"),
-                "more_items":         ctx.Locale.TrString("more_items"),
-                "incorrect_root_url": ctx.Locale.TrString("incorrect_root_url", setting.AppURL),
-            }
+			i18n := map[string]string{
+				"copy_success":       ctx.Locale.TrString("copy_success"),
+				"copy_error":         ctx.Locale.TrString("copy_error"),
+				"error_occurred":     ctx.Locale.TrString("error.occurred"),
+				"network_error":      ctx.Locale.TrString("error.network_error"),
+				"remove_label_str":   ctx.Locale.TrString("remove_label_str"),
+				"modal_confirm":      ctx.Locale.TrString("modal.confirm"),
+				"modal_cancel":       ctx.Locale.TrString("modal.cancel"),
+				"more_items":         ctx.Locale.TrString("more_items"),
+				"incorrect_root_url": ctx.Locale.TrString("incorrect_root_url", setting.AppURL),
+			}
 
-            ctx.Data["i18n"] = i18n
+			ctx.Data["i18n"] = i18n
 
-            // PageData is passed by reference, and it will be rendered to `window.config.pageData` in `head.tmpl` for JavaScript modules
-            ctx.PageData = map[string]any{}
-            ctx.Data["PageData"] = ctx.PageData
+			// PageData is passed by reference, and it will be rendered to `window.config.pageData` in `head.tmpl` for JavaScript modules
+			ctx.PageData = map[string]any{}
+			ctx.Data["PageData"] = ctx.PageData
 
 			ctx.AppendContextValue(WebContextKey, ctx)
 			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })

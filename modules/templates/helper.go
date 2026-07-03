@@ -288,8 +288,8 @@ func DotEscape(raw string) string {
 }
 
 func toJSON(v any) template.JS {
-    b, _ := json.Marshal(v)
-    return template.JS(b)
+	b, _ := json.Marshal(v)
+	return template.JS(b)
 }
 
 // Eval the expression and return the result, see the comment of eval.Expr for details.
