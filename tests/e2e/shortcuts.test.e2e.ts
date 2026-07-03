@@ -3,7 +3,7 @@
 // web_src/js/features/user-shortcuts.ts
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Response} from '@playwright/test';
 import {test, login_user, login} from './utils_e2e.ts';
 
 test.skip(({isMobile}) => isMobile, 'Desktop only');
@@ -204,28 +204,24 @@ test('Open dialog and persist enable setting', async ({
   const checkbox = dialog.getByRole('checkbox');
   await expect(checkbox).toBeChecked();
 
-  const saveResponse = page.waitForResponse(
-    (resp) =>
-      resp.url().includes('/user/settings/appearance/shortcuts') &&
-      resp.request().method() === 'POST' &&
-      resp.status() === 200,
-  );
-  await checkbox.uncheck();
-  const response = await saveResponse;
-  const body = (await response.json()) as {enable_shortcuts: boolean};
-  expect(body.enable_shortcuts).toBe(false);
+  const checkResponse = async (value: boolean) => {
+    expect(
+      (
+        (await (
+          await page.waitForResponse(
+            (resp: Response) =>
+              resp.url().includes('/user/settings/appearance/shortcuts') &&
+              resp.request().method() === 'POST' &&
+              resp.status() === 200,
+          )
+        ).json()) as {enable_shortcuts: boolean}
+      ).enable_shortcuts,
+    ).toBe(value);
+  };
 
-  await page.reload();
-  await page.keyboard.press('Shift+?');
+  await Promise.all([checkResponse(false), checkbox.uncheck()]);
   await expect(checkbox).not.toBeChecked();
-
-  await checkbox.check();
-  await page.waitForResponse(
-    (resp) =>
-      resp.url().includes('/user/settings/appearance/shortcuts') &&
-      resp.request().method() === 'POST' &&
-      resp.status() === 200,
-  );
+  await Promise.all([checkResponse(true), checkbox.check()]);
 
   await page.keyboard.press('ArrowDown');
   await expect(dialog.locator('input').first()).toHaveValue('repo');
