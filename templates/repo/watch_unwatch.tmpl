@@ -13,7 +13,7 @@
 			</a>
 		</summary>
 		<div class="content">
-			<form class="ui form tw-p-3" hx-boost="true" hx-target="#watch-button" method="post" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
+			<form class="ui form tw-p-3" hx-target="#watch-button" method="post" hx-post="{{$.RepoLink}}/action/watch/select" action="{{$.RepoLink}}/action/watch/select" hx-swap="outerHTML">
 				<fieldset>
 					<label>
 						<input type="checkbox" name="watch_issues" value="true" {{if $.RepoWatchSelection.Issues}}checked{{end}}>
