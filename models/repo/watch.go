@@ -265,7 +265,7 @@ func autoWatch(ctx context.Context, userID, repoID int64) error {
 	if watch.Source == WatchSourceExplicit {
 		return nil
 	}
-	// TODO: replace this in the next PR with checking that we are using the user preset.
+	// TODO: This would be a place to check that we are using the user preset (which doesn't exist yet).
 	if watch.GetWatchSelection().IsFullyWatching() {
 		return nil
 	}
