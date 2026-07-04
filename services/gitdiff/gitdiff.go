@@ -1134,55 +1134,66 @@ func parseNameStatusFileListSplit(output string, pageSize int) ([]*DiffFileMetad
 	}
 
 	var files []*DiffFileMetadata
-
-	scanner := bufio.NewScanner(strings.NewReader(output))
 	cur := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
+
+	// With -z, fields and records are both NUL-separated
+	// Split once, then walk through the parts sequentially
+	parts := strings.Split(output, "\x00")
+
+	for i := 0; i < len(parts); {
+		// Skip empty trailing element
+		if parts[i] == "" {
+			i++
 			continue
 		}
 
-		// Split only on the first tab, not all whitespace
-		// Format: "<status>\t<filename>" or "<status>\t<oldname>\t<newname>" for renames
-		fields := strings.SplitN(line, "\t", 3)
-		if len(fields) < 2 {
-			continue
+		if i >= len(parts) {
+			break
 		}
-		cur++
+		status := parts[i]
+		i++
 
-		status := fields[0]
+		if i >= len(parts) {
+			break
+		}
+		oldName := parts[i]
+		i++
+
 		file := DiffFileMetadata{}
-		file.Name = fields[1]
-		file.NameHash = git.HashFilePathForWebUI(fields[1])
+		file.Name = oldName
+		file.NameHash = git.HashFilePathForWebUI(oldName)
+		cur++
 		file.OnPage = (cur + pageSize - 1) / pageSize
 
-		switch status {
-		case "A":
+		isRenameOrCopy := len(status) > 0 && (status[0] == 'R' || status[0] == 'C')
+		var newName string
+		if isRenameOrCopy {
+			if i >= len(parts) {
+				break
+			}
+			newName = parts[i]
+			i++
+		}
+		switch status[0] {
+		case 'A':
 			file.Type = DiffFileAdd
-		case "M":
+		case 'M':
 			file.Type = DiffFileChange
-		case "D":
+		case 'D':
 			file.Type = DiffFileDel
-		case "R":
+		case 'R':
 			file.Type = DiffFileRename
-			// Renames have format: "R<score>\t<oldname>\t<newname>"
-			if len(fields) == 3 {
-				file.Name = fields[2] // new name
-				file.NameHash = git.HashFilePathForWebUI(fields[2])
-			}
-		case "C":
+			file.Name = newName
+			file.NameHash = git.HashFilePathForWebUI(newName)
+		case 'C':
 			file.Type = DiffFileCopy
-			// Copies have format: "C<score>\t<oldname>\t<newname>"
-			if len(fields) == 3 {
-				file.Name = fields[2]
-				file.NameHash = git.HashFilePathForWebUI(fields[2])
-			}
+			file.Name = newName
+			file.NameHash = git.HashFilePathForWebUI(newName)
 		}
 		files = append(files, &file)
 	}
 
-	return files, scanner.Err()
+	return files, nil
 }
 
 func GetFileNames(files []*DiffFileMetadata) []string {
