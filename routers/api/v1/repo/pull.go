@@ -1616,35 +1616,33 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 		return
 	}
 
-	if start >= len(diffFileMetadata) {
-		ctx.NotFound()
-		return
-	}
-
 	if limit > len(diffFileMetadata) {
 		limit = len(diffFileMetadata)
 	}
 
-	diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
-		&gitdiff.DiffOptions{
-			BeforeCommitID:     startCommitID,
-			AfterCommitID:      endCommitID,
-			MaxLines:           maxLines,
-			MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-			WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
-		}, gitdiff.GetFileNames(diffFileMetadata[start:limit])...)
-	if err != nil {
-		ctx.ServerError("GetDiff", err)
-		return
+	var apiFiles []*api.ChangedFile
+	if start < len(diffFileMetadata) {
+		diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
+			&gitdiff.DiffOptions{
+				BeforeCommitID:     startCommitID,
+				AfterCommitID:      endCommitID,
+				MaxLines:           maxLines,
+				MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
+				WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
+			}, gitdiff.GetFileNames(diffFileMetadata[start:limit])...)
+		if err != nil {
+			ctx.ServerError("GetDiff", err)
+			return
+		}
+		apiFiles = make([]*api.ChangedFile, 0, len(diff.Files))
+		for _, diffFile := range diff.Files {
+			apiFiles = append(apiFiles, convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID))
+		}
 	}
 
 	totalNumberOfFiles := len(diffFileMetadata)
 	totalNumberOfPages := int(math.Ceil(float64(totalNumberOfFiles) / float64(listOptions.PageSize)))
 
-	apiFiles := make([]*api.ChangedFile, 0, len(diff.Files))
-	for _, diffFile := range diff.Files {
-		apiFiles = append(apiFiles, convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID))
-	}
 	ctx.SetLinkHeader(totalNumberOfFiles, listOptions.PageSize)
 	ctx.SetTotalCountHeader(int64(totalNumberOfFiles))
 
