@@ -1616,11 +1616,15 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 		return
 	}
 
-	if len(diffFileMetadata) <= listOptions.Page*listOptions.PageSize {
+	if start >= len(diffFileMetadata) {
+		ctx.NotFound()
+		return
+	}
+
+	if limit > len(diffFileMetadata) {
 		limit = len(diffFileMetadata)
 	}
 
-	// FIXME: If there are too many files in the repo, may cause some unpredictable issues.
 	diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
 		&gitdiff.DiffOptions{
 			BeforeCommitID:     startCommitID,
@@ -1637,8 +1641,7 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	totalNumberOfFiles := len(diffFileMetadata)
 	totalNumberOfPages := int(math.Ceil(float64(totalNumberOfFiles) / float64(listOptions.PageSize)))
 
-	numberOffDiffFiles := len(diff.Files)
-	apiFiles := make([]*api.ChangedFile, 0, numberOffDiffFiles)
+	apiFiles := make([]*api.ChangedFile, 0, len(diff.Files))
 	for _, diffFile := range diff.Files {
 		apiFiles = append(apiFiles, convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID))
 	}
