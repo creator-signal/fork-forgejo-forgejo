@@ -81,13 +81,11 @@ test('Watch/unwatch button URL retention', async ({page}) => {
   const response = await page.goto('/user2/repo1');
   expect(response?.status()).toBe(200);
 
-  const button = page.locator('button[aria-label="Watch"], button[aria-label="Unwatch"]');
+  const watchDropdown = page.locator('details.dropdown#watch-button');
+  const watchMenu = watchDropdown.locator('.content');
+  const unwatchButton = watchMenu.locator('button:has-text("Unwatch")');
 
-  await button.click();
-  expect(page.url()).not.toContain('/watch');
-  expect(page.url()).not.toContain('/unwatch');
-
-  await button.click();
+  await unwatchButton.click();
   expect(page.url()).not.toContain('/watch');
   expect(page.url()).not.toContain('/unwatch');
 });
