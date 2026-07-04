@@ -131,7 +131,7 @@ func IsWatching(ctx *context.APIContext) {
 	//   "200":
 	//     "$ref": "#/responses/WatchInfo"
 	//   "404":
-	//     description: User is not watching this repo or repo does not exist
+	//     description: User is not watching this repo or repo do not exist
 
 	if repo_model.IsWatcher(ctx, ctx.Doer().ID, ctx.Repo().Repository.ID) {
 		ctx.JSON(http.StatusOK, api.WatchInfo{
