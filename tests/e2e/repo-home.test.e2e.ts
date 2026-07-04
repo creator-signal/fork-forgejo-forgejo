@@ -83,6 +83,12 @@ test('Watch/unwatch button URL retention', async ({page}) => {
 
   const watchDropdown = page.locator('details.dropdown#watch-button');
   const watchMenu = watchDropdown.locator('.content');
+  const watchButton = watchMenu.locator('button:has-text("Watch")');
+
+  await watchButton.click();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
+
   const unwatchButton = watchMenu.locator('button:has-text("Unwatch")');
 
   await unwatchButton.click();
