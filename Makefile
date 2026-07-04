@@ -39,7 +39,7 @@ XGO_VERSION := go-1.21.x
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
 EDITORCONFIG_CHECKER_PACKAGE ?= github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@v3.7.0 # renovate: datasource=go
 GOFUMPT_PACKAGE ?= mvdan.cc/gofumpt@v0.9.2 # renovate: datasource=go
-GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 # renovate: datasource=go
+GOLANGCI_LINT_PACKAGE ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.1 # renovate: datasource=go
 GXZ_PACKAGE ?= github.com/ulikunitz/xz/cmd/gxz@v0.5.15 # renovate: datasource=go
 SWAGGER_PACKAGE ?= github.com/go-swagger/go-swagger/cmd/swagger@v0.34.0 # renovate: datasource=go
 XGO_PACKAGE ?= src.techknowlogick.com/xgo@latest
@@ -47,7 +47,7 @@ GO_LICENSES_PACKAGE ?= github.com/google/go-licenses/v2@v2.0.1 # renovate: datas
 GOVULNCHECK_PACKAGE ?= golang.org/x/vuln/cmd/govulncheck@v1 # renovate: datasource=go
 DEADCODE_PACKAGE ?= golang.org/x/tools/cmd/deadcode@v0.46.0 # renovate: datasource=go
 ERRORTYPE_PACKAGE ?= fillmore-labs.com/errortype@v0.0.11 # renovate: datasource=go
-RENOVATE_NPM_PACKAGE ?= renovate@43.228.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
+RENOVATE_NPM_PACKAGE ?= renovate@43.247.0 # renovate: datasource=docker packageName=data.forgejo.org/renovate/renovate
 MOCKERY_PACKAGE ?= github.com/vektra/mockery/v3@v3.7.1 # renovate: datasource=go
 
 # https://github.com/disposable-email-domains/disposable-email-domains/commits/main/
@@ -237,7 +237,8 @@ help:
 	@echo " - test-frontend-coverage           test frontend files and display code coverage"
 	@echo " - test-backend                     test backend files"
 	@echo " - test-remote-cacher               test backend files that use a remote cache"
-	@echo " - coverage-run*                    test and collect coverages in the coverage/data directory"
+	@echo " - coverage-reset                   remove the coverage directory"
+	@echo " - coverage-run-*                   test and collect coverages in the coverage/data directory"
 	@echo " - coverage-show-html               display coverage-run results in an HTML page"
 	@echo " - coverage-show-percent            display coverage-run per package coverage percentage"
 	@echo " - test-e2e-sqlite[\#name.test.e2e] test end to end using playwright and sqlite"
@@ -602,6 +603,9 @@ test\#%: | compute-go-test-packages
 	@echo "Running go test with $(GOTESTFLAGS) -tags '$(TEST_TAGS)'..."
 	@TZ=UTC GITEA_ROOT="$(CURDIR)" $(GOTEST) $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -run $(subst .,/,$*) $(GO_TEST_PACKAGES)
 
+coverage-reset:
+	rm -fr coverage
+
 coverage-merge:
 	rm -fr coverage/merged ; mkdir -p coverage/merged
 	$(GO) tool covdata merge -i `find coverage/data -name 'covmeta.*' | sed -e 's|/covmeta.*|,|' | tr -d '\n' | sed -e 's/,$$//'` -o coverage/merged
@@ -619,17 +623,16 @@ coverage-show-percentage: coverage-convert
 coverage-run: | compute-go-test-packages
 	contrib/coverage-helper.sh test_packages $(COVERAGE_TEST_PACKAGES)
 
-coverage-run-%: generate-ini-% | compute-migration-packages
-  #
-  # Migration tests go first
-  #
+coverage-run-%: coverage-run-migration-% coverage-run-integration-%
+	echo $@ done
+
+coverage-run-migration-%: generate-ini-% | compute-migration-packages
 	$(MAKE) GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/$*.ini COVERAGE_TEST_ARGS= COVERAGE_TEST_PACKAGES=forgejo.org/tests/integration/migration-test coverage-run
 	for pkg in $(MIGRATION_PACKAGES); do \
 		$(MAKE) GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/$*.ini COVERAGE_TEST_DATABASE=$* COVERAGE_TEST_ARGS= COVERAGE_TEST_PACKAGES=$$pkg coverage-run ; \
 	done
-  #
-  # All other integration tests follow
-  #
+
+coverage-run-integration-%: generate-ini-%
 	$(MAKE) GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/$*.ini COVERAGE_TEST_DATABASE=$* COVERAGE_TEST_PACKAGES=forgejo.org/tests/integration coverage-run
 
 .PHONY: tidy

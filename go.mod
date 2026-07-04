@@ -11,7 +11,7 @@ require (
 	code.forgejo.org/forgejo/go-rpmutils v1.0.0
 	code.forgejo.org/forgejo/levelqueue v1.1.0
 	code.forgejo.org/forgejo/reply v1.0.2
-	code.forgejo.org/forgejo/runner/v12 v12.11.1
+	code.forgejo.org/forgejo/runner/v12 v12.12.0
 	code.forgejo.org/go-chi/binding v1.0.1
 	code.forgejo.org/go-chi/cache v1.0.1
 	code.forgejo.org/go-chi/captcha v1.0.2
@@ -30,7 +30,7 @@ require (
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/blevesearch/bleve/v2 v2.6.0
 	github.com/buildkite/terminal-to-html/v3 v3.16.8
-	github.com/caddyserver/certmagic v0.25.3
+	github.com/caddyserver/certmagic v0.25.4
 	github.com/chi-middleware/proxy v1.1.1
 	github.com/djherbis/buffer v1.2.0
 	github.com/djherbis/nio/v3 v3.0.1
@@ -44,7 +44,7 @@ require (
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-ap/activitypub v0.0.0-20260208110334-902f6cf8c2cc
 	github.com/go-ap/jsonld v0.0.0-20251216162253-e38fa664ea77
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-chi/cors v1.2.2
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-enry/go-enry/v2 v2.9.6
@@ -74,7 +74,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/markbates/goth v1.82.0
 	github.com/mattn/go-isatty v0.0.22
-	github.com/mattn/go-sqlite3 v1.14.44
+	github.com/mattn/go-sqlite3 v1.14.47
 	github.com/meilisearch/meilisearch-go v0.36.2
 	github.com/mholt/archives v0.1.5
 	github.com/microcosm-cc/bluemonday v1.0.27
@@ -101,13 +101,13 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.143.2
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.53.0
-	golang.org/x/image v0.42.0
+	golang.org/x/image v0.43.0
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.21.0
 	golang.org/x/sys v0.46.0
 	golang.org/x/text v0.38.0
-	golang.org/x/tools v0.45.0
+	golang.org/x/tools v0.46.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.3
@@ -250,7 +250,7 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
