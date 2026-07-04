@@ -89,9 +89,30 @@ test('Watch/unwatch button URL retention', async ({page}) => {
   await watchSummary.click();
   await expect(watchMenu).toBeVisible();
 
-  const unwatchButton = watchMenu.locator('button:has-text("Unwatch")');
+  // Select PRs
+  const prsCheckbox = watchMenu.locator('input[name="watch_pull_requests"]');
+  await prsCheckbox.click();
 
+  // Save
+  const saveButton = watchMenu.locator('button:has-text("Save")');
+  await saveButton.isVisible();
+  await saveButton.click();
+
+  // Wait for menu to disappear
+  await expect(watchMenu).toBeHidden();
+  expect(page.url()).not.toContain('/watch');
+  expect(page.url()).not.toContain('/unwatch');
+
+  // Open the dropdown once more
+  await watchSummary.click();
+  await expect(watchMenu).toBeVisible();
+
+  // Unwatch
+  const unwatchButton = watchMenu.locator('button:has-text("Unwatch")');
   await unwatchButton.click();
+
+  // Wait for menu to disappear
+  await expect(watchMenu).toBeHidden();
   expect(page.url()).not.toContain('/watch');
   expect(page.url()).not.toContain('/unwatch');
 });
