@@ -266,9 +266,6 @@ linters:
       - path: modules/git/commit.go
         linters:
           - nilnil
-      - path: modules/git/foreachref/parser.go
-        linters:
-          - nilnil
       - path: modules/git/last_commit_cache.go
         linters:
           - nilnil
