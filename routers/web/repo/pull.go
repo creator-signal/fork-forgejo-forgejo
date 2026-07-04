@@ -1066,7 +1066,6 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 
 	maxLines := setting.Git.MaxGitDiffLines
 
-	var methodWithError string
 	var diff *gitdiff.Diff
 
 	var diffFileMetadata []*gitdiff.DiffFileMetadata
@@ -1076,8 +1075,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		diffFileMetadata, err = gitdiff.GetDiffNameStatus(ctx, gitRepo, startCommitID, endCommitID, setting.UI.DiffPagingNum, files...)
 	}
 	if err != nil {
-		methodWithError = "GetDiffNameStatus"
-		ctx.ServerError(methodWithError, err)
+		ctx.ServerError("GetDiffNameStatus", err)
 		return
 	}
 
@@ -1103,6 +1101,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 	// have to load only the diff and not get the viewed information
 	// as the viewed information is designed to be loaded only on latest PR
 	// diff and if you're signed in.
+	var methodWithError string
 	if !ctx.IsSigned || willShowSpecifiedCommit || willShowSpecifiedCommitRange {
 		diff, err = gitdiff.GetDiffFull(ctx, gitRepo, diffOptions, pagedFiles...)
 		methodWithError = "GetDiff"
