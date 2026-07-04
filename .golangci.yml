@@ -254,9 +254,6 @@ linters:
       - path: models/user/email_address.go
         linters:
           - nilnil
-      - path: models/user/list.go
-        linters:
-          - nilnil
       - path: models/user/user.go
         linters:
           - nilnil
