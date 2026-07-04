@@ -1081,15 +1081,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		return
 	}
 
-	page := max(ctx.FormInt("diff-page"), 1)
-	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
-
-	listOpts := db.ListOptions{
-		Page:     page,
-		PageSize: setting.UI.DiffPagingNum,
-	}
-
-	pagedFiles := gitdiff.GetDiffFilePage(diffFileMetadata, listOpts.Page, listOpts.PageSize, len(diffFileMetadata))
+	pager, pagedFiles := utils.PaginateDiffFiles(ctx, diffFileMetadata)
 
 	if fileOnly && (len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1) {
 		maxLines = -1

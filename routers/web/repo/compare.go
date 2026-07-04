@@ -36,6 +36,7 @@ import (
 	"forgejo.org/modules/typesniffer"
 	"forgejo.org/modules/util"
 	"forgejo.org/routers/common"
+	"forgejo.org/routers/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/context/upload"
 	"forgejo.org/services/gitdiff"
@@ -592,24 +593,16 @@ func PrepareCompareDiff(
 		ctx.ServerError("GetDiffNameOnly", err)
 		return false
 	}
+	ctx.Data["DiffFileMetadata"] = diffFileMetadata
 
-	page := max(ctx.FormInt("diff-page"), 1)
-	pager := context.NewPagination(len(diffFileMetadata), setting.UI.DiffPagingNum, page, 5)
+	pager, pagedFiles := utils.PaginateDiffFiles(ctx, diffFileMetadata)
 
-	listOpts := db.ListOptions{
-		Page:     page,
-		PageSize: setting.UI.DiffPagingNum,
-	}
-
-	diffFileMetadataStat, err := gitdiff.GetDiffMetadata(nil, pager.Paginater, len(diffFileMetadata))
+	diffMetadata, err := gitdiff.GetDiffMetadata(nil, pager.Paginater, len(diffFileMetadata))
 	if err != nil {
 		ctx.ServerError("GetDiffMetadata", err)
 		return false
 	}
-	ctx.Data["DiffFileMetadata"] = diffFileMetadata
-	ctx.Data["DiffMetadata"] = diffFileMetadataStat
-
-	pagedFiles := gitdiff.GetDiffFilePage(diffFileMetadata, listOpts.Page, listOpts.PageSize, len(diffFileMetadata))
+	ctx.Data["DiffMetadata"] = diffMetadata
 
 	maxLines := setting.Git.MaxGitDiffLines
 	if len(diffFileMetadata) == 2 || len(diffFileMetadata) == 1 {

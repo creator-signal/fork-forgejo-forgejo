@@ -1076,6 +1076,8 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 
 	cmdDiff := git.NewCommand(cmdCtx).AddArguments("diff", "--name-status")
 
+	cmdDiff.AddArguments("-z")
+
 	objectFormat, err := gitRepo.GetObjectFormat()
 	if err != nil {
 		return nil, fmt.Errorf("not able to determine the object format: %w", err)
@@ -1107,11 +1109,8 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 
 	cmdDiff.AddDashesAndList(files...)
 
-	stdout, stderr, err := cmdDiff.RunStdString(&git.RunOpts{Dir: gitRepo.Path})
+	stdout, _, err := cmdDiff.RunStdString(&git.RunOpts{Dir: gitRepo.Path})
 	if err != nil {
-		if stderr != "" {
-			return nil, errors.New(stderr)
-		}
 		return nil, err
 	}
 
