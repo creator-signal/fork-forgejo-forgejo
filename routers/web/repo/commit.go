@@ -346,7 +346,7 @@ func Diff(ctx *context.Context) {
 	maxLines := setting.Git.MaxGitDiffLines
 	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, gitRepo, "", commitID, setting.UI.DiffPagingNum, files...)
 	if err != nil {
-		ctx.ServerError("GetDiffNameOnly", err)
+		ctx.ServerError("GetDiffNameStatus", err)
 		return
 	}
 	ctx.Data["DiffFileMetadata"] = diffFileMetadata

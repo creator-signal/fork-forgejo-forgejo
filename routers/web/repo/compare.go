@@ -590,7 +590,7 @@ func PrepareCompareDiff(
 	ctx.Data["FileSelection"] = files
 	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, ci.HeadGitRepo, beforeCommitID, headCommitID, setting.UI.DiffPagingNum, files...)
 	if err != nil {
-		ctx.ServerError("GetDiffNameOnly", err)
+		ctx.ServerError("GetDiffNameStatus", err)
 		return false
 	}
 	ctx.Data["DiffFileMetadata"] = diffFileMetadata
