@@ -83,6 +83,7 @@ var GitConfig = GitConfigType{
 
 func loadGitFrom(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("git")
+	deprecatedSettingWarning(rootCfg, "git", "MAX_GIT_DIFF_FILES", "ui", "DIFF_PAGING_NUM")
 	if err := sec.MapTo(&Git); err != nil {
 		log.Fatal("Failed to map Git settings: %v", err)
 	}
