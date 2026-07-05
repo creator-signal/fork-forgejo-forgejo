@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -20,6 +21,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/services/forms"
 	"forgejo.org/tests"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -118,8 +120,24 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			t, testCtx, user, "master", "never", "unsigned-never.txt", func(t *testing.T, response api.FileResponse) {
 				assert.False(t, response.Verification.Verified)
 			}))
-		t.Run("CreateCRUDFile-Never", crudActionCreateFile(
+		t.Run("CreateCRUDFile-Never-2", crudActionCreateFile(
 			t, testCtx, user, "never", "never2", "unsigned-never2.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+		t.Run("CreateCRUDFile-Never-3", crudActionCreateFile(
+			t, testCtx, user, "never", "never3", "unsigned-never3.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+		t.Run("CreateCRUDFile-Never-4", crudActionCreateFile(
+			t, testCtx, user, "never3", "never3", "unsigned-never4.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+		t.Run("CreateCRUDFile-Never-5", crudActionCreateFile(
+			t, testCtx, user, "never", "never5", "unsigned-never5.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+		t.Run("CreateCRUDFile-Never-6", crudActionCreateFile(
+			t, testCtx, user, "never5", "never5", "unsigned-never6.txt", func(t *testing.T, response api.FileResponse) {
 				assert.False(t, response.Verification.Verified)
 			}))
 	})
@@ -410,11 +428,84 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NoError(t, err)
 			t.Run("MergePR", doAPIMergePullRequest(testCtx, testCtx.Username, testCtx.Reponame, pr.Index))
 		})
-		t.Run("CheckMasterBranchUnsigned", func(t *testing.T) {
+		t.Run("CheckMasterBranchSigned", func(t *testing.T) {
 			branch := doAPIGetBranch(testCtx, "master")(t)
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
+			assert.Equal(t, "fox@example.com", branch.Commit.Verification.Signer.Email)
+		})
+	})
+
+	t.Run("AlwaysSign-Merge-RebaseMerge", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		setting.Repository.Signing.Merges = []string{"always"}
+
+		testCtx := NewAPITestContext(t, username, "initial-unsigned"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		t.Run("CreatePullRequest", func(t *testing.T) {
+			pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "never3")(t)
+			require.NoError(t, err)
+			t.Run("MergePR", func(t *testing.T) {
+				doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+					MergeMessageField: "doAPIMergePullRequest Rebase Merge",
+					Do:                string(repo_model.MergeStyleRebaseMerge),
+				})
+			})
+			masterBranch := doAPIGetCommit(testCtx, "master")(t)
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				require.NotNil(t, masterBranch.RepoCommit)
+				require.NotNil(t, masterBranch.RepoCommit.Verification)
+				assert.True(t, masterBranch.RepoCommit.Verification.Verified)
+				assert.Equal(t, "fox@example.com", masterBranch.RepoCommit.Verification.Signer.Email)
+			})
+			behindMaster := doAPIGetCommit(testCtx, masterBranch.Parents[1].SHA)(t)
+			t.Run("CheckSecondCommitSigned", func(t *testing.T) {
+				assert.Equal(t, "unsigned-never4.txt", behindMaster.Files[0].Filename)
+				require.NotNil(t, behindMaster.RepoCommit)
+				require.NotNil(t, behindMaster.RepoCommit.Verification)
+				assert.True(t, behindMaster.RepoCommit.Verification.Verified)
+				assert.Equal(t, "fox@example.com", behindMaster.RepoCommit.Verification.Signer.Email)
+			})
+			behindMaster2 := doAPIGetCommit(testCtx, behindMaster.Parents[0].SHA)(t)
+			t.Run("CheckThirdCommitSigned", func(t *testing.T) {
+				assert.Equal(t, "unsigned-never3.txt", behindMaster2.Files[0].Filename)
+				require.NotNil(t, behindMaster2.RepoCommit)
+				require.NotNil(t, behindMaster2.RepoCommit.Verification)
+				assert.True(t, behindMaster2.RepoCommit.Verification.Verified)
+				assert.Equal(t, "fox@example.com", behindMaster2.RepoCommit.Verification.Signer.Email)
+			})
+		})
+	})
+	t.Run("AlwaysSign-Merge-Rebase", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		setting.Repository.Signing.Merges = []string{"always"}
+
+		testCtx := NewAPITestContext(t, username, "initial-unsigned"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		t.Run("CreatePullRequest", func(t *testing.T) {
+			pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "never5")(t)
+			require.NoError(t, err)
+			t.Run("MergePR", func(t *testing.T) {
+				doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+					MergeMessageField: "doAPIMergePullRequest Rebase",
+					Do:                string(repo_model.MergeStyleRebase),
+				})
+			})
+			masterBranch := doAPIGetCommit(testCtx, "master")(t)
+			t.Run("CheckMasterBranchSigned", func(t *testing.T) {
+				assert.Equal(t, "unsigned-never5.txt", masterBranch.Files[0].Filename)
+				require.NotNil(t, masterBranch.RepoCommit)
+				require.NotNil(t, masterBranch.RepoCommit.Verification)
+				assert.True(t, masterBranch.RepoCommit.Verification.Verified)
+				assert.Equal(t, "fox@example.com", masterBranch.RepoCommit.Verification.Signer.Email)
+			})
+			behindMaster := doAPIGetCommit(testCtx, masterBranch.Parents[1].SHA)(t)
+			t.Run("CheckSecondCommitSigned", func(t *testing.T) {
+				assert.Equal(t, "unsigned-never6.txt", behindMaster.Files[0].Filename)
+				require.NotNil(t, behindMaster.RepoCommit)
+				require.NotNil(t, behindMaster.RepoCommit.Verification)
+				assert.True(t, behindMaster.RepoCommit.Verification.Verified)
+				assert.Equal(t, "fox@example.com", behindMaster.RepoCommit.Verification.Signer.Email)
+			})
 		})
 	})
 }

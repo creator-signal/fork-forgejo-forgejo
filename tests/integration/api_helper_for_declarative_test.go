@@ -481,3 +481,19 @@ func doAPIAddRepoToOrganizationTeam(ctx APITestContext, teamID int64, orgName, r
 		ctx.Session.MakeRequest(t, req, http.StatusNoContent)
 	}
 }
+
+func doAPIGetCommit(ctx APITestContext, refOrObjectID string) func(*testing.T) api.Commit {
+	return func(t *testing.T) api.Commit {
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/git/commits/%s", ctx.Username, ctx.Reponame, refOrObjectID).
+			AddTokenAuth(ctx.Token)
+		expected := http.StatusOK
+		if ctx.ExpectedCode != 0 {
+			expected = ctx.ExpectedCode
+		}
+		resp := ctx.Session.MakeRequest(t, req, expected)
+
+		commit := api.Commit{}
+		DecodeJSON(t, resp, &commit)
+		return commit
+	}
+}
