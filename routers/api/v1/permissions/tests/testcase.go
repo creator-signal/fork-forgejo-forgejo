@@ -15,15 +15,7 @@ import (
 	"forgejo.org/modules/web/routing"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	apiv1_permissions_testhelpers "forgejo.org/routers/api/v1/permissions/testhelpers"
-
-	"github.com/stretchr/testify/require"
 )
-
-func dataToString(t *testing.T, testData *testData, key string) string {
-	t.Helper()
-	require.True(t, testData.HasShared(key))
-	return testData.GetShared(key)
-}
 
 type testData struct {
 	own    map[string]string
