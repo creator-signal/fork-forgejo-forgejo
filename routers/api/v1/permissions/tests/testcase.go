@@ -30,7 +30,14 @@ type testData struct {
 	shared map[string]string
 }
 
+func verifySharedKey(key string) {
+	if !slices.Contains([]string{"doer", "task.RepoID", "task.IsForkPullRequest", "authentication", "scope", "repository", "repository-init", "level", "disable-units"}, key) {
+		panic(fmt.Sprintf("%s is not a shared key", key))
+	}
+}
+
 func (o *testData) SetShared(key, value string) {
+	verifySharedKey(key)
 	o.shared[key] = value
 }
 
@@ -41,10 +48,12 @@ func (o *testData) SetSharedDefault(key, value string) {
 }
 
 func (o *testData) GetShared(key string) string {
+	verifySharedKey(key)
 	return o.shared[key]
 }
 
 func (o *testData) HasShared(key string) bool {
+	verifySharedKey(key)
 	_, has := o.shared[key]
 	return has
 }

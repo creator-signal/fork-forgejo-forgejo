@@ -65,9 +65,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"setOrg": "true",
-			}),
+			}, map[string]string{}),
 			error: "reqOrgOwnership: unprepared context",
 		},
 	},
