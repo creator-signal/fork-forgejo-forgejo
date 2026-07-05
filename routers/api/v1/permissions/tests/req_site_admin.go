@@ -12,12 +12,12 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "doeradmin",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "regularuser",
 			}),
 			error: "user should be the site admin",
@@ -25,6 +25,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "doeradmin")
+		data.SetSharedDefault("doer", "doeradmin")
 	},
 })

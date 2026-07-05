@@ -14,13 +14,13 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"packageOwner": "doer",
 					"doer":         "doeradmin",
 				}),
 			},
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"doer":         "userregular",
 					"packageOwner": "userprivate",
 				}),
@@ -33,11 +33,11 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.SetDefault("doer", "doerregular")
-			if data.Get("packageOwner") == "doer" {
-				data.Set("packageOwner", data.Get("doer"))
+			data.SetSharedDefault("doer", "doerregular")
+			if data.GetShared("packageOwner") == "doer" {
+				data.SetShared("packageOwner", data.GetShared("doer"))
 			}
-			data.SetDefault("packageOwner", data.Get("doer"))
+			data.SetSharedDefault("packageOwner", data.GetShared("doer"))
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 			fixtureSetPackageOwner(t, permissions, data)

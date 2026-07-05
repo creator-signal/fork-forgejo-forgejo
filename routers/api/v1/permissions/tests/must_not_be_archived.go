@@ -10,12 +10,12 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.MustNotBeArchived, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositoryarchived",
 			}),
 			error: "is archived",

@@ -21,54 +21,84 @@ import (
 
 func dataToString(t *testing.T, testData *testData, key string) string {
 	t.Helper()
-	require.True(t, testData.Has(key))
-	return testData.Get(key)
+	require.True(t, testData.HasShared(key))
+	return testData.GetShared(key)
 }
 
 type testData struct {
-	entries map[string]string
+	own    map[string]string
+	shared map[string]string
 }
 
-func (o *testData) Set(key, value string) {
-	o.entries[key] = value
+func (o *testData) SetShared(key, value string) {
+	o.shared[key] = value
 }
 
-func (o *testData) SetDefault(key, value string) {
-	if !o.Has(key) {
-		o.Set(key, value)
+func (o *testData) SetSharedDefault(key, value string) {
+	if !o.HasShared(key) {
+		o.SetShared(key, value)
 	}
 }
 
-func (o *testData) Get(key string) string {
-	return o.entries[key]
+func (o *testData) GetShared(key string) string {
+	return o.shared[key]
 }
 
-func (o *testData) Has(key string) bool {
-	_, has := o.entries[key]
+func (o *testData) HasShared(key string) bool {
+	_, has := o.shared[key]
+	return has
+}
+
+func (o *testData) SetOwn(key, value string) {
+	o.own[key] = value
+}
+
+func (o *testData) SetOwnDefault(key, value string) {
+	if !o.HasOwn(key) {
+		o.SetOwn(key, value)
+	}
+}
+
+func (o *testData) GetOwn(key string) string {
+	return o.own[key]
+}
+
+func (o *testData) HasOwn(key string) bool {
+	_, has := o.own[key]
 	return has
 }
 
 func (o *testData) String() string {
 	var s []string
-	for k, e := range o.entries {
+	for k, e := range o.shared {
+		s = append(s, fmt.Sprintf("%s:%s", k, e))
+	}
+	for k, e := range o.own {
 		s = append(s, fmt.Sprintf("%s:%s", k, e))
 	}
 	slices.Sort(s)
 	return strings.Join(s, ",")
 }
 
-func newTestData(data map[string]string) *testData {
+func newTestData(own, shared map[string]string) *testData {
 	testData := &testData{
-		entries: make(map[string]string, 10),
+		own:    make(map[string]string, 10),
+		shared: make(map[string]string, 10),
 	}
-	for key, value := range data {
-		testData.Set(key, value)
+	for key, value := range own {
+		testData.SetOwn(key, value)
+	}
+	for key, value := range shared {
+		testData.SetShared(key, value)
 	}
 	return testData
 }
 
 func (o *testData) Clone() *testData {
-	return &testData{entries: maps.Clone(o.entries)}
+	return &testData{
+		own:    maps.Clone(o.own),
+		shared: maps.Clone(o.shared),
+	}
 }
 
 type testCase struct {

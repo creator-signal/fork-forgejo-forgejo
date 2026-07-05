@@ -17,10 +17,10 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{}),
+				data: newTestData(map[string]string{}, map[string]string{}),
 			},
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"disable-units": unit,
 				}),
 				error: "Not Found",
@@ -28,7 +28,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 			// This fixture is unreachable because this permissions function is always used after
 			// a RepoAccess that enforces the same restriction for non admin users
 			// {
-			// 	data: newTestData(map[string]string{
+			// 	data: newTestData(map[string]string{}, map[string]string{
 			// 		"doer":       "regularuser",
 			// 		"repository": "userowner/repositoryprivate",
 			// 	}),

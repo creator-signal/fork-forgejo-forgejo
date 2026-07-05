@@ -149,10 +149,10 @@ func fixtureCreateTeam(t *testing.T, org *org_model.Organization, memberName str
 
 func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.Has("packageOwner") {
+	if !testData.HasShared("packageOwner") {
 		return
 	}
-	owner := fixtureCreateUser(t, &user_model.User{Name: testData.Get("packageOwner")})
+	owner := fixtureCreateUser(t, &user_model.User{Name: testData.GetShared("packageOwner")})
 	permissions.SetPackageOwner(owner)
 	mode, err := packages_service.DeterminePackageAccessMode(permissions.Context(), permissions.PackageOwner(), permissions.Doer())
 	require.NoError(t, err)
@@ -161,16 +161,16 @@ func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permiss
 
 func fixtureSetDoer(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.Has("doer") {
+	if !testData.HasShared("doer") {
 		return
 	}
 	if doer := permissions.Doer(); doer != nil {
-		if doer.Name != testData.Get("doer") {
-			panic(fmt.Sprintf("attempting to override already doer %s with %s", doer.Name, testData.Get("doer")))
+		if doer.Name != testData.GetShared("doer") {
+			panic(fmt.Sprintf("attempting to override already doer %s with %s", doer.Name, testData.GetShared("doer")))
 		}
 		return
 	}
-	name := testData.Get("doer")
+	name := testData.GetShared("doer")
 	if name == user_model.ActionsUserName {
 		fixtureSetDoerActionsUser(t, permissions, testData)
 	} else {
@@ -203,13 +203,13 @@ func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Perm
 	repository := permissions.Repository()
 	require.NotNil(t, repository)
 	repositoryID := repository.ID
-	if testData.Get("task.RepoID") == "unrelated" {
+	if testData.GetShared("task.RepoID") == "unrelated" {
 		repositoryID = 13245
 	}
 	task := &actions_model.ActionTask{
 		RepoID: repositoryID,
 	}
-	if testData.Get("task.IsForkPullRequest") == "true" {
+	if testData.GetShared("task.IsForkPullRequest") == "true" {
 		task.IsForkPullRequest = true
 	}
 	task.GenerateToken()
@@ -279,13 +279,13 @@ func (*reverseProxyAuthenticationResult) IsReverseProxyAuthentication() bool {
 
 func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	var scope auth_model.AccessTokenScope
-	if testData.Has("scope") {
-		scope = auth_model.AccessTokenScope(testData.Get("scope"))
+	if testData.HasShared("scope") {
+		scope = auth_model.AccessTokenScope(testData.GetShared("scope"))
 	} else {
 		scope = auth_model.AccessTokenScopeAll
 	}
-	if testData.Has("doer") {
-		doer := testData.Get("doer")
+	if testData.HasShared("doer") {
+		doer := testData.GetShared("doer")
 		if doer != "anonymous" {
 			isAdmin := strings.Contains(doer, "admin")
 			user := &user_model.User{
@@ -307,7 +307,7 @@ func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Perm
 		tokenReducer, err := authz.GetAuthorizationReducerForAccessToken(t.Context(), token)
 		require.NoError(t, err)
 		permissions.SetIsSigned(true)
-		switch testData.Get("authentication") {
+		switch testData.GetShared("authentication") {
 		case "basic":
 			permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.Doer()})
 		case "proxy":
@@ -333,14 +333,14 @@ func fixtureCreateBranch(t *testing.T, permissions *apiv1_permissions.Permission
 
 func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.Has("pullRequest") {
+	if !testData.HasShared("pullRequest") {
 		return
 	}
 
 	repository := permissions.Repository()
 	require.NotNil(t, repository)
 
-	poster := fixtureGetUser(t, testData.Get("pullRequestAuthor"))
+	poster := fixtureGetUser(t, testData.GetShared("pullRequestAuthor"))
 	require.NotNil(t, poster)
 
 	ctx, committer, err := db.TxContext(t.Context())
@@ -355,7 +355,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 		Index:    idx,
 		RepoID:   repository.ID,
 		IsPull:   true,
-		Title:    testData.Get("pullRequest"),
+		Title:    testData.GetShared("pullRequest"),
 		PosterID: poster.ID,
 		Poster:   poster,
 	}
@@ -372,7 +372,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	pr.IssueID = issue.ID
 	pr.HeadRepoID = repository.ID
 	pr.BaseRepoID = repository.ID
-	pr.HeadBranch = testData.Get("pullRequestBranch")
+	pr.HeadBranch = testData.GetShared("pullRequestBranch")
 	_, err = sess.NoAutoTime().Insert(pr)
 	require.NoError(t, err)
 	require.NoError(t, committer.Commit())
@@ -383,23 +383,23 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 
 func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.Has("repository") {
+	if !testData.HasShared("repository") {
 		return
 	}
 	if repository := permissions.Repository(); repository != nil {
-		if repository.FullName() != testData.Get("repository") {
-			panic(fmt.Sprintf("attempting to override already repository %s with %s", repository.FullName(), testData.Get("repository")))
+		if repository.FullName() != testData.GetShared("repository") {
+			panic(fmt.Sprintf("attempting to override already repository %s with %s", repository.FullName(), testData.GetShared("repository")))
 		}
 		return
 	}
-	ownerName, repoName, found := strings.Cut(testData.Get("repository"), "/")
+	ownerName, repoName, found := strings.Cut(testData.GetShared("repository"), "/")
 	require.True(t, found)
 	owner := fixtureCreateUser(t, &user_model.User{Name: ownerName})
 	opts := &forgery.CreateRepositoryOptions{
 		Name:      repoName,
 		IsPrivate: strings.Contains(repoName, "private"),
 	}
-	if testData.Get("repository-init") == "true" {
+	if testData.GetShared("repository-init") == "true" {
 		opts.Files = forgery.FilesInit{}
 	}
 	repository := forgery.CreateRepository(t, owner, opts)
@@ -428,7 +428,7 @@ func fixtureGetIssue(t *testing.T, testData *testData) *issues_model.Issue {
 func fixtureSetIssue(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
 	if fixtureGetIssue(t, testData) == nil {
-		authorName := testData.Get("issueAuthor")
+		authorName := testData.GetShared("issueAuthor")
 		author := fixtureCreateUser(t, &user_model.User{Name: authorName})
 		_ = fixtureCreateIssue(t, author, permissions.Repository(), dataToString(t, testData, "issue"), "issue description")
 	}
@@ -448,7 +448,7 @@ func fixtureGetComment(t *testing.T, testData *testData) *issues_model.Comment {
 func fixtureCreateComment(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
 	if fixtureGetComment(t, testData) == nil {
-		authorName := testData.Get("issueAuthor")
+		authorName := testData.GetShared("issueAuthor")
 		author := fixtureCreateUser(t, &user_model.User{Name: authorName})
 		_, err := issues_model.CreateComment(t.Context(), &issues_model.CreateCommentOptions{
 			Type:    issues_model.CommentTypeComment,
@@ -470,10 +470,10 @@ func fixtureDisableRepoUnit(t *testing.T, permissions *apiv1_permissions.Permiss
 
 func fixtureDisableUnits(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.Has("disable-units") {
+	if !testData.HasShared("disable-units") {
 		return
 	}
-	for unit := range strings.SplitSeq(testData.Get("disable-units"), ",") {
+	for unit := range strings.SplitSeq(testData.GetShared("disable-units"), ",") {
 		unitType := unit_model.TypeFromKey(unit)
 		if unitType == unit_model.TypeInvalid {
 			panic(fmt.Errorf("unable to find a unit matching '%s'", unit))

@@ -13,17 +13,17 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "doerregular",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": user_model.ActionsUserName,
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "anonymous",
 			}),
 			error: "token is required",
@@ -31,6 +31,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "doerregular")
+		data.SetSharedDefault("doer", "doerregular")
 	},
 })

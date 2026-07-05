@@ -13,21 +13,21 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                              "regularuser",
 				"Service.EnableReverseProxyAuthAPI": "true",
 				"authentication":                    "proxy",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                              "regularuser",
 				"Service.EnableReverseProxyAuthAPI": "false",
 				"authentication":                    "basic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                              "regularuser",
 				"Service.EnableReverseProxyAuthAPI": "true",
 				"authentication":                    "token",
@@ -35,7 +35,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			error: "auth method not allowed",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                              "regularuser",
 				"Service.EnableReverseProxyAuthAPI": "false",
 				"authentication":                    "token",
@@ -45,12 +45,12 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "regularuser")
-		data.SetDefault("Service.EnableReverseProxyAuthAPI", "true")
-		data.SetDefault("authentication", "proxy")
+		data.SetSharedDefault("doer", "regularuser")
+		data.SetSharedDefault("Service.EnableReverseProxyAuthAPI", "true")
+		data.SetSharedDefault("authentication", "proxy")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
-		setting.Service.EnableReverseProxyAuthAPI = data.Get("Service.EnableReverseProxyAuthAPI") == "true"
+		setting.Service.EnableReverseProxyAuthAPI = data.GetShared("Service.EnableReverseProxyAuthAPI") == "true"
 	},
 })

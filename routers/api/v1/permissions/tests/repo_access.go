@@ -13,45 +13,45 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "doerregular",
 				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "anonymous",
 				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "doeradmin",
 				"repository": "userowner/repositoryprivate",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "doerregular",
 				"repository": "userowner/repositoryprivate",
 			}),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "anonymous",
 				"repository": "userowner/repositoryprivate",
 			}),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       user_model.ActionsUserName,
 				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":        user_model.ActionsUserName,
 				"repository":  "userowner/repositorypublic",
 				"task.RepoID": "unrelated",
@@ -59,7 +59,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                   user_model.ActionsUserName,
 				"repository":             "userowner/repositorypublic",
 				"task.IsForkPullRequest": "true",
@@ -68,7 +68,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("repository", "userowner/repositorypublic")
+		data.SetSharedDefault("repository", "userowner/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetRepository(t, permissions, data)

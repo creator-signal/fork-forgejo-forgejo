@@ -16,20 +16,20 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "doeradmin",
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -38,7 +38,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -48,7 +48,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Must be a team member",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":     "regularuser",
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -58,7 +58,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"org": "ReqTeamMembership",
 			}),
 			error: "reqTeamMembership: unprepared context",
@@ -71,26 +71,26 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("org", "ReqTeamMembership")
-		data.SetDefault("team", org_model.OwnerTeamName)
+		data.SetSharedDefault("org", "ReqTeamMembership")
+		data.SetSharedDefault("team", org_model.OwnerTeamName)
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.Get("doer")
-		if data.Has("orgOwner") {
-			orgOwner = data.Get("orgOwner")
+		orgOwner := data.GetShared("doer")
+		if data.HasShared("orgOwner") {
+			orgOwner = data.GetShared("orgOwner")
 		}
 		var org *org_model.Organization
-		if data.Has("org") {
+		if data.HasShared("org") {
 			fixtureCreateUser(t, &user_model.User{Name: orgOwner})
-			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: orgOwner})
+			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.GetShared("org")}, &user_model.User{Name: orgOwner})
 		}
 
-		if data.Has("teams") {
-			fixtureCreateTeams(t, org, data.Get("teams"))
+		if data.HasShared("teams") {
+			fixtureCreateTeams(t, org, data.GetShared("teams"))
 		}
 
-		if data.Has("team") {
-			team, err := org_model.GetTeam(t.Context(), org.ID, data.Get("team"))
+		if data.HasShared("team") {
+			team, err := org_model.GetTeam(t.Context(), org.ID, data.GetShared("team"))
 			require.NoError(t, err)
 			permissions.SetTeam(team)
 		}

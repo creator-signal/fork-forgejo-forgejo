@@ -21,20 +21,20 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"repository": "userowner/repositorypublic",
 					"doer":       "userowner",
 					"scope":      scopes,
 				}),
 			},
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"disable-units": units,
 				}),
 				error: "Not Found",
 			},
 			{
-				data: newTestData(map[string]string{
+				data: newTestData(map[string]string{}, map[string]string{
 					"doer":       "regularuser",
 					"repository": "userowner/repositorypublic",
 					"scope":      "write:issue",
@@ -52,15 +52,15 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			if data.Has("repository") {
-				owner, _, found := strings.Cut(data.Get("repository"), "/")
+			if data.HasShared("repository") {
+				owner, _, found := strings.Cut(data.GetShared("repository"), "/")
 				require.True(t, found)
-				data.Set("doer", owner)
+				data.SetShared("doer", owner)
 			} else {
-				data.SetDefault("repository", "userowner/repositorypublic")
-				data.SetDefault("doer", "userowner")
+				data.SetSharedDefault("repository", "userowner/repositorypublic")
+				data.SetSharedDefault("doer", "userowner")
 			}
-			data.SetDefault("level", "write")
+			data.SetSharedDefault("level", "write")
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

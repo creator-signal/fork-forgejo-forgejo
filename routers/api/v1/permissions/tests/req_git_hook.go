@@ -13,12 +13,12 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "doeradmin",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":            "doeradmin",
 				"DisableGitHooks": "true",
 			}),
@@ -30,9 +30,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "doeradmin")
+		data.SetSharedDefault("doer", "doeradmin")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableGitHooks = data.Get("DisableGitHooks") == "true"
+		setting.DisableGitHooks = data.GetShared("DisableGitHooks") == "true"
 	},
 })

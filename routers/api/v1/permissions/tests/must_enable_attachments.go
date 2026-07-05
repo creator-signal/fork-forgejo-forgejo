@@ -13,10 +13,10 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.MustEnableAttachments, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}),
+			data: newTestData(map[string]string{}, map[string]string{}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"Attachment.Enabled": "false",
 			}),
 			error: "Not Found",
@@ -26,6 +26,6 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableAttachments, functionTe
 		&setting.Attachment.Enabled,
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.Attachment.Enabled = data.Get("Attachment.Enabled") != "false"
+		setting.Attachment.Enabled = data.GetShared("Attachment.Enabled") != "false"
 	},
 })

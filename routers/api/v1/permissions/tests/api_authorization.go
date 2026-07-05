@@ -13,27 +13,27 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "anonymous",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer": "doerregular",
 			}),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "doerregular")
-		if data.Get("doer") == user_model.ActionsUserName {
-			data.SetDefault("repository", "userowner/repositorypublic")
+		data.SetSharedDefault("doer", "doerregular")
+		if data.GetShared("doer") == user_model.ActionsUserName {
+			data.SetSharedDefault("repository", "userowner/repositorypublic")
 		}
-		data.SetDefault("scope", "read:repository")
-		data.SetDefault("level", "read")
+		data.SetSharedDefault("scope", "read:repository")
+		data.SetSharedDefault("level", "read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.Has("repository") && data.Get("doer") == user_model.ActionsUserName {
+		if data.HasShared("repository") && data.GetShared("doer") == user_model.ActionsUserName {
 			fixtureSetRepository(t, permissions, data)
 		}
 		fixtureSetDoer(t, permissions, data)

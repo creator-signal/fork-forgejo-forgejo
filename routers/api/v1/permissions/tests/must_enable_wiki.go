@@ -12,13 +12,13 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.MustEnableWiki, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "doerregular",
 				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":          "doerregular",
 				"repository":    "userowner/repositorypublic",
 				"disable-units": "repo.wiki",

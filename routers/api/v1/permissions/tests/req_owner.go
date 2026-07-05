@@ -15,14 +15,14 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "userowner",
 				"repository": "userowner/repositorypublic",
 				"scope":      "read:user,write:repository",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "regular",
 				"repository": "userowner/repositorypublic",
 				"scope":      "read:user,write:repository",
@@ -33,7 +33,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	for _, unitType := range unitTypes {
 		unit := unitsTypeToString(unitType)
 		fixtures = append(fixtures, &testCase{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"disable-units": unit,
 			}),
 			error: "Not Found",
@@ -50,7 +50,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.Set("doer", "doeradmin")
+			data.SetShared("doer", "doeradmin")
 		},
 		testCases:  fixtures,
 		staticArgs: 1,

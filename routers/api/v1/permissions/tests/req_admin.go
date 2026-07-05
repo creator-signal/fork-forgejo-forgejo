@@ -15,19 +15,19 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositorypublic",
 				"doer":       "doeradmin",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositorypublic",
 				"doer":       "userowner",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositorypublic",
 				"doer":       "regularuser",
 			}),
@@ -37,7 +37,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 	for _, unitType := range unitTypes {
 		unit := unitsTypeToString(unitType)
 		fixtures = append(fixtures, &testCase{
-			data: newTestData(map[string]string{
+			data: newTestData(map[string]string{}, map[string]string{
 				"repository":    "userowner/repositorypublic",
 				"doer":          "doeradmin",
 				"disable-units": unit,
@@ -56,7 +56,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.Set("doer", "doeradmin")
+			data.SetShared("doer", "doeradmin")
 		},
 		testCases:  fixtures,
 		staticArgs: 1,
