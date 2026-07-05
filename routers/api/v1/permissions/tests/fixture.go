@@ -147,12 +147,12 @@ func fixtureCreateTeam(t *testing.T, org *org_model.Organization, memberName str
 	return team
 }
 
-func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permissions, packageOwner string) {
 	t.Helper()
-	if !testData.HasShared("packageOwner") {
+	if packageOwner == "" {
 		return
 	}
-	owner := fixtureCreateUser(t, &user_model.User{Name: testData.GetShared("packageOwner")})
+	owner := fixtureCreateUser(t, &user_model.User{Name: packageOwner})
 	permissions.SetPackageOwner(owner)
 	mode, err := packages_service.DeterminePackageAccessMode(permissions.Context(), permissions.PackageOwner(), permissions.Doer())
 	require.NoError(t, err)
