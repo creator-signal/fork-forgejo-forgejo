@@ -43,7 +43,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 			}, map[string]string{
 				"doer":            "userowner",
 				"repository":      "userowner/repositorypublic",
-				"repository-init": "true",
+				"repository.init": "true",
 				"disable-units":   "repo.issues",
 			}),
 		},

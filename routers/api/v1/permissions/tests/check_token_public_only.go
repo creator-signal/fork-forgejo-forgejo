@@ -44,7 +44,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{}, map[string]string{
 				"repository": "userowner/repositorypublic",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -52,7 +52,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryRepository,
 			}, map[string]string{
 				"repository": "userowner/repositorypublic",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -60,7 +60,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryRepository,
 			}, map[string]string{
 				"repository": "userowner/repositoryprivate",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public repos",
 		},
@@ -69,7 +69,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryIssue,
 			}, map[string]string{
 				"repository": "userowner/repositorypublic",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -77,7 +77,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryIssue,
 			}, map[string]string{
 				"repository": "userowner/repositoryprivate",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public issues",
 		},
@@ -86,7 +86,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryNotification,
 			}, map[string]string{
 				"repository": "userowner/repositorypublic",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -94,7 +94,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryNotification,
 			}, map[string]string{
 				"repository": "userowner/repositoryprivate",
-				"scope":      fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public notifications",
 		},
@@ -103,7 +103,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryUser,
 				"user":                    "regularuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -111,7 +111,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryUser,
 				"user":                    "privateuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public users",
 		},
@@ -120,7 +120,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryActivityPub,
 				"user":                    "regularuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -128,7 +128,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryActivityPub,
 				"user":                    "privateuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public activitypub",
 		},
@@ -137,7 +137,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "regularorg",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -145,7 +145,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "privateorg",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public orgs",
 		},
@@ -155,7 +155,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"org":                     "privateorg",
 				"orgAsUser":               "true",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public orgs",
 		},
@@ -164,7 +164,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryPackage,
 				"packageOwner":            "regularuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 		},
 		{
@@ -172,7 +172,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				"requiredScopeCategories": categoryPackage,
 				"packageOwner":            "privateuser",
 			}, map[string]string{
-				"scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
+				"doer.scope": fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly),
 			}),
 			error: "token scope is limited to public packages",
 		},
@@ -202,7 +202,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			}
 			permissions.SetRequiredScopeCategories(categories)
 		}
-		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
+		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()

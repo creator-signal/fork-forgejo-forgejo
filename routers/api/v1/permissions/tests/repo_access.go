@@ -52,17 +52,17 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, map[string]string{
-				"doer":        user_model.ActionsUserName,
-				"task.RepoID": "unrelated",
-				"repository":  "userowner/repositorypublic",
+				"doer":                     user_model.ActionsUserName,
+				"doer.actions.task.RepoID": "unrelated",
+				"repository":               "userowner/repositorypublic",
 			}),
 			error: "Not Found",
 		},
 		{
 			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                   user_model.ActionsUserName,
-				"task.IsForkPullRequest": "true",
-				"repository":             "userowner/repositorypublic",
+				"doer":                                user_model.ActionsUserName,
+				"doer.actions.task.IsForkPullRequest": "true",
+				"repository":                          "userowner/repositorypublic",
 			}),
 		},
 	},
@@ -71,6 +71,6 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		data.SetSharedDefault("repository", "userowner/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
+		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
 	},
 })

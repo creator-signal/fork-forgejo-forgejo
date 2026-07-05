@@ -22,7 +22,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 			}, map[string]string{
 				"doer":            "userowner",
 				"repository":      "userowner/repositorypublic",
-				"repository-init": "true",
+				"repository.init": "true",
 			}),
 		},
 		{
@@ -33,7 +33,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 			}, map[string]string{
 				"doer":            "regularuser",
 				"repository":      "userowner/repositorypublic",
-				"repository-init": "true",
+				"repository.init": "true",
 			}),
 			error: "user should have a permission to write to this branch",
 		},
@@ -50,7 +50,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 		owner, _, found := strings.Cut(data.GetShared("repository"), "/")
 		require.True(t, found)
 		data.SetShared("doer", owner)
-		data.SetSharedDefault("repository-init", "true")
+		data.SetSharedDefault("repository.init", "true")
 		data.SetOwnDefault("pullRequestAuthor", owner)
 		data.SetOwnDefault("pullRequestBranch", "ReqRepoBranchWriter")
 		data.SetOwnDefault("pullRequest", "ReqRepoBranchWriter")

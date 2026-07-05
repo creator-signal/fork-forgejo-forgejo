@@ -18,14 +18,14 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "userowner",
 				"repository": "userowner/repositorypublic",
-				"scope":      "read:user,write:repository",
+				"doer.scope": "read:user,write:repository",
 			}),
 		},
 		{
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":       "regular",
 				"repository": "userowner/repositorypublic",
-				"scope":      "read:user,write:repository",
+				"doer.scope": "read:user,write:repository",
 			}),
 			error: "user should be the owner of the repo",
 		},

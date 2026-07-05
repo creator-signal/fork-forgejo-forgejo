@@ -166,7 +166,7 @@ func fixtureSetDoer(t *testing.T, permissions *apiv1_permissions.Permissions, te
 	}
 	if doer := permissions.Doer(); doer != nil {
 		if doer.Name != testData.GetShared("doer") {
-			panic(fmt.Sprintf("attempting to override already doer %s with %s", doer.Name, testData.GetShared("doer")))
+			panic(fmt.Sprintf("attempting to override doer %s with %s", doer.Name, testData.GetShared("doer")))
 		}
 		return
 	}
@@ -203,13 +203,13 @@ func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Perm
 	repository := permissions.Repository()
 	require.NotNil(t, repository)
 	repositoryID := repository.ID
-	if testData.GetShared("task.RepoID") == "unrelated" {
+	if testData.GetShared("doer.actions.task.RepoID") == "unrelated" {
 		repositoryID = 13245
 	}
 	task := &actions_model.ActionTask{
 		RepoID: repositoryID,
 	}
-	if testData.GetShared("task.IsForkPullRequest") == "true" {
+	if testData.GetShared("doer.actions.task.IsForkPullRequest") == "true" {
 		task.IsForkPullRequest = true
 	}
 	task.GenerateToken()
@@ -279,8 +279,8 @@ func (*reverseProxyAuthenticationResult) IsReverseProxyAuthentication() bool {
 
 func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	var scope auth_model.AccessTokenScope
-	if testData.HasShared("scope") {
-		scope = auth_model.AccessTokenScope(testData.GetShared("scope"))
+	if testData.HasShared("doer.scope") {
+		scope = auth_model.AccessTokenScope(testData.GetShared("doer.scope"))
 	} else {
 		scope = auth_model.AccessTokenScopeAll
 	}
@@ -307,7 +307,7 @@ func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Perm
 		tokenReducer, err := authz.GetAuthorizationReducerForAccessToken(t.Context(), token)
 		require.NoError(t, err)
 		permissions.SetIsSigned(true)
-		switch testData.GetShared("authentication") {
+		switch testData.GetShared("doer.authentication") {
 		case "basic":
 			permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.Doer()})
 		case "proxy":

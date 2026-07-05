@@ -15,14 +15,14 @@ var _ = registerFunctionTest(apiv1_permissions.MustAllowPulls, functionTest{
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":            "doerregular",
 				"repository":      "userowner/repositorypublic",
-				"repository-init": "true",
+				"repository.init": "true",
 			}),
 		},
 		{
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":            "doerregular",
 				"repository":      "userowner/repositorypublic",
-				"repository-init": "true",
+				"repository.init": "true",
 				"disable-units":   "repo.pulls",
 			}),
 			error: "Not Found",
@@ -30,7 +30,7 @@ var _ = registerFunctionTest(apiv1_permissions.MustAllowPulls, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetShared("repository-init", "true")
+		data.SetShared("repository.init", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))

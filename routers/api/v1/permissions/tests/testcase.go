@@ -31,7 +31,17 @@ type testData struct {
 }
 
 func verifySharedKey(key string) {
-	if !slices.Contains([]string{"doer", "task.RepoID", "task.IsForkPullRequest", "authentication", "scope", "repository", "repository-init", "level", "disable-units"}, key) {
+	if !slices.Contains([]string{
+		"disable-units",
+		"doer",
+		"doer.actions.task.IsForkPullRequest",
+		"doer.actions.task.RepoID",
+		"doer.authentication",
+		"doer.scope",
+		"repository",
+		"repository.init",
+		"token.level",
+	}, key) {
 		panic(fmt.Sprintf("%s is not a shared key", key))
 	}
 }

@@ -24,7 +24,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 				data: newTestData(map[string]string{}, map[string]string{
 					"repository": "userowner/repositorypublic",
 					"doer":       "userowner",
-					"scope":      scopes,
+					"doer.scope": scopes,
 				}),
 			},
 			{
@@ -37,7 +37,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 				data: newTestData(map[string]string{}, map[string]string{
 					"doer":       "regularuser",
 					"repository": "userowner/repositorypublic",
-					"scope":      "write:issue",
+					"doer.scope": "write:issue",
 				}),
 				error: "user should have a permission to write to a repo",
 			},
@@ -60,7 +60,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 				data.SetSharedDefault("repository", "userowner/repositorypublic")
 				data.SetSharedDefault("doer", "userowner")
 			}
-			data.SetSharedDefault("level", "write")
+			data.SetSharedDefault("token.level", "write")
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

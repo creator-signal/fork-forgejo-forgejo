@@ -46,24 +46,24 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 		testCases: []*testCase{
 			{
 				data: newTestData(map[string]string{}, map[string]string{
-					"doer":  "doerregular",
-					"scope": readscope,
-					"level": "read",
+					"doer":        "doerregular",
+					"doer.scope":  readscope,
+					"token.level": "read",
 				}),
 			},
 			{
 				data: newTestData(map[string]string{}, map[string]string{
-					"doer":  "doerregular",
-					"scope": readscope,
-					"level": "write",
+					"doer":        "doerregular",
+					"doer.scope":  readscope,
+					"token.level": "write",
 				}),
 				error: "token does not have at least one of required scope(s)",
 			},
 			{
 				data: newTestData(map[string]string{}, map[string]string{
-					"doer":  "doerregular",
-					"scope": "read:misc",
-					"level": "read",
+					"doer":        "doerregular",
+					"doer.scope":  "read:misc",
+					"token.level": "read",
 				}),
 				error: "token does not have at least one of required scope(s)",
 			},
@@ -72,24 +72,24 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 			t.Helper()
 			data.SetSharedDefault("repository", "userowner/repositorypublic")
 			data.SetSharedDefault("doer", "doerregular")
-			if data.HasShared("scope") {
-				scope := data.GetShared("scope")
+			if data.HasShared("doer.scope") {
+				scope := data.GetShared("doer.scope")
 				if !strings.Contains(scope, readscope) {
 					writescope := strings.ReplaceAll(readscope, "read", "write")
-					data.SetShared("scope", strings.Join([]string{scope, writescope}, ","))
+					data.SetShared("doer.scope", strings.Join([]string{scope, writescope}, ","))
 				}
 			} else {
-				data.SetShared("scope", readscope)
+				data.SetShared("doer.scope", readscope)
 			}
 
-			data.SetSharedDefault("level", "read")
+			data.SetSharedDefault("token.level", "read")
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
+			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, args []any) {
-			level := levelStringToLevel(data.GetShared("level"))
+			level := levelStringToLevel(data.GetShared("token.level"))
 			categories := args[0].([]auth_model.AccessTokenScopeCategory)
 			t.Logf("calling TokenRequiresScopes(ctx, %v, %v)", categories, level)
 			apiv1_permissions.TokenRequiresScopes(ctx, categories, level)

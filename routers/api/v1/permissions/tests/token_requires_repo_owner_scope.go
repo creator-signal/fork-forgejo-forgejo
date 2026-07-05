@@ -20,16 +20,16 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 			data: newTestData(map[string]string{
 				"owner": "doerregular",
 			}, map[string]string{
-				"scope": "read:user",
-				"level": "read",
+				"doer.scope":  "read:user",
+				"token.level": "read",
 			}),
 		},
 		{
 			data: newTestData(map[string]string{
 				"owner": "doerregular",
 			}, map[string]string{
-				"scope": "read:user",
-				"level": "write",
+				"doer.scope":  "read:user",
+				"token.level": "write",
 			}),
 			error: "token does not have at least one of required scope(s): [write:user]",
 		},
@@ -37,16 +37,16 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 			data: newTestData(map[string]string{
 				"owner": "regularorg",
 			}, map[string]string{
-				"scope": "read:organization",
-				"level": "read",
+				"doer.scope":  "read:organization",
+				"token.level": "read",
 			}),
 		},
 		{
 			data: newTestData(map[string]string{
 				"owner": "regularorg",
 			}, map[string]string{
-				"scope": "read:organization",
-				"level": "write",
+				"doer.scope":  "read:organization",
+				"token.level": "write",
 			}),
 			error: "token does not have at least one of required scope(s): [write:organization]",
 		},
@@ -62,7 +62,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 				data.SetOwn("owner", "doerregular")
 			}
 		}
-		data.SetSharedDefault("level", "read")
+		data.SetSharedDefault("token.level", "read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		ownerName := data.GetOwn("owner")
@@ -76,7 +76,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
 		owner := fixtureGetUser(t, data.GetOwn("owner"))
-		level := levelStringToLevel(data.GetShared("level"))
+		level := levelStringToLevel(data.GetShared("token.level"))
 		t.Logf("calling TokenRequiresRepoOwnerScope(ctx, %+v, %v)", owner, level)
 		apiv1_permissions.TokenRequiresRepoOwnerScope(ctx, owner, level)
 	},

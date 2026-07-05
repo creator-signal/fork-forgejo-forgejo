@@ -29,12 +29,12 @@ var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 		if data.GetShared("doer") == user_model.ActionsUserName {
 			data.SetSharedDefault("repository", "userowner/repositorypublic")
 		}
-		data.SetSharedDefault("scope", "read:repository")
-		data.SetSharedDefault("level", "read")
+		data.SetSharedDefault("doer.scope", "read:repository")
+		data.SetSharedDefault("token.level", "read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.HasShared("repository") && data.GetShared("doer") == user_model.ActionsUserName {
-			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
+			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
 		}
 		fixtureSetDoer(t, permissions, data)
 	},
