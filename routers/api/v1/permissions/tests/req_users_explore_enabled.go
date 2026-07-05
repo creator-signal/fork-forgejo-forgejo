@@ -16,9 +16,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionT
 			data: newTestData(map[string]string{}, map[string]string{}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"Service.Explore.DisableUsersPage": "true",
-			}),
+			}, map[string]string{}),
 			error: "Not Found",
 		},
 	},
@@ -26,6 +26,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionT
 		&setting.Service.Explore.DisableUsersPage,
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.Service.Explore.DisableUsersPage = data.GetShared("Service.Explore.DisableUsersPage") == "true"
+		setting.Service.Explore.DisableUsersPage = data.GetOwn("Service.Explore.DisableUsersPage") == "true"
 	},
 })
