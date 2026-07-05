@@ -28,6 +28,24 @@ type functionTest struct {
 - The `call` function, if it exists, is expected to call the function for which the test is designed. Fos instance the `call` for `ReqValidCommentID` runs `apiv1_permissions.ReqValidCommentID(ctx, comment)`. The function must not have any side effect. Instead it must use what has been created by the fixtures (using the `interpret` function).
 - The `sequenceFilter` only keeps some permissions function in the sequence leading to the function under test. For instance when testing `ReqOrgOwnership` the sequence `APIAuthorization,TokenRequiresScopes,ReqOrgOwnership` will be used. In some cases it is useful to simplify the tests in case the shortest sequence leading to a function contains functions that will interfere if a particular `testCase` is set.
 
+## Test data interpretation
+
+The `testData` of the `testCase` is split into data:
+
+- owned by the `testCase` (`GetOwn`, `SetOwn`) and not meant to be
+  used anywhere else in the sequence. They should be used when
+  creating a new `testCase` unless there is a good reason not to.
+- shared by all the `testCase` in the sequence (`GetShared`,
+  `SetShared`) and care must be taken about how such data is handled
+  by the `fulfillNeeds` function
+
+Because shared keys can quickly become difficult to figure out, they
+must be listed in the `verifySharedKey` function and only used when
+there is no other way around it. For instance `APIAuthorization` must
+be aware of the `doer` and it needs to be overriden by the `ReqAdmin`
+tests function when it is not last in the sequence, otherwise it will
+always fail.
+
 ## Permission function signatures
 
 The signature of every permission function has at least one argument which is a `routers/api/v1/permissions.Context` interface. It may also have additional arguments provided when building the routes. For instance `TokenRequiresScopes` may be given a list of scope categories. Such arguments do not vary depending on the context because they are preset when the route is built. In addition the function may have arguments that are extracted from the environment. For instance `ReqValidCommentID` may be given the content of the `id` field from the body of a JSON payload.
@@ -70,7 +88,7 @@ All fixtures are dynamically created (they are not using the global fixtures fou
 
 ## The call function
 
-`func(t *testing.T, ctx apiv1_permissions.Context, permissions *apiv1_permissions.Permissions, data *testData, signature []any)`
+`func(t *testing.T, ctx apiv1_permissions.Context, data *testData, staticArgs []any)`
 
 It is responsible for:
 
@@ -79,9 +97,7 @@ It is responsible for:
 
 The `permissions` and `data` arguments are provided, as computed by the `interpret` function.
 
-The `signature[0]` is the function itself and could be called with `signature[0].Call`.
-
-The `signature[1:]` list are the mandatory arguments to the function call.
+The `args` are the mandatory arguments to the function call.
 
 ## Test coverage
 
