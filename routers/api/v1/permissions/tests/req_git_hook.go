@@ -18,9 +18,10 @@ var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":            "doeradmin",
+			data: newTestData(map[string]string{
 				"DisableGitHooks": "true",
+			}, map[string]string{
+				"doer": "doeradmin",
 			}),
 			error: "must be allowed to edit Git hooks",
 		},
@@ -33,6 +34,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 		data.SetSharedDefault("doer", "doeradmin")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableGitHooks = data.GetShared("DisableGitHooks") == "true"
+		setting.DisableGitHooks = data.GetOwn("DisableGitHooks") == "true"
 	},
 })
