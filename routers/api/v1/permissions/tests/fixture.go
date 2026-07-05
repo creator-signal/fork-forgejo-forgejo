@@ -381,25 +381,25 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	require.NoError(t, pull_service.PushToBaseRepo(ctx, pr))
 }
 
-func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name, init string) {
 	t.Helper()
-	if !testData.HasShared("repository") {
+	if name == "" {
 		return
 	}
 	if repository := permissions.Repository(); repository != nil {
-		if repository.FullName() != testData.GetShared("repository") {
-			panic(fmt.Sprintf("attempting to override already repository %s with %s", repository.FullName(), testData.GetShared("repository")))
+		if repository.FullName() != name {
+			panic(fmt.Sprintf("attempting to override already repository %s with %s", repository.FullName(), name))
 		}
 		return
 	}
-	ownerName, repoName, found := strings.Cut(testData.GetShared("repository"), "/")
+	ownerName, repoName, found := strings.Cut(name, "/")
 	require.True(t, found)
 	owner := fixtureCreateUser(t, &user_model.User{Name: ownerName})
 	opts := &forgery.CreateRepositoryOptions{
 		Name:      repoName,
 		IsPrivate: strings.Contains(repoName, "private"),
 	}
-	if testData.GetShared("repository-init") == "true" {
+	if init == "true" {
 		opts.Files = forgery.FilesInit{}
 	}
 	repository := forgery.CreateRepository(t, owner, opts)
@@ -468,12 +468,12 @@ func fixtureDisableRepoUnit(t *testing.T, permissions *apiv1_permissions.Permiss
 	forgery.DisableRepoUnits(t, repo, unitType)
 }
 
-func fixtureDisableUnits(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureDisableUnits(t *testing.T, permissions *apiv1_permissions.Permissions, disable string) {
 	t.Helper()
-	if !testData.HasShared("disable-units") {
+	if disable == "" {
 		return
 	}
-	for unit := range strings.SplitSeq(testData.GetShared("disable-units"), ",") {
+	for unit := range strings.SplitSeq(disable, ",") {
 		unitType := unit_model.TypeFromKey(unit)
 		if unitType == unit_model.TypeInvalid {
 			panic(fmt.Errorf("unable to find a unit matching '%s'", unit))

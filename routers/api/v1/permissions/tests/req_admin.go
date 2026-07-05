@@ -52,7 +52,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 			signatureString,
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data)
+			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()

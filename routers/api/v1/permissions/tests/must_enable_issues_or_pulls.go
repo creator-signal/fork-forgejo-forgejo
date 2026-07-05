@@ -32,6 +32,6 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableIssuesOrPulls, function
 		data.SetShared("repository-init", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
+		fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
 	},
 })

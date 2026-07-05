@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.HasShared("repository") && data.GetShared("doer") == user_model.ActionsUserName {
-			fixtureSetRepository(t, permissions, data)
+			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
 		}
 		fixtureSetDoer(t, permissions, data)
 	},

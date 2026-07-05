@@ -41,7 +41,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 			signatureString,
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data)
+			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

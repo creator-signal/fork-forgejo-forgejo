@@ -202,7 +202,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			}
 			permissions.SetRequiredScopeCategories(categories)
 		}
-		fixtureSetRepository(t, permissions, data)
+		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()

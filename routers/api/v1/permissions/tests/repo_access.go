@@ -71,6 +71,6 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		data.SetSharedDefault("repository", "userowner/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetRepository(t, permissions, data)
+		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
 	},
 })

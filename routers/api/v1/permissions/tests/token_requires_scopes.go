@@ -85,7 +85,7 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 			data.SetSharedDefault("level", "read")
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureSetRepository(t, permissions, data)
+			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository-init"))
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, args []any) {

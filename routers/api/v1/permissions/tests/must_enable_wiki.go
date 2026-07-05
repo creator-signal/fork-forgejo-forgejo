@@ -27,6 +27,6 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableWiki, functionTest{
 		},
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
+		fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
 	},
 })

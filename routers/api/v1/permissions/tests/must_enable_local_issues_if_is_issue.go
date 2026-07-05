@@ -54,7 +54,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 		data.SetOwnDefault("issueAuthor", "issueAuthor")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureDisableUnits(t, permissions, data)
+		fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
 		if data.HasOwn("pullRequest") {
 			require.True(t, data.HasOwn("pullRequestBranch"))
 			fixtureCreateBranch(t, permissions, data.GetOwn("pullRequestBranch"))
