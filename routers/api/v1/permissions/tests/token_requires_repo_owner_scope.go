@@ -17,30 +17,34 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerScope, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"owner": "doerregular",
+			}, map[string]string{
 				"scope": "read:user",
 				"level": "read",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"owner": "doerregular",
+			}, map[string]string{
 				"scope": "read:user",
 				"level": "write",
 			}),
 			error: "token does not have at least one of required scope(s): [write:user]",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"owner": "regularorg",
+			}, map[string]string{
 				"scope": "read:organization",
 				"level": "read",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"owner": "regularorg",
+			}, map[string]string{
 				"scope": "read:organization",
 				"level": "write",
 			}),
@@ -49,19 +53,19 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		if !data.HasShared("owner") {
+		if !data.HasOwn("owner") {
 			if data.HasShared("repository") {
 				owner, _, found := strings.Cut(data.GetShared("repository"), "/")
 				require.True(t, found)
-				data.SetShared("owner", owner)
+				data.SetOwn("owner", owner)
 			} else {
-				data.SetShared("owner", "doerregular")
+				data.SetOwn("owner", "doerregular")
 			}
 		}
 		data.SetSharedDefault("level", "read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		ownerName := data.GetShared("owner")
+		ownerName := data.GetOwn("owner")
 		if strings.Contains(ownerName, "org") {
 			fixtureCreateOrg(t, &org_model.Organization{Name: ownerName}, &user_model.User{Name: "orgOwner" + ownerName})
 			require.NotNil(t, fixtureGetUser(t, ownerName))
@@ -71,7 +75,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		owner := fixtureGetUser(t, data.GetShared("owner"))
+		owner := fixtureGetUser(t, data.GetOwn("owner"))
 		level := levelStringToLevel(data.GetShared("level"))
 		t.Logf("calling TokenRequiresRepoOwnerScope(ctx, %+v, %v)", owner, level)
 		apiv1_permissions.TokenRequiresRepoOwnerScope(ctx, owner, level)
