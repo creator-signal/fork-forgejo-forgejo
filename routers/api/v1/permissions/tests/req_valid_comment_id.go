@@ -70,13 +70,13 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		data.SetSharedDefault("comment", "comment for ReqValidCommentID")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureCreateUser(t, &user_model.User{Name: data.GetShared("issueAuthor")})
-		fixtureSetIssue(t, permissions, data)
-		fixtureCreateComment(t, permissions, data)
+		issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetShared("issueAuthor")})
+		issue := fixtureSetIssue(t, permissions, data.GetShared("issue"), issueAuthor.Name)
+		fixtureCreateComment(t, permissions, issue, data.GetShared("comment"))
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		comment := fixtureGetComment(t, data)
+		comment := fixtureGetComment(t, data.GetShared("comment"))
 		if data.HasShared("NilIssue") {
 			comment.Issue = nil
 		}

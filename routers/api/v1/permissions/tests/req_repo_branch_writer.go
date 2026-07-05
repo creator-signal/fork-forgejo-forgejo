@@ -41,7 +41,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 		fixtureCreateBranch(t, permissions, data.GetShared("pullRequestBranch"))
 		require.True(t, data.HasShared("pullRequestAuthor"))
 		require.True(t, data.HasShared("pullRequest"))
-		fixtureCreatePullRequest(t, permissions, data)
+		fixtureCreatePullRequest(t, permissions, data.GetOwn("pullRequest"), data.GetOwn("pullRequestAuthor"), data.GetOwn("pullRequestBranch"))
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()

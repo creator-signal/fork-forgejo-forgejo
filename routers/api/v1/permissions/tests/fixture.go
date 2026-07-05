@@ -331,16 +331,16 @@ func fixtureCreateBranch(t *testing.T, permissions *apiv1_permissions.Permission
 	require.NoError(t, gitRepo.CreateBranch(branch, defaultBranch))
 }
 
-func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permissions, pullRequest, pullRequestAuthor, pullRequestBranch string) {
 	t.Helper()
-	if !testData.HasShared("pullRequest") {
+	if pullRequest == "" {
 		return
 	}
 
 	repository := permissions.Repository()
 	require.NotNil(t, repository)
 
-	poster := fixtureGetUser(t, testData.GetShared("pullRequestAuthor"))
+	poster := fixtureGetUser(t, pullRequestAuthor)
 	require.NotNil(t, poster)
 
 	ctx, committer, err := db.TxContext(t.Context())
@@ -355,7 +355,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 		Index:    idx,
 		RepoID:   repository.ID,
 		IsPull:   true,
-		Title:    testData.GetShared("pullRequest"),
+		Title:    pullRequest,
 		PosterID: poster.ID,
 		Poster:   poster,
 	}
@@ -372,7 +372,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	pr.IssueID = issue.ID
 	pr.HeadRepoID = repository.ID
 	pr.BaseRepoID = repository.ID
-	pr.HeadBranch = testData.GetShared("pullRequestBranch")
+	pr.HeadBranch = pullRequestBranch
 	_, err = sess.NoAutoTime().Insert(pr)
 	require.NoError(t, err)
 	require.NoError(t, committer.Commit())
@@ -414,29 +414,31 @@ func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissio
 	permissions.SetRepository(repository)
 }
 
-func fixtureGetIssue(t *testing.T, testData *testData) *issues_model.Issue {
+func fixtureGetIssue(t *testing.T, issueName string) *issues_model.Issue {
 	t.Helper()
 	var issue issues_model.Issue
-	found, err := db.GetEngine(t.Context()).Where("name = ?", dataToString(t, testData, "issue")).Get(&issue)
+	found, err := db.GetEngine(t.Context()).Where("name = ?", issueName).Get(&issue)
 	require.NoError(t, err)
 	if !found {
 		return nil
 	}
+	issue.LoadPoster(t.Context())
 	return &issue
 }
 
-func fixtureSetIssue(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureSetIssue(t *testing.T, permissions *apiv1_permissions.Permissions, issueName, issueAuthor string) *issues_model.Issue {
 	t.Helper()
-	if fixtureGetIssue(t, testData) == nil {
-		authorName := testData.GetShared("issueAuthor")
-		author := fixtureCreateUser(t, &user_model.User{Name: authorName})
-		_ = fixtureCreateIssue(t, author, permissions.Repository(), dataToString(t, testData, "issue"), "issue description")
+	issue := fixtureGetIssue(t, issueName)
+	if issue == nil {
+		author := fixtureCreateUser(t, &user_model.User{Name: issueAuthor})
+		issue = fixtureCreateIssue(t, author, permissions.Repository(), issueName, "issue description")
 	}
+	return issue
 }
 
-func fixtureGetComment(t *testing.T, testData *testData) *issues_model.Comment {
+func fixtureGetComment(t *testing.T, content string) *issues_model.Comment {
 	var comment issues_model.Comment
-	found, err := db.GetEngine(t.Context()).Where("content = ?", dataToString(t, testData, "comment")).Get(&comment)
+	found, err := db.GetEngine(t.Context()).Where("content = ?", content).Get(&comment)
 	require.NoError(t, err)
 	if !found {
 		return nil
@@ -445,17 +447,15 @@ func fixtureGetComment(t *testing.T, testData *testData) *issues_model.Comment {
 	return &comment
 }
 
-func fixtureCreateComment(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureCreateComment(t *testing.T, permissions *apiv1_permissions.Permissions, issue *issues_model.Issue, comment string) {
 	t.Helper()
-	if fixtureGetComment(t, testData) == nil {
-		authorName := testData.GetShared("issueAuthor")
-		author := fixtureCreateUser(t, &user_model.User{Name: authorName})
+	if fixtureGetComment(t, comment) == nil {
 		_, err := issues_model.CreateComment(t.Context(), &issues_model.CreateCommentOptions{
 			Type:    issues_model.CommentTypeComment,
-			Doer:    author,
-			Issue:   fixtureGetIssue(t, testData),
+			Doer:    issue.Poster,
+			Issue:   issue,
 			Repo:    permissions.Repository(),
-			Content: dataToString(t, testData, "comment"),
+			Content: comment,
 		})
 		require.NoError(t, err)
 	}

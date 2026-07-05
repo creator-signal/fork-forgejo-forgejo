@@ -15,58 +15,61 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIsIssue, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":        "doerregular",
-				"repository":  "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"issue":       "issue5000",
 				"issueAuthor": "issueAuthor",
+			}, map[string]string{
+				"doer":       "doerregular",
+				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
+				"issue":       "issue5000",
+				"issueAuthor": "issueAuthor",
+			}, map[string]string{
 				"doer":          "doerregular",
 				"repository":    "userowner/repositorypublic",
-				"issue":         "issue5000",
-				"issueAuthor":   "issueAuthor",
 				"disable-units": "repo.issues",
 			}),
 			error: "Not Found",
 		},
 		{ // does not fail because it is an issue instead of a pull request
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":              "userowner",
-				"repository":        "userowner/repositorypublic",
-				"repository-init":   "true",
+			data: newTestData(map[string]string{
 				"pullRequestAuthor": "userowner",
 				"pullRequestBranch": "MustEnableLocalIssuesIfIsIssue",
 				"pullRequest":       "MustEnableLocalIssuesIfIsIssue",
 				"issue":             "MustEnableLocalIssuesIfIsIssue",
-				"disable-units":     "repo.issues",
+			}, map[string]string{
+				"doer":            "userowner",
+				"repository":      "userowner/repositorypublic",
+				"repository-init": "true",
+				"disable-units":   "repo.issues",
 			}),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("issue", "issueOne")
-		data.SetSharedDefault("issueAuthor", "issueAuthor")
+		data.SetOwnDefault("issue", "issueOne")
+		data.SetOwnDefault("issueAuthor", "issueAuthor")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureDisableUnits(t, permissions, data)
-		if data.HasShared("pullRequest") {
-			require.True(t, data.HasShared("pullRequestBranch"))
-			fixtureCreateBranch(t, permissions, data.GetShared("pullRequestBranch"))
-			require.True(t, data.HasShared("pullRequestAuthor"))
-			require.True(t, data.HasShared("pullRequest"))
-			fixtureCreatePullRequest(t, permissions, data)
-			require.Equal(t, data.GetShared("issue"), data.GetShared("pullRequest"))
+		if data.HasOwn("pullRequest") {
+			require.True(t, data.HasOwn("pullRequestBranch"))
+			fixtureCreateBranch(t, permissions, data.GetOwn("pullRequestBranch"))
+			require.True(t, data.HasOwn("pullRequestAuthor"))
+			require.True(t, data.HasOwn("pullRequest"))
+			fixtureCreatePullRequest(t, permissions, data.GetOwn("pullRequest"), data.GetOwn("pullRequestAuthor"), data.GetOwn("pullRequestBranch"))
+			require.Equal(t, data.GetOwn("issue"), data.GetOwn("pullRequest"))
 		} else {
-			fixtureCreateUser(t, &user_model.User{Name: data.GetShared("issueAuthor")})
-			fixtureSetIssue(t, permissions, data)
+			issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetOwn("issueAuthor")})
+			fixtureSetIssue(t, permissions, data.GetOwn("issue"), issueAuthor.Name)
 		}
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		index := fixtureGetIssue(t, data).Index
+		index := fixtureGetIssue(t, data.GetOwn("issue")).Index
 		t.Logf("calling MustEnableLocalIssuesIfIsIssue(ctx, %d)", index)
 		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, index)
 	},
