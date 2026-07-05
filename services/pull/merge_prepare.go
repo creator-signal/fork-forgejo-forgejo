@@ -254,13 +254,11 @@ func rebaseTrackingOnToBase(ctx *mergeContext, mergeStyle repo_model.MergeStyle)
 		return nil
 	}
 
-	// Check git version for availability of git-replay. If it is available, we use
-	// it for performance and to preserve unknown commit headers like the
-	// "change-id" header used by Jujutsu and GitButler to track changes across
-	// rebase, amend etc.
-	if err := git.CheckGitVersionAtLeast("2.44"); err == nil {
-		// Use git-replay for performance and to preserve unknown headers,
-		// like the "change-id" header used by Jujutsu and GitButler.
+	// If git-replay(1) is available, we use it for performance and to preserve
+	// unknown commit headers like the "change-id" header used by Jujutsu and
+	// GitButler to track changes across rebase, amend etc. It cannot be used if
+	// we have to sign the rebased commits, as of git 2.55 this is not possible.
+	if git.SupportsGitReplay && ctx.signKeyID == "" {
 		if err := git.NewCommand(ctx, "replay", "--onto").AddDynamicArguments(baseBranch).
 			AddDynamicArguments(fmt.Sprintf("%s..%s", baseBranch, stagingBranch)).
 			Run(ctx.RunOpts()); err != nil {

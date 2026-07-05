@@ -313,7 +313,7 @@ func TestCantMergeConflict(t *testing.T) {
 			})
 			t.Run("Git version with replay", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				if git.CheckGitVersionAtLeast("2.44") != nil {
+				if !git.SupportsGitReplay {
 					t.SkipNow()
 				}
 

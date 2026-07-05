@@ -34,6 +34,7 @@ var (
 	// DefaultContext is the default context to run git commands in, must be initialized by git.InitXxx
 	DefaultContext context.Context
 
+	SupportsGitReplay      bool // >= 2.44
 	SupportHashSha256      bool // >= 2.42, SHA-256 repositories no longer an ‘experimental curiosity’
 	InvertedGitFlushEnv    bool // 2.43.1
 	SupportFetchPorcelain  bool // >= 2.41
@@ -168,6 +169,7 @@ func InitFull(ctx context.Context) (err error) {
 	// Explicitly disable credential helper, otherwise Git credentials might leak
 	globalCommandArgs = append(globalCommandArgs, "-c", "credential.helper=")
 
+	SupportsGitReplay = CheckGitVersionAtLeast("2.44") == nil
 	SupportHashSha256 = CheckGitVersionAtLeast("2.42") == nil
 	SupportFetchPorcelain = CheckGitVersionAtLeast("2.41") == nil
 	SupportCheckAttrOnBare = CheckGitVersionAtLeast("2.40") == nil
