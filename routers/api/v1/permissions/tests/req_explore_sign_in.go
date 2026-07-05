@@ -18,16 +18,18 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                      "anonymous",
+			data: newTestData(map[string]string{
 				"Service.RequireSignInView": "true",
+			}, map[string]string{
+				"doer": "anonymous",
 			}),
 			error: "you must be signed in",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                              "anonymous",
+			data: newTestData(map[string]string{
 				"Service.Explore.RequireSigninView": "true",
+			}, map[string]string{
+				"doer": "anonymous",
 			}),
 			error: "you must be signed in",
 		},
@@ -42,7 +44,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
-		setting.Service.RequireSignInView = data.GetShared("Service.RequireSignInView") == "true"
-		setting.Service.Explore.RequireSigninView = data.GetShared("Service.Explore.RequireSigninView") == "true"
+		setting.Service.RequireSignInView = data.GetOwn("Service.RequireSignInView") == "true"
+		setting.Service.Explore.RequireSigninView = data.GetOwn("Service.Explore.RequireSigninView") == "true"
 	},
 })
