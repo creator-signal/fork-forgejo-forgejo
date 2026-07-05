@@ -16,46 +16,51 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"org":    "ReqOrgOwnershipOrg",
 				"setOrg": "true",
-			}),
+			}, map[string]string{}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":   "doeradmin",
+			data: newTestData(map[string]string{
 				"setOrg": "true",
+			}, map[string]string{
+				"doer": "doeradmin",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"org":    "ReqOrgOwnershipOrg",
-				"doer":   "regularuser",
 				"setOrg": "true",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
-				"doer":     "regularuser",
 				"setOrg":   "true",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 			error: "Must be an organization owner",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"org":     "ReqOrgOwnershipOrg",
-				"doer":    "regularuser",
 				"setTeam": "true",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
-				"doer":     "regularuser",
 				"setTeam":  "true",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 			error: "Not Found",
 		},
@@ -73,25 +78,25 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("org", "ReqOrgOwnershipOrg")
-		data.SetSharedDefault("setOrg", "true")
+		data.SetOwnDefault("org", "ReqOrgOwnershipOrg")
+		data.SetOwnDefault("setOrg", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		orgOwner := data.GetShared("doer")
-		if data.HasShared("orgOwner") {
-			orgOwner = data.GetShared("orgOwner")
+		if data.HasOwn("orgOwner") {
+			orgOwner = data.GetOwn("orgOwner")
 		}
 		var org *org_model.Organization
-		if data.HasShared("org") {
+		if data.HasOwn("org") {
 			fixtureCreateUser(t, &user_model.User{Name: orgOwner})
-			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.GetShared("org")}, &user_model.User{Name: orgOwner})
+			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.GetOwn("org")}, &user_model.User{Name: orgOwner})
 		}
 
-		if data.GetShared("setOrg") == "true" {
+		if data.GetOwn("setOrg") == "true" {
 			permissions.SetOrganization(org)
 		}
 
-		if data.GetShared("setTeam") == "true" {
+		if data.GetOwn("setTeam") == "true" {
 			team, err := org_model.GetTeam(t.Context(), org.ID, org_model.OwnerTeamName)
 			require.NoError(t, err)
 			permissions.SetTeam(team)
