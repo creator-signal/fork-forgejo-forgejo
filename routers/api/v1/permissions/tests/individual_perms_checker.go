@@ -13,31 +13,32 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"user": "IndividualPermsChecker",
-			}),
+			}, map[string]string{}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
 				"user": "IndividualPermsCheckerprivate",
-			}),
+			}, map[string]string{}),
 			error: "Visit Project",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "anonymous",
+			data: newTestData(map[string]string{
 				"user": "IndividualPermsCheckerlimited",
+			}, map[string]string{
+				"doer": "anonymous",
 			}),
 			error: "Visit Project",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("user", data.GetShared("doer"))
+		data.SetOwnDefault("user", data.GetShared("doer"))
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.HasShared("user") && data.GetShared("user") != "anonymous" {
-			name := data.GetShared("user")
+		if data.HasOwn("user") {
+			name := data.GetOwn("user")
 			fixtureCreateUser(t, &user_model.User{Name: name})
 			permissions.SetUser(fixtureGetUser(t, name))
 		}
