@@ -13,32 +13,36 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                              "regularuser",
+			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
-				"authentication":                    "proxy",
+			}, map[string]string{
+				"doer":           "regularuser",
+				"authentication": "proxy",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                              "regularuser",
+			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
-				"authentication":                    "basic",
+			}, map[string]string{
+				"doer":           "regularuser",
+				"authentication": "basic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                              "regularuser",
+			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
-				"authentication":                    "token",
+			}, map[string]string{
+				"doer":           "regularuser",
+				"authentication": "token",
 			}),
 			error: "auth method not allowed",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                              "regularuser",
+			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
-				"authentication":                    "token",
+			}, map[string]string{
+				"doer":           "regularuser",
+				"authentication": "token",
 			}),
 			error: "auth method not allowed",
 		},
@@ -46,11 +50,11 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetSharedDefault("doer", "regularuser")
-		data.SetSharedDefault("Service.EnableReverseProxyAuthAPI", "true")
 		data.SetSharedDefault("authentication", "proxy")
+		data.SetOwnDefault("Service.EnableReverseProxyAuthAPI", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
-		setting.Service.EnableReverseProxyAuthAPI = data.GetShared("Service.EnableReverseProxyAuthAPI") == "true"
+		setting.Service.EnableReverseProxyAuthAPI = data.GetOwn("Service.EnableReverseProxyAuthAPI") == "true"
 	},
 })
