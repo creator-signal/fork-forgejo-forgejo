@@ -18,31 +18,34 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "regularuser",
+			data: newTestData(map[string]string{
 				"user": "regularuser",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "regularuser",
+			data: newTestData(map[string]string{
 				"user": "otheruser",
+			}, map[string]string{
+				"doer": "regularuser",
 			}),
 			error: "doer should be the site admin or be same as the contextUser",
 		},
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"ReqSelfOrAdmin",
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		data.SetSharedDefault("doer", "doeradmin")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.HasShared("user") && data.GetShared("user") != "anonymous" {
-			name := data.GetShared("user")
-			user := permissions.User()
-			if user == nil {
-				fixtureCreateUser(t, &user_model.User{Name: name})
-				permissions.SetUser(fixtureGetUser(t, name))
-			}
+		if data.HasOwn("user") {
+			name := data.GetOwn("user")
+			fixtureCreateUser(t, &user_model.User{Name: name})
+			permissions.SetUser(fixtureGetUser(t, name))
 		}
 	},
 })
