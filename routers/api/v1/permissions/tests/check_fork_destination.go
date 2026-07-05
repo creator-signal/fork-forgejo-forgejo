@@ -18,73 +18,78 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":         "regularorgowner",
-				"repository":   "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"forkOrg":      "regularorg1",
 				"forkOrgOwner": "regularorgowner",
+			}, map[string]string{
+				"doer":       "regularorgowner",
+				"repository": "userowner/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                 "regularuser",
-				"repository":           "regularuser/repositorypublic",
+			data: newTestData(map[string]string{
 				"forkOrg":              "regularorg1",
 				"forkOrgOwner":         "regularorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "true",
+			}, map[string]string{
+				"doer":       "regularuser",
+				"repository": "regularuser/repositorypublic",
 			}),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                 "regularuser",
-				"repository":           "regularuser/repositorypublic",
+			data: newTestData(map[string]string{
 				"forkOrg":              "regularorg1",
 				"forkOrgOwner":         "regularorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "false",
+			}, map[string]string{
+				"doer":       "regularuser",
+				"repository": "regularuser/repositorypublic",
 			}),
 			error: "User is not allowed to create repos in Organisation",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":         "doerregular",
-				"repository":   "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"forkOrg":      "regularorg2",
 				"forkOrgOwner": "regularorgowner",
+			}, map[string]string{
+				"doer":       "doerregular",
+				"repository": "userowner/repositorypublic",
 			}),
 			error: "User is no Member of Organisation 'regularorg2'",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
+			data: newTestData(map[string]string{
+				"forkOrg": "unknownOrg",
+			}, map[string]string{
 				"doer":       "regularorgowner",
 				"repository": "userowner/repositorypublic",
-				"forkOrg":    "unknownOrg",
 			}),
 			error: "org does not exist",
 		},
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		require.True(t, data.HasShared("forkOrg"))
-		if data.GetShared("forkOrg") == "unknownOrg" {
+		require.True(t, data.HasOwn("forkOrg"))
+		if data.GetOwn("forkOrg") == "unknownOrg" {
 			return
 		}
-		require.True(t, data.HasShared("forkOrgOwner"))
-		name := data.GetShared("forkOrg")
-		owner := data.GetShared("forkOrgOwner")
+		require.True(t, data.HasOwn("forkOrgOwner"))
+		name := data.GetOwn("forkOrg")
+		owner := data.GetOwn("forkOrgOwner")
 		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
 
-		if data.HasShared("team") {
+		if data.HasOwn("team") {
 			fixtureCreateTeam(t, org, data.GetShared("doer"), &forgery.CreateTeamOptions{
-				Name:             data.GetShared("team"),
-				CanCreateOrgRepo: data.GetShared("teamCanCreateOrgRepo") != "false",
+				Name:             data.GetOwn("team"),
+				CanCreateOrgRepo: data.GetOwn("teamCanCreateOrgRepo") != "false",
 
 				Mode: perm.AccessModeWrite,
 			})
 		}
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		forkOrg := data.GetShared("forkOrg")
+		forkOrg := data.GetOwn("forkOrg")
 		t.Logf("calling CheckForkDestination(ctx, %s)", forkOrg)
 		apiv1_permissions.CheckForkDestination(ctx, &forkOrg)
 	},
