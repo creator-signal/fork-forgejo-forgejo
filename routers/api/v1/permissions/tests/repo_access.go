@@ -53,16 +53,16 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		{
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":        user_model.ActionsUserName,
-				"repository":  "userowner/repositorypublic",
 				"task.RepoID": "unrelated",
+				"repository":  "userowner/repositorypublic",
 			}),
 			error: "Not Found",
 		},
 		{
 			data: newTestData(map[string]string{}, map[string]string{
 				"doer":                   user_model.ActionsUserName,
-				"repository":             "userowner/repositorypublic",
 				"task.IsForkPullRequest": "true",
+				"repository":             "userowner/repositorypublic",
 			}),
 		},
 	},
