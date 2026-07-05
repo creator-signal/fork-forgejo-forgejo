@@ -13,47 +13,51 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":        "doerregular",
-				"repository":  "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
+			}, map[string]string{
+				"doer":       "doerregular",
+				"repository": "userowner/repositorypublic",
 			}),
 		},
 		// This fixture is unreachable because this permissions function is always used after
 		// a RepoAccess that enforces the same restriction for non admin users
 		// {
-		// 	data: newTestData(map[string]string{}, map[string]string{
-		// 		"doer":        "doerregular",
-		// 		"repository":  "userowner/repositoryprivate",
+		// 	data: newTestData(map[string]string{
 		// 		"issue":       "issueOne",
 		// 		"issueAuthor": "issueAuthor",
 		// 		"comment":     "comment for ReqValidCommentID",
+		// 	}, map[string]string{
+		// 		"doer":        "doerregular",
+		// 		"repository":  "userowner/repositoryprivate",
 		// 	}),
 		// 	error: "Not Found",
 		// },
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":        "doerregular",
-				"repository":  "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
 
 				"NilIssue": "true",
+			}, map[string]string{
+				"doer":       "doerregular",
+				"repository": "userowner/repositorypublic",
 			}),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":        "doerregular",
-				"repository":  "userowner/repositorypublic",
+			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
 
 				"InconsistentID": "true",
+			}, map[string]string{
+				"doer":       "doerregular",
+				"repository": "userowner/repositorypublic",
 			}),
 			error: "Not Found",
 		},
@@ -65,22 +69,22 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("issue", "issueOne")
-		data.SetSharedDefault("issueAuthor", "issueAuthor")
-		data.SetSharedDefault("comment", "comment for ReqValidCommentID")
+		data.SetOwnDefault("issue", "issueOne")
+		data.SetOwnDefault("issueAuthor", "issueAuthor")
+		data.SetOwnDefault("comment", "comment for ReqValidCommentID")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetShared("issueAuthor")})
-		issue := fixtureSetIssue(t, permissions, data.GetShared("issue"), issueAuthor.Name)
-		fixtureCreateComment(t, permissions, issue, data.GetShared("comment"))
+		issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetOwn("issueAuthor")})
+		issue := fixtureSetIssue(t, permissions, data.GetOwn("issue"), issueAuthor.Name)
+		fixtureCreateComment(t, permissions, issue, data.GetOwn("comment"))
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		comment := fixtureGetComment(t, data.GetShared("comment"))
-		if data.HasShared("NilIssue") {
+		comment := fixtureGetComment(t, data.GetOwn("comment"))
+		if data.HasOwn("NilIssue") {
 			comment.Issue = nil
 		}
-		if data.HasShared("InconsistentID") {
+		if data.HasOwn("InconsistentID") {
 			comment.Issue.RepoID = 123456
 		}
 		t.Logf("calling ReqValidCommentID(ctx, %+v)", comment)
