@@ -25,7 +25,6 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/storage"
 )
 
 // See https://github.com/git-lfs/git-lfs/blob/main/docs/proposals/ssh_adapter.md
@@ -132,7 +131,7 @@ func (s *SSHAdpater) handleBatchRequest(_ string, _ [][]byte) error {
 	if err != nil {
 		return s.handleError(http.StatusBadRequest, fmt.Errorf("Error parsing batch request: %v", err))
 	}
-	err = s.bridge.Batch(s.ctx, s.user, s.repository, s.lfsVerb, oidLines)
+	err = s.bridge.Batch(s.ctx, s.lfsVerb, oidLines)
 	if err != nil {
 		return s.handleError(http.StatusInternalServerError, err)
 	}
@@ -185,7 +184,7 @@ func (s *SSHAdpater) handlePutObjectRequest(oid string, packets [][]byte) error 
 			http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", pointer.Oid, s.repository.Name))
 	}
 
-	err = s.bridge.Upload(s.ctx, s.user, s.repository, pointer, s.pktAdapter)
+	err = s.bridge.Upload(s.ctx, pointer, s.pktAdapter)
 	if err != nil {
 		return s.handleError(http.StatusInternalServerError, err)
 	}
@@ -222,7 +221,7 @@ func (s *SSHAdpater) handleVerifyObject(oid string, packets [][]byte) error {
 	}
 
 	pointer := &lfs_module.Pointer{Oid: oid, Size: size}
-	err = s.bridge.Verify(s.ctx, s.user, s.repository, pointer)
+	err = s.bridge.Verify(s.ctx, pointer)
 	if err != nil {
 		return s.handleError(http.StatusInternalServerError, err)
 	}
@@ -247,7 +246,7 @@ func (s *SSHAdpater) handleGetObjectRequest(oid string, _ [][]byte) error {
 		return s.handleError(http.StatusUnprocessableEntity, errors.New("Oid or size are invalid"))
 	}
 
-	err := s.bridge.Download(s.ctx, s.user, s.repository, pointer, s.pktAdapter)
+	err := s.bridge.Download(s.ctx, pointer, s.pktAdapter)
 	if err != nil {
 		return s.handleError(http.StatusInternalServerError, err)
 	}
@@ -261,7 +260,7 @@ func (s *SSHAdpater) handleListLockRequest(_ string, packets [][]byte) error {
 	}
 
 	var lockSpec PktLine
-	lockList, err := s.bridge.ListLock(s.ctx, s.user, s.repository, requestArgs)
+	lockList, err := s.bridge.ListLock(s.ctx, requestArgs)
 	if err != nil {
 		return s.handleError(http.StatusInternalServerError, fmt.Errorf("error requesting lock list from bridge: %v", err))
 	}
@@ -315,7 +314,7 @@ func (s *SSHAdpater) handleLockRequest(_ string, packets [][]byte) error {
 		return s.handleError(http.StatusBadRequest, fmt.Errorf("Path argument not found in lock: %q %q", packets, args))
 	}
 
-	lockResponse, errorResponse, code, ok, err := s.bridge.Lock(s.ctx, s.user, s.repository, path)
+	lockResponse, errorResponse, code, ok, err := s.bridge.Lock(s.ctx, path)
 	if err != nil {
 		return s.handleError(code, err)
 	}
@@ -352,7 +351,7 @@ func (s *SSHAdpater) handleUnlockRequest(lid string, packets [][]byte) error {
 		}
 	}
 
-	lockResponse, errorResponse, code, ok, err := s.bridge.Unlock(s.ctx, s.user, s.repository, lid, force)
+	lockResponse, errorResponse, code, ok, err := s.bridge.Unlock(s.ctx, lid, force)
 	if err != nil {
 		return s.handleError(code, err)
 	}
@@ -476,9 +475,6 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	if !setting.LFS.StartServer {
 		return fmt.Errorf("LFS isn't enabled")
 	}
-	if err := storage.InitLFS(); err != nil {
-		return fmt.Errorf("Cannot initialize LFS storage: %v", err)
-	}
 
 	user, err := user_model.GetUserByID(ctx, results.UserID)
 	if err != nil {
@@ -494,8 +490,8 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	}
 	client := lfs_module.NewClient(localURL, nil)
 	sshAdapter := SSHAdpater{
-		bridge: newHTTPBridge(tokenString), client: &client, ctx: ctx, lfsVerb: lfsVerb, pktAdapter: pktAdapter,
-		repository: repository, requestedMode: requestedMode, user: user,
+		bridge: newHTTPBridge(tokenString, user, repository), client: &client, ctx: ctx, lfsVerb: lfsVerb,
+		pktAdapter: pktAdapter, repository: repository, requestedMode: requestedMode, user: user,
 	}
 	return sshAdapter.run()
 }

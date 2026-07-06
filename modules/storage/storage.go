@@ -118,7 +118,7 @@ func Init() error {
 		initAttachments,
 		initAvatars,
 		initRepoAvatars,
-		InitLFS,
+		initLFS,
 		initRepoArchives,
 		initPackages,
 		initActions,
@@ -159,7 +159,7 @@ func initAttachments() (err error) {
 	return err
 }
 
-func InitLFS() (err error) {
+func initLFS() (err error) {
 	if !setting.LFS.StartServer {
 		LFS = DiscardStorage("LFS isn't enabled")
 		return nil

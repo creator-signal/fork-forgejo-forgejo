@@ -14,8 +14,8 @@ func TestPktAdapter_WriteHTTPError(t *testing.T) {
 		msg      string
 		expected []byte
 	}{
-		{"Error message", "Not implemented", []byte("000fstatus400\n00010014Not implemented\n0000")},
-		{"Error message", "size mismatch", []byte("000fstatus400\n00010012size mismatch\n0000")},
+		{"Error message", "Not implemented", []byte("000fstatus 400\n00010014Not implemented\n0000")},
+		{"Error message", "size mismatch", []byte("000fstatus 400\n00010012size mismatch\n0000")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -26,15 +26,15 @@ func TestPktAdapter_WriteHTTPError(t *testing.T) {
 			if gotErr != nil {
 				t.Errorf("WriteHttpError() failed: %v", gotErr)
 			}
-			if bytes.Equal(out.Bytes(), tt.expected) {
-				t.Errorf("WriteHttpError() output should be \"%s\" but got \"%s\"", tt.expected, out.Bytes())
+			if !bytes.Equal(out.Bytes(), tt.expected) {
+				t.Errorf("WriteHttpError() output should be %q but got %q", tt.expected, out.Bytes())
 			}
 		})
 	}
 }
 
 func TestPktAdapter_WriteHTTPOK(t *testing.T) {
-	expected := []byte("000fstatus200\n0000")
+	expected := []byte("000fstatus 200\n0000")
 	var in bytes.Buffer
 	var out bytes.Buffer
 	p := NewPktAdapter(&in, &out)
@@ -42,13 +42,13 @@ func TestPktAdapter_WriteHTTPOK(t *testing.T) {
 	if gotErr != nil {
 		t.Errorf("WriteHttpOK() failed: %v", gotErr)
 	}
-	if bytes.Equal(out.Bytes(), expected) {
-		t.Errorf("WriteHttpError() output should be \"%s\" but got \"%s\"", expected, out.Bytes())
+	if !bytes.Equal(out.Bytes(), expected) {
+		t.Errorf("WriteHttpError() output should be %q but got %q", expected, out.Bytes())
 	}
 }
 
 func TestPktAdapter_Write2SplitPacket(t *testing.T) {
-	expected := []byte("00eversion=1\n0000000fstatus 400\n00010020Unexpected version received\n0000")
+	expected := []byte("000fstatus 400\n00010020Unexpected version received\n0000")
 	var in bytes.Buffer
 	var out bytes.Buffer
 	p := NewPktAdapter(&in, &out)
@@ -64,7 +64,7 @@ func TestPktAdapter_Write2SplitPacket(t *testing.T) {
 	if gotErr != nil {
 		t.Errorf("WriteHttpOK() failed: %v", gotErr)
 	}
-	if bytes.Equal(out.Bytes(), expected) {
-		t.Errorf("WriteHttpError() output should be \"%s\" but got \"%s\"", expected, out.Bytes())
+	if !bytes.Equal(out.Bytes(), expected) {
+		t.Errorf("WriteHttpError() output should be %q but got %q", expected, out.Bytes())
 	}
 }

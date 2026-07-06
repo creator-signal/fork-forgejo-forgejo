@@ -122,8 +122,8 @@ func fail(ctx context.Context, userMessage, logMsgFmt string, args ...any) error
 }
 
 // LFS transfer should not print anything in stdout like fail
-func lfsTransferFail(ctx context.Context, msg string) error {
-	logFail(ctx, msg, msg)
+func lfsTransferFail(ctx context.Context, userMessage, logMsg string) error {
+	logFail(ctx, userMessage, logMsg)
 	return cli.Exit("", 1)
 }
 
@@ -228,10 +228,13 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	var lfsVerb string
 	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
 		if !setting.LFS.StartServer {
+			var logMsg string
 			if verb == lfsAuthenticateVerb {
-				return fail(ctx, "Unknown git command", "LFS authentication request over SSH denied, LFS support is disabled")
+				logMsg = "LFS authentication request over SSH denied, LFS support is disabled"
+			} else {
+				logMsg = "LFS transfer request over SSH denied, LFS support is disabled"
 			}
-			return fail(ctx, "Unknown git command", "LFS transfer request over SSH denied, LFS support is disabled")
+			return fail(ctx, "Unknown git command", "%s", logMsg)
 		}
 
 		if len(words) > 2 {
@@ -329,16 +332,18 @@ func runServ(ctx context.Context, c *cli.Command) error {
 			return nil
 		case lfsTransferVerb: // LFS transfer
 			if lfsVerb != lfsTransferDownload && lfsVerb != lfsTransferUpload {
-				return lfsTransferFail(ctx, fmt.Sprintf("Unexpected operation: %v", lfsVerb))
+				errorMessage := fmt.Sprintf("Unexpected operation: %v", lfsVerb)
+				return lfsTransferFail(ctx, errorMessage, errorMessage)
 			}
 			if err := initDB(ctx); err != nil {
-				return lfsTransferFail(ctx, fmt.Sprintf("Cannot initialize database: %v", err))
+				return lfsTransferFail(ctx, "Unexpected internal database error", fmt.Sprintf("Cannot initialize database: %v", err))
 			}
 			pktAdapter := lfs.NewPktAdapter(
 				bufio.NewReaderSize(os.Stdin, lfs.MaxPacketLength), bufio.NewWriterSize(os.Stdout, lfs.MaxPacketLength))
 			err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb, tokenString)
 			if err != nil {
-				return lfsTransferFail(ctx, err.Error())
+				return lfsTransferFail(ctx, fmt.Sprintf("An error occured during transfer: %v", err),
+					fmt.Sprintf("Error during HandlerLFSTransfer: %v", err))
 			}
 			return nil
 		}

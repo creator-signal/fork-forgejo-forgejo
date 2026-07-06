@@ -23,11 +23,14 @@ import (
 )
 
 type HTTPBridge struct {
-	client *http.Client
-	bearer string
+	client     *http.Client
+	bearer     string
+	pathPrefix string
+	repository *repo_model.Repository
+	user       *user_model.User
 }
 
-func newHTTPBridge(token string) *HTTPBridge {
+func newHTTPBridge(token string, user *user_model.User, repository *repo_model.Repository) *HTTPBridge {
 	httpTransport := &http.Transport{
 		Proxy:           proxy.Proxy(),
 		MaxConnsPerHost: 1,
@@ -38,14 +41,17 @@ func newHTTPBridge(token string) *HTTPBridge {
 
 	hc := &http.Client{Transport: httpTransport}
 	client := &HTTPBridge{
-		client: hc,
-		bearer: fmt.Sprintf("Bearer %s", token),
+		client:     hc,
+		bearer:     fmt.Sprintf("Bearer %s", token),
+		user:       user,
+		repository: repository,
+		pathPrefix: setting.LocalURL + repository.FullName(),
 	}
 
 	return client
 }
 
-func (b *HTTPBridge) createRequest(ctx context.Context, method, url, username, reponame string, body io.Reader) (*http.Request, error) {
+func (b *HTTPBridge) createRequest(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("error creating bridge request: %v", err)
@@ -53,8 +59,8 @@ func (b *HTTPBridge) createRequest(ctx context.Context, method, url, username, r
 	req.Header.Set("Accept", lfs_module.AcceptHeader)
 	req.Header.Set("Content-Type", lfs_module.AcceptHeader)
 	req.Header.Set("User-Agent", lfs_module.UserAgentHeader)
-	req.Header.Set("username", username)
-	req.Header.Set("reponame", reponame)
+	req.Header.Set("username", b.user.Name)
+	req.Header.Set("reponame", b.repository.Name)
 	req.Header.Set("Authorization", b.bearer)
 	return req, nil
 }
@@ -90,10 +96,8 @@ func (b *HTTPBridge) performOKRequest(ctx context.Context, request *http.Request
 	return resp, nil
 }
 
-func (b *HTTPBridge) Batch(
-	ctx context.Context, user *user_model.User, repository *repo_model.Repository, operation string, objects []lfs_module.Pointer,
-) error {
-	url := fmt.Sprintf("%s%s.git/info/lfs/objects/batch", setting.LocalURL, repository.FullName())
+func (b *HTTPBridge) Batch(ctx context.Context, operation string, objects []lfs_module.Pointer) error {
+	url := fmt.Sprintf("%s.git/info/lfs/objects/batch", b.pathPrefix)
 
 	request := &lfs_module.BatchRequest{Operation: operation, Transfers: nil, Ref: nil, Objects: objects}
 	body := new(bytes.Buffer)
@@ -102,7 +106,7 @@ func (b *HTTPBridge) Batch(
 		return fmt.Errorf("Error encoding batch request: %v", err)
 	}
 
-	req, err := b.createRequest(ctx, http.MethodPost, url, user.Name, repository.Name, body)
+	req, err := b.createRequest(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return err
 	}
@@ -113,10 +117,8 @@ func (b *HTTPBridge) Batch(
 	return resp.Body.Close()
 }
 
-func (b *HTTPBridge) Upload(ctx context.Context, user *user_model.User, repository *repo_model.Repository,
-	pointer *lfs_module.Pointer, pktAdapter *PktAdapter,
-) error {
-	url := fmt.Sprintf("%s%s.git/info/lfs/objects/%s/%d", setting.LocalURL, repository.FullName(), pointer.Oid, pointer.Size)
+func (b *HTTPBridge) Upload(ctx context.Context, pointer *lfs_module.Pointer, pktAdapter *PktAdapter) error {
+	url := fmt.Sprintf("%s.git/info/lfs/objects/%s/%d", b.pathPrefix, pointer.Oid, pointer.Size)
 
 	binaryReader := pktAdapter.GetBinaryReader(int(pointer.Size))
 	var err error
@@ -126,7 +128,7 @@ func (b *HTTPBridge) Upload(ctx context.Context, user *user_model.User, reposito
 
 	requestCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	req, err := b.createRequest(requestCtx, http.MethodPut, url, user.Name, repository.Name, binaryReader)
+	req, err := b.createRequest(requestCtx, http.MethodPut, url, binaryReader)
 	if err != nil {
 		return err
 	}
@@ -145,17 +147,15 @@ func (b *HTTPBridge) Upload(ctx context.Context, user *user_model.User, reposito
 	return nil
 }
 
-func (b *HTTPBridge) Verify(ctx context.Context, user *user_model.User, repository *repo_model.Repository,
-	pointer *lfs_module.Pointer,
-) error {
-	url := fmt.Sprintf("%s%s.git/info/lfs/verify", setting.LocalURL, repository.FullName())
+func (b *HTTPBridge) Verify(ctx context.Context, pointer *lfs_module.Pointer) error {
+	url := fmt.Sprintf("%s.git/info/lfs/verify", b.pathPrefix)
 
 	body, err := json.Marshal(pointer)
 	if err != nil {
 		return fmt.Errorf("Error encoding verify request: %v", err)
 	}
 
-	req, err := b.createRequest(ctx, http.MethodPost, url, user.Name, repository.Name, bytes.NewReader(body))
+	req, err := b.createRequest(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -166,14 +166,12 @@ func (b *HTTPBridge) Verify(ctx context.Context, user *user_model.User, reposito
 	return resp.Body.Close()
 }
 
-func (b *HTTPBridge) Download(ctx context.Context, user *user_model.User, repository *repo_model.Repository,
-	pointer *lfs_module.Pointer, pktAdapter *PktAdapter,
-) error {
-	url := fmt.Sprintf("%s%s.git/info/lfs/objects/%s/%d", setting.LocalURL, repository.FullName(), pointer.Oid, pointer.Size)
+func (b *HTTPBridge) Download(ctx context.Context, pointer *lfs_module.Pointer, pktAdapter *PktAdapter) error {
+	url := fmt.Sprintf("%s.git/info/lfs/objects/%s/%d", b.pathPrefix, pointer.Oid, pointer.Size)
 
 	requestCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	req, err := b.createRequest(requestCtx, http.MethodGet, url, user.Name, repository.Name, nil)
+	req, err := b.createRequest(requestCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -190,18 +188,16 @@ func (b *HTTPBridge) Download(ctx context.Context, user *user_model.User, reposi
 	return pktAdapter.WriteBinaryData(size, resp.Body)
 }
 
-func (b *HTTPBridge) ListLock(ctx context.Context, user *user_model.User, repository *repo_model.Repository, args map[string]string,
-) (*api.LFSLockList, error) {
+func (b *HTTPBridge) ListLock(ctx context.Context, args map[string]string) (*api.LFSLockList, error) {
 	query := make(url.Values)
 	for _, argName := range []string{"path", "id", "limit", "cursor", "refspec"} {
-		argValue, ok := args[argName]
-		if ok {
+		if argValue, ok := args[argName]; ok {
 			query[argName] = []string{argValue}
 		}
 	}
-	url := fmt.Sprintf("%s%s.git/info/lfs/locks?%s", setting.LocalURL, repository.FullName(), query.Encode())
+	url := fmt.Sprintf("%s.git/info/lfs/locks?%s", b.pathPrefix, query.Encode())
 
-	req, err := b.createRequest(ctx, http.MethodGet, url, user.Name, repository.Name, nil)
+	req, err := b.createRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +215,8 @@ func (b *HTTPBridge) ListLock(ctx context.Context, user *user_model.User, reposi
 	return &response, nil
 }
 
-func (b *HTTPBridge) Lock(ctx context.Context, user *user_model.User, repository *repo_model.Repository, path string,
-) (*api.LFSLockResponse, *api.LFSLockError, int, bool, error) {
-	url := fmt.Sprintf("%s%s.git/info/lfs/locks", setting.LocalURL, repository.FullName())
+func (b *HTTPBridge) Lock(ctx context.Context, path string) (*api.LFSLockResponse, *api.LFSLockError, int, bool, error) {
+	url := fmt.Sprintf("%s.git/info/lfs/locks", b.pathPrefix)
 
 	request := &api.LFSLockRequest{Path: path}
 	body := new(bytes.Buffer)
@@ -230,7 +225,7 @@ func (b *HTTPBridge) Lock(ctx context.Context, user *user_model.User, repository
 		return nil, nil, http.StatusInternalServerError, false, fmt.Errorf("Error encoding lock request: %v", err)
 	}
 
-	req, err := b.createRequest(ctx, http.MethodPost, url, user.Name, repository.Name, body)
+	req, err := b.createRequest(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, err
 	}
@@ -258,9 +253,9 @@ func (b *HTTPBridge) Lock(ctx context.Context, user *user_model.User, repository
 	return &response, &errorResponse, resp.StatusCode, ok, nil
 }
 
-func (b *HTTPBridge) Unlock(ctx context.Context, user *user_model.User, repository *repo_model.Repository, lid string, force bool,
+func (b *HTTPBridge) Unlock(ctx context.Context, lid string, force bool,
 ) (*api.LFSLockResponse, *api.LFSLockError, int, bool, error) {
-	url := fmt.Sprintf("%s%s.git/info/lfs/locks/%s/unlock", setting.LocalURL, repository.FullName(), lid)
+	url := fmt.Sprintf("%s.git/info/lfs/locks/%s/unlock", b.pathPrefix, lid)
 
 	request := &api.LFSLockDeleteRequest{Force: force}
 	body := new(bytes.Buffer)
@@ -269,7 +264,7 @@ func (b *HTTPBridge) Unlock(ctx context.Context, user *user_model.User, reposito
 		return nil, nil, http.StatusInternalServerError, false, fmt.Errorf("Error encoding unlock request: %v", err)
 	}
 
-	req, err := b.createRequest(ctx, http.MethodPost, url, user.Name, repository.Name, body)
+	req, err := b.createRequest(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, err
 	}
