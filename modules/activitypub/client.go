@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -100,19 +101,22 @@ func NewClientFactoryWithTimeout(timeout time.Duration) (c *ClientFactory, err e
 // against hosts that do not match the host of the originating request.
 //
 // If no host is set, it checks that the host matches an external address.
-func (cf *ClientFactory) SetHostMatcher(host string) error {
+func (cf *ClientFactory) SetHostMatcher(host *url.URL) error {
 	if cf == nil {
 		return errors.New("nil client factory")
+	}
+	if host == nil {
+		return nil
 	}
 
 	var hostMatchAllow, hostMatchBlock string
 	if setting.Federation.InsecureAllowInvalidHosts {
 		hostMatchAllow = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
-		if host != "" {
-			hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host)
+		if host != nil {
+			hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
 		}
 	} else {
-		hostMatchAllow = host
+		hostMatchAllow = host.Host
 		hostMatchBlock = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
 	}
 
@@ -131,7 +135,7 @@ func (cf *ClientFactory) SetHostMatcher(host string) error {
 type APClientFactory interface {
 	WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error)
 	WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error)
-	SetHostMatcher(host string) error
+	SetHostMatcher(host *url.URL) error
 }
 
 // Client struct

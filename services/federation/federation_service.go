@@ -134,7 +134,7 @@ func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forge
 		return nil, fmt.Errorf("invalid actor URI: %w", err)
 	}
 
-	if err = clientFactory.SetHostMatcher(uri.Host); err != nil {
+	if err = clientFactory.SetHostMatcher(uri); err != nil {
 		return nil, err
 	}
 
@@ -184,7 +184,8 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *
 		return nil, nil, err
 	}
 
-	if err = clientFactory.SetHostMatcher(federationHost.AsURL().Host); err != nil {
+	hostURL := federationHost.AsURL()
+	if err = clientFactory.SetHostMatcher(&hostURL); err != nil {
 		return nil, nil, err
 	}
 

@@ -42,9 +42,12 @@ func TestActivityPubHostMatcher(t *testing.T) {
 		userPath := fmt.Sprintf("user-id/%d", userID)
 
 		for _, actorPath := range []string{repositoryPath, userPath} {
-			for _, internalHost := range []string{"127.0.0.1", "localhost"} {
+			for _, internalHost := range []string{"http://127.0.0.1", "http://localhost"} {
 				// confirm that even setting the allow-list to an internal host still blocks local hosts
-				cf.SetHostMatcher(internalHost)
+				internalURI, err := url.Parse(internalHost)
+				require.NoError(t, err)
+
+				cf.SetHostMatcher(internalURI)
 
 				c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
 					mock.Persons[0].KeyID(federatedSrv.URL))
