@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -964,9 +965,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		var prevCommit, curCommit, nextCommit *git.Commit
 
 		// Iterate in reverse to properly map "previous" and "next" buttons
-		for i := len(prInfo.Commits) - 1; i >= 0; i-- {
-			commit := prInfo.Commits[i]
-
+		for _, commit := range slices.Backward(prInfo.Commits) {
 			if curCommit != nil {
 				nextCommit = commit
 				break
