@@ -17,12 +17,7 @@ import (
 	"time"
 
 	"forgejo.org/models/perm"
-	access_model "forgejo.org/models/perm/access"
-	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
-	user_model "forgejo.org/models/user"
 	lfs_module "forgejo.org/modules/lfs"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/setting"
 )
@@ -53,12 +48,31 @@ type SSHAdpater struct {
 	lfsVerb       string
 	pktAdapter    *PktAdapter
 	quitExpected  bool
-	repository    *repo_model.Repository
+	repoName      string
 	requestedMode perm.AccessMode
-	user          *user_model.User
+	userName      string
 }
 
 type commandHandler func(string, [][]byte) error
+
+func NewSSHAdapter(ctx context.Context, client *lfs_module.Client, lfsVerb string, pktAdapter *PktAdapter,
+	repoName string, requestedMode perm.AccessMode, tokenString, userName string,
+) *SSHAdpater {
+	sshAdapter := SSHAdpater{
+		bridge: newHTTPBridge(tokenString, userName, repoName), client: client, ctx: ctx, lfsVerb: lfsVerb,
+		pktAdapter: pktAdapter, quitExpected: false, repoName: repoName, requestedMode: requestedMode, userName: userName,
+	}
+	sshAdapter.handlerMap = map[string]commandHandler{
+		batchCommand:        sshAdapter.handleBatchRequest,
+		getObjectCommand:    sshAdapter.handleGetObjectRequest,
+		listLockCommand:     sshAdapter.handleListLockRequest,
+		lockCommand:         sshAdapter.handleLockRequest,
+		putObjectCommand:    sshAdapter.handlePutObjectRequest,
+		unlockCommand:       sshAdapter.handleUnlockRequest,
+		verifyObjectCommand: sshAdapter.handleVerifyObject,
+	}
+	return &sshAdapter
+}
 
 func parseArguments(req [][]byte) (map[string]string, error) {
 	arguments := make(map[string]string)
@@ -100,16 +114,6 @@ func parseBatchRequest(req [][]byte) ([]lfs_module.Pointer, error) {
 
 func (s *SSHAdpater) checkVersionCommand(c []byte) bool {
 	return bytes.Equal(c, []byte("version 1\n"))
-}
-
-func (s *SSHAdpater) CheckAuthorization() bool {
-	perm, err := access_model.GetUserRepoPermission(s.ctx, s.repository, s.user)
-	if err != nil {
-		log.Error("Unable to GetUserRepoPermission for user %-v in repo %-v Error: %v", s.user, s.repository, err)
-		return false
-	}
-
-	return perm.CanAccess(s.requestedMode, unit.TypeCode)
 }
 
 func (s *SSHAdpater) handleError(status int, err error) error {
@@ -181,7 +185,7 @@ func (s *SSHAdpater) handlePutObjectRequest(oid string, packets [][]byte) error 
 	}
 	if !pointer.IsValid() {
 		return s.handleError(
-			http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", pointer.Oid, s.repository.Name))
+			http.StatusUnprocessableEntity, fmt.Errorf("Attempt to access invalid LFS OID[%s] in %s", pointer.Oid, s.repoName))
 	}
 
 	err = s.bridge.Upload(s.ctx, pointer, s.pktAdapter)
@@ -283,7 +287,7 @@ func (s *SSHAdpater) handleListLockRequest(_ string, packets [][]byte) error {
 			return s.handleError(http.StatusInternalServerError, fmt.Errorf("error creating PktLine for lock[%s] ownername", lock.ID))
 		}
 		var owning string
-		if lock.Owner.Name == s.user.Name {
+		if lock.Owner.Name == s.userName {
 			owning = "ours"
 		} else {
 			owning = "theirs"
@@ -322,12 +326,12 @@ func (s *SSHAdpater) handleLockRequest(_ string, packets [][]byte) error {
 	if !ok {
 		return s.pktAdapter.WriteHTTPErrorWithArgs(code, errorResponse.Message, map[string]any{
 			"id": errorResponse.Lock.ID, "path": errorResponse.Lock.Path, "locked-at": errorResponse.Lock.LockedAt,
-			"ownername": s.user.Name,
+			"ownername": s.userName,
 		})
 	}
 	return s.pktAdapter.WriteStatusWithArgs(code, map[string]any{
 		"id": lockResponse.Lock.ID, "path": lockResponse.Lock.Path, "locked-at": lockResponse.Lock.LockedAt,
-		"ownername": s.user.Name,
+		"ownername": s.userName,
 	})
 }
 
@@ -359,30 +363,16 @@ func (s *SSHAdpater) handleUnlockRequest(lid string, packets [][]byte) error {
 	if !ok {
 		return s.pktAdapter.WriteHTTPErrorWithArgs(code, errorResponse.Message, map[string]any{
 			"id": errorResponse.Lock.ID, "path": errorResponse.Lock.Path, "locked-at": errorResponse.Lock.LockedAt,
-			"ownername": s.user.Name,
+			"ownername": s.userName,
 		})
 	}
 	return s.pktAdapter.WriteStatusWithArgs(code, map[string]any{
 		"id": lockResponse.Lock.ID, "path": lockResponse.Lock.Path, "locked-at": lockResponse.Lock.LockedAt,
-		"ownername": s.user.Name,
+		"ownername": s.userName,
 	})
 }
 
-func (s *SSHAdpater) init() error {
-	s.handlerMap = map[string]commandHandler{
-		batchCommand:        s.handleBatchRequest,
-		getObjectCommand:    s.handleGetObjectRequest,
-		listLockCommand:     s.handleListLockRequest,
-		lockCommand:         s.handleLockRequest,
-		putObjectCommand:    s.handlePutObjectRequest,
-		unlockCommand:       s.handleUnlockRequest,
-		verifyObjectCommand: s.handleVerifyObject,
-	}
-
-	if !s.CheckAuthorization() {
-		return fmt.Errorf("Not authorized to access repository")
-	}
-
+func (s *SSHAdpater) sendStartupMessages() error {
 	err := s.pktAdapter.WriteStr("version=1")
 	if err != nil {
 		return fmt.Errorf("Failed to send version capability advertisement: %v", err)
@@ -399,7 +389,7 @@ func (s *SSHAdpater) init() error {
 }
 
 func (s *SSHAdpater) run() error {
-	err := s.init()
+	err := s.sendStartupMessages()
 	if err != nil {
 		return err
 	}
@@ -476,22 +466,11 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 		return fmt.Errorf("LFS isn't enabled")
 	}
 
-	user, err := user_model.GetUserByID(ctx, results.UserID)
-	if err != nil {
-		return fmt.Errorf("Unable to GetUserById: %v", err)
-	}
-	repository, err := repo_model.GetRepositoryByOwnerAndName(ctx, results.OwnerName, results.RepoName)
-	if err != nil {
-		return fmt.Errorf("You must have pull access to %s/%s: %v", results.OwnerName, results.RepoName, err)
-	}
 	localURL, err := url.Parse(setting.LocalURL)
 	if err != nil {
 		return fmt.Errorf("Cannot create local url for LFS HTTP bridge: %v", err)
 	}
 	client := lfs_module.NewClient(localURL, nil)
-	sshAdapter := SSHAdpater{
-		bridge: newHTTPBridge(tokenString, user, repository), client: &client, ctx: ctx, lfsVerb: lfsVerb,
-		pktAdapter: pktAdapter, repository: repository, requestedMode: requestedMode, user: user,
-	}
+	sshAdapter := NewSSHAdapter(ctx, &client, lfsVerb, pktAdapter, results.RepoName, requestedMode, tokenString, results.UserName)
 	return sshAdapter.run()
 }

@@ -13,26 +13,26 @@ import (
 	"strconv"
 	"time"
 
-	repo_model "forgejo.org/models/repo"
-	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/json"
 	lfs_module "forgejo.org/modules/lfs"
-	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+)
+
+const (
+	errorBodyLen = 4096 // Max size of body to be read from LFS server during error
 )
 
 type HTTPBridge struct {
 	client     *http.Client
 	bearer     string
 	pathPrefix string
-	repository *repo_model.Repository
-	user       *user_model.User
+	repoName   string
+	userName   string
 }
 
-func newHTTPBridge(token string, user *user_model.User, repository *repo_model.Repository) *HTTPBridge {
+func newHTTPBridge(token, userName, repoName string) *HTTPBridge {
 	httpTransport := &http.Transport{
-		Proxy:           proxy.Proxy(),
 		MaxConnsPerHost: 1,
 		MaxIdleConns:    1,
 		IdleConnTimeout: time.Second,
@@ -43,9 +43,9 @@ func newHTTPBridge(token string, user *user_model.User, repository *repo_model.R
 	client := &HTTPBridge{
 		client:     hc,
 		bearer:     fmt.Sprintf("Bearer %s", token),
-		user:       user,
-		repository: repository,
-		pathPrefix: setting.LocalURL + repository.FullName(),
+		pathPrefix: fmt.Sprintf("%s%s/%s", setting.LocalURL, userName, repoName),
+		userName:   userName,
+		repoName:   repoName,
 	}
 
 	return client
@@ -59,8 +59,6 @@ func (b *HTTPBridge) createRequest(ctx context.Context, method, url string, body
 	req.Header.Set("Accept", lfs_module.AcceptHeader)
 	req.Header.Set("Content-Type", lfs_module.AcceptHeader)
 	req.Header.Set("User-Agent", lfs_module.UserAgentHeader)
-	req.Header.Set("username", b.user.Name)
-	req.Header.Set("reponame", b.repository.Name)
 	req.Header.Set("Authorization", b.bearer)
 	return req, nil
 }
@@ -86,11 +84,15 @@ func (b *HTTPBridge) performOKRequest(ctx context.Context, request *http.Request
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusIMUsed {
 		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
+		body := make([]byte, errorBodyLen)
+		ellipsis := "[...]"
+		readBytes, err := resp.Body.Read(body)
+		if err == io.EOF {
+			ellipsis = ""
+		} else if err != nil {
 			return nil, fmt.Errorf("bridge failed with %d status and body cannot by read: %v", resp.StatusCode, err)
 		}
-		return nil, fmt.Errorf("bridge failed with %d status: %s", resp.StatusCode, body)
+		return nil, fmt.Errorf("bridge failed with %d status: %q%s", resp.StatusCode, bytes.TrimRight(body[:readBytes], "\n"), ellipsis)
 	}
 
 	return resp, nil
@@ -123,7 +125,7 @@ func (b *HTTPBridge) Upload(ctx context.Context, pointer *lfs_module.Pointer, pk
 	binaryReader := pktAdapter.GetBinaryReader(int(pointer.Size))
 	var err error
 	defer func() {
-		_, _ = io.Copy(io.Discard, binaryReader) // Make sure to consume all data
+		_, _ = io.Copy(io.Discard, binaryReader) // Make sure to consume all data to be able to read the next command
 	}()
 
 	requestCtx, cancel := context.WithCancel(ctx)
@@ -203,7 +205,7 @@ func (b *HTTPBridge) ListLock(ctx context.Context, args map[string]string) (*api
 	}
 	resp, err := b.performOKRequest(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bridge (user: %s, repo: %s, url: %v) error: %v", b.userName, b.repoName, url, err)
 	}
 	defer resp.Body.Close()
 

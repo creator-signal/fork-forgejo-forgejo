@@ -335,11 +335,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 				errorMessage := fmt.Sprintf("Unexpected operation: %v", lfsVerb)
 				return lfsTransferFail(ctx, errorMessage, errorMessage)
 			}
-			if err := initDB(ctx); err != nil {
-				return lfsTransferFail(ctx, "Unexpected internal database error", fmt.Sprintf("Cannot initialize database: %v", err))
-			}
-			pktAdapter := lfs.NewPktAdapter(
-				bufio.NewReaderSize(os.Stdin, lfs.MaxPacketLength), bufio.NewWriterSize(os.Stdout, lfs.MaxPacketLength))
+			pktAdapter := lfs.NewPktAdapter(bufio.NewReader(os.Stdin), bufio.NewWriter(os.Stdout))
 			err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb, tokenString)
 			if err != nil {
 				return lfsTransferFail(ctx, fmt.Sprintf("An error occured during transfer: %v", err),
