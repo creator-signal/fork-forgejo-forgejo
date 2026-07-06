@@ -70,7 +70,7 @@ func TestClientCtx(t *testing.T) {
 	log.Debug("ClientFactory: %v\nError: %v", cf, err)
 	require.NoError(t, err)
 
-	c, err := cf.WithKeys(db.DefaultContext, user, pubID)
+	c, err := cf.WithKeys(db.DefaultContext, user, pubID, nil)
 
 	log.Debug("Client: %v\nError: %v", c, err)
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestActivityPubSignedPost(t *testing.T) {
 	pubID := "https://example.com/pubID"
 	cf, err := activitypub.NewClientFactory()
 	require.NoError(t, err)
-	c, err := cf.WithKeys(db.DefaultContext, user, pubID)
+	c, err := cf.WithKeys(db.DefaultContext, user, pubID, nil)
 	require.NoError(t, err)
 
 	expected := "BODY"

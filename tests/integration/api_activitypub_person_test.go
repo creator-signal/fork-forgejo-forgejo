@@ -53,7 +53,7 @@ func TestActivityPubPerson(t *testing.T) {
 			require.NoError(t, err)
 
 			c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-				mock.Persons[0].KeyID(federatedSrv.URL))
+				mock.Persons[0].KeyID(federatedSrv.URL), nil)
 			require.NoError(t, err)
 
 			resp, err := c.GetBody(localUserURL)
@@ -104,7 +104,7 @@ func TestActivityPubPersonInbox(t *testing.T) {
 		ctx, _ := contexttest.MockAPIContext(t, user2inboxurl)
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
-		c, err := cf.WithKeys(ctx, user1, user1url)
+		c, err := cf.WithKeys(ctx, user1, user1url, nil)
 		require.NoError(t, err)
 
 		// invalid request is rejected
@@ -132,7 +132,7 @@ func TestActivityPubPersonOutbox(t *testing.T) {
 		require.NoError(t, err)
 
 		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-			mock.Persons[0].KeyID(federatedSrv.URL))
+			mock.Persons[0].KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		// request outbox

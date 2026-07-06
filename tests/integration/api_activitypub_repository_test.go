@@ -43,7 +43,7 @@ func TestActivityPubRepository(t *testing.T) {
 		require.NoError(t, err)
 
 		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-			mock.Persons[0].KeyID(federatedSrv.URL))
+			mock.Persons[0].KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		resp, err := c.GetBody(localRepository)
@@ -90,7 +90,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 		require.NoError(t, err)
 
 		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-			mock.Persons[0].KeyID(federatedSrv.URL))
+			mock.Persons[0].KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		activity1 := fmt.Appendf(nil,
@@ -170,7 +170,7 @@ func TestActivityPubRepositoryInboxInvalid(t *testing.T) {
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeys(ctx, apServerActor, apServerActor.KeyID())
+		c, err := cf.WithKeys(ctx, apServerActor, apServerActor.KeyID(), nil)
 		require.NoError(t, err)
 
 		activity := []byte(`{"type":"Wrong"}`)

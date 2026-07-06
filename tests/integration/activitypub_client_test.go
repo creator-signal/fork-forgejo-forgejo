@@ -33,7 +33,7 @@ func TestActivityPubClientBodySize(t *testing.T) {
 		clientFactory, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		apClient, err := clientFactory.WithKeys(ctx, user1, user1.KeyID())
+		apClient, err := clientFactory.WithKeys(ctx, user1, user1.KeyID(), nil)
 		require.NoError(t, err)
 
 		// Request with normal MaxSize

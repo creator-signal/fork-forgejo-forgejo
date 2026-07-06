@@ -47,10 +47,8 @@ func TestActivityPubHostMatcher(t *testing.T) {
 				internalURI, err := url.Parse(internalHost)
 				require.NoError(t, err)
 
-				cf.SetHostMatcher(internalURI)
-
 				c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-					mock.Persons[0].KeyID(federatedSrv.URL))
+					mock.Persons[0].KeyID(federatedSrv.URL), internalURI)
 				require.NoError(t, err)
 
 				// avoid calls to internal IPs with invalid ports

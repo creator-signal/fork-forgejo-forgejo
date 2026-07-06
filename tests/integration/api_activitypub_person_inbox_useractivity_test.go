@@ -84,7 +84,7 @@ func TestActivityPubPersonInboxNoteFromDistant(t *testing.T) {
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL))
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		resp, err := c.Post(userActivity, localUser2Inbox)
@@ -140,7 +140,7 @@ func TestActivityPubPersonInboxNoteToDistant(t *testing.T) {
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL))
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		resp, err := c.Post(followActivity, localUser2Inbox)

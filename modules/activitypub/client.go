@@ -112,9 +112,7 @@ func (cf *ClientFactory) SetHostMatcher(host *url.URL) error {
 	var hostMatchAllow, hostMatchBlock string
 	if setting.Federation.InsecureAllowInvalidHosts {
 		hostMatchAllow = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
-		if host != nil {
-			hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
-		}
+		hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
 	} else {
 		hostMatchAllow = host.Host
 		hostMatchBlock = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
@@ -133,8 +131,8 @@ func (cf *ClientFactory) SetHostMatcher(host *url.URL) error {
 }
 
 type APClientFactory interface {
-	WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error)
-	WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error)
+	WithKeys(ctx context.Context, user *user_model.User, pubID string, host *url.URL) (APClient, error)
+	WithKeysDirect(ctx context.Context, privateKey, pubID string, host *url.URL) (APClient, error)
 	SetHostMatcher(host *url.URL) error
 }
 
@@ -150,11 +148,15 @@ type Client struct {
 }
 
 // NewRequest function
-func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID string) (APClient, error) {
+func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID string, host *url.URL) (APClient, error) {
 	privPem, _ := pem.Decode([]byte(privateKey))
 	privParsed, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
 	if err != nil {
 		return nil, err
+	}
+
+	if err = cf.SetHostMatcher(host); err != nil {
+		return nil, fmt.Errorf("client: invalid host for HostMatcher: %w", err)
 	}
 
 	c := Client{
@@ -169,12 +171,12 @@ func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID s
 	return &c, nil
 }
 
-func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string) (APClient, error) {
+func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string, host *url.URL) (APClient, error) {
 	priv, err := GetPrivateKey(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-	return cf.WithKeysDirect(ctx, priv, pubID)
+	return cf.WithKeysDirect(ctx, priv, pubID, host)
 }
 
 // NewRequest function creates a new signed request to an external federation host.
