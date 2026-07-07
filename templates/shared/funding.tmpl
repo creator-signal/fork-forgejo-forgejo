@@ -16,7 +16,7 @@
 					<div class="icon" role="img" aria-label="{{.ProviderName}}">
 					{{if eq .ProviderName "buy_me_a_coffee" "community_bridge" "github" "issuehunt" "ko_fi" "liberapay" "open_collective" "patreon" "polar" "thanks_dev"}}
 						{{$iconName := (print "brand-" .ProviderName)}}
-						{{svg $iconName 22}}
+						{{svg $iconName 22 "brand-color"}}
 					{{else if eq .ProviderName "custom"}}
 						{{svg "octicon-link" 22}}
 					{{else}}

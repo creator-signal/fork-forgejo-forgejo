@@ -11,3 +11,8 @@
 .markup [href$="#dark-mode-only"] {
   display: unset;
 }
+
+svg.brand-color path,
+svg.brand-color rect {
+  fill: var(--brand-dark-fill, revert-rule);
+}

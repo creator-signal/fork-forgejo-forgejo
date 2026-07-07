@@ -4,3 +4,8 @@
 .markup [href$="#dark-mode-only"] {
   display: none;
 }
+
+svg.brand-color path,
+svg.brand-color rect {
+  fill: var(--brand-light-fill, revert-rule);
+}
