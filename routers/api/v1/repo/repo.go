@@ -1446,7 +1446,7 @@ func GetFundingConfig(ctx *context.APIContext) {
 	//     "$ref": "#/responses/RepoFunding"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repository())
 	if err != nil && !funding_service.IsErrFundingNotExist(err) {
 		log.Error("GetFundingFromDefaultBranch: %v", err)
 	}
@@ -1482,7 +1482,7 @@ func ValidateFundingConfig(ctx *context.APIContext) {
 	//     "$ref": "#/responses/ConfigValidation"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repo.Repository)
+	funding, err := funding_service.GetFundingFromDefaultBranch(ctx, ctx.Repository())
 	if err != nil && !funding_service.IsErrFundingNotExist(err) {
 		log.Error("GetFundingFromDefaultBranch: %v", err)
 	}
