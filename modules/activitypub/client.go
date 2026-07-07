@@ -100,21 +100,37 @@ func NewClientFactoryWithTimeout(timeout time.Duration) (c *ClientFactory, err e
 // This prevents specially crafted key IDs or other IRIs from triggering a SSRF
 // against hosts that do not match the host of the originating request.
 //
-// If no host is set, it checks that the host matches an external address.
-func (cf *ClientFactory) SetHostMatcher(host *url.URL) error {
+// If no host is set, an error will be returned unless `setting.Federation.InsecureAllowInvalidHosts` is set to `true`.
+func (cf *ClientFactory) setHostMatcher(hosts []*url.URL) error {
 	if cf == nil {
 		return errors.New("nil client factory")
 	}
-	if host == nil {
-		return nil
+
+	hostsNil := len(hosts) == 0
+	for _, host := range hosts {
+		hostsNil = hostsNil || host == nil
+	}
+
+	if hostsNil && !setting.Federation.InsecureAllowInvalidHosts {
+		return errors.New("nil client host(s)")
 	}
 
 	var hostMatchAllow, hostMatchBlock string
 	if setting.Federation.InsecureAllowInvalidHosts {
 		hostMatchAllow = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
-		hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
+		for _, host := range hosts {
+			if host != nil {
+				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
+			}
+		}
 	} else {
-		hostMatchAllow = host.Host
+		for i, host := range hosts {
+			if i == 0 {
+				hostMatchAllow = host.Host
+			} else {
+				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
+			}
+		}
 		hostMatchBlock = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
 	}
 
@@ -131,9 +147,8 @@ func (cf *ClientFactory) SetHostMatcher(host *url.URL) error {
 }
 
 type APClientFactory interface {
-	WithKeys(ctx context.Context, user *user_model.User, pubID string, host *url.URL) (APClient, error)
-	WithKeysDirect(ctx context.Context, privateKey, pubID string, host *url.URL) (APClient, error)
-	SetHostMatcher(host *url.URL) error
+	WithKeys(ctx context.Context, user *user_model.User, pubID string, hosts []*url.URL) (APClient, error)
+	WithKeysDirect(ctx context.Context, privateKey, pubID string, hosts []*url.URL) (APClient, error)
 }
 
 // Client struct
@@ -148,14 +163,14 @@ type Client struct {
 }
 
 // NewRequest function
-func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID string, host *url.URL) (APClient, error) {
+func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID string, hosts []*url.URL) (APClient, error) {
 	privPem, _ := pem.Decode([]byte(privateKey))
 	privParsed, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = cf.SetHostMatcher(host); err != nil {
+	if err = cf.setHostMatcher(hosts); err != nil {
 		return nil, fmt.Errorf("client: invalid host for HostMatcher: %w", err)
 	}
 
@@ -171,12 +186,12 @@ func (cf *ClientFactory) WithKeysDirect(ctx context.Context, privateKey, pubID s
 	return &c, nil
 }
 
-func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string, host *url.URL) (APClient, error) {
+func (cf *ClientFactory) WithKeys(ctx context.Context, user *user_model.User, pubID string, hosts []*url.URL) (APClient, error) {
 	priv, err := GetPrivateKey(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-	return cf.WithKeysDirect(ctx, priv, pubID, host)
+	return cf.WithKeysDirect(ctx, priv, pubID, hosts)
 }
 
 // NewRequest function creates a new signed request to an external federation host.

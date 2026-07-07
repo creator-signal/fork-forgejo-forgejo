@@ -134,7 +134,7 @@ func createFederationHostFromAP(ctx context.Context, actorID fm.ActorID) (*forge
 		return nil, fmt.Errorf("invalid actor URI: %w", err)
 	}
 
-	client, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), uri)
+	client, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), []*url.URL{uri})
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func fetchUserFromAP(ctx context.Context, personID fm.PersonID, federationHost *
 	}
 
 	hostURL := federationHost.AsURL()
-	apClient, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), &hostURL)
+	apClient, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), []*url.URL{&hostURL})
 	if err != nil {
 		return nil, nil, err
 	}

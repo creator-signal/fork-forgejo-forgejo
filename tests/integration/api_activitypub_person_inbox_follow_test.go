@@ -65,7 +65,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 		distantURI, err := url.Parse(distantURL)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL), distantURI)
+		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL), []*url.URL{distantURI})
 		require.NoError(t, err)
 
 		resp, err := c.Post(followActivity, localUser2Inbox)

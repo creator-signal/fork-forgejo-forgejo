@@ -163,7 +163,7 @@ func fetchKeyFromAp(ctx context.Context, keyURL, hostURL url.URL) (pubKey any, p
 		return nil, nil, nil, err
 	}
 
-	apClient, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), &hostURL)
+	apClient, err := clientFactory.WithKeys(ctx, actionsUser, actionsUser.KeyID(), []*url.URL{&hostURL})
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -61,7 +61,7 @@ func deliverToInbox(item deliveryQueueItem) error {
 		return fmt.Errorf("invalid delivery item inbox URL: %w", err)
 	}
 
-	apclient, err := clientFactory.WithKeys(ctx, item.Doer, item.Doer.APActorID()+"#main-key", inboxURL)
+	apclient, err := clientFactory.WithKeys(ctx, item.Doer, item.Doer.APActorID()+"#main-key", []*url.URL{inboxURL})
 	if err != nil {
 		return err
 	}
