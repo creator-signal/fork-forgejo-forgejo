@@ -152,6 +152,21 @@ dialog .toast-close {
   margin-inline-start: auto;
 }
 
+#sponsor-modal ul {
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0;
+}
+
+#sponsor-modal ul > li {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 #sponsor-modal li > .icon {
   position: relative;
   width: 22px;

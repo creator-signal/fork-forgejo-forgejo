@@ -10,9 +10,9 @@
 				{{ctx.Locale.Tr "funding.sponsor_parsing_errors" .FundingConfig}}
 			</div>
 			{{end}}
-			<ul class="tw-list-none tw-p-0">
+			<ul>
 				{{range .Funding}}
-				<li class="tw-flex tw-flex-nowrap tw-items-center tw-gap-2 tw-mb-4">
+				<li>
 					<div class="icon" role="img" aria-label="{{.ProviderName}}">
 					{{if eq .ProviderName "buy_me_a_coffee" "community_bridge" "github" "issuehunt" "ko_fi" "liberapay" "open_collective" "patreon" "polar" "thanks_dev"}}
 						{{$iconName := (print "brand-" .ProviderName)}}
