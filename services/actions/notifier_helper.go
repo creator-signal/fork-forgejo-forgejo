@@ -181,7 +181,7 @@ func notify(ctx context.Context, input *notifyInput) error {
 	}
 
 	if shouldDetectSchedules {
-		if err := handleSchedules(ctx, schedules, commit, input, ref.String()); err != nil {
+		if err := handleSchedules(ctx, schedules, commit, input); err != nil {
 			return err
 		}
 	}
@@ -528,13 +528,8 @@ func handleSchedules(
 	detectedWorkflows []*actions_module.DetectedWorkflow,
 	commit *git.Commit,
 	input *notifyInput,
-	_ string,
 ) error {
-	branch, err := commit.GetBranchName()
-	if err != nil {
-		return err
-	}
-	if branch != input.Repo.DefaultBranch {
+	if input.Ref.BranchName() != input.Repo.DefaultBranch {
 		log.Trace("commit branch is not default branch in repo")
 		return nil
 	}
@@ -641,5 +636,5 @@ func DetectAndHandleSchedules(ctx context.Context, repo *repo_model.Repository) 
 	// so we use action user as the Doer of the notifyInput
 	notifyInput := newNotifyInputForSchedules(repo)
 
-	return handleSchedules(ctx, scheduleWorkflows, commit, notifyInput, repo.DefaultBranch)
+	return handleSchedules(ctx, scheduleWorkflows, commit, notifyInput)
 }
