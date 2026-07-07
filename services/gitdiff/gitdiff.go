@@ -1071,12 +1071,7 @@ func GetDiffNameStatus(ctx context.Context, gitRepo *git.Repository, beforeCommi
 		return nil, fmt.Errorf("unable to get the after commit %q: %w", afterCommitID, err)
 	}
 
-	cmdCtx, cmdCancel := context.WithCancel(ctx)
-	defer cmdCancel()
-
-	cmdDiff := git.NewCommand(cmdCtx).AddArguments("diff", "--name-status")
-
-	cmdDiff.AddArguments("-z")
+	cmdDiff := git.NewCommand(ctx).AddArguments("diff", "--name-status", "-z")
 
 	objectFormat, err := gitRepo.GetObjectFormat()
 	if err != nil {
