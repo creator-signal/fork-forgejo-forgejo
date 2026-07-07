@@ -690,7 +690,7 @@ test('Persistent monospace preference across multiple editors', async ({page}) =
   // Open a second editor (by clicking "Edit" in the context menu of a message)
   const openSecondEditor = async () => {
     const contextMenu = page.locator('.timeline-item [aria-label="Comment menu"]:has(.edit-content)').first();
-    const editButton = contextMenu.locator('[role="menuitem"]').getByText('Edit').first();
+    const editButton = contextMenu.getByRole('menuitem').getByText('Edit').first();
     await contextMenu.click();
     await editButton.click();
   };
