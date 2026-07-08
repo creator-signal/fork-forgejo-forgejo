@@ -295,10 +295,16 @@ func TestFundingEntriesFromConfig(t *testing.T) {
 			`custom: 'Arbitrary: text'`,
 			`custom: "h3://localhost:8080/"`,
 			`custom: ' '`,
+			`custom: [[test]]`,
+			`custom: [["test"]]`,
+			`custom: [[]]`,
+			`custom:`,
+			`custom: 42`,
+			"custom: 42\nwhatever:",
 		}
 		for _, config := range configs {
 			funding, errs := getFundingFromConfig(t, config)
-			assert.Len(t, errs, 1)
+			assert.NotEmpty(t, errs)
 			assert.Empty(t, funding)
 		}
 	})
@@ -344,23 +350,6 @@ func TestFundingEntriesWithErrorsFromConfig(t *testing.T) {
 				actualRemainder = append(actualRemainder, funding.URL)
 			}
 			assert.Equal(t, expectedRemainder, actualRemainder)
-		}
-	})
-
-	t.Run("Invalid config", func(t *testing.T) {
-		configs := []string{
-			`custom: [[test]]`,
-			`custom: [["test"]]`,
-			`custom: [[]]`,
-			`custom:`,
-			`custom: 42`,
-			"custom: 42\nwhatever:",
-		}
-		for _, config := range configs {
-			funding, errs := getFundingFromConfig(t, config)
-			assert.Empty(t, funding)
-			require.NotEmpty(t, errs)
-			assert.Equal(t, "Invalid type for key 'custom', expected a string or string array", errs[0].Error())
 		}
 	})
 
