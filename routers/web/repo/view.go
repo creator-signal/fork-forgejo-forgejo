@@ -464,12 +464,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 			for _, err := range funding.Errors {
 				if unknownProviderErr, ok := errors.AsType[*funding_service.ErrUnknownFundingProvider](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.unknown_provider_error", unknownProviderErr.Name))
-				} else if tooManyErr, ok := errors.AsType[*funding_service.ErrTooManyOfFundingProvider](err); ok {
-					if tooManyErr.Limit == 0 {
-						details = append(details, ctx.Locale.Tr("funding.provider_disallowed_error", tooManyErr.Name))
-					} else {
-						details = append(details, ctx.Locale.Tr("funding.n_too_many_of_provider_error", tooManyErr.Limit, tooManyErr.Name))
-					}
+				} else if tooManyErr, ok := errors.AsType[*funding_service.ErrTooManyFundingProviders](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.n_too_many_providers_error", tooManyErr.TotalLimit))
 				} else if duplicateEntryErr, ok := errors.AsType[*funding_service.ErrDuplicateFundingEntry](err); ok {
 					details = append(details, ctx.Locale.Tr("funding.duplicate_entry_error", duplicateEntryErr.Name, duplicateEntryErr.URL))
 				} else if badInputErr, ok := errors.AsType[*funding_service.ErrBadInput](err); ok {

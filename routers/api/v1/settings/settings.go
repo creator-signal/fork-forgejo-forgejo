@@ -104,7 +104,6 @@ func GetFundingSettings(ctx *context.APIContext) {
 
 		providerData := new(api.FundingProvider)
 		providerData.Name = provider.Name
-		providerData.Limit = provider.Limit
 		providerData.Text = provider.Text
 		providerData.URL = provider.URL
 		providerData.InputPattern = provider.InputPattern.String()

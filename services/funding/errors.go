@@ -35,18 +35,14 @@ func (err ErrUnknownFundingProvider) Error() string {
 	return fmt.Sprintf("Unknown funding provider: %s", err.Name)
 }
 
-// ErrTooManyOfFundingProvider occurs when a funding config contains more
-// values for a funding provider than expected.
-type ErrTooManyOfFundingProvider struct {
-	Name  string
-	Limit uint
+// ErrTooManyFundingProviders occurs when a funding config contains more
+// funding entries than expected.
+type ErrTooManyFundingProviders struct {
+	TotalLimit uint
 }
 
-func (err ErrTooManyOfFundingProvider) Error() string {
-	if err.Limit == 0 {
-		return fmt.Sprintf("Funding provider %s is not allowed", err.Name)
-	}
-	return fmt.Sprintf("Expected up to %d of funding provider %s", err.Limit, err.Name)
+func (err ErrTooManyFundingProviders) Error() string {
+	return fmt.Sprintf("Expected up to %d funding providers", err.TotalLimit)
 }
 
 // ErrDuplicateFundingEntry occurs when a funding config contains a provider

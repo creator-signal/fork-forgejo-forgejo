@@ -53,20 +53,22 @@ test('Sponsor modal (repo)', async ({browser}) => {
   await expect(sponsorModal.locator('.ui.error.message')).toBeHidden();
 
   const items = sponsorModal.getByRole('listitem');
-  await expect(items).toHaveCount(13);
+  await expect(items).toHaveCount(15); // the most we can have!
   await expectSponsorEntry(items.nth(0), 'community_bridge', 'funding.communitybridge.org/projects/example', 'https://funding.communitybridge.org/projects/example');
   await expectSponsorEntry(items.nth(1), 'github', 'github.com/sponsors/example', 'https://github.com/sponsors/example');
   await expectSponsorEntry(items.nth(2), 'github', 'github.com/sponsors/example2', 'https://github.com/sponsors/example2');
   await expectSponsorEntry(items.nth(3), 'issuehunt', 'issuehunt.io/r/example', 'https://issuehunt.io/r/example');
   await expectSponsorEntry(items.nth(4), 'ko_fi', 'ko-fi.com/example', 'https://ko-fi.com/example');
-  await expectSponsorEntry(items.nth(5), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
-  await expectSponsorEntry(items.nth(6), 'patreon', 'patreon.com/example', 'https://patreon.com/example');
-  await expectSponsorEntry(items.nth(7), 'open_collective', 'opencollective.com/example', 'https://opencollective.com/example');
-  await expectSponsorEntry(items.nth(8), 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
-  await expectSponsorEntry(items.nth(9), 'polar', 'polar.sh/example', 'https://polar.sh/example');
-  await expectSponsorEntry(items.nth(10), 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
-  await expectSponsorEntry(items.nth(11), 'custom', 'https://example.com', 'https://example.com');
-  await expectSponsorEntry(items.nth(12), 'custom', 'example.com', 'http://example.com');
+  await expectSponsorEntry(items.nth(5), 'ko_fi', 'ko-fi.com/example_2_electric_boogaloo', 'https://ko-fi.com/example_2_electric_boogaloo');
+  await expectSponsorEntry(items.nth(6), 'liberapay', 'liberapay.com/example', 'https://liberapay.com/example');
+  await expectSponsorEntry(items.nth(7), 'patreon', 'patreon.com/example', 'https://patreon.com/example');
+  await expectSponsorEntry(items.nth(8), 'open_collective', 'opencollective.com/example', 'https://opencollective.com/example');
+  await expectSponsorEntry(items.nth(9), 'buy_me_a_coffee', 'buymeacoffee.com/example', 'https://buymeacoffee.com/example');
+  await expectSponsorEntry(items.nth(10), 'polar', 'polar.sh/example', 'https://polar.sh/example');
+  await expectSponsorEntry(items.nth(11), 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
+  await expectSponsorEntry(items.nth(12), 'tidelift', 'tidelift.com/funding/github/npm/example', 'https://tidelift.com/funding/github/npm/example');
+  await expectSponsorEntry(items.nth(13), 'custom', 'https://example.com', 'https://example.com');
+  await expectSponsorEntry(items.nth(14), 'custom', 'example.com', 'http://example.com');
 
   await screenshot(page);
 });
@@ -282,7 +284,7 @@ test('Sponsor modal: links to config file on error', async ({browser}) => {
   await expect(sponsorModal).toBeHidden();
   await expect(errors).toBeVisible();
   await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
-  await expect(errors).toContainText('Funding provider tidelift is not allowed'); // sad day, probably :(
+  await expect(errors).toContainText('Unknown funding provider: ko-fi');
 });
 
 test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {

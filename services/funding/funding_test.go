@@ -200,7 +200,12 @@ func assertKoFi(t *testing.T, entry *api.RepoFundingEntry, expectedText, expecte
 	assertEntry(t, entry, "ko_fi", expectedText, expectedURL)
 }
 
-func TestConfigParseErrors(t *testing.T) {
+func assertTidelift(t *testing.T, entry *api.RepoFundingEntry, expectedText, expectedURL string) {
+	t.Helper()
+	assertEntry(t, entry, "tidelift", expectedText, expectedURL)
+}
+
+func TestFundingConfigParseErrors(t *testing.T) {
 	configs := []string{
 		`this isn't yaml`,
 		`[`,
@@ -217,7 +222,7 @@ func TestConfigParseErrors(t *testing.T) {
 	}
 }
 
-func TestEntriesFromConfig(t *testing.T) {
+func TestFundingEntriesFromConfig(t *testing.T) {
 	defer test.MockProtect(&setting.FundingProviders)()
 	setting.LoadBuiltInFundingProviders()
 
@@ -244,7 +249,7 @@ func TestEntriesFromConfig(t *testing.T) {
 	})
 }
 
-func TestEntriesWithErrorsFromConfig(t *testing.T) {
+func TestFundingEntriesWithErrorsFromConfig(t *testing.T) {
 	defer test.MockProtect(&setting.FundingProviders)()
 	setting.LoadBuiltInFundingProviders()
 
@@ -353,20 +358,42 @@ func TestEntriesWithErrorsFromConfig(t *testing.T) {
 			`- "https://example.com"` + "\n" +
 			"- test3\n" +
 			"- test4\n" +
+			"- test5\n" +
+			"- test6\n" +
+			"- test7\n" +
+			"- test8\n" +
+			"- test9\n" +
+			"- test10\n" +
+			"- test11\n" +
+			"- test12\n" +
+			"- test13\n" +
+			"- test14\n" +
+			"- test15\n" +
 			"- too_many"
 		funding, errs := getFundingFromConfig(t, config)
 
 		assert.Len(t, errs, 1)
-		assert.Equal(t, "Expected up to 4 of funding provider custom", errs[0].Error())
+		assert.Equal(t, "Expected up to 15 funding providers", errs[0].Error())
 
-		assert.Len(t, funding, 4)
+		assert.Len(t, funding, 15)
 		assertCustom(t, funding[0], "test1", "http://test1")
 		assertCustom(t, funding[1], "https://example.com", "https://example.com")
 		assertCustom(t, funding[2], "test3", "http://test3")
 		assertCustom(t, funding[3], "test4", "http://test4")
+		assertCustom(t, funding[4], "test5", "http://test5")
+		assertCustom(t, funding[5], "test6", "http://test6")
+		assertCustom(t, funding[6], "test7", "http://test7")
+		assertCustom(t, funding[7], "test8", "http://test8")
+		assertCustom(t, funding[8], "test9", "http://test9")
+		assertCustom(t, funding[9], "test10", "http://test10")
+		assertCustom(t, funding[10], "test11", "http://test11")
+		assertCustom(t, funding[11], "test12", "http://test12")
+		assertCustom(t, funding[12], "test13", "http://test13")
+		assertCustom(t, funding[13], "test14", "http://test14")
+		assertCustom(t, funding[14], "test15", "http://test15")
 	})
 
-	t.Run("Partially invalid (too many of two providers, valid list of others)", func(t *testing.T) {
+	t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
 		config := "ko_fi: [test]\n" +
 			"tidelift: npm/example\n" +
 			"custom:\n" +
@@ -374,6 +401,15 @@ func TestEntriesWithErrorsFromConfig(t *testing.T) {
 			`- "https://example.com"` + "\n" +
 			"- test3\n" +
 			"- test4\n" +
+			"- test5\n" +
+			"- test6\n" +
+			"- test7\n" +
+			"- test8\n" +
+			"- test9\n" +
+			"- test10\n" +
+			"- test11\n" +
+			"- test12\n" +
+			"- test13\n" +
 			"- too_many"
 		funding, errs := getFundingFromConfig(t, config)
 
@@ -383,31 +419,19 @@ func TestEntriesWithErrorsFromConfig(t *testing.T) {
 
 		assert.Len(t, funding, 5)
 		assertKoFi(t, funding[0], "ko-fi.com/test", "https://ko-fi.com/test")
-		assertCustom(t, funding[1], "test1", "http://test1")
-		assertCustom(t, funding[2], "https://example.com", "https://example.com")
-		assertCustom(t, funding[3], "test3", "http://test3")
-		assertCustom(t, funding[4], "test4", "http://test4")
-	})
-
-	t.Run("Partially invalid (too many of two providers)", func(t *testing.T) {
-		config := "ko_fi: [test, test2]\n" +
-			"custom:\n" +
-			"- test1\n" +
-			`- "https://example.com"` + "\n" +
-			"- test3\n" +
-			"- test4\n" +
-			"- too_many"
-		funding, errs := getFundingFromConfig(t, config)
-
-		assert.Len(t, errs, 2)
-		assert.Equal(t, "Expected up to 1 of funding provider ko_fi", errs[0].Error())
-		assert.Equal(t, "Expected up to 4 of funding provider custom", errs[1].Error())
-
-		assert.Len(t, funding, 5)
-		assertKoFi(t, funding[0], "ko-fi.com/test", "https://ko-fi.com/test")
-		assertCustom(t, funding[1], "test1", "http://test1")
-		assertCustom(t, funding[2], "https://example.com", "https://example.com")
-		assertCustom(t, funding[3], "test3", "http://test3")
-		assertCustom(t, funding[4], "test4", "http://test4")
+		assertTidelift(t, funding[1], "tidelift.com/funding/github/npm/example", "https://tidelift.com/funding/github/npm/example")
+		assertCustom(t, funding[2], "test1", "http://test1")
+		assertCustom(t, funding[3], "https://example.com", "https://example.com")
+		assertCustom(t, funding[4], "test3", "http://test3")
+		assertCustom(t, funding[5], "test4", "http://test4")
+		assertCustom(t, funding[6], "test5", "http://test5")
+		assertCustom(t, funding[7], "test6", "http://test6")
+		assertCustom(t, funding[8], "test7", "http://test7")
+		assertCustom(t, funding[9], "test8", "http://test8")
+		assertCustom(t, funding[10], "test9", "http://test9")
+		assertCustom(t, funding[11], "test10", "http://test10")
+		assertCustom(t, funding[12], "test11", "http://test11")
+		assertCustom(t, funding[13], "test12", "http://test12")
+		assertCustom(t, funding[14], "test13", "http://test13")
 	})
 }

@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewFundingProviderConfig(t *testing.T) {
+func TestFundingProviderConfig(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
-	// only requires url formatter. the text, limits, and icon can be derived automatically
+	// only requires url formatter. the text and icon can be derived automatically
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
 URL = "https://mycustom.example.com/%s"
@@ -26,13 +26,12 @@ URL = "https://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)        // derived from URL
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL) // note that the %s becomes %[1]s as well, since this will only ever have the one input
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigWithMailtoUrl(t *testing.T) {
+func TestFundingProviderConfigWithMailtoUrl(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	// not sure what an email domain would do for funding stuffs, but weird formatting cases are good to test
@@ -45,13 +44,12 @@ URL = "mailto:%s@localhost"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Text) // same as URL
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigWithMailtoUrlWithText(t *testing.T) {
+func TestFundingProviderConfigWithMailtoUrlWithText(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
@@ -64,13 +62,12 @@ TEXT = "Email %s@localhost for info"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Text)
 	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigWithText(t *testing.T) {
+func TestFundingProviderConfigWithText(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
@@ -83,13 +80,12 @@ URL = "https://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Text)
 	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigWithSchemalessUrl(t *testing.T) {
+func TestFundingProviderConfigWithSchemalessUrl(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
@@ -101,13 +97,12 @@ URL = "mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.URL)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigWithWeirdSchemalessUrl(t *testing.T) {
+func TestFundingProviderConfigWithWeirdSchemalessUrl(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
@@ -119,13 +114,12 @@ URL = "://mycustom.example.com/%s"
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, 1, int(mycustom.Limit))
 	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.URL)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestNewFundingProviderConfigHandlesSigils(t *testing.T) {
+func TestFundingProviderConfigHandlesSigils(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cases := [][3]string{
@@ -158,46 +152,7 @@ URL = "%s"
 	}
 }
 
-func TestNewFundingProviderConfigWithLimit(t *testing.T) {
-	defer test.MockProtect(&FundingProviders)()
-
-	cases := [][2]any{
-		{-1, 0}, // lower bound clamps to 0
-		{-12, 0},
-		{-0, 0},
-		{0, 0},
-		{1, 1},
-		{4, 4},
-		{15, 15},
-		{16, 16},
-		{50, 16}, // upper bound clamps to 16
-		{0.0, 0},
-		{-1.5, 1}, // floats (except for 0.0) default to 1. what do we even do with those? round them? ridiculous! 🙃
-		{1.5, 1},
-		{50.2, 1},
-	}
-
-	for _, c := range cases {
-		input := c[0]
-		expected := c[1]
-		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
-[funding.mycustom]
-LIMIT = %v
-URL = "https://mycustom.example.com/%%s"
-`, input))
-		require.NoError(t, err)
-		loadCustomFundingProvidersFrom(cfg)
-
-		mycustom := FundingProviders["mycustom"]
-		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, expected, int(mycustom.Limit))
-		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
-		assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
-	}
-}
-
-func TestNewFundingProviderConfigWithCustomInputPattern(t *testing.T) {
+func TestFundingProviderConfigWithCustomInputPattern(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cases := [][2]string{
@@ -223,7 +178,6 @@ INPUT_PATTERN = %v
 
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, 1, int(mycustom.Limit))
 		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
 		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
 		assert.Equal(t, expected, mycustom.InputPattern.String())
@@ -235,15 +189,14 @@ func TestIgnoredOverrideFundingProviderConfig(t *testing.T) {
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.ko_fi]
-LIMIT = 0
+URL = example.com/%[1]s
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	koFi := FundingProviders["ko_fi"]
 	assert.Equal(t, "ko_fi", koFi.Name)
-	assert.Equal(t, 1, int(koFi.Limit)) // no change from builtin
-	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text)
+	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text) // no change from builtin
 	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.URL)
 	assert.Equal(t, `^[^/]+$`, koFi.InputPattern.String())
 }

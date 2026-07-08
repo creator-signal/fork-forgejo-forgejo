@@ -71,7 +71,12 @@ func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
 	var errs []error
 
 	// no need to sort these, they'll come in the order they were given
-	for _, entry := range config {
+	configLoop: for _, entry := range config {
+		if len(entryList) >= setting.MAX_FUNDING_ENTRIES_PER_CONFIG {
+			errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MAX_FUNDING_ENTRIES_PER_CONFIG})
+			break configLoop // we've reached our limit; no point checking further, even for parse errors (there may be many!)
+		}
+
 		providerName := entry.Key
 		entryData := entry.Value
 		provider := setting.GetFundingProviderByName(providerName)
@@ -88,11 +93,6 @@ func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
 		dataType := reflect.TypeOf(entryData)
 		switch dataType.Kind() {
 		case reflect.String:
-			if provider.Limit == 0 {
-				// 1 is too many! this provider is disabled.
-				errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
-				continue
-			}
 			newEntry, err := getFundingEntry(provider, entryData.(string))
 			if err != nil {
 				errs = append(errs, err)
@@ -104,9 +104,9 @@ func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
 			// no need to sort these either, they'll come in the order they were given
 			stringSlice := reflect.ValueOf(entryData)
 			for i := 0; i < stringSlice.Len(); i++ {
-				if uint(i) >= provider.Limit {
-					errs = append(errs, &ErrTooManyOfFundingProvider{Name: providerName, Limit: provider.Limit})
-					break // stop here for this provider, we've got enough
+				if len(entryList) >= setting.MAX_FUNDING_ENTRIES_PER_CONFIG {
+					errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MAX_FUNDING_ENTRIES_PER_CONFIG})
+					break configLoop // we've reached our limit; no point checking further, even for parse errors (there may be many!)
 				}
 				str, ok := stringSlice.Index(i).Interface().(string)
 				if !ok {
