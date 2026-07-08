@@ -456,26 +456,26 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	} else if funding_service.IsFundingConfig(ctx.Repo.TreePath) {
 		funding, err := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
 		if err != nil {
-			ctx.Data["FileError"] = ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error()))
+			ctx.Data["FileError"] = ctx.Locale.Tr("funding.yaml_error.unknown", strings.TrimSpace(err.Error()))
 		} else if funding != nil && len(funding.Errors) > 0 {
-			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.n_config_parsing_errors")
+			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.yaml_error.n_errors")
 
 			details := make([]template.HTML, 0, len(funding.Errors))
 			for _, err := range funding.Errors {
 				if unknownProviderErr, ok := errors.AsType[*funding_service.ErrUnknownFundingProvider](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.unknown_provider_error", unknownProviderErr.Name))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.unknown_provider", unknownProviderErr.Name))
 				} else if tooManyErr, ok := errors.AsType[*funding_service.ErrTooManyFundingProviders](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.n_too_many_providers_error", tooManyErr.TotalLimit))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.n_too_many_providers", tooManyErr.TotalLimit))
 				} else if duplicateEntryErr, ok := errors.AsType[*funding_service.ErrDuplicateFundingEntry](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.duplicate_entry_error", duplicateEntryErr.Name, duplicateEntryErr.URL))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.duplicate_entry", duplicateEntryErr.Name, duplicateEntryErr.URL))
 				} else if badInputErr, ok := errors.AsType[*funding_service.ErrBadInput](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.bad_input_error", badInputErr.Name, badInputErr.Pattern.String()))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.bad_input", badInputErr.Name, badInputErr.Pattern.String()))
 				} else if invalidYamlErr, ok := errors.AsType[*funding_service.ErrInvalidYamlType](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.invalid_yaml_type_error", invalidYamlErr.Name))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.invalid_yaml_type", invalidYamlErr.Name))
 				} else if parseErr, ok := errors.AsType[*funding_service.ErrCannotParseURL](err); ok {
-					details = append(details, ctx.Locale.Tr("funding.parse_url_error", parseErr.Name, parseErr.Err.Error()))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.parse_url", parseErr.Name, parseErr.Err.Error()))
 				} else {
-					details = append(details, ctx.Locale.Tr("funding.unknown_error", strings.TrimSpace(err.Error())))
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.unknown", strings.TrimSpace(err.Error())))
 				}
 			}
 			ctx.Data["FileErrorDetails"] = details
