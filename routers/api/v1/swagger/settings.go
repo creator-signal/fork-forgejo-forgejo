@@ -32,10 +32,3 @@ type swaggerResponseGeneralAttachmentSettings struct {
 	// in:body
 	Body api.GeneralAttachmentSettings `json:"body"`
 }
-
-// FundingSettings
-// swagger:response FundingSettings
-type swaggerFundingSettings struct {
-	// in:body
-	Body api.FundingSettings `json:"body"`
-}

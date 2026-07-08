@@ -4,9 +4,7 @@
 package settings
 
 import (
-	"cmp"
 	"net/http"
-	"slices"
 
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
@@ -84,39 +82,5 @@ func GetGeneralAttachmentSettings(ctx *context.APIContext) {
 		AllowedTypes: setting.Attachment.AllowedTypes,
 		MaxFiles:     setting.Attachment.MaxFiles,
 		MaxSize:      setting.Attachment.MaxSize,
-	})
-}
-
-// GetFundingSettings returns funding settings
-func GetFundingSettings(ctx *context.APIContext) {
-	// swagger:operation GET /settings/funding settings getFundingSetting
-	// ---
-	// summary: Get instance's global funding settings
-	// produces:
-	// - application/json
-	// responses:
-	//   "200":
-	//     "$ref": "#/responses/FundingSettings"
-
-	providers := make([]*api.FundingProvider, 0, len(setting.FundingProviders))
-	for k := range setting.FundingProviders {
-		provider := setting.FundingProviders[k]
-
-		providerData := new(api.FundingProvider)
-		providerData.Name = provider.Name
-		providerData.Text = provider.Text
-		providerData.URL = provider.URL
-		providerData.InputPattern = provider.InputPattern.String()
-
-		providers = append(providers, providerData)
-	}
-
-	// alphabetical by name (the order of these is arbitrary, but we gotta pick something consistent!)
-	slices.SortFunc(providers, func(a, b *api.FundingProvider) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-
-	ctx.JSON(http.StatusOK, api.FundingSettings{
-		Providers: providers,
 	})
 }

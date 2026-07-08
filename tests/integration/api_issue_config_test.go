@@ -177,7 +177,7 @@ func TestAPIRepoValidateIssueConfig(t *testing.T) {
 			req := NewRequest(t, "GET", urlStr)
 			resp := MakeRequest(t, req, http.StatusOK)
 
-			var issueConfigValidation api.ConfigValidation
+			var issueConfigValidation api.IssueConfigValidation
 			DecodeJSON(t, resp, &issueConfigValidation)
 
 			assert.True(t, issueConfigValidation.Valid)
@@ -201,7 +201,7 @@ func TestAPIRepoValidateIssueConfig(t *testing.T) {
 					req := NewRequest(t, "GET", urlStr)
 					resp := MakeRequest(t, req, http.StatusOK)
 
-					var issueConfigValidation api.ConfigValidation
+					var issueConfigValidation api.IssueConfigValidation
 					DecodeJSON(t, resp, &issueConfigValidation)
 
 					assert.False(t, issueConfigValidation.Valid)

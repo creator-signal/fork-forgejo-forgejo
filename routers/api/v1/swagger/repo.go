@@ -472,6 +472,13 @@ type swaggerRepoIssueConfig struct {
 	Body api.IssueConfig `json:"body"`
 }
 
+// RepoIssueConfigValidation
+// swagger:response RepoIssueConfigValidation
+type swaggerRepoIssueConfigValidation struct {
+	// in:body
+	Body api.IssueConfigValidation `json:"body"`
+}
+
 // RepoNewIssuePinsAllowed
 // swagger:response RepoNewIssuePinsAllowed
 type swaggerRepoNewIssuePinsAllowed struct {
@@ -539,11 +546,4 @@ type swaggerActionArtifactList struct {
 type swaggerActionArtifact struct {
 	// in:body
 	Body api.ActionArtifact `json:"body"`
-}
-
-// RepoFunding
-// swagger:response RepoFunding
-type swaggerRepoFunding struct {
-	// in:body
-	Body []api.RepoFundingEntry `json:"body"`
 }
