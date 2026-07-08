@@ -74,8 +74,11 @@ test('Sponsor modal (repo)', async ({browser}) => {
 });
 
 const appearanceCases = [
+  // unlike normal repo funding configs, user/org ones always say sposor their user/org, not the repo itself:
   {kind: 'user', badUrl: '/user2', goodUrl: '/user39', heading: 'Sponsor User39'},
+  {kind: 'user profile', badUrl: '/user2', goodUrl: '/user39/.profile', heading: 'Sponsor User39'},
   {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Sponsor Org Six'},
+  {kind: 'org profile', badUrl: '/org25', goodUrl: '/org6/.profile', heading: 'Sponsor Org Six'},
 ] as const;
 for (const testCase of appearanceCases) {
   test(`Sponsor button (${testCase.kind}): appears when a profile has a valid funding config`, async ({browser}) => {
@@ -83,11 +86,13 @@ for (const testCase of appearanceCases) {
     const context = await browser.newContext({javaScriptEnabled: false});
     const page = await context.newPage();
 
+    // user/org without a funding config has no Sponsor button
     let response = await page.goto(testCase.badUrl, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
     await expect(page.locator('#sponsor-modal')).toBeHidden();
     await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
 
+    // user/org with a funding config shows Sponsors
     response = await page.goto(testCase.goodUrl, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
 

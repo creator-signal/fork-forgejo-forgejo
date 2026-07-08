@@ -42,6 +42,9 @@ import (
 	"github.com/editorconfig/editorconfig-core-go/v2"
 )
 
+// The name of the special {User|Org}/.profile repository.
+const OwnerProfileRepositoryName = ".profile"
+
 // PullRequest contains information to make a pull request
 type PullRequest struct {
 	BaseRepo       *repo_model.Repository
@@ -726,7 +729,11 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.Data["Funding"] = funding.Entries
 		ctx.Data["FundingConfig"] = funding.ConfigPath
 		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
-		ctx.Data["FundingTarget"] = fmt.Sprintf("%s/%s", ctx.Repo.Repository.OwnerName, ctx.Repo.Repository.Name)
+		if ctx.Repo.Repository.Name == OwnerProfileRepositoryName {
+			ctx.Data["FundingTarget"] = fmt.Sprintf("%s", ctx.Repo.Repository.Owner.DisplayName())
+		} else {
+			ctx.Data["FundingTarget"] = fmt.Sprintf("%s/%s", ctx.Repo.Repository.OwnerName, ctx.Repo.Repository.Name)
+		}
 	}
 
 	branchOpts := git_model.FindBranchOptions{
