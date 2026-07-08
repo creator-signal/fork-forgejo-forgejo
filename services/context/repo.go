@@ -730,7 +730,7 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.Data["FundingConfig"] = funding.ConfigPath
 		ctx.Data["FundingHasErrors"] = len(funding.Errors) > 0
 		if ctx.Repo.Repository.Name == OwnerProfileRepositoryName {
-			ctx.Data["FundingTarget"] = fmt.Sprintf("%s", ctx.Repo.Repository.Owner.DisplayName())
+			ctx.Data["FundingTarget"] = ctx.Repo.Repository.Owner.DisplayName()
 		} else {
 			ctx.Data["FundingTarget"] = fmt.Sprintf("%s/%s", ctx.Repo.Repository.OwnerName, ctx.Repo.Repository.Name)
 		}
