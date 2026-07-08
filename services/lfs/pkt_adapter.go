@@ -21,7 +21,7 @@ const (
 
 var (
 	flushPkt = PktLine("0000")
-	delimPkt = PktLine("0001")
+	delimPkt = PktLine("0001") // See https://git-scm.com/docs/protocol-v2.html#_packet_line_framing
 )
 
 type PktAdapter struct {
