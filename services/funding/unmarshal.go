@@ -20,7 +20,6 @@ func IsFundingConfig(path string) bool {
 	return false
 }
 
-
 // Represents a key-value pair in a FUNDING.yml document. The value may be a
 // list containing one or more strings.
 type rawRepoFundingConfigEntry struct {

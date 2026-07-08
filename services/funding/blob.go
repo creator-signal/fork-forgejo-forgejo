@@ -25,9 +25,10 @@ func getFundingFromBlob(content []byte) (entries []*api.RepoFundingEntry, lineEr
 	var errs []error
 
 	// no need to sort these, they'll come in the order they were given
-	configLoop: for _, entry := range config {
-		if len(entryList) >= setting.MAX_FUNDING_ENTRIES_PER_CONFIG {
-			errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MAX_FUNDING_ENTRIES_PER_CONFIG})
+configLoop:
+	for _, entry := range config {
+		if len(entryList) >= setting.MaxFundingEntriesPerConfig {
+			errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MaxFundingEntriesPerConfig})
 			break configLoop // we've reached our limit; no point checking further, even for parse errors (there may be many!)
 		}
 
@@ -58,8 +59,8 @@ func getFundingFromBlob(content []byte) (entries []*api.RepoFundingEntry, lineEr
 			// no need to sort these either, they'll come in the order they were given
 			stringSlice := reflect.ValueOf(entryData)
 			for i := 0; i < stringSlice.Len(); i++ {
-				if len(entryList) >= setting.MAX_FUNDING_ENTRIES_PER_CONFIG {
-					errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MAX_FUNDING_ENTRIES_PER_CONFIG})
+				if len(entryList) >= setting.MaxFundingEntriesPerConfig {
+					errs = append(errs, &ErrTooManyFundingProviders{TotalLimit: setting.MaxFundingEntriesPerConfig})
 					break configLoop // we've reached our limit; no point checking further, even for parse errors (there may be many!)
 				}
 				str, ok := stringSlice.Index(i).Interface().(string)

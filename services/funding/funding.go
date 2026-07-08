@@ -11,14 +11,14 @@ import (
 	"slices"
 	"strings"
 
-	"golang.org/x/net/idna"
-
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
+
+	"golang.org/x/net/idna"
 )
 
 // Funding config files are considered in this order. When a file is found
@@ -92,7 +92,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 	if !slices.Contains(validSchemes, urlValue.Scheme) {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: &ErrBadURLScheme{
 			ValidSchemes: validSchemes,
-			GivenScheme: urlValue.Scheme,
+			GivenScheme:  urlValue.Scheme,
 		}}
 	}
 
@@ -110,11 +110,11 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 }
 
 type RepoFunding struct {
-	// Funding options for the repository
-	Entries []*api.RepoFundingEntry
-
 	// The navigable path to the repository's funding config file
 	ConfigPath string
+
+	// Funding options for the repository
+	Entries []*api.RepoFundingEntry
 
 	// Parsing issues, if any, from parsing the repository's funding config
 	Errors []error
@@ -155,9 +155,9 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 	}
 
 	funding := &RepoFunding{
-		Entries: data,
 		ConfigPath: configPath,
-		Errors: lineErrors,
+		Entries:    data,
+		Errors:     lineErrors,
 	}
 	return funding, nil
 }

@@ -47,7 +47,7 @@ var FundingProviders map[string]*FundingProviderConfig
 //
 // This limit is arbitrary, and may be changed later, though this limit seems
 // reasonable for now.
-const MAX_FUNDING_ENTRIES_PER_CONFIG = 15
+const MaxFundingEntriesPerConfig = 15
 
 // Ensures that any formatting sigils (%s, etc.) are rendered inert, except for
 // %[1]s. Also transforms %s into %[1]s, because these format strings only

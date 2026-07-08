@@ -80,7 +80,7 @@ func (err ErrCannotParseURL) Error() string {
 
 // ErrBadURLScheme occurs when a URL scheme is not in a list of valid schemes.
 type ErrBadURLScheme struct {
-	GivenScheme string
+	GivenScheme  string
 	ValidSchemes []string
 }
 
