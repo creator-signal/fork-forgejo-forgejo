@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -42,7 +41,6 @@ type OidLine struct {
 
 type SSHAdpater struct {
 	bridge        *HTTPBridge
-	client        *lfs_module.Client
 	ctx           context.Context
 	handlerMap    map[string]commandHandler
 	lfsVerb       string
@@ -55,12 +53,12 @@ type SSHAdpater struct {
 
 type commandHandler func(string, [][]byte) error
 
-func NewSSHAdapter(ctx context.Context, client *lfs_module.Client, lfsVerb string, pktAdapter *PktAdapter,
-	repoName string, requestedMode perm.AccessMode, tokenString, userName string,
+func NewSSHAdapter(ctx context.Context, lfsVerb string, pktAdapter *PktAdapter, repoName string,
+	requestedMode perm.AccessMode, tokenString, userName string,
 ) *SSHAdpater {
 	sshAdapter := SSHAdpater{
-		bridge: newHTTPBridge(tokenString, userName, repoName), client: client, ctx: ctx, lfsVerb: lfsVerb,
-		pktAdapter: pktAdapter, quitExpected: false, repoName: repoName, requestedMode: requestedMode, userName: userName,
+		bridge: newHTTPBridge(tokenString, userName, repoName), ctx: ctx, lfsVerb: lfsVerb, pktAdapter: pktAdapter,
+		quitExpected: false, repoName: repoName, requestedMode: requestedMode, userName: userName,
 	}
 	sshAdapter.handlerMap = map[string]commandHandler{
 		batchCommand:        sshAdapter.handleBatchRequest,
@@ -465,12 +463,6 @@ func HandleLFSTransfer(ctx context.Context, results *private.ServCommandResults,
 	if !setting.LFS.StartServer {
 		return fmt.Errorf("LFS isn't enabled")
 	}
-
-	localURL, err := url.Parse(setting.LocalURL)
-	if err != nil {
-		return fmt.Errorf("Cannot create local url for LFS HTTP bridge: %v", err)
-	}
-	client := lfs_module.NewClient(localURL, nil)
-	sshAdapter := NewSSHAdapter(ctx, &client, lfsVerb, pktAdapter, results.RepoName, requestedMode, tokenString, results.UserName)
+	sshAdapter := NewSSHAdapter(ctx, lfsVerb, pktAdapter, results.RepoName, requestedMode, tokenString, results.UserName)
 	return sshAdapter.run()
 }

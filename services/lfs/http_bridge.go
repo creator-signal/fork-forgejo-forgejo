@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/json"
 	lfs_module "forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
@@ -20,7 +21,10 @@ import (
 )
 
 const (
-	errorBodyLen = 4096 // Max size of body to be read from LFS server during error
+	errorBodyLen            = 4096 // Max size of body to be read from LFS server during error
+	bridgeConnectionTimeout = 10 * time.Second
+	bridgeIdleTimeout       = 1 * time.Second
+	bridgeReadWriteTimeout  = 60 * time.Minute
 )
 
 type HTTPBridge struct {
@@ -32,14 +36,19 @@ type HTTPBridge struct {
 }
 
 func newHTTPBridge(token, userName, repoName string) *HTTPBridge {
+	// req.SetTimeout(10*time.Second, 60*time.Second)
 	httpTransport := &http.Transport{
 		MaxConnsPerHost: 1,
 		MaxIdleConns:    1,
-		IdleConnTimeout: time.Second,
+		IdleConnTimeout: bridgeIdleTimeout,
 		WriteBufferSize: MaxPacketLength,
+		DialContext:     httplib.TimeoutDialer(bridgeConnectionTimeout),
 	}
 
-	hc := &http.Client{Transport: httpTransport}
+	hc := &http.Client{
+		Transport: httpTransport,
+		Timeout:   bridgeReadWriteTimeout,
+	}
 	client := &HTTPBridge{
 		client:     hc,
 		bearer:     fmt.Sprintf("Bearer %s", token),
@@ -63,21 +72,8 @@ func (b *HTTPBridge) createRequest(ctx context.Context, method, url string, body
 	return req, nil
 }
 
-func (b *HTTPBridge) performRequest(ctx context.Context, request *http.Request) (*http.Response, error) {
+func (b *HTTPBridge) performRequest(request *http.Request) (*http.Response, error) {
 	resp, err := b.client.Do(request)
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return resp, ctx.Err()
-		default:
-		}
-		return resp, err
-	}
-	return resp, nil
-}
-
-func (b *HTTPBridge) performOKRequest(ctx context.Context, request *http.Request) (*http.Response, error) {
-	resp, err := b.performRequest(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +108,7 @@ func (b *HTTPBridge) Batch(ctx context.Context, operation string, objects []lfs_
 	if err != nil {
 		return err
 	}
-	resp, err := b.performOKRequest(ctx, req)
+	resp, err := b.performRequest(req)
 	if err != nil {
 		return err
 	}
@@ -137,7 +133,7 @@ func (b *HTTPBridge) Upload(ctx context.Context, pointer *lfs_module.Pointer, pk
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Transfer-Encoding", "chunked")
 	req.ContentLength = pointer.Size
-	resp, err := b.performOKRequest(ctx, req)
+	resp, err := b.performRequest(req)
 	if err != nil {
 		return err
 	}
@@ -161,7 +157,7 @@ func (b *HTTPBridge) Verify(ctx context.Context, pointer *lfs_module.Pointer) er
 	if err != nil {
 		return err
 	}
-	resp, err := b.performOKRequest(ctx, req)
+	resp, err := b.performRequest(req)
 	if err != nil {
 		return err
 	}
@@ -177,7 +173,7 @@ func (b *HTTPBridge) Download(ctx context.Context, pointer *lfs_module.Pointer, 
 	if err != nil {
 		return err
 	}
-	resp, err := b.performOKRequest(ctx, req)
+	resp, err := b.performRequest(req)
 	if err != nil {
 		return err
 	}
@@ -203,7 +199,7 @@ func (b *HTTPBridge) ListLock(ctx context.Context, args map[string]string) (*api
 	if err != nil {
 		return nil, err
 	}
-	resp, err := b.performOKRequest(ctx, req)
+	resp, err := b.performRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("bridge (user: %s, repo: %s, url: %v) error: %v", b.userName, b.repoName, url, err)
 	}
@@ -231,7 +227,7 @@ func (b *HTTPBridge) Lock(ctx context.Context, path string) (*api.LFSLockRespons
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, err
 	}
-	resp, err := b.performRequest(ctx, req)
+	resp, err := b.client.Do(req)
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, err
 	}
@@ -270,7 +266,7 @@ func (b *HTTPBridge) Unlock(ctx context.Context, lid string, force bool,
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, err
 	}
-	resp, err := b.performRequest(ctx, req)
+	resp, err := b.client.Do(req)
 	if err != nil {
 		return nil, nil, http.StatusInternalServerError, false, fmt.Errorf("Unlocking error with body \"%s\": %v", body, err)
 	}

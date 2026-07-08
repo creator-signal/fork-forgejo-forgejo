@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net/url"
@@ -38,11 +37,13 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+type lfsVerb string
+
 const (
-	lfsAuthenticateVerb = "git-lfs-authenticate"
-	lfsTransferVerb     = "git-lfs-transfer"
-	lfsTransferDownload = "download"
-	lfsTransferUpload   = "upload"
+	lfsAuthenticateVerb         = "git-lfs-authenticate"
+	lfsTransferVerb             = "git-lfs-transfer"
+	lfsTransferDownload lfsVerb = "download"
+	lfsTransferUpload   lfsVerb = "upload"
 )
 
 // CmdServ represents the available serv sub-command.
@@ -225,20 +226,14 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	verb := words[0]
 	repoPath := strings.TrimPrefix(words[1], "/")
 
-	var lfsVerb string
+	var cmdLfsVerb lfsVerb
 	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
 		if !setting.LFS.StartServer {
-			var logMsg string
-			if verb == lfsAuthenticateVerb {
-				logMsg = "LFS authentication request over SSH denied, LFS support is disabled"
-			} else {
-				logMsg = "LFS transfer request over SSH denied, LFS support is disabled"
-			}
-			return fail(ctx, "Unknown git command", "%s", logMsg)
+			return fail(ctx, "Unknown git command", "LFS command %s denied: LFS support is disabled", verb)
 		}
 
 		if len(words) > 2 {
-			lfsVerb = words[2]
+			cmdLfsVerb = lfsVerb(words[2])
 		}
 	}
 
@@ -283,17 +278,17 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	}
 
 	if verb == lfsAuthenticateVerb || verb == lfsTransferVerb {
-		switch lfsVerb {
-		case "upload":
+		switch cmdLfsVerb {
+		case lfsTransferUpload:
 			requestedMode = perm.AccessModeWrite
-		case "download":
+		case lfsTransferDownload:
 			requestedMode = perm.AccessModeRead
 		default:
-			return fail(ctx, "Unknown LFS verb", "Unknown lfs verb %s", lfsVerb)
+			return fail(ctx, "Unknown LFS verb", "Unknown lfs verb %s", cmdLfsVerb)
 		}
 	}
 
-	results, extra := private.ServCommand(ctx, keyID, repoUsername, reponame, requestedMode, verb, lfsVerb)
+	results, extra := private.ServCommand(ctx, keyID, repoUsername, reponame, requestedMode, verb, string(cmdLfsVerb))
 	if extra.HasError() {
 		return fail(ctx, extra.UserMsg, "ServCommand failed: %s", extra.Error)
 	}
@@ -306,7 +301,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 				NotBefore: jwt.NewNumericDate(now),
 			},
 			RepoID: results.RepoID,
-			Op:     lfsVerb,
+			Op:     string(cmdLfsVerb),
 			UserID: results.UserID,
 		}
 
@@ -331,12 +326,8 @@ func runServ(ctx context.Context, c *cli.Command) error {
 			}
 			return nil
 		case lfsTransferVerb: // LFS transfer
-			if lfsVerb != lfsTransferDownload && lfsVerb != lfsTransferUpload {
-				errorMessage := fmt.Sprintf("Unexpected operation: %v", lfsVerb)
-				return lfsTransferFail(ctx, errorMessage, errorMessage)
-			}
-			pktAdapter := lfs.NewPktAdapter(bufio.NewReader(os.Stdin), bufio.NewWriter(os.Stdout))
-			err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, lfsVerb, tokenString)
+			pktAdapter := lfs.NewPktAdapter(os.Stdin, os.Stdout)
+			err = lfs.HandleLFSTransfer(ctx, results, pktAdapter, requestedMode, string(cmdLfsVerb), tokenString)
 			if err != nil {
 				return lfsTransferFail(ctx, fmt.Sprintf("An error occured during transfer: %v", err),
 					fmt.Sprintf("Error during HandlerLFSTransfer: %v", err))
