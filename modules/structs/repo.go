@@ -450,3 +450,22 @@ type RepoTargetOption struct {
 	// required: true
 	Name string `json:"name"`
 }
+
+// RepoFundingEntryKind represents a way in which a funding entry should be interpreted
+type RepoFundingEntryKind string
+
+const (
+	URLFundingEntryKind RepoFundingEntryKind = "url" // The entry should be interpreted as a hyperlink, with Title as title and Value as target
+)
+
+// RepoFundingEntry is a funding option for a repo
+type RepoFundingEntry struct {
+	// Identifies the funding provider to which the entry belongs
+	ProviderName string `json:"provider_name"`
+	// Identifies to other users the account on the funding provider, similar to a "display name"; suitable for use as hyperlink text
+	Title string `json:"title"`
+	// The direct funding entry data, such as the URL to a funding provider's webpage associated with the project to which the entry belongs
+	Value string `json:"value"`
+	// Describes how the entry data should be interpreted
+	Kind RepoFundingEntryKind `json:"kind"`
+}
