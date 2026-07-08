@@ -5,9 +5,21 @@ package funding
 
 import (
 	"fmt"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
+
+// IsFundingConfig returns true if the given path is a funding config.
+func IsFundingConfig(path string) bool {
+	for _, name := range fundingCandidates {
+		if strings.EqualFold(path, name) {
+			return true
+		}
+	}
+	return false
+}
+
 
 // Represents a key-value pair in a FUNDING.yml document. The value may be a
 // list containing one or more strings.

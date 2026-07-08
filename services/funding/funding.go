@@ -191,13 +191,3 @@ func GetFundingFromDefaultBranch(ctx context.Context, r *repo_model.Repository) 
 
 	return GetFundingFromCommit(r, commit)
 }
-
-// IsFundingConfig returns true if the given path is a funding config.
-func IsFundingConfig(path string) bool {
-	for _, name := range fundingCandidates {
-		if strings.EqualFold(path, name) {
-			return true
-		}
-	}
-	return false
-}
