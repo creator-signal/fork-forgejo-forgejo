@@ -13,12 +13,12 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{}),
+			data: newTestData(map[string]string{}, newSharedData()),
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.Explore.DisableUsersPage": "true",
-			}, map[string]string{}),
+			}, newSharedData()),
 			error: "Not Found",
 		},
 	},

@@ -13,25 +13,21 @@ import (
 var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.T, signatureString string, signature []any) {
 	t.Helper()
 	unitType := signature[1].(unit_model.Type)
-	unit := unitsTypeToString(unitType)
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{}, map[string]string{}),
+				data: newTestData(map[string]string{}, newSharedData()),
 			},
 			{
-				data: newTestData(map[string]string{}, map[string]string{
-					"disable-units": unit,
-				}),
+				data: newTestData(map[string]string{}, newSharedData().
+					SetRepositoryDisabledUnits([]unit_model.Type{unitType}),
+				),
 				error: "Not Found",
 			},
 			// This fixture is unreachable because this permissions function is always used after
 			// a RepoAccess that enforces the same restriction for non admin users
 			// {
-			// 	data: newTestData(map[string]string{}, map[string]string{
-			// 		"doer":       "regularuser",
-			// 		"repository": "userowner/repositoryprivate",
-			// 	}),
+			//	data: newTestData(map[string]string{}, newSharedData()),
 			// 	error: "user should have specific read permission or be a repo admin or a site admin",
 			// },
 		},
@@ -41,7 +37,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 			signatureString,
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
+			fixtureDisableUnits(t, permissions, data.shared.RepositoryDisabledUnits())
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

@@ -13,24 +13,25 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "doerregular",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": user_model.ActionsUserName,
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName(user_model.ActionsUserName).
+				SetDoerActions(true),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "anonymous",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true),
+			),
 			error: "token is required",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("doer", "doerregular")
+		data.shared.SetDoerNameDefault("doerregular")
 	},
 })

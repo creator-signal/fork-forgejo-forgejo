@@ -17,10 +17,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
-			}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		// This fixture is unreachable because this permissions function is always used after
 		// a RepoAccess that enforces the same restriction for non admin users
@@ -29,10 +29,11 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// 		"issue":       "issueOne",
 		// 		"issueAuthor": "issueAuthor",
 		// 		"comment":     "comment for ReqValidCommentID",
-		// 	}, map[string]string{
-		// 		"doer":        "doerregular",
-		// 		"repository":  "userowner/repositoryprivate",
-		// 	}),
+		// 	}, newSharedData().
+		// 		SetDoerName("doerregular").
+		// 		SetRepositoryName("userowner/repositoryprivate").
+		// 		SetRepositoryPrivate(true),
+		// 	),
 		// 	error: "Not Found",
 		// },
 		{
@@ -42,10 +43,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 				"comment":     "comment for ReqValidCommentID",
 
 				"NilIssue": "true",
-			}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "Not Found",
 		},
 		{
@@ -55,10 +56,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 				"comment":     "comment for ReqValidCommentID",
 
 				"InconsistentID": "true",
-			}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "Not Found",
 		},
 	},

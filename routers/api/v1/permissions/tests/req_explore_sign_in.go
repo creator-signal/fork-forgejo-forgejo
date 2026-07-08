@@ -13,30 +13,26 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "regularuser",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("doerregular"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.RequireSignInView": "true",
-			}, map[string]string{
-				"doer": "anonymous",
-			}),
+			}, newSharedData().SetAnonymous(true)),
 			error: "you must be signed in",
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.Explore.RequireSigninView": "true",
-			}, map[string]string{
-				"doer": "anonymous",
-			}),
+			}, newSharedData().SetAnonymous(true)),
 			error: "you must be signed in",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("doer", "regularuser")
+		data.shared.SetDoerNameDefault("regularuser")
 	},
 	protectSettingsBool: []*bool{
 		&setting.Service.RequireSignInView,

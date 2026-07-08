@@ -15,33 +15,34 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"repository": "userowner/repositorypublic",
-				"doer":       "doeradmin",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetRepositoryName("userowner/repositorypublic").
+				SetDoerName("doeradmin").
+				SetDoerAdmin(true),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"repository": "userowner/repositorypublic",
-				"doer":       "userowner",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetRepositoryName("userowner/repositorypublic").
+				SetDoerName("userowner"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"repository": "userowner/repositorypublic",
-				"doer":       "regularuser",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetRepositoryName("userowner/repositorypublic").
+				SetDoerName("regularuser"),
+			),
 			error: "user should be an owner or a collaborator with admin write of a repository",
 		},
 	}
 	for _, unitType := range unitTypes {
-		unit := unitsTypeToString(unitType)
 		fixtures = append(fixtures, &testCase{
-			data: newTestData(map[string]string{}, map[string]string{
-				"repository":    "userowner/repositorypublic",
-				"doer":          "doeradmin",
-				"disable-units": unit,
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetRepositoryName("userowner/repositorypublic").
+				SetRepositoryDisabledUnits([]unit_model.Type{unitType}).
+				SetDoerName("doeradmin").
+				SetDoerAdmin(true),
+			),
 			error: "Not Found",
 		})
 	}
@@ -52,11 +53,12 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 			signatureString,
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
+			fixtureDisableUnits(t, permissions, data.shared.RepositoryDisabledUnits())
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.SetShared("doer", "doeradmin")
+			data.shared.SetDoerName("doeradmin")
+			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,
 		staticArgs: 1,

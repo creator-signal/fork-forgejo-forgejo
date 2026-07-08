@@ -15,26 +15,24 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 		{
 			data: newTestData(map[string]string{
 				"user": "IndividualPermsChecker",
-			}, map[string]string{}),
+			}, newSharedData()),
 		},
 		{
 			data: newTestData(map[string]string{
 				"user": "IndividualPermsCheckerprivate",
-			}, map[string]string{}),
+			}, newSharedData()),
 			error: "Visit Project",
 		},
 		{
 			data: newTestData(map[string]string{
 				"user": "IndividualPermsCheckerlimited",
-			}, map[string]string{
-				"doer": "anonymous",
-			}),
+			}, newSharedData().SetAnonymous(true)),
 			error: "Visit Project",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetOwnDefault("user", data.GetShared("doer"))
+		data.SetOwnDefault("user", data.shared.DoerName())
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.HasOwn("user") {

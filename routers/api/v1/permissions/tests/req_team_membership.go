@@ -19,15 +19,16 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			data: newTestData(map[string]string{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
-			}, map[string]string{}),
+			}, newSharedData()),
 		},
 		{
 			data: newTestData(map[string]string{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
-			}, map[string]string{
-				"doer": "doeradmin",
-			}),
+			}, newSharedData().
+				SetDoerName("doeradmin").
+				SetDoerAdmin(true),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
@@ -35,9 +36,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":      "ReqTeamMembership",
 				"teams":    "team1:regularuser",
 				"team":     "team1",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
@@ -45,9 +46,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":      "ReqTeamMembership",
 				"teams":    "team1:regularuser,team2:otheruser",
 				"team":     "team2",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 			error: "Must be a team member",
 		},
 		{
@@ -56,15 +57,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":      "ReqTeamMembership",
 				"teams":    "team2:otheruser",
 				"team":     "team2",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 			error: "Not Found",
 		},
 		{
 			data: newTestData(map[string]string{
 				"org": "ReqTeamMembership",
-			}, map[string]string{}),
+			}, newSharedData()),
 			error: "reqTeamMembership: unprepared context",
 		},
 	},
@@ -79,7 +80,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 		data.SetOwnDefault("team", org_model.OwnerTeamName)
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.GetShared("doer")
+		orgOwner := data.shared.DoerName()
 		if data.HasOwn("orgOwner") {
 			orgOwner = data.GetOwn("orgOwner")
 		}

@@ -15,42 +15,42 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 		{
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
-			}, map[string]string{
-				"doer":                "regularuser",
-				"doer.authentication": "proxy",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetDoerAuthentication("proxy"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
-			}, map[string]string{
-				"doer":                "regularuser",
-				"doer.authentication": "basic",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetDoerAuthentication("basic"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
-			}, map[string]string{
-				"doer":                "regularuser",
-				"doer.authentication": "token",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetDoerAuthentication("token"),
+			),
 			error: "auth method not allowed",
 		},
 		{
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
-			}, map[string]string{
-				"doer":                "regularuser",
-				"doer.authentication": "token",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetDoerAuthentication("token"),
+			),
 			error: "auth method not allowed",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("doer", "regularuser")
-		data.SetSharedDefault("doer.authentication", "proxy")
+		data.shared.SetDoerNameDefault("regularuser")
+		data.shared.SetDoerAuthenticationDefault("proxy")
 		data.SetOwnDefault("Service.EnableReverseProxyAuthAPI", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {

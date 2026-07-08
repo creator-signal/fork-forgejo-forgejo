@@ -6,35 +6,34 @@ package tests
 import (
 	"testing"
 
-	user_model "forgejo.org/models/user"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 )
 
 var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "anonymous",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer": "doerregular",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("doerregular"),
+			),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("doer", "doerregular")
-		if data.GetShared("doer") == user_model.ActionsUserName {
-			data.SetSharedDefault("repository", "userowner/repositorypublic")
+		data.shared.SetDoerNameDefault("doerregular")
+		if data.shared.DoerActions() {
+			data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
 		}
-		data.SetSharedDefault("doer.scope", "read:repository")
-		data.SetSharedDefault("token.level", "read")
+		data.shared.SetDoerScopeDefault("read:repository")
+		data.shared.SetTokenLevelDefault("read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.HasShared("repository") && data.GetShared("doer") == user_model.ActionsUserName {
-			fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
+		if data.shared.HasRepositoryName() && data.shared.DoerActions() {
+			fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit())
 		}
 		fixtureSetDoer(t, permissions, data)
 	},

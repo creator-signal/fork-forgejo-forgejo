@@ -13,64 +13,71 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "anonymous",
-				"repository": "userowner/repositorypublic",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true).
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "doeradmin",
-				"repository": "userowner/repositoryprivate",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("doeradmin").
+				SetDoerAdmin(true).
+				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryPrivate(true),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositoryprivate",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryPrivate(true),
+			),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "anonymous",
-				"repository": "userowner/repositoryprivate",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true).
+				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryPrivate(true),
+			),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       user_model.ActionsUserName,
-				"repository": "userowner/repositorypublic",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName(user_model.ActionsUserName).
+				SetDoerActions(true).
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                     user_model.ActionsUserName,
-				"doer.actions.task.RepoID": "unrelated",
-				"repository":               "userowner/repositorypublic",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName(user_model.ActionsUserName).
+				SetDoerActions(true).
+				SetDoerActionsRepoID(111111111111).
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "Not Found",
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":                                user_model.ActionsUserName,
-				"doer.actions.task.IsForkPullRequest": "true",
-				"repository":                          "userowner/repositorypublic",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName(user_model.ActionsUserName).
+				SetDoerActions(true).
+				SetDoerActionsIsForkPullRequest(true).
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetSharedDefault("repository", "userowner/repositorypublic")
+		data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetRepository(t, permissions, data.GetShared("repository"), data.GetShared("repository.init"))
+		fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit())
 	},
 })

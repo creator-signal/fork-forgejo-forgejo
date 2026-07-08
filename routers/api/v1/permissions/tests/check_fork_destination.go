@@ -21,10 +21,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 			data: newTestData(map[string]string{
 				"forkOrg":      "regularorg1",
 				"forkOrgOwner": "regularorgowner",
-			}, map[string]string{
-				"doer":       "regularorgowner",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("regularorgowner").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
@@ -32,10 +32,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrgOwner":         "regularorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "true",
-			}, map[string]string{
-				"doer":       "regularuser",
-				"repository": "regularuser/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetRepositoryName("regularuser/repositorypublic"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
@@ -43,29 +43,29 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrgOwner":         "regularorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "false",
-			}, map[string]string{
-				"doer":       "regularuser",
-				"repository": "regularuser/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser").
+				SetRepositoryName("regularuser/repositorypublic"),
+			),
 			error: "User is not allowed to create repos in Organisation",
 		},
 		{
 			data: newTestData(map[string]string{
 				"forkOrg":      "regularorg2",
 				"forkOrgOwner": "regularorgowner",
-			}, map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("doerregular").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "User is no Member of Organisation 'regularorg2'",
 		},
 		{
 			data: newTestData(map[string]string{
 				"forkOrg": "unknownOrg",
-			}, map[string]string{
-				"doer":       "regularorgowner",
-				"repository": "userowner/repositorypublic",
-			}),
+			}, newSharedData().
+				SetDoerName("regularorgowner").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "org does not exist",
 		},
 	},
@@ -80,7 +80,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
 
 		if data.HasOwn("team") {
-			fixtureCreateTeam(t, org, data.GetShared("doer"), &forgery.CreateTeamOptions{
+			fixtureCreateTeam(t, org, data.shared.DoerName(), &forgery.CreateTeamOptions{
 				Name:             data.GetOwn("team"),
 				CanCreateOrgRepo: data.GetOwn("teamCanCreateOrgRepo") != "false",
 

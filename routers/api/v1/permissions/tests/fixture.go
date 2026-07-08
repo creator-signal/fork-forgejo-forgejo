@@ -22,7 +22,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/optional"
-	"forgejo.org/modules/structs"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/services/auth"
@@ -101,10 +101,10 @@ func fixtureCreateUser(t *testing.T, user *user_model.User) *user_model.User {
 	user.Email = user.Name + "@test.forgejo.org"
 	user.Passwd = "password"
 	if strings.Contains(user.Name, "private") {
-		visibility := structs.VisibleTypePrivate
+		visibility := api.VisibleTypePrivate
 		overwriteDefault.Visibility = &visibility
 	} else if strings.Contains(user.Name, "limited") {
-		visibility := structs.VisibleTypeLimited
+		visibility := api.VisibleTypeLimited
 		overwriteDefault.Visibility = &visibility
 	}
 	require.NoError(t, user_model.CreateUser(t.Context(), user, overwriteDefault))
@@ -118,7 +118,7 @@ func fixtureCreateOrg(t *testing.T, org *org_model.Organization, owner *user_mod
 	}
 	owner = fixtureCreateUser(t, owner)
 	if strings.Contains(org.Name, "private") {
-		org.Visibility = structs.VisibleTypePrivate
+		org.Visibility = api.VisibleTypePrivate
 	}
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, owner))
 	return org
@@ -161,20 +161,21 @@ func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permiss
 
 func fixtureSetDoer(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
 	t.Helper()
-	if !testData.HasShared("doer") {
+	if testData.shared.Anonymous() {
+		permissions.SetAuthentication(&auth.UnauthenticatedResult{})
 		return
 	}
+	name := testData.shared.DoerName()
 	if doer := permissions.Doer(); doer != nil {
-		if doer.Name != testData.GetShared("doer") {
-			panic(fmt.Sprintf("attempting to override doer %s with %s", doer.Name, testData.GetShared("doer")))
+		if doer.Name != name {
+			panic(fmt.Sprintf("attempting to override doer %s with %s", doer.Name, name))
 		}
 		return
 	}
-	name := testData.GetShared("doer")
 	if name == user_model.ActionsUserName {
-		fixtureSetDoerActionsUser(t, permissions, testData)
+		fixtureSetDoerActionsUser(t, permissions, testData.shared)
 	} else {
-		fixtureSetDoerRegularUser(t, permissions, testData)
+		fixtureSetDoerRegularUser(t, permissions, testData.shared)
 	}
 }
 
@@ -198,20 +199,18 @@ func (r *actionsTaskTokenAuthenticationResult) ActionsTaskID() optional.Option[i
 	return optional.Some(r.taskID)
 }
 
-func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureSetDoerActionsUser(t *testing.T, permissions *apiv1_permissions.Permissions, data *sharedData) {
 	permissions.SetDoer(user_model.NewActionsUser())
 	repository := permissions.Repository()
 	require.NotNil(t, repository)
 	repositoryID := repository.ID
-	if testData.GetShared("doer.actions.task.RepoID") == "unrelated" {
-		repositoryID = 13245
+	if data.HasDoerActionsRepoID() {
+		repositoryID = data.DoerActionsRepoID()
 	}
 	task := &actions_model.ActionTask{
 		RepoID: repositoryID,
 	}
-	if testData.GetShared("doer.actions.task.IsForkPullRequest") == "true" {
-		task.IsForkPullRequest = true
-	}
+	task.IsForkPullRequest = data.DoerActionsIsForkPullRequest()
 	task.GenerateToken()
 	{
 		_, err := db.GetEngine(t.Context()).Insert(task)
@@ -277,45 +276,37 @@ func (*reverseProxyAuthenticationResult) IsReverseProxyAuthentication() bool {
 	return true
 }
 
-func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Permissions, testData *testData) {
+func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Permissions, data *sharedData) {
 	var scope auth_model.AccessTokenScope
-	if testData.HasShared("doer.scope") {
-		scope = auth_model.AccessTokenScope(testData.GetShared("doer.scope"))
+	if data.DoerScope() != "" {
+		scope = auth_model.AccessTokenScope(data.DoerScope())
 	} else {
 		scope = auth_model.AccessTokenScopeAll
 	}
-	if testData.HasShared("doer") {
-		doer := testData.GetShared("doer")
-		if doer != "anonymous" {
-			isAdmin := strings.Contains(doer, "admin")
-			user := &user_model.User{
-				Name:    doer,
-				IsAdmin: isAdmin,
-			}
-			fixtureCreateUser(t, user)
-			permissions.SetDoer(user)
+	if !data.Anonymous() {
+		user := &user_model.User{
+			Name:    data.DoerName(),
+			IsAdmin: data.DoerAdmin(),
 		}
+		fixtureCreateUser(t, user)
+		permissions.SetDoer(user)
 	} else {
 		panic(fmt.Errorf("attempting to set doer with no name"))
 	}
 
-	if permissions.Doer() == nil {
-		permissions.SetAuthentication(&auth.UnauthenticatedResult{})
-	} else {
-		token, err := fixtureCreateToken(t, permissions.Doer(), scope)
-		require.NoError(t, err)
-		tokenReducer, err := authz.GetAuthorizationReducerForAccessToken(t.Context(), token)
-		require.NoError(t, err)
-		permissions.SetIsSigned(true)
-		switch testData.GetShared("doer.authentication") {
-		case "basic":
-			permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.Doer()})
-		case "proxy":
-			permissions.SetAuthentication(&reverseProxyAuthenticationResult{user: permissions.Doer()})
-		default:
-			permissions.SetToken(token)
-			permissions.SetAuthentication(&accessTokenAuthenticationResult{user: permissions.Doer(), scope: token.Scope, reducer: tokenReducer})
-		}
+	token, err := fixtureCreateToken(t, permissions.Doer(), scope)
+	require.NoError(t, err)
+	tokenReducer, err := authz.GetAuthorizationReducerForAccessToken(t.Context(), token)
+	require.NoError(t, err)
+	permissions.SetIsSigned(true)
+	switch data.DoerAuthentication() {
+	case "basic":
+		permissions.SetAuthentication(&basicPasswordAuthenticationResult{user: permissions.Doer()})
+	case "proxy":
+		permissions.SetAuthentication(&reverseProxyAuthenticationResult{user: permissions.Doer()})
+	default:
+		permissions.SetToken(token)
+		permissions.SetAuthentication(&accessTokenAuthenticationResult{user: permissions.Doer(), scope: token.Scope, reducer: tokenReducer})
 	}
 }
 
@@ -381,7 +372,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	require.NoError(t, pull_service.PushToBaseRepo(ctx, pr))
 }
 
-func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name, init string) {
+func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name string, init bool) {
 	t.Helper()
 	if name == "" {
 		return
@@ -399,7 +390,7 @@ func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissio
 		Name:      repoName,
 		IsPrivate: strings.Contains(repoName, "private"),
 	}
-	if init == "true" {
+	if init {
 		opts.Files = forgery.FilesInit{}
 	}
 	repository := forgery.CreateRepository(t, owner, opts)
@@ -468,16 +459,9 @@ func fixtureDisableRepoUnit(t *testing.T, permissions *apiv1_permissions.Permiss
 	forgery.DisableRepoUnits(t, repo, unitType)
 }
 
-func fixtureDisableUnits(t *testing.T, permissions *apiv1_permissions.Permissions, disable string) {
+func fixtureDisableUnits(t *testing.T, permissions *apiv1_permissions.Permissions, unitTypes []unit_model.Type) {
 	t.Helper()
-	if disable == "" {
-		return
-	}
-	for unit := range strings.SplitSeq(disable, ",") {
-		unitType := unit_model.TypeFromKey(unit)
-		if unitType == unit_model.TypeInvalid {
-			panic(fmt.Errorf("unable to find a unit matching '%s'", unit))
-		}
+	for _, unitType := range unitTypes {
 		fixtureDisableRepoUnit(t, permissions, unitType)
 	}
 }

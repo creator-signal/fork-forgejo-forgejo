@@ -16,29 +16,28 @@ import (
 var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.T, signatureString string, signature []any) {
 	t.Helper()
 	unitTypes := signature[1].([]unit_model.Type)
-	units := unitsTypeToString(unitTypes...)
 	scopes := unitsToScopes(unitTypes, "write")
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{}, map[string]string{
-					"repository": "userowner/repositorypublic",
-					"doer":       "userowner",
-					"doer.scope": scopes,
-				}),
+				data: newTestData(map[string]string{}, newSharedData().
+					SetDoerName("userowner").
+					SetRepositoryName("userowner/repositorypublic").
+					SetDoerScope(scopes),
+				),
 			},
 			{
-				data: newTestData(map[string]string{}, map[string]string{
-					"disable-units": units,
-				}),
+				data: newTestData(map[string]string{}, newSharedData().
+					SetRepositoryDisabledUnits(unitTypes),
+				),
 				error: "Not Found",
 			},
 			{
-				data: newTestData(map[string]string{}, map[string]string{
-					"doer":       "regularuser",
-					"repository": "userowner/repositorypublic",
-					"doer.scope": "write:issue",
-				}),
+				data: newTestData(map[string]string{}, newSharedData().
+					SetDoerName("regularuser").
+					SetRepositoryName("userowner/repositorypublic").
+					SetDoerScope(scopes),
+				),
 				error: "user should have a permission to write to a repo",
 			},
 		},
@@ -48,19 +47,19 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 			signatureString,
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
+			fixtureDisableUnits(t, permissions, data.shared.RepositoryDisabledUnits())
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			if data.HasShared("repository") {
-				owner, _, found := strings.Cut(data.GetShared("repository"), "/")
+			if data.shared.HasRepositoryName() {
+				owner, _, found := strings.Cut(data.shared.RepositoryName(), "/")
 				require.True(t, found)
-				data.SetShared("doer", owner)
+				data.shared.SetDoerName(owner)
 			} else {
-				data.SetSharedDefault("repository", "userowner/repositorypublic")
-				data.SetSharedDefault("doer", "userowner")
+				data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
+				data.shared.SetDoerNameDefault("userowner")
 			}
-			data.SetSharedDefault("token.level", "write")
+			data.shared.SetTokenLevelDefault("write")
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

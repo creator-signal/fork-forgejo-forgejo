@@ -15,27 +15,25 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "userowner",
-				"repository": "userowner/repositorypublic",
-				"doer.scope": "read:user,write:repository",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("userowner").
+				SetDoerScope("read:user,write:repository").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 		},
 		{
-			data: newTestData(map[string]string{}, map[string]string{
-				"doer":       "regular",
-				"repository": "userowner/repositorypublic",
-				"doer.scope": "read:user,write:repository",
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoerName("regular").
+				SetDoerScope("read:user,write:repository").
+				SetRepositoryName("userowner/repositorypublic"),
+			),
 			error: "user should be the owner of the repo",
 		},
 	}
 	for _, unitType := range unitTypes {
-		unit := unitsTypeToString(unitType)
 		fixtures = append(fixtures, &testCase{
-			data: newTestData(map[string]string{}, map[string]string{
-				"disable-units": unit,
-			}),
+			data: newTestData(map[string]string{}, newSharedData().
+				SetRepositoryDisabledUnits([]unit_model.Type{unitType})),
 			error: "Not Found",
 		})
 	}
@@ -46,11 +44,12 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 			"ReqOwner",
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureDisableUnits(t, permissions, data.GetShared("disable-units"))
+			fixtureDisableUnits(t, permissions, data.shared.RepositoryDisabledUnits())
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.SetShared("doer", "doeradmin")
+			data.shared.SetDoerName("doeradmin")
+			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,
 		staticArgs: 1,

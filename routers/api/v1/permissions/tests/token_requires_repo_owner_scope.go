@@ -19,50 +19,50 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 		{
 			data: newTestData(map[string]string{
 				"owner": "doerregular",
-			}, map[string]string{
-				"doer.scope":  "read:user",
-				"token.level": "read",
-			}),
+			}, newSharedData().
+				SetDoerScope("read:user").
+				SetTokenLevel("read"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"owner": "doerregular",
-			}, map[string]string{
-				"doer.scope":  "read:user",
-				"token.level": "write",
-			}),
+			}, newSharedData().
+				SetDoerScope("read:user").
+				SetTokenLevel("write"),
+			),
 			error: "token does not have at least one of required scope(s): [write:user]",
 		},
 		{
 			data: newTestData(map[string]string{
 				"owner": "regularorg",
-			}, map[string]string{
-				"doer.scope":  "read:organization",
-				"token.level": "read",
-			}),
+			}, newSharedData().
+				SetDoerScope("read:organization").
+				SetTokenLevel("read"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"owner": "regularorg",
-			}, map[string]string{
-				"doer.scope":  "read:organization",
-				"token.level": "write",
-			}),
+			}, newSharedData().
+				SetDoerScope("read:organization").
+				SetTokenLevel("write"),
+			),
 			error: "token does not have at least one of required scope(s): [write:organization]",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		if !data.HasOwn("owner") {
-			if data.HasShared("repository") {
-				owner, _, found := strings.Cut(data.GetShared("repository"), "/")
+			if data.shared.HasRepositoryName() {
+				owner, _, found := strings.Cut(data.shared.RepositoryName(), "/")
 				require.True(t, found)
 				data.SetOwn("owner", owner)
 			} else {
 				data.SetOwn("owner", "doerregular")
 			}
 		}
-		data.SetSharedDefault("token.level", "read")
+		data.shared.SetTokenLevelDefault("read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		ownerName := data.GetOwn("owner")
@@ -76,7 +76,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
 		owner := fixtureGetUser(t, data.GetOwn("owner"))
-		level := levelStringToLevel(data.GetShared("token.level"))
+		level := levelStringToLevel(data.shared.TokenLevel())
 		t.Logf("calling TokenRequiresRepoOwnerScope(ctx, %+v, %v)", owner, level)
 		apiv1_permissions.TokenRequiresRepoOwnerScope(ctx, owner, level)
 	},

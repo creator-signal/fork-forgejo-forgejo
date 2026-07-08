@@ -19,55 +19,56 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 			data: newTestData(map[string]string{
 				"org":    "ReqOrgMembershipOrg",
 				"setOrg": "true",
-			}, map[string]string{}),
+			}, newSharedData()),
 		},
 		{
 			data: newTestData(map[string]string{
 				"setOrg": "true",
-			}, map[string]string{
-				"doer": "doeradmin",
-			}),
+			}, newSharedData().
+				SetDoerName("doeradmin").
+				SetDoerAdmin(true),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"org":    "ReqOrgMembershipOrg",
 				"setOrg": "true",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"org":      "ReqOrgMembershipOrg",
 				"orgOwner": "ReqOrgMembershipOrgOwner",
 				"setOrg":   "true",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 			error: "Must be an organization member",
 		},
 		{
 			data: newTestData(map[string]string{
 				"org":     "ReqOrgMembershipOrg",
 				"setTeam": "true",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"org":      "ReqOrgMembershipOrg",
 				"orgOwner": "ReqOrgMembershipOrgOwner",
 				"setTeam":  "true",
-			}, map[string]string{
-				"doer": "regularuser",
-			}),
+			}, newSharedData().
+				SetDoerName("regularuser"),
+			),
 			error: "Not Found",
 		},
 		{
 			data: newTestData(map[string]string{
 				"setOrg": "true",
-			}, map[string]string{}),
+			}, newSharedData()),
 			error: "unprepared context",
 		},
 	},
@@ -82,7 +83,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 		data.SetOwnDefault("setOrg", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.GetShared("doer")
+		orgOwner := data.shared.DoerName()
 		if data.HasOwn("orgOwner") {
 			orgOwner = data.GetOwn("orgOwner")
 		}
