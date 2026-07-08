@@ -274,10 +274,11 @@ func TestAPIRepoFundingConfigBasics(t *testing.T) {
 				"liberapay: 'text/other'\n" + // omitted (contains a `/`)
 				"thanks_dev: 'could/be/real/bad'\n" + // omitted (too many `/`)
 				"custom:\n" +
-				`- '#" style="background: url(localhost)'` + "\n" +
+				`- '#" style="background: url(localhost)'` + "\n" + // this is just a hash segment tbh
 				`- 'https://example.com" class="rogue injection'` + "\n" + // omitted (space in domain name)
-				`- 'https://example.com/" class="rogue injection'` + "\n" + // URL escaped
-				"- \"<script>alert`1`</script>\""
+				`- 'https://example.com/" class="rogue injection'` + "\n" + // path gets URL escaped
+				"- \"<script>alert`1`</script>\"\n" + // omitted ("`" in domain name)
+				"- \"Arbitrary: text\"" // omitted (": text" is not a port number)
 			err := createOrReplaceFileInBranch(owner, repo, treePath, repo.DefaultBranch, config)
 			require.NoError(t, err)
 			funding := getRepoFundingConfig(t, repo, token)
@@ -289,13 +290,14 @@ func TestAPIRepoFundingConfigBasics(t *testing.T) {
 			assert.Equal(t, "Value for key 'ko_fi' does not match pattern /^[^/]+$/\n"+
 				"Value for key 'liberapay' does not match pattern /^[^/]+$/\n"+
 				`Value for key 'thanks_dev' does not match pattern /^[^/]+\/[^/]+\/[^/]+$/`+"\n"+
-				`Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`,
+				`Invalid URL value for key 'custom': parse "https://example.com\" class=\"rogue injection": invalid character " " in host name`+"\n"+
+				`Invalid URL value for key 'custom': parse "http://<script>alert`+"`1`"+`</script>": invalid character "`+"`"+` in host name`+"\n"+
+				`Invalid URL value for key 'custom': parse "http://Arbitrary: text": invalid port ": text" after host`,
 				validation.Message)
 
-			assert.Len(t, funding, 3)
-			assertCustom(t, funding[0], `#" style="background: url(localhost)`, "http://#%22%20style=%22background:%20url(localhost)")
+			assert.Len(t, funding, 2)
+			assertCustom(t, funding[0], `#" style="background: url(localhost)`, "http://localhost:3003/user2/funding_evil/src/branch/main/.forgejo/FUNDING.yml#%22%20style=%22background:%20url%28localhost%29")
 			assertCustom(t, funding[1], `https://example.com/" class="rogue injection`, "https://example.com/%22%20class=%22rogue%20injection")
-			assertCustom(t, funding[2], "<script>alert`1`</script>", "http://%3Cscript%3Ealert%601%60%3C/script%3E")
 		})
 	})
 }

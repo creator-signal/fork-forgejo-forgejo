@@ -205,7 +205,7 @@ buy_me_a_coffee: example
 polar: example
 thanks_dev: u/gh/example
 tidelift: npm/example
-custom: ["https://example.com", example.com]
+custom: ["https://example.com", 😀.com]
 `},
 	}}, nil)
 	newRepo(t, 2, "funding_some_valid", nil, []FileChanges{{
@@ -233,6 +233,7 @@ custom:
   - 'https://example.com" class="rogue injection'
   - 'https://example.com/" class="rogue injection'
   - '<script>alert` + "`" + `1` + "`" + `</script>'
+  - 'Arbitrary: text'
 `},
 	}}, nil)
 	newRepo(t, 6, ".profile", nil, []FileChanges{{

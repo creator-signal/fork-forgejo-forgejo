@@ -68,7 +68,7 @@ test('Sponsor modal (repo)', async ({browser}) => {
   await expectSponsorEntry(items.nth(11), 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
   await expectSponsorEntry(items.nth(12), 'tidelift', 'tidelift.com/funding/github/npm/example', 'https://tidelift.com/funding/github/npm/example');
   await expectSponsorEntry(items.nth(13), 'custom', 'https://example.com', 'https://example.com');
-  await expectSponsorEntry(items.nth(14), 'custom', 'example.com', 'http://example.com');
+  await expectSponsorEntry(items.nth(14), 'custom', '😀.com', 'http://xn--e28h.com');
 
   await screenshot(page);
 });
@@ -304,10 +304,9 @@ test('Sponsor modal (repo): mitigates XSS', async ({browser}) => {
   // list items should contain encoded strings as given in config; these strings should be interpreted as text, NOT as HTML markup
   // strings that don't produce valid URLs or whose value does not match the regex are omitted with error
   const items = sponsorModal.getByRole('listitem');
-  await expect(items).toHaveCount(3);
-  await expectSponsorEntry(items.nth(0), 'custom', '#" style="background: url(localhost)', 'http://#%22%20style=%22background:%20url%28localhost%29');
+  await expect(items).toHaveCount(2);
+  await expectSponsorEntry(items.nth(0), 'custom', '#" style="background: url(localhost)', 'http:#%22%20style=%22background:%20url%28localhost%29');
   await expectSponsorEntry(items.nth(1), 'custom', 'https://example.com/" class="rogue injection', 'https://example.com/%22%20class=%22rogue%20injection');
-  await expectSponsorEntry(items.nth(2), 'custom', '<script>alert`1`</script>', 'http://%3Cscript%3Ealert%601%60%3C/script%3E');
 
   // no real injected <script>
   await expect(sponsorModal.locator('a *')).toBeHidden();

@@ -4,7 +4,6 @@
 package funding
 
 import (
-	"fmt"
 	"reflect"
 	"slices"
 
@@ -14,57 +13,12 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-type RawRepoFundingConfigEntry struct {
-	Key   string
-	Value any
-}
-
-// A funding config consists of unique key-value pairs, considered in order.
-// Each key corresponds to at least one value, which should be either a bare
-// string or a list of strings, but the parser doesn't have to worry about the
-// actual type; that's the validator's job.
-type RawRepoFundingConfig []RawRepoFundingConfigEntry
-
-// called by `yaml.Unmarshal` when decoding file data
-func (c *RawRepoFundingConfig) UnmarshalYAML(value *yaml.Node) error {
-	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("Expected YAML mapping, got %v", value.Kind)
-	}
-
-	// in a mapping, Content contains pairs of nodes, so we iterate two at a time
-	for i := 0; i < len(value.Content); i += 2 {
-		// peeking ahead at the value, store it if it's there
-		var entryData any
-		if err := value.Content[i+1].Decode(&entryData); err != nil {
-			return err // not sure what we hit that won't fit into `any`, but it wasn't good :/
-		}
-
-		// since we have a value, grab the key
-		key := value.Content[i].Value
-		for _, alreadyEntry := range *c {
-			if alreadyEntry.Key == key {
-				return fmt.Errorf("Duplicate YAML key: %s", key)
-			}
-		}
-
-		// record the pair
-		*c = append(*c, RawRepoFundingConfigEntry{Key: key, Value: entryData})
-	}
-
-	return nil
-}
-
-type EntriesAndLineErrors struct {
-	EntryList []*api.RepoFundingEntry
-	Errs      []error
-}
-
 // Parses the given file data for funding entries. Fails if the data could not
-// be understood for some reason.
-func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
-	config := make(RawRepoFundingConfig, 0)
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		return nil, err
+// be understood as a funding config documenet.
+func getFundingFromBlob(content []byte) (entries []*api.RepoFundingEntry, lineErrors []error, parseErr error) {
+	config := make(rawRepoFundingConfig, 0)
+	if parseErr := yaml.Unmarshal(content, &config); parseErr != nil {
+		return nil, nil, parseErr
 	}
 
 	entryList := make([]*api.RepoFundingEntry, 0)
@@ -132,5 +86,5 @@ func GetFundingFromBlob(content []byte) (*EntriesAndLineErrors, error) {
 		}
 	}
 
-	return &EntriesAndLineErrors{entryList, errs}, nil
+	return entryList, errs, nil
 }

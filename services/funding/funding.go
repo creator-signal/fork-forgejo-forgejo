@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strings"
+
+	"golang.org/x/net/idna"
 
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/modules/git"
@@ -35,6 +38,35 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
+// Transforms unicode in the given URL's domain name into its punycode
+// representation.
+//
+// See also https://en.wikipedia.org/wiki/Internationalized_domain_name
+func toASCII(url *url.URL) (*url.URL, error) {
+	port := url.Port()
+
+	// Punycode!
+	hostname, err := idna.ToASCII(url.Hostname())
+	if err != nil {
+		return nil, err
+	}
+
+	// Domain names are always lowercase
+	hostname = strings.ToLower(hostname)
+
+	// url.Hostname() removes brackets, so we replace them if the host had them before
+	if strings.HasPrefix(url.Host, "[") {
+		url.Host = "[" + hostname + "]"
+	} else {
+		url.Host = hostname
+	}
+	if port != "" {
+		url.Host += ":" + port
+	}
+
+	return url, nil
+}
+
 // Constructs a funding entry from the known funding provider config and the
 // user-provided `text`.
 func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*api.RepoFundingEntry, error) {
@@ -45,21 +77,34 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 	}
 
 	urlText := fmt.Sprintf(provider.URL, input)
+	if !strings.Contains(urlText, "://") {
+		// assume HTTP before parsing (otherwise, url.Parse may think the *hostname* is the scheme!)
+		urlText = "http://" + urlText
+	}
+
 	urlValue, err := url.Parse(urlText) // value should parse as a URL, just in case interpolation got us something invalid
 	if err != nil {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
-	if urlValue.Scheme == "" {
-		// assume HTTP
-		urlText = "http://" + urlValue.String()
-	} else {
-		urlText = urlValue.String()
+
+	// TODO: Look into whether this should also respect setting.Service.ValidSiteURLSchemes
+	validSchemes := []string{"http", "https"}
+	if !slices.Contains(validSchemes, urlValue.Scheme) {
+		return nil, &ErrCannotParseURL{Name: provider.Name, Err: &ErrBadURLScheme{
+			ValidSchemes: validSchemes,
+			GivenScheme: urlValue.Scheme,
+		}}
+	}
+
+	urlValue, err = toASCII(urlValue)
+	if err != nil {
+		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
 
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
 	entry.Text = fmt.Sprintf(provider.Text, input)
-	entry.URL = urlText
+	entry.URL = urlValue.String()
 
 	return entry, nil
 }
@@ -104,12 +149,16 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 
 	configPath = fmt.Sprintf("/%s/src/branch/%s/%s", util.PathEscapeSegments(r.FullName()), util.PathEscapeSegments(r.DefaultBranch), configPath)
 
-	data, err := GetFundingFromBlob(configContent)
+	data, lineErrors, err := getFundingFromBlob(configContent)
 	if err != nil {
 		return nil, err
 	}
 
-	funding := &RepoFunding{data.EntryList, configPath, data.Errs}
+	funding := &RepoFunding{
+		Entries: data,
+		ConfigPath: configPath,
+		Errors: lineErrors,
+	}
 	return funding, nil
 }
 

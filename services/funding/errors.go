@@ -6,6 +6,7 @@ package funding
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	repo_model "forgejo.org/models/repo"
 )
@@ -75,6 +76,17 @@ type ErrCannotParseURL struct {
 
 func (err ErrCannotParseURL) Error() string {
 	return fmt.Sprintf("Invalid URL value for key '%s': %v", err.Name, err.Err.Error())
+}
+
+// ErrBadURLScheme occurs when a URL scheme is not in a list of valid schemes.
+type ErrBadURLScheme struct {
+	GivenScheme string
+	ValidSchemes []string
+}
+
+func (err ErrBadURLScheme) Error() string {
+	valid := strings.Join(err.ValidSchemes, ", ")
+	return fmt.Sprintf("invalid scheme \"%s\", expected one of: %s", err.GivenScheme, valid)
 }
 
 // ErrInvalidYamlType occurs when a funding config is misshaped.
