@@ -503,9 +503,14 @@ func download(ctx *context.Context, archiveName string, archiver *repo_model.Rep
 
 	// Add nix format link header so tarballs lock correctly:
 	// https://github.com/nixos/nix/blob/56763ff918eb308db23080e560ed2ea3e00c80a7/doc/manual/src/protocols/tarball-fetcher.md
-	ctx.Resp.Header().Add("Link", fmt.Sprintf("<%s/archive/%s.tar.gz?rev=%s>; rel=\"immutable\"",
+	ctx.Resp.Header().Add("Link", fmt.Sprintf("<%s/archive/%s.%s?rev=%s>; rel=\"immutable\"",
 		ctx.Repo.Repository.APIURL(),
-		archiver.CommitID, archiver.CommitID))
+		archiver.CommitID, archiver.Type, archiver.CommitID))
+
+	// Add entity tag for optional efficiency and bandwidth saving
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag
+	// https://datatracker.ietf.org/doc/html/rfc9110#name-etag
+	ctx.Resp.Header().Add("ETag", fmt.Sprintf("\"%s-%s\"", archiver.CommitID, archiver.Type))
 
 	rPath := archiver.RelativePath()
 	if setting.RepoArchive.Storage.MinioConfig.ServeDirect {

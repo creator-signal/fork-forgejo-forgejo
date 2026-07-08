@@ -41,6 +41,21 @@ func TestRepoDownloadArchive(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, resp.Header().Get("Content-Encoding"))
 	assert.Len(t, bs, 320)
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+	assert.Equal(t, fmt.Sprintf("<%s/archive/65f1bf27bc3bf70f64657658635e66094edbcb4d.zip?rev=65f1bf27bc3bf70f64657658635e66094edbcb4d>; rel=\"immutable\"", repo.APIURL()), resp.Header().Get("Link"))
+	assert.Equal(t, "\"65f1bf27bc3bf70f64657658635e66094edbcb4d-zip\"", resp.Header().Get("ETag"))
+
+	// different format
+	req = NewRequest(t, "HEAD", "/user2/repo1/archive/master.tar.gz")
+	resp = MakeRequest(t, req, http.StatusOK)
+	assert.Equal(t, fmt.Sprintf("<%s/archive/65f1bf27bc3bf70f64657658635e66094edbcb4d.tar.gz?rev=65f1bf27bc3bf70f64657658635e66094edbcb4d>; rel=\"immutable\"", repo.APIURL()), resp.Header().Get("Link"))
+	assert.Equal(t, "\"65f1bf27bc3bf70f64657658635e66094edbcb4d-tar.gz\"", resp.Header().Get("ETag"))
+
+	// using API URL
+	req = NewRequest(t, "GET", "/api/v1/repos/user2/repo1/archive/master.zip")
+	resp = MakeRequest(t, req, http.StatusOK)
+	assert.Equal(t, fmt.Sprintf("<%s/archive/65f1bf27bc3bf70f64657658635e66094edbcb4d.zip?rev=65f1bf27bc3bf70f64657658635e66094edbcb4d>; rel=\"immutable\"", repo.APIURL()), resp.Header().Get("Link"))
+	assert.Equal(t, "\"65f1bf27bc3bf70f64657658635e66094edbcb4d-zip\"", resp.Header().Get("ETag"))
 
 	// Verify that unrecognized archive type returns 404
 	req = NewRequest(t, "GET", "/user2/repo1/archive/master.invalid")
@@ -70,6 +85,8 @@ func TestRepoDownloadArchiveSubdir(t *testing.T) {
 
 		t.Run("Backend", func(t *testing.T) {
 			resp := MakeRequest(t, NewRequestf(t, "GET", "/%s/archive/master:subdir.tar.gz", repo.FullName()), http.StatusOK)
+			assert.Equal(t, fmt.Sprintf("<%s/archive/d6729459b9c5c68c96543f7acbf88de93ce94260.tar.gz?rev=d6729459b9c5c68c96543f7acbf88de93ce94260>; rel=\"immutable\"", repo.APIURL()), resp.Header().Get("Link"))
+			assert.Equal(t, "\"d6729459b9c5c68c96543f7acbf88de93ce94260-tar.gz\"", resp.Header().Get("ETag"))
 
 			uncompressedStream, err := gzip.NewReader(resp.Body)
 			require.NoError(t, err)

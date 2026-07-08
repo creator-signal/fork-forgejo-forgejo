@@ -341,6 +341,11 @@ func download(ctx *context.APIContext, archiveName string, archiver *repo_model.
 		archiver.CommitID,
 	))
 
+	// Add entity tag for optional efficiency and bandwidth saving
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag
+	// https://datatracker.ietf.org/doc/html/rfc9110#name-etag
+	ctx.Resp.Header().Add("ETag", fmt.Sprintf("\"%s-%s\"", archiver.CommitID, archiver.Type))
+
 	rPath := archiver.RelativePath()
 	if setting.RepoArchive.Storage.MinioConfig.ServeDirect {
 		// If we have a signed url (S3, object storage), redirect to this directly.
