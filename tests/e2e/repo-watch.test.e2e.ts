@@ -10,12 +10,9 @@
 import {expect} from '@playwright/test';
 import {test, login_user, login} from './utils_e2e.ts';
 
-test.beforeAll(async ({browser}, workerInfo) => {
-  await login_user(browser, workerInfo, 'user2');
-});
+test.use({user: 'user2'});
 
-test('Watch dropdown: toggle watch events', async ({browser}, workerInfo) => {
-  const page = await login({browser}, workerInfo);
+test('Watch dropdown: toggle watch events', async ({browser, page}, workerInfo) => {
   await page.goto('/user2/repo1');
 
   // Find the watch dropdown
@@ -41,8 +38,7 @@ test('Watch dropdown: toggle watch events', async ({browser}, workerInfo) => {
   await expect(watchMenu).toBeHidden();
 });
 
-test('Watch dropdown: unwatch all shows proper state', async ({browser}, workerInfo) => {
-  const page = await login({browser}, workerInfo);
+test('Watch dropdown: unwatch all shows proper state', async ({browser, page}, workerInfo) => {
   await page.goto('/user2/repo1');
 
   const watchDropdown = page.locator('details.dropdown#watch-button');
