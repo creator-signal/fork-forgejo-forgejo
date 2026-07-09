@@ -278,6 +278,11 @@ forgejo.org/services/auth
 forgejo.org/services/context
 	GetPrivateContext
 
+forgejo.org/services/funding
+	ErrFundingNotExist.Error
+	GetFundingFromCommit
+	GetFundingFromDefaultBranch
+
 forgejo.org/services/notify
 	UnregisterNotifier
 

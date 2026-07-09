@@ -52,6 +52,7 @@ import (
 	"forgejo.org/modules/util"
 	"forgejo.org/routers/web/feed"
 	"forgejo.org/services/context"
+	funding_service "forgejo.org/services/funding"
 	issue_service "forgejo.org/services/issue"
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
@@ -451,6 +452,33 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	} else if ctx.Repo.TreePath == ".gitmodules" {
 		if fInfo.fileSize > git.MaxGitmodulesFileSize {
 			ctx.Data["FileWarning"] = ctx.Locale.Tr("repo.view.gitmodules_too_large")
+		}
+	} else if funding_service.CouldBeFundingConfig(ctx.Repo.TreePath) {
+		funding, err := funding_service.GetFundingFromPath(ctx.Repo.Repository, ctx.Repo.TreePath, ctx.Repo.Commit)
+		if err != nil {
+			ctx.Data["FileError"] = ctx.Locale.Tr("funding.yaml_error.unknown", strings.TrimSpace(err.Error()))
+		} else if funding != nil && len(funding.Errors) > 0 {
+			ctx.Data["FileError"] = ctx.Locale.TrPluralString(len(funding.Errors), "funding.yaml_error.n_errors")
+
+			details := make([]template.HTML, 0, len(funding.Errors))
+			for _, err := range funding.Errors {
+				if unknownProviderErr, ok := errors.AsType[*funding_service.ErrUnknownFundingProvider](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.unknown_provider", unknownProviderErr.Name))
+				} else if tooManyErr, ok := errors.AsType[*funding_service.ErrTooManyFundingProviders](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.n_too_many_providers", tooManyErr.TotalLimit))
+				} else if duplicateEntryErr, ok := errors.AsType[*funding_service.ErrDuplicateFundingEntry](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.duplicate_entry", duplicateEntryErr.Name, duplicateEntryErr.Value))
+				} else if badInputErr, ok := errors.AsType[*funding_service.ErrBadInput](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.bad_input", badInputErr.Name, badInputErr.Pattern.String()))
+				} else if invalidYamlErr, ok := errors.AsType[*funding_service.ErrInvalidYamlType](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.invalid_yaml_type", invalidYamlErr.Name))
+				} else if parseErr, ok := errors.AsType[*funding_service.ErrCannotParseURL](err); ok {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.parse_url", parseErr.Name, parseErr.Err.Error()))
+				} else {
+					details = append(details, ctx.Locale.Tr("funding.yaml_error.unknown", strings.TrimSpace(err.Error())))
+				}
+			}
+			ctx.Data["FileErrorDetails"] = details
 		}
 	}
 
