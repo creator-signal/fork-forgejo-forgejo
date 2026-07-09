@@ -8,11 +8,11 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test, login_user, login} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
 
 test.use({user: 'user2'});
 
-test('Watch dropdown: toggle watch events', async ({browser, page}, workerInfo) => {
+test('Watch dropdown: toggle watch events', async ({page}, _) => {
   await page.goto('/user2/repo1');
 
   // Find the watch dropdown
@@ -38,7 +38,7 @@ test('Watch dropdown: toggle watch events', async ({browser, page}, workerInfo) 
   await expect(watchMenu).toBeHidden();
 });
 
-test('Watch dropdown: unwatch all shows proper state', async ({browser, page}, workerInfo) => {
+test('Watch dropdown: unwatch all shows proper state', async ({page}, _) => {
   await page.goto('/user2/repo1');
 
   const watchDropdown = page.locator('details.dropdown#watch-button');
