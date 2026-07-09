@@ -102,6 +102,8 @@ func MergedManually(
 // allowed to push to the base branch of the repository.
 //
 // A mismatch of the branch comparison check is silently ignored.
+//
+// Only the first 100 commits are checked.
 func CloseManuallyMergedPRs(
 	ctx context.Context,
 	doer *user_model.User,
@@ -115,7 +117,12 @@ func CloseManuallyMergedPRs(
 	}
 
 	// Commits are appended in the reverse order.
-	for _, commit := range slices.Backward(commits) {
+	for i, commit := range slices.Backward(commits) {
+		// Skip checking after 100 commits to avoid a performance penalty.
+		if i >= 100 {
+			return nil
+		}
+
 		for _, ref := range references.FindAllIssueReferences(commit.Message) {
 			// Skip processing for other actions, we're only interested in manual merges.
 			if ref.Action != references.XRefActionManuallyMerges {
