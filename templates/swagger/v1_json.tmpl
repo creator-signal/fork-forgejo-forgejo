@@ -9401,6 +9401,74 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/funding": {
+      "get": {
+        "description": "Only the first funding config file is the considered. The file may contain validation errors, in which case, invalid entries are omitted from the returned data. Query /repos/{owner}/{repo}/funding/validate for a description of each error.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Returns the funding options for a repo",
+        "operationId": "repoGetFundingConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/RepoFunding"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/funding/validate": {
+      "get": {
+        "description": "Only the first funding config file is the considered. A file with validation errors may still contain valid funding options. Query /repos/{owner}/{repo}/funding to list any such entries.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Returns the validation information for the funding config of the repo",
+        "operationId": "repoValidateFundingConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ConfigValidation"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/git/blobs": {
       "get": {
         "produces": [
@@ -10459,7 +10527,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/RepoIssueConfigValidation"
+            "$ref": "#/responses/ConfigValidation"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -19394,6 +19462,23 @@
         }
       }
     },
+    "/settings/funding": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get instance's global settings for funding",
+        "operationId": "getFundingSettings",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/FundingSettings"
+          }
+        }
+      }
+    },
     "/settings/repository": {
       "get": {
         "produces": [
@@ -24699,6 +24784,21 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "ConfigValidation": {
+      "description": "ConfigValidation is a validation for a config file",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "valid": {
+          "type": "boolean",
+          "x-go-name": "Valid"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "ContentsResponse": {
       "description": "ContentsResponse contains information about a repo's entry's (dir, file, symlink, submodule) metadata and content",
       "type": "object",
@@ -27213,6 +27313,47 @@
       "type": "object",
       "x-go-package": "forgejo.org/modules/forgefed"
     },
+    "FundingProvider": {
+      "description": "FundingProvider contains a funding provider exposed by API",
+      "type": "object",
+      "properties": {
+        "input_pattern": {
+          "description": "A regex string that input text must match before it may be interpolated into either of the Template or Title strings",
+          "type": "string",
+          "x-go-name": "InputPattern"
+        },
+        "name": {
+          "description": "Identifies the funding provider",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "template": {
+          "description": "A template string for the value of an entry of this provider",
+          "type": "string",
+          "x-go-name": "Template"
+        },
+        "title": {
+          "description": "A template string for the title of an entry of this provider",
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "FundingSettings": {
+      "description": "FundingProvider contains global funding provider settings exposed by API",
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FundingProvider"
+          },
+          "x-go-name": "Providers"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "GPGKey": {
       "description": "GPGKey a user GPG key to sign commit and tag in repository",
       "type": "object",
@@ -27882,20 +28023,6 @@
         "url": {
           "type": "string",
           "x-go-name": "URL"
-        }
-      },
-      "x-go-package": "forgejo.org/modules/structs"
-    },
-    "IssueConfigValidation": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "x-go-name": "Message"
-        },
-        "valid": {
-          "type": "boolean",
-          "x-go-name": "Valid"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -30068,6 +30195,28 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "RepoFundingEntry": {
+      "description": "RepoFundingEntry is a funding option for a repo",
+      "type": "object",
+      "properties": {
+        "provider_name": {
+          "description": "Identifies the funding provider to which the entry belongs",
+          "type": "string",
+          "x-go-name": "ProviderName"
+        },
+        "title": {
+          "description": "Identifies to other users the account on the funding provider, similar to a \"display name\"; suitable for use as hyperlink text",
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "value": {
+          "description": "The direct funding entry data, such as the URL to a funding provider's webpage associated with the project to which the entry belongs",
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "RepoTargetOption": {
       "type": "object",
       "required": [
@@ -31863,6 +32012,12 @@
         "$ref": "#/definitions/Compare"
       }
     },
+    "ConfigValidation": {
+      "description": "ConfigValidation",
+      "schema": {
+        "$ref": "#/definitions/ConfigValidation"
+      }
+    },
     "ContentsListResponse": {
       "description": "ContentsListResponse",
       "schema": {
@@ -31953,6 +32108,12 @@
       "description": "FilesResponse",
       "schema": {
         "$ref": "#/definitions/FilesResponse"
+      }
+    },
+    "FundingSettings": {
+      "description": "FundingSettings",
+      "schema": {
+        "$ref": "#/definitions/FundingSettings"
       }
     },
     "GPGKey": {
@@ -32621,16 +32782,19 @@
         "$ref": "#/definitions/RepoCollaboratorPermission"
       }
     },
+    "RepoFunding": {
+      "description": "RepoFunding",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/RepoFundingEntry"
+        }
+      }
+    },
     "RepoIssueConfig": {
       "description": "RepoIssueConfig",
       "schema": {
         "$ref": "#/definitions/IssueConfig"
-      }
-    },
-    "RepoIssueConfigValidation": {
-      "description": "RepoIssueConfigValidation",
-      "schema": {
-        "$ref": "#/definitions/IssueConfigValidation"
       }
     },
     "RepoNewIssuePinsAllowed": {

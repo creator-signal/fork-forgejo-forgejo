@@ -36,3 +36,20 @@ type GeneralAttachmentSettings struct {
 	MaxSize      int64  `json:"max_size"`
 	MaxFiles     int    `json:"max_files"`
 }
+
+// FundingProvider contains a funding provider exposed by API
+type FundingProvider struct {
+	// Identifies the funding provider
+	Name string `json:"name"`
+	// A template string for the title of an entry of this provider
+	Title string `json:"title"`
+	// A template string for the value of an entry of this provider
+	Template string `json:"template"`
+	// A regex string that input text must match before it may be interpolated into either of the Template or Title strings
+	InputPattern string `json:"input_pattern"`
+}
+
+// FundingProvider contains global funding provider settings exposed by API
+type FundingSettings struct {
+	Providers []*FundingProvider `json:"providers"`
+}
