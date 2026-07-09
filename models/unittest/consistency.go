@@ -89,7 +89,7 @@ func init() {
 		}
 
 		actual := GetCountByCond(t, "watch", builder.Eq{"repo_id": repo.int("ID")}.
-		  // This could be BuilderWatchAnything() but that would introduce an import cycle.
+			// This could be BuilderWatchAnything() but that would introduce an import cycle.
 			And(builder.Or(
 				builder.Eq{"`watch`.watch_selection_issues": true},
 				builder.Eq{"`watch`.watch_selection_pull_requests": true},
