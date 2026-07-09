@@ -1,0 +1,3 @@
+<button type="button" class="sponsor button {{if .Org}}secondary{{else}}ui compact small basic{{end}}" aria-label="{{ctx.Locale.Tr "funding.sponsor.modal.header" .FundingTarget}}" command="show-modal" commandfor="sponsor-modal">
+	{{svg "octicon-heart" 16 "icon-sponsor"}}<span class="text not-mobile">{{ctx.Locale.Tr "funding.sponsor.button"}}</span>
+</button>

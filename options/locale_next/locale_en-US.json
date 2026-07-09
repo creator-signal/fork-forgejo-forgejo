@@ -1019,5 +1019,8 @@
 	"funding.yaml_error.parse_url": "Invalid URL value for key '%s': %v",
 	"funding.yaml_error.invalid_yaml_type": "Invalid type for key '%s', expected a string or string array",
 	"funding.yaml_error.unknown": "Unknown error: %s",
+	"funding.sponsor.button": "Sponsor",
+	"funding.sponsor.modal.header": "Sponsor %s",
+	"funding.sponsor.modal.config_has_errors": "The <a href=\"%s\">funding config</a> contains errors.",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
