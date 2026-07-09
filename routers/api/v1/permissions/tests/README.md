@@ -32,19 +32,19 @@ type functionTest struct {
 
 The `testData` of the `testCase` is split into data:
 
-- owned by the `testCase` (`GetOwn`, `SetOwn`) and not meant to be
-  used anywhere else in the sequence. They should be used when
-  creating a new `testCase` unless there is a good reason not to.
-- shared by all the `testCase` in the sequence (`GetShared`,
-  `SetShared`) and care must be taken about how such data is handled
-  by the `fulfillNeeds` function
+- owned by the `testCase` (`Has`, `Get`, `Set`, `SetDefault`) and not
+  meant to be used anywhere else in the sequence. They should be used
+  when creating a new `testCase` unless there is a good reason not to.
+- shared by all the `testCase` in the sequence (`shared`)
+  and care must be taken about how such data is handled
+  by the `fulfillNeeds` function.
 
-Because shared keys can quickly become difficult to figure out, they
-must be listed in the `verifySharedKey` function and only used when
-there is no other way around it. For instance `APIAuthorization` must
-be aware of the `doer` and it needs to be overriden by the `ReqAdmin`
-tests function when it is not last in the sequence, otherwise it will
-always fail.
+Data shared between tests must be limited to a minimum because their
+interactions are difficult to figure out. For instance
+`APIAuthorization` must set a default `shared.DoerName()` and the
+`shared.DoerAdmin()` value associated with it needs to be overriden by
+the `ReqAdmin` tests function when it is not last in the sequence,
+otherwise it will fail.
 
 ## Permission function signatures
 

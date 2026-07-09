@@ -39,11 +39,11 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 		},
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		require.True(t, data.HasOwn("pullRequestBranch"))
-		fixtureCreateBranch(t, permissions, data.GetOwn("pullRequestBranch"))
-		require.True(t, data.HasOwn("pullRequestAuthor"))
-		require.True(t, data.HasOwn("pullRequest"))
-		fixtureCreatePullRequest(t, permissions, data.GetOwn("pullRequest"), data.GetOwn("pullRequestAuthor"), data.GetOwn("pullRequestBranch"))
+		require.True(t, data.Has("pullRequestBranch"))
+		fixtureCreateBranch(t, permissions, data.Get("pullRequestBranch"))
+		require.True(t, data.Has("pullRequestAuthor"))
+		require.True(t, data.Has("pullRequest"))
+		fixtureCreatePullRequest(t, permissions, data.Get("pullRequest"), data.Get("pullRequestAuthor"), data.Get("pullRequestBranch"))
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
@@ -51,12 +51,12 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 		require.True(t, found)
 		data.shared.SetDoerName(owner)
 		data.shared.SetRepositoryInitDefault(true)
-		data.SetOwnDefault("pullRequestAuthor", owner)
-		data.SetOwnDefault("pullRequestBranch", "ReqRepoBranchWriter")
-		data.SetOwnDefault("pullRequest", "ReqRepoBranchWriter")
+		data.SetDefault("pullRequestAuthor", owner)
+		data.SetDefault("pullRequestBranch", "ReqRepoBranchWriter")
+		data.SetDefault("pullRequest", "ReqRepoBranchWriter")
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		branch := data.GetOwn("pullRequestBranch")
+		branch := data.Get("pullRequestBranch")
 		t.Logf("calling ReqRepoBranchWriter(ctx, %s)", branch)
 		apiv1_permissions.ReqRepoBranchWriter(ctx, branch)
 	},

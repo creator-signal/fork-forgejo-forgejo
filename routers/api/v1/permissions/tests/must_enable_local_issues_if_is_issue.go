@@ -51,26 +51,26 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetOwnDefault("issue", "issueOne")
-		data.SetOwnDefault("issueAuthor", "issueAuthor")
+		data.SetDefault("issue", "issueOne")
+		data.SetDefault("issueAuthor", "issueAuthor")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureDisableUnits(t, permissions, data.shared.RepositoryDisabledUnits())
-		if data.HasOwn("pullRequest") {
-			require.True(t, data.HasOwn("pullRequestBranch"))
-			fixtureCreateBranch(t, permissions, data.GetOwn("pullRequestBranch"))
-			require.True(t, data.HasOwn("pullRequestAuthor"))
-			require.True(t, data.HasOwn("pullRequest"))
-			fixtureCreatePullRequest(t, permissions, data.GetOwn("pullRequest"), data.GetOwn("pullRequestAuthor"), data.GetOwn("pullRequestBranch"))
-			require.Equal(t, data.GetOwn("issue"), data.GetOwn("pullRequest"))
+		if data.Has("pullRequest") {
+			require.True(t, data.Has("pullRequestBranch"))
+			fixtureCreateBranch(t, permissions, data.Get("pullRequestBranch"))
+			require.True(t, data.Has("pullRequestAuthor"))
+			require.True(t, data.Has("pullRequest"))
+			fixtureCreatePullRequest(t, permissions, data.Get("pullRequest"), data.Get("pullRequestAuthor"), data.Get("pullRequestBranch"))
+			require.Equal(t, data.Get("issue"), data.Get("pullRequest"))
 		} else {
-			issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetOwn("issueAuthor")})
-			fixtureSetIssue(t, permissions, data.GetOwn("issue"), issueAuthor.Name)
+			issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
+			fixtureSetIssue(t, permissions, data.Get("issue"), issueAuthor.Name)
 		}
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		index := fixtureGetIssue(t, data.GetOwn("issue")).Index
+		index := fixtureGetIssue(t, data.Get("issue")).Index
 		t.Logf("calling MustEnableLocalIssuesIfIsIssue(ctx, %d)", index)
 		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, index)
 	},

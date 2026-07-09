@@ -26,6 +26,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
 		&setting.DisableWebhooks,
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableWebhooks = data.GetOwn("DisableWebhooks") == "true"
+		setting.DisableWebhooks = data.Get("DisableWebhooks") == "true"
 	},
 })

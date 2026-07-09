@@ -76,26 +76,26 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetOwnDefault("org", "ReqTeamMembership")
-		data.SetOwnDefault("team", org_model.OwnerTeamName)
+		data.SetDefault("org", "ReqTeamMembership")
+		data.SetDefault("team", org_model.OwnerTeamName)
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		orgOwner := data.shared.DoerName()
-		if data.HasOwn("orgOwner") {
-			orgOwner = data.GetOwn("orgOwner")
+		if data.Has("orgOwner") {
+			orgOwner = data.Get("orgOwner")
 		}
 		var org *org_model.Organization
-		if data.HasOwn("org") {
+		if data.Has("org") {
 			fixtureCreateUser(t, &user_model.User{Name: orgOwner})
-			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.GetOwn("org")}, &user_model.User{Name: orgOwner})
+			org = fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: orgOwner})
 		}
 
-		if data.HasOwn("teams") {
-			fixtureCreateTeams(t, org, data.GetOwn("teams"))
+		if data.Has("teams") {
+			fixtureCreateTeams(t, org, data.Get("teams"))
 		}
 
-		if data.HasOwn("team") {
-			team, err := org_model.GetTeam(t.Context(), org.ID, data.GetOwn("team"))
+		if data.Has("team") {
+			team, err := org_model.GetTeam(t.Context(), org.ID, data.Get("team"))
 			require.NoError(t, err)
 			permissions.SetTeam(team)
 		}

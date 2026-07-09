@@ -278,7 +278,7 @@ func (*reverseProxyAuthenticationResult) IsReverseProxyAuthentication() bool {
 
 func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Permissions, data *sharedData) {
 	var scope auth_model.AccessTokenScope
-	if data.DoerScope() != "" {
+	if data.HasDoerScope() {
 		scope = auth_model.AccessTokenScope(data.DoerScope())
 	} else {
 		scope = auth_model.AccessTokenScopeAll

@@ -32,11 +32,11 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetOwnDefault("user", data.shared.DoerName())
+		data.SetDefault("user", data.shared.DoerName())
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		if data.HasOwn("user") {
-			name := data.GetOwn("user")
+		if data.Has("user") {
+			name := data.Get("user")
 			fixtureCreateUser(t, &user_model.User{Name: name})
 			permissions.SetUser(fixtureGetUser(t, name))
 		}

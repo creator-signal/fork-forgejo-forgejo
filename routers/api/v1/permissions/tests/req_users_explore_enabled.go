@@ -26,6 +26,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionT
 		&setting.Service.Explore.DisableUsersPage,
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.Service.Explore.DisableUsersPage = data.GetOwn("Service.Explore.DisableUsersPage") == "true"
+		setting.Service.Explore.DisableUsersPage = data.Get("Service.Explore.DisableUsersPage") == "true"
 	},
 })

@@ -70,26 +70,26 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 		},
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		require.True(t, data.HasOwn("forkOrg"))
-		if data.GetOwn("forkOrg") == "unknownOrg" {
+		require.True(t, data.Has("forkOrg"))
+		if data.Get("forkOrg") == "unknownOrg" {
 			return
 		}
-		require.True(t, data.HasOwn("forkOrgOwner"))
-		name := data.GetOwn("forkOrg")
-		owner := data.GetOwn("forkOrgOwner")
+		require.True(t, data.Has("forkOrgOwner"))
+		name := data.Get("forkOrg")
+		owner := data.Get("forkOrgOwner")
 		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
 
-		if data.HasOwn("team") {
+		if data.Has("team") {
 			fixtureCreateTeam(t, org, data.shared.DoerName(), &forgery.CreateTeamOptions{
-				Name:             data.GetOwn("team"),
-				CanCreateOrgRepo: data.GetOwn("teamCanCreateOrgRepo") != "false",
+				Name:             data.Get("team"),
+				CanCreateOrgRepo: data.Get("teamCanCreateOrgRepo") != "false",
 
 				Mode: perm.AccessModeWrite,
 			})
 		}
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
-		forkOrg := data.GetOwn("forkOrg")
+		forkOrg := data.Get("forkOrg")
 		t.Logf("calling CheckForkDestination(ctx, %s)", forkOrg)
 		apiv1_permissions.CheckForkDestination(ctx, &forkOrg)
 	},

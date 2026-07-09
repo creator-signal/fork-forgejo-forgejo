@@ -40,7 +40,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
-		setting.Service.RequireSignInView = data.GetOwn("Service.RequireSignInView") == "true"
-		setting.Service.Explore.RequireSigninView = data.GetOwn("Service.Explore.RequireSigninView") == "true"
+		setting.Service.RequireSignInView = data.Get("Service.RequireSignInView") == "true"
+		setting.Service.Explore.RequireSigninView = data.Get("Service.Explore.RequireSigninView") == "true"
 	},
 })

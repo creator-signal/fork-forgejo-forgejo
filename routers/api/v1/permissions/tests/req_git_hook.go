@@ -36,6 +36,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqGitHook, functionTest{
 		data.shared.SetDoerNameDefault("doeradmin")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.DisableGitHooks = data.GetOwn("DisableGitHooks") == "true"
+		setting.DisableGitHooks = data.Get("DisableGitHooks") == "true"
 	},
 })

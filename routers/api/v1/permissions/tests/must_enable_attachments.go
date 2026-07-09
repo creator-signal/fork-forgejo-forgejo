@@ -26,6 +26,6 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableAttachments, functionTe
 		&setting.Attachment.Enabled,
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		setting.Attachment.Enabled = data.GetOwn("Attachment.Enabled") != "false"
+		setting.Attachment.Enabled = data.Get("Attachment.Enabled") != "false"
 	},
 })

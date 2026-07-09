@@ -475,21 +475,21 @@ type testData struct {
 	shared *sharedData
 }
 
-func (o *testData) SetOwn(key, value string) {
+func (o *testData) Set(key, value string) {
 	o.own[key] = value
 }
 
-func (o *testData) SetOwnDefault(key, value string) {
-	if !o.HasOwn(key) {
-		o.SetOwn(key, value)
+func (o *testData) SetDefault(key, value string) {
+	if !o.Has(key) {
+		o.Set(key, value)
 	}
 }
 
-func (o *testData) GetOwn(key string) string {
+func (o *testData) Get(key string) string {
 	return o.own[key]
 }
 
-func (o *testData) HasOwn(key string) bool {
+func (o *testData) Has(key string) bool {
 	_, has := o.own[key]
 	return has
 }
@@ -510,7 +510,7 @@ func newTestData(own map[string]string, shared *sharedData) *testData {
 		shared: shared,
 	}
 	for key, value := range own {
-		testData.SetOwn(key, value)
+		testData.Set(key, value)
 	}
 	return testData
 }

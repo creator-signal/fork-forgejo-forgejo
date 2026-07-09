@@ -70,22 +70,22 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetOwnDefault("issue", "issueOne")
-		data.SetOwnDefault("issueAuthor", "issueAuthor")
-		data.SetOwnDefault("comment", "comment for ReqValidCommentID")
+		data.SetDefault("issue", "issueOne")
+		data.SetDefault("issueAuthor", "issueAuthor")
+		data.SetDefault("comment", "comment for ReqValidCommentID")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.GetOwn("issueAuthor")})
-		issue := fixtureSetIssue(t, permissions, data.GetOwn("issue"), issueAuthor.Name)
-		fixtureCreateComment(t, permissions, issue, data.GetOwn("comment"))
+		issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
+		issue := fixtureSetIssue(t, permissions, data.Get("issue"), issueAuthor.Name)
+		fixtureCreateComment(t, permissions, issue, data.Get("comment"))
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		comment := fixtureGetComment(t, data.GetOwn("comment"))
-		if data.HasOwn("NilIssue") {
+		comment := fixtureGetComment(t, data.Get("comment"))
+		if data.Has("NilIssue") {
 			comment.Issue = nil
 		}
-		if data.HasOwn("InconsistentID") {
+		if data.Has("InconsistentID") {
 			comment.Issue.RepoID = 123456
 		}
 		t.Logf("calling ReqValidCommentID(ctx, %+v)", comment)

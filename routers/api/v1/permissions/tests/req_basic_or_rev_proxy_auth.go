@@ -51,10 +51,10 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 		t.Helper()
 		data.shared.SetDoerNameDefault("regularuser")
 		data.shared.SetDoerAuthenticationDefault("proxy")
-		data.SetOwnDefault("Service.EnableReverseProxyAuthAPI", "true")
+		data.SetDefault("Service.EnableReverseProxyAuthAPI", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
-		setting.Service.EnableReverseProxyAuthAPI = data.GetOwn("Service.EnableReverseProxyAuthAPI") == "true"
+		setting.Service.EnableReverseProxyAuthAPI = data.Get("Service.EnableReverseProxyAuthAPI") == "true"
 	},
 })

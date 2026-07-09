@@ -37,13 +37,13 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
 			data.shared.SetDoerNameDefault("doerregular")
-			if data.GetOwn("packageOwner") == "doer" {
-				data.SetOwn("packageOwner", data.shared.DoerName())
+			if data.Get("packageOwner") == "doer" {
+				data.Set("packageOwner", data.shared.DoerName())
 			}
-			data.SetOwnDefault("packageOwner", data.shared.DoerName())
+			data.SetDefault("packageOwner", data.shared.DoerName())
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureSetPackageOwner(t, permissions, data.GetOwn("packageOwner"))
+			fixtureSetPackageOwner(t, permissions, data.Get("packageOwner"))
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

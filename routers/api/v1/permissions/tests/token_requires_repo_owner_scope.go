@@ -53,19 +53,19 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		if !data.HasOwn("owner") {
+		if !data.Has("owner") {
 			if data.shared.HasRepositoryName() {
 				owner, _, found := strings.Cut(data.shared.RepositoryName(), "/")
 				require.True(t, found)
-				data.SetOwn("owner", owner)
+				data.Set("owner", owner)
 			} else {
-				data.SetOwn("owner", "doerregular")
+				data.Set("owner", "doerregular")
 			}
 		}
 		data.shared.SetTokenLevelDefault("read")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		ownerName := data.GetOwn("owner")
+		ownerName := data.Get("owner")
 		if strings.Contains(ownerName, "org") {
 			fixtureCreateOrg(t, &org_model.Organization{Name: ownerName}, &user_model.User{Name: "orgOwner" + ownerName})
 			require.NotNil(t, fixtureGetUser(t, ownerName))
@@ -75,7 +75,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		owner := fixtureGetUser(t, data.GetOwn("owner"))
+		owner := fixtureGetUser(t, data.Get("owner"))
 		level := levelStringToLevel(data.shared.TokenLevel())
 		t.Logf("calling TokenRequiresRepoOwnerScope(ctx, %+v, %v)", owner, level)
 		apiv1_permissions.TokenRequiresRepoOwnerScope(ctx, owner, level)
