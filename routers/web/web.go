@@ -290,7 +290,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			}
 		}
 
-		if options.SignInRequired {
+		if options.SignInRequired != nil && options.SignInRequired() {
 			if !ctx.IsSigned {
 				if ctx.Req.URL.Path != "/user/events" {
 					middleware.SetRedirectToCookie(ctx.Resp, setting.AppSubURL+ctx.Req.URL.RequestURI())
@@ -429,11 +429,19 @@ func Routes() *web.Route {
 
 var (
 	ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
-	reqSignIn  = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true})
+	reqSignIn  = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: func() bool { return true }})
 	reqSignOut = verifyAuthWithOptions(&common.VerifyOptions{SignOutRequired: true})
 	// TODO: rename them to "optSignIn", which means that the "sign-in" could be optional, depends on the VerifyOptions (RequireSignInView)
-	ignSignIn        = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView})
-	ignExploreSignIn = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView})
+	ignSignIn = verifyAuthWithOptions(&common.VerifyOptions{
+		SignInRequired: func() bool {
+			return setting.Service.RequireSignInView
+		},
+	})
+	ignExploreSignIn = verifyAuthWithOptions(&common.VerifyOptions{
+		SignInRequired: func() bool {
+			return setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView
+		},
+	})
 
 	reqRepoAdmin               = context.RequireRepoAdmin()
 	reqRepoCodeWriter          = context.RequireRepoWriter(unit.TypeCode)
@@ -853,7 +861,7 @@ func registerRoutes(m *web.Route) {
 
 	m.Get("/avatar/{hash}", user.AvatarByEmailHash)
 
-	adminReq := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true, AdminRequired: true})
+	adminReq := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: func() bool { return true }, AdminRequired: true})
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
