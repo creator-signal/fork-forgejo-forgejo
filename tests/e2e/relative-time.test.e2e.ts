@@ -26,9 +26,11 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
   const durationPattern = /\d+ (year|month|week|day|hour|minute|second)/;
   await expect(relativeTime).toContainText(durationPattern);
 
-  // The system-status panel refreshes itself via htmx.
-  // Capture the formatted text and assert it survives an htmx swap unchanged.
-  const textBefore = await relativeTime.textContent();
+  // The <relative-time> custom element renders its formatted text into an open
+  // shadow root. Read that text directly: locator.textContent() does not
+  // reflect the shadow-DOM content, and an htmx morph re-adds the raw-datetime
+  // light-DOM fallback which would pollute toHaveText/toContainText.
+  const textBefore = await relativeTime.evaluate((el) => el.shadowRoot?.textContent ?? '');
 
   const body = page.locator('body');
   await body.evaluate(
@@ -40,5 +42,10 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
       ),
   );
 
-  await expect(relativeTime).toHaveText(textBefore);
+  // The system-status panel refreshes itself via htmx every 5 seconds. A
+  // previous regression (0e8d752d86) reset the rendered relative-time text on
+  // swap; assert the formatted text survives the swap unchanged.
+  await expect.poll(
+    () => relativeTime.evaluate((el) => el.shadowRoot?.textContent ?? ''),
+  ).toBe(textBefore);
 });
