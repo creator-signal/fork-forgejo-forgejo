@@ -38,7 +38,6 @@ type doer struct {
 	name *string
 
 	admin          *bool
-	private        *bool
 	authentication *string
 	scope          *string
 
@@ -52,7 +51,6 @@ func (o doer) Clone() doer {
 		name: pointerToCopyOrNil(o.name),
 
 		admin:          pointerToCopyOrNil(o.admin),
-		private:        pointerToCopyOrNil(o.private),
 		authentication: pointerToCopyOrNil(o.authentication),
 		scope:          pointerToCopyOrNil(o.scope),
 
@@ -69,9 +67,6 @@ func (o doer) String() string {
 	}
 	if o.admin != nil {
 		str = append(str, fmt.Sprintf("doer.admin:%v", *o.admin))
-	}
-	if o.private != nil {
-		str = append(str, fmt.Sprintf("doer.private:%v", *o.private))
 	}
 	if o.authentication != nil {
 		str = append(str, "doer.authentication:"+*o.authentication)
@@ -207,26 +202,6 @@ func (o *sharedData) SetDoerAdminDefault(admin bool) *sharedData {
 
 func (o *sharedData) SetDoerAdmin(admin bool) *sharedData {
 	o.doer.admin = &admin
-	return o
-}
-
-func (o sharedData) DoerPrivate() bool {
-	return getReferenceOrZero(o.doer.private)
-}
-
-func (o sharedData) HasDoerPrivate() bool {
-	return o.doer.private != nil
-}
-
-func (o *sharedData) SetDoerPrivateDefault(private bool) *sharedData {
-	if !o.HasDoerPrivate() {
-		o.SetDoerPrivate(private)
-	}
-	return o
-}
-
-func (o *sharedData) SetDoerPrivate(private bool) *sharedData {
-	o.doer.private = &private
 	return o
 }
 
