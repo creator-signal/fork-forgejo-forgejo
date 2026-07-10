@@ -26,7 +26,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}, newSharedData().
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true),
 			),
 		},

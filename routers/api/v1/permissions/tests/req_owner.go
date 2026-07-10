@@ -48,7 +48,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoer("doeradmin")
+			data.shared.SetDoer("root")
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

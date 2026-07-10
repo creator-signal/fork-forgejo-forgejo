@@ -20,7 +20,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 				"issue":       "issue5000",
 				"issueAuthor": "issueAuthor",
 			}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -29,7 +29,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 				"issue":       "issue5000",
 				"issueAuthor": "issueAuthor",
 			}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit_model.Type{unit_model.TypeIssues}),
 			),
@@ -42,7 +42,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 				"pullRequest":       "MustEnableLocalIssuesIfIsIssue",
 				"issue":             "MustEnableLocalIssuesIfIsIssue",
 			}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit_model.Type{unit_model.TypeIssues}).
 				SetRepositoryInit(true),

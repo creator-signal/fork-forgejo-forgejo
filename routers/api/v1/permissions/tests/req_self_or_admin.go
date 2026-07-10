@@ -14,7 +14,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true)),
 		},
 		{
@@ -40,7 +40,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
 		if !data.shared.HasDoer() {
-			data.shared.SetDoer("doeradmin")
+			data.shared.SetDoer("root")
 			data.shared.SetDoerAdmin(true)
 		}
 	},

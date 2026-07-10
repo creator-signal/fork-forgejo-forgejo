@@ -66,12 +66,12 @@ All fixtures are dynamically created (they are not using the global fixtures fou
 ```
 ...
 === RUN   TestAPIv1Permissions/APIAuthorization,TokenRequiresScopes_Admin_fixture_0
-    functions.go:95: creating fixture data from doer:doerregular,level:read,scope:read:admin
-    functions.go:98: created fixture data doer:doerregular,level:read,scope:read:admin
+    functions.go:95: creating fixture data from doer:doername,level:read,scope:read:admin
+    functions.go:98: created fixture data doer:doername,level:read,scope:read:admin
     functions.go:105: 	*auth.AccessToken(ID=10 Token=e26bfc1190efcf8c36ef640659af33e87073032c)
-    functions.go:105: 	*user.User(Name=doerregular)
+    functions.go:105: 	*user.User(Name=doername)
     functions.go:105: 	isSigned(true)
-    functions.go:105: 	*tests_test.accessTokenAuthenticationResult(*user.User(Name=doerregular) auth.AccessTokenScope(read:admin) *authz.AllAccessAuthorizationReducer)
+    functions.go:105: 	*tests_test.accessTokenAuthenticationResult(*user.User(Name=doername) auth.AccessTokenScope(read:admin) *authz.AllAccessAuthorizationReducer)
     fixture.go:637: calling permissions.APIAuthorization(ctx)
     functions.go:131: 	+ *authz.AllAccessAuthorizationReducer
     token_requires_scopes_test.go:67: calling TokenRequiresScopes(ctx, [1], 1)

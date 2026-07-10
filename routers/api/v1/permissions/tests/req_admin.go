@@ -17,7 +17,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true),
 			),
 		},
@@ -40,7 +40,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit_model.Type{unitType}).
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true),
 			),
 			error: "Not Found",
@@ -57,7 +57,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoer("doeradmin")
+			data.shared.SetDoer("root")
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

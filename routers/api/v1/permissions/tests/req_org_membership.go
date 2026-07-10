@@ -25,7 +25,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 			data: newTestData(map[string]string{
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true),
 			),
 		},

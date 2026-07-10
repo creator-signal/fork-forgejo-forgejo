@@ -17,7 +17,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 				data: newTestData(map[string]string{
 					"packageOwner": "doer",
 				}, newSharedData().
-					SetDoer("doeradmin").
+					SetDoer("root").
 					SetDoerAdmin(true),
 				),
 			},
@@ -36,7 +36,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerDefault("doerregular")
+			data.shared.SetDoerDefault("doername")
 			if data.Get("packageOwner") == "doer" {
 				data.Set("packageOwner", data.shared.Doer())
 			}

@@ -32,6 +32,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerDefault("doerregular")
+		data.shared.SetDoerDefault("doername")
 	},
 })

@@ -14,7 +14,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -26,7 +26,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true).
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),
@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),
 			),

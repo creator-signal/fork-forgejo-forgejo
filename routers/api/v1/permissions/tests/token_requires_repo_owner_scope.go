@@ -18,7 +18,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
-				"owner": "doerregular",
+				"owner": "doername",
 			}, newSharedData().
 				SetDoerScope("read:user").
 				SetTokenLevel("read"),
@@ -26,7 +26,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 		},
 		{
 			data: newTestData(map[string]string{
-				"owner": "doerregular",
+				"owner": "doername",
 			}, newSharedData().
 				SetDoerScope("read:user").
 				SetTokenLevel("write"),
@@ -59,7 +59,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 				require.True(t, found)
 				data.Set("owner", owner)
 			} else {
-				data.Set("owner", "doerregular")
+				data.Set("owner", "doername")
 			}
 		}
 		data.shared.SetTokenLevelDefault("read")

@@ -54,7 +54,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrg":      "regularorg2",
 				"forkOrgOwner": "regularorgowner",
 			}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "User is no Member of Organisation 'regularorg2'",

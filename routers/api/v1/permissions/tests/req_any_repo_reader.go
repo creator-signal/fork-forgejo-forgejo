@@ -11,13 +11,13 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doerregular").
+				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doeradmin").
+				SetDoer("root").
 				SetDoerAdmin(true).
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),
@@ -27,7 +27,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 		// a RepoAccess that enforces the same restriction for non admin users
 		// {
 		// 	data: newTestData(map[string]string{}, newSharedData().
-		// 		SetDoerName("doerregular").
+		// 		SetDoerName("doername").
 		// 		SetRepositoryName("userowner/repositoryprivate").
 		// 		SetRepositoryPrivate(true),
 		// 	),
