@@ -25,7 +25,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			data: newTestData(map[string]string{
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true),
 			),
 		},
@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"org":    "ReqOrgOwnershipOrg",
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 		},
 		{
@@ -43,7 +43,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"setOrg":   "true",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 			error: "Must be an organization owner",
 		},
@@ -52,7 +52,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"org":     "ReqOrgOwnershipOrg",
 				"setTeam": "true",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 		},
 		{
@@ -61,7 +61,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"setTeam":  "true",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 			error: "Not Found",
 		},
@@ -83,7 +83,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 		data.SetDefault("setOrg", "true")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.shared.DoerName()
+		orgOwner := data.shared.Doer()
 		if data.Has("orgOwner") {
 			orgOwner = data.Get("orgOwner")
 		}

@@ -17,7 +17,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 				data: newTestData(map[string]string{
 					"packageOwner": "doer",
 				}, newSharedData().
-					SetDoerName("doeradmin").
+					SetDoer("doeradmin").
 					SetDoerAdmin(true),
 				),
 			},
@@ -25,7 +25,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 				data: newTestData(map[string]string{
 					"packageOwner": "userprivate",
 				}, newSharedData().
-					SetDoerName("userregular"),
+					SetDoer("userregular"),
 				),
 				error: "user should have specific permission or be a site admin",
 			},
@@ -36,11 +36,11 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerNameDefault("doerregular")
+			data.shared.SetDoerDefault("doerregular")
 			if data.Get("packageOwner") == "doer" {
-				data.Set("packageOwner", data.shared.DoerName())
+				data.Set("packageOwner", data.shared.Doer())
 			}
-			data.SetDefault("packageOwner", data.shared.DoerName())
+			data.SetDefault("packageOwner", data.shared.Doer())
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 			fixtureSetPackageOwner(t, permissions, data.Get("packageOwner"))

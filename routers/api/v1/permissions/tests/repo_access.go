@@ -14,7 +14,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -26,7 +26,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true).
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),
@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),
 			),
@@ -50,14 +50,14 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsRepoID(111111111111).
 				SetRepositoryName("userowner/repositorypublic"),
@@ -66,7 +66,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsIsForkPullRequest(true).
 				SetRepositoryName("userowner/repositorypublic"),

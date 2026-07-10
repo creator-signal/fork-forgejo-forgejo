@@ -170,22 +170,22 @@ func newSharedData() *sharedData {
 	return &sharedData{}
 }
 
-func (o sharedData) DoerName() string {
+func (o sharedData) Doer() string {
 	return getReferenceOrZero(o.doer.name)
 }
 
-func (o sharedData) HasDoerName() bool {
+func (o sharedData) HasDoer() bool {
 	return o.doer.name != nil
 }
 
-func (o *sharedData) SetDoerNameDefault(name string) *sharedData {
-	if !o.HasDoerName() {
-		o.SetDoerName(name)
+func (o *sharedData) SetDoerDefault(name string) *sharedData {
+	if !o.HasDoer() {
+		o.SetDoer(name)
 	}
 	return o
 }
 
-func (o *sharedData) SetDoerName(name string) *sharedData {
+func (o *sharedData) SetDoer(name string) *sharedData {
 	o.doer.name = &name
 	return o
 }

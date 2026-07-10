@@ -14,13 +14,13 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableIssues, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit.Type{unit.TypeIssues}),
 			),

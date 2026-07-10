@@ -17,20 +17,20 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("userowner"),
+				SetDoer("userowner"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 			error: "user should be an owner or a collaborator with admin write of a repository",
 		},
@@ -40,7 +40,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit_model.Type{unitType}).
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true),
 			),
 			error: "Not Found",
@@ -57,7 +57,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerName("doeradmin")
+			data.shared.SetDoer("doeradmin")
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

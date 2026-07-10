@@ -32,7 +32,7 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("user", data.shared.DoerName())
+		data.SetDefault("user", data.shared.Doer())
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {

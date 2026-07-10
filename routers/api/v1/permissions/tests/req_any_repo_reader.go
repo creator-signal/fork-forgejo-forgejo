@@ -11,13 +11,13 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true).
 				SetRepositoryName("userowner/repositoryprivate").
 				SetRepositoryPrivate(true),

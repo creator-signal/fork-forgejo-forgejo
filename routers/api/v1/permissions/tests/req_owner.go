@@ -16,14 +16,14 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	fixtures := []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("userowner").
+				SetDoer("userowner").
 				SetDoerScope("read:user,write:repository").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("regular").
+				SetDoer("regular").
 				SetDoerScope("read:user,write:repository").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
@@ -48,7 +48,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerName("doeradmin")
+			data.shared.SetDoer("doeradmin")
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

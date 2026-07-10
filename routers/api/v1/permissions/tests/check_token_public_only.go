@@ -185,7 +185,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		"CheckTokenPublicOnly",
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
-		data.shared.SetDoerNameDefault("regularuser")
+		data.shared.SetDoerDefault("regularuser")
 		data.shared.SetRepositoryNameDefault("regularuser/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
@@ -193,7 +193,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			fixtureCreateUser(t, &user_model.User{Name: data.Get("user")})
 		}
 		if data.Has("org") {
-			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.shared.DoerName()})
+			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.shared.Doer()})
 		}
 		if data.Has("packageOwner") {
 			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner")})

@@ -46,14 +46,14 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 		testCases: []*testCase{
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoerName("doerregular").
+					SetDoer("doerregular").
 					SetDoerScope(readscope).
 					SetTokenLevel("read"),
 				),
 			},
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoerName("doerregular").
+					SetDoer("doerregular").
 					SetDoerScope(readscope).
 					SetTokenLevel("write"),
 				),
@@ -61,7 +61,7 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 			},
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoerName("doerregular").
+					SetDoer("doerregular").
 					SetDoerScope("read:misc").
 					SetTokenLevel("write"),
 				),
@@ -71,7 +71,7 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
 			data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
-			data.shared.SetDoerNameDefault("doerregular")
+			data.shared.SetDoerDefault("doerregular")
 			if data.shared.HasDoerScope() {
 				scope := data.shared.DoerScope()
 				if !strings.Contains(scope, readscope) {

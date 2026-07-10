@@ -14,21 +14,21 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doeradmin").
+				SetDoer("doeradmin").
 				SetDoerAdmin(true)),
 		},
 		{
 			data: newTestData(map[string]string{
 				"user": "regularuser",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"user": "otheruser",
 			}, newSharedData().
-				SetDoerName("regularuser"),
+				SetDoer("regularuser"),
 			),
 			error: "doer should be the site admin or be same as the contextUser",
 		},
@@ -39,8 +39,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		if !data.shared.HasDoerName() {
-			data.shared.SetDoerName("doeradmin")
+		if !data.shared.HasDoer() {
+			data.shared.SetDoer("doeradmin")
 			data.shared.SetDoerAdmin(true)
 		}
 	},

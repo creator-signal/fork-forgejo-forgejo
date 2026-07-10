@@ -14,14 +14,14 @@ var _ = registerFunctionTest(apiv1_permissions.MustAllowPulls, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryInit(true),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doerregular").
+				SetDoer("doerregular").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryInit(true).
 				SetRepositoryDisabledUnits([]unit_model.Type{unit_model.TypePullRequests}),
