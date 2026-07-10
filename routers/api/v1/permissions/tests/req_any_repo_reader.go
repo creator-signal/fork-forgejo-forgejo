@@ -19,7 +19,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer("root").
 				SetDoerAdmin(true).
-				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
 			),
 		},
@@ -28,7 +28,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 		// {
 		// 	data: newTestData(map[string]string{}, newSharedData().
 		// 		SetDoerName("doername").
-		// 		SetRepositoryName("userowner/repositoryprivate").
+		// 		SetRepositoryName("userowner/repositoryname").
 		// 		SetRepositoryPrivate(true),
 		// 	),
 		// 	error: "Denied",

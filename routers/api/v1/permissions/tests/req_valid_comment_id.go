@@ -31,7 +31,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// 		"comment":     "comment for ReqValidCommentID",
 		// 	}, newSharedData().
 		// 		SetDoerName("doername").
-		// 		SetRepositoryName("userowner/repositoryprivate").
+		// 		SetRepositoryName("userowner/repositoryname").
 		// 		SetRepositoryPrivate(true),
 		// 	),
 		// 	error: "Not Found",

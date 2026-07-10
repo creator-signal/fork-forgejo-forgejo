@@ -33,7 +33,7 @@ var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.shared.HasRepositoryName() && data.shared.DoerActions() {
-			fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit())
+			fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit(), data.shared.RepositoryPrivate())
 		}
 		fixtureSetDoer(t, permissions, data)
 	},

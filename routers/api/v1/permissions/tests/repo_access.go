@@ -28,14 +28,14 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer("root").
 				SetDoerAdmin(true).
-				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer("doername").
-				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
 			),
 			error: "Not Found",
@@ -43,7 +43,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetAnonymous(true).
-				SetRepositoryName("userowner/repositoryprivate").
+				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
 			),
 			error: "Not Found",
@@ -78,6 +78,6 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 		data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit())
+		fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit(), data.shared.RepositoryPrivate())
 	},
 })

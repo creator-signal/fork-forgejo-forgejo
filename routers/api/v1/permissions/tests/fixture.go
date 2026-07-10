@@ -372,7 +372,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	require.NoError(t, pull_service.PushToBaseRepo(ctx, pr))
 }
 
-func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name string, init bool) {
+func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name string, init, private bool) {
 	t.Helper()
 	if name == "" {
 		return
@@ -388,7 +388,7 @@ func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissio
 	owner := fixtureCreateUser(t, &user_model.User{Name: ownerName})
 	opts := &forgery.CreateRepositoryOptions{
 		Name:      repoName,
-		IsPrivate: strings.Contains(repoName, "private"),
+		IsPrivate: private,
 	}
 	if init {
 		opts.Files = forgery.FilesInit{}
