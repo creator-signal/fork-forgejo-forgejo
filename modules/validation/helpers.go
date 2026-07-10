@@ -30,6 +30,28 @@ func IsValidURL(uri string) bool {
 	return true
 }
 
+// IsValidOAuthRedirectURI checks if a URI is a valid OAuth2 redirect URI
+func IsValidOAuthRedirectURI(uri string) bool {
+	// RFC 6749 §3.1.2 requires:
+	//   - an absolute URI as defined by RFC 3986 §4.3 (a scheme is mandatory), and
+	//   - no fragment component.
+	u, err := url.Parse(uri)
+	if err != nil || !u.IsAbs() || u.Fragment != "" {
+		return false
+	}
+
+	// http(s) URIs keep the stricter host/port validation of IsValidURL.
+	// Reject pseudo-schemes that execute in a browser context, as defense in depth.
+	switch u.Scheme {
+	case "http", "https":
+		return IsValidURL(uri)
+	case "javascript", "data", "vbscript":
+		return false
+	}
+
+	return true
+}
+
 // IsValidSiteURL checks if URL is valid
 func IsValidSiteURL(uri string) bool {
 	u, err := url.ParseRequestURI(uri)

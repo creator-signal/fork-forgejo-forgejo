@@ -85,7 +85,7 @@ func addValidURLListBindingRule() {
 			ok := true
 			urls := util.SplitTrimSpace(str, "\n")
 			for _, u := range urls {
-				if !IsValidURL(u) {
+				if !IsValidOAuthRedirectURI(u) {
 					ok = false
 					errs.Add([]string{name}, binding.ERR_URL, u)
 				}
