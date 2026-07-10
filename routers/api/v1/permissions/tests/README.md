@@ -39,6 +39,20 @@ The `testData` of the `testCase` is split into data:
   and care must be taken about how such data is handled
   by the `fulfillNeeds` function.
 
+The `shared` data define:
+
+- The `Doer` (which can also be anonymous)
+- The `Repository`
+- The `TokenLevel`
+
+When running the tests for the sequence A,B,C the data that will be
+used by the `interpret` function is built starting from the data of
+C. Then the `fulfillNeeds` function of B is called and may modify it
+depending on what it needs to succeed. The permission function under
+test is C and the permission functions that come before it (B, A) in
+the sequence are only expected to successfully pass so the sequence
+can reach C without return a premature error.
+
 Data shared between tests must be limited to a minimum because their
 interactions are difficult to figure out. For instance
 `APIAuthorization` must set a default `shared.DoerName()` and the
@@ -66,16 +80,16 @@ All fixtures are dynamically created (they are not using the global fixtures fou
 ```
 ...
 === RUN   TestAPIv1Permissions/APIAuthorization,TokenRequiresScopes_Admin_fixture_0
-    functions.go:95: creating fixture data from doer:doername,level:read,scope:read:admin
-    functions.go:98: created fixture data doer:doername,level:read,scope:read:admin
-    functions.go:105: 	*auth.AccessToken(ID=10 Token=e26bfc1190efcf8c36ef640659af33e87073032c)
-    functions.go:105: 	*user.User(Name=doername)
-    functions.go:105: 	isSigned(true)
-    functions.go:105: 	*tests_test.accessTokenAuthenticationResult(*user.User(Name=doername) auth.AccessTokenScope(read:admin) *authz.AllAccessAuthorizationReducer)
-    fixture.go:637: calling permissions.APIAuthorization(ctx)
-    functions.go:131: 	+ *authz.AllAccessAuthorizationReducer
-    token_requires_scopes_test.go:67: calling TokenRequiresScopes(ctx, [1], 1)
-    functions.go:131: 	+ []auth.AccessTokenScopeCategory([1])
+    functions.go:93: creating fixture data from doer:doername doer.scope:read:admin token.level:read
+    functions.go:96: created fixture data doer:doername doer.scope:read:admin token.level:read
+    functions.go:103: 	*auth.AccessToken(ID=5302 Token=ccd381ada3140a9ada3a72901456d7bb3553b3ce)
+    functions.go:103: 	doer=*user.User(Name=doername, Private=false, Admin=false)
+    functions.go:103: 	isSigned(true)
+    functions.go:103: 	*tests.accessTokenAuthenticationResult(*user.User(Name=doername) auth.AccessTokenScope(read:admin) *authz.AllAccessAuthorizationReducer)
+    testcase.go:550: calling permissions.APIAuthorization(ctx)
+    functions.go:129: 	+ *authz.AllAccessAuthorizationReducer
+    token_requires_scopes.go:94: calling TokenRequiresScopes(ctx, [1], 1)
+    functions.go:129: 	+ []auth.AccessTokenScopeCategory([1])
 ...
 ```
 - The name of the test is the sequence of middleware under test (`APIAuthorization`, `TokenRequiresScopes`)
