@@ -372,7 +372,7 @@ func fixtureCreatePullRequest(t *testing.T, permissions *apiv1_permissions.Permi
 	require.NoError(t, pull_service.PushToBaseRepo(ctx, pr))
 }
 
-func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name string, init, private bool) {
+func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissions, name string, init, private, archived bool) {
 	t.Helper()
 	if name == "" {
 		return
@@ -399,7 +399,7 @@ func fixtureSetRepository(t *testing.T, permissions *apiv1_permissions.Permissio
 	for _, unitType := range unit_model.DefaultRepoUnits {
 		forgery.EnableRepoUnit(t, repository, unitType, nil)
 	}
-	if strings.Contains(repoName, "archived") {
+	if archived {
 		require.NoError(t, repo_model.SetArchiveRepoState(t.Context(), repository, true))
 	}
 	permissions.SetRepository(repository)

@@ -16,7 +16,7 @@ var _ = registerFunctionTest(apiv1_permissions.MustNotBeArchived, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositoryarchived").
+				SetRepositoryName("userowner/repository").
 				SetRepositoryArchived(true),
 			),
 			error: "is archived",
