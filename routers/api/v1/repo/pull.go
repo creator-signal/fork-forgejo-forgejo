@@ -1547,6 +1547,10 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	//   type: integer
 	//   format: int64
 	//   required: true
+	// - name: skip-to
+	//   in: query
+	//   description: skip to given file
+	//   type: string
 	// - name: whitespace
 	//   in: query
 	//   description: whitespace behavior
@@ -1616,6 +1620,11 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 		return
 	}
 
+	skipTo := ctx.FormString("skip-to")
+	if skipTo != "" {
+		diffFileMetadata = skipFilesTo(diffFileMetadata, skipTo)
+	}
+
 	if limit > len(diffFileMetadata) {
 		limit = len(diffFileMetadata)
 	}
@@ -1653,4 +1662,13 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	ctx.AppendAccessControlExposeHeaders("X-Page", "X-PerPage", "X-PageCount", "X-HasMore")
 
 	ctx.JSON(http.StatusOK, &apiFiles)
+}
+
+func skipFilesTo(list []*gitdiff.DiffFileMetadata, target string) []*gitdiff.DiffFileMetadata {
+	for i, s := range list {
+		if s.Name == target {
+			return list[i:]
+		}
+	}
+	return []*gitdiff.DiffFileMetadata{}
 }
