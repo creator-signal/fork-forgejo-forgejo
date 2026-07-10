@@ -26,6 +26,10 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
   const durationPattern = /\d+ (year|month|week|day|hour|minute|second)/;
   await expect(relativeTime).toContainText(durationPattern);
 
+  // The system-status panel refreshes itself via htmx.
+  // Capture the formatted text and assert it survives an htmx swap unchanged.
+  const textBefore = await relativeTime.textContent();
+
   const body = page.locator('body');
   await body.evaluate(
     (element) =>
@@ -36,5 +40,5 @@ test('Relative time after htmx swap', async ({page}, workerInfo) => {
       ),
   );
 
-  await expect(relativeTime).toContainText(durationPattern);
+  await expect(relativeTime).toHaveText(textBefore);
 });
