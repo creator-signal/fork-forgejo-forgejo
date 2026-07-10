@@ -140,7 +140,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
-				"org":                     "regularorg",
+				"org":                     "orgname",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -148,7 +148,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
-				"org":                     "privateorg",
+				"org":                     "orgname",
+				"orgVisibility":           "private",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -157,7 +158,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
-				"org":                     "privateorg",
+				"org":                     "orgname",
+				"orgVisibility":           "private",
 				"orgAsUser":               "true",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
@@ -196,7 +198,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			fixtureCreateUser(t, &user_model.User{Name: data.Get("user"), Visibility: stringToVisibility(data.Get("userVisibility"))})
 		}
 		if data.Has("org") {
-			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.shared.Doer()})
+			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org"), Visibility: stringToVisibility(data.Get("orgVisibility"))}, &user_model.User{Name: data.shared.Doer()})
 		}
 		if data.Has("packageOwner") {
 			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner"), Visibility: stringToVisibility(data.Get("packageOwnerVisibility"))})

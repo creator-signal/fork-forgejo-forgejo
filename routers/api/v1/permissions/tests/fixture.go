@@ -22,7 +22,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/optional"
-	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/services/auth"
@@ -112,9 +111,6 @@ func fixtureCreateOrg(t *testing.T, org *org_model.Organization, owner *user_mod
 		return existing
 	}
 	owner = fixtureCreateUser(t, owner)
-	if strings.Contains(org.Name, "private") {
-		org.Visibility = api.VisibleTypePrivate
-	}
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, owner))
 	return org
 }
