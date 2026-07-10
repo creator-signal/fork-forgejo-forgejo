@@ -32,7 +32,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerDefault("regularuser")
+		data.shared.SetDoerDefault("someuser")
 	},
 	protectSettingsBool: []*bool{
 		&setting.Service.RequireSignInView,

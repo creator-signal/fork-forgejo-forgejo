@@ -19,7 +19,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "user should be the site admin",
 		},

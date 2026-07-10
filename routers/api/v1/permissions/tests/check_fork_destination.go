@@ -19,51 +19,51 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{
-				"forkOrg":      "regularorg1",
-				"forkOrgOwner": "regularorgowner",
+				"forkOrg":      "someorg1",
+				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
-				SetDoer("regularorgowner").
+				SetDoer("someorgowner").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{
-				"forkOrg":              "regularorg1",
-				"forkOrgOwner":         "regularorgowner",
+				"forkOrg":              "someorg1",
+				"forkOrgOwner":         "someorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "true",
 			}, newSharedData().
-				SetDoer("regularuser").
-				SetRepositoryName("regularuser/repositorypublic"),
+				SetDoer("someuser").
+				SetRepositoryName("someuser/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{
-				"forkOrg":              "regularorg1",
-				"forkOrgOwner":         "regularorgowner",
+				"forkOrg":              "someorg1",
+				"forkOrgOwner":         "someorgowner",
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "false",
 			}, newSharedData().
-				SetDoer("regularuser").
-				SetRepositoryName("regularuser/repositorypublic"),
+				SetDoer("someuser").
+				SetRepositoryName("someuser/repositorypublic"),
 			),
 			error: "User is not allowed to create repos in Organisation",
 		},
 		{
 			data: newTestData(map[string]string{
-				"forkOrg":      "regularorg2",
-				"forkOrgOwner": "regularorgowner",
+				"forkOrg":      "someorg2",
+				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
 				SetDoer("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
-			error: "User is no Member of Organisation 'regularorg2'",
+			error: "User is no Member of Organisation 'someorg2'",
 		},
 		{
 			data: newTestData(map[string]string{
 				"forkOrg": "unknownOrg",
 			}, newSharedData().
-				SetDoer("regularorgowner").
+				SetDoer("someorgowner").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "org does not exist",

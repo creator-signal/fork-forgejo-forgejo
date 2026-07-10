@@ -14,7 +14,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 		},
 		{

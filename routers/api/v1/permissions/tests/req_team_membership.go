@@ -34,20 +34,20 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			data: newTestData(map[string]string{
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
-				"teams":    "team1:regularuser",
+				"teams":    "team1:someuser",
 				"team":     "team1",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
-				"teams":    "team1:regularuser,team2:otheruser",
+				"teams":    "team1:someuser,team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "Must be a team member",
 		},
@@ -58,7 +58,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "Not Found",
 		},

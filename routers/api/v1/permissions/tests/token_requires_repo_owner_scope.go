@@ -35,7 +35,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 		},
 		{
 			data: newTestData(map[string]string{
-				"owner": "regularorg",
+				"owner": "someorg",
 			}, newSharedData().
 				SetDoerScope("read:organization").
 				SetTokenLevel("read"),
@@ -43,7 +43,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.TokenRequiresRepoOwnerSco
 		},
 		{
 			data: newTestData(map[string]string{
-				"owner": "regularorg",
+				"owner": "someorg",
 			}, newSharedData().
 				SetDoerScope("read:organization").
 				SetTokenLevel("write"),

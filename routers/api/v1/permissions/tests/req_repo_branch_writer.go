@@ -31,7 +31,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 				"pullRequestBranch": "ReqRepoBranchWriter",
 				"pullRequest":       "ReqRepoBranchWriter",
 			}, newSharedData().
-				SetDoer("regularuser").
+				SetDoer("someuser").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryInit(true),
 			),

@@ -30,7 +30,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		{
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepositoryName("userowner/repositorypublic").
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "user should be an owner or a collaborator with admin write of a repository",
 		},

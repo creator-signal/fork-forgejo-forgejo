@@ -23,7 +23,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("regular").
+				SetDoer("some").
 				SetDoerScope("read:user,write:repository").
 				SetRepositoryName("userowner/repositorypublic"),
 			),

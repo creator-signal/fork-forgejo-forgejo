@@ -23,10 +23,10 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 			},
 			{
 				data: newTestData(map[string]string{
-					"packageOwner":           "userprivate",
+					"packageOwner":           "someuser",
 					"packageOwnerVisibility": "private",
 				}, newSharedData().
-					SetDoer("userregular"),
+					SetDoer("usersome"),
 				),
 				error: "user should have specific permission or be a site admin",
 			},

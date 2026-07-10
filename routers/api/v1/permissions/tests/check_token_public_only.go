@@ -104,7 +104,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryUser,
-				"user":                    "regularuser",
+				"user":                    "someuser",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -122,7 +122,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryActivityPub,
-				"user":                    "regularuser",
+				"user":                    "someuser",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -169,7 +169,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryPackage,
-				"packageOwner":            "regularuser",
+				"packageOwner":            "someuser",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -190,8 +190,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		"CheckTokenPublicOnly",
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
-		data.shared.SetDoerDefault("regularuser")
-		data.shared.SetRepositoryNameDefault("regularuser/repositorypublic")
+		data.shared.SetDoerDefault("someuser")
+		data.shared.SetRepositoryNameDefault("someuser/repositorypublic")
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {

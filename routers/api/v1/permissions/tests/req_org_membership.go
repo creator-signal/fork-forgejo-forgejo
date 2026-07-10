@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 				"org":    "ReqOrgMembershipOrg",
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 		},
 		{
@@ -43,7 +43,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 				"orgOwner": "ReqOrgMembershipOrgOwner",
 				"setOrg":   "true",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "Must be an organization member",
 		},
@@ -52,7 +52,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 				"org":     "ReqOrgMembershipOrg",
 				"setTeam": "true",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 		},
 		{
@@ -61,7 +61,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 				"orgOwner": "ReqOrgMembershipOrgOwner",
 				"setTeam":  "true",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "Not Found",
 		},

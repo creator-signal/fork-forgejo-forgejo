@@ -19,16 +19,16 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{
-				"user": "regularuser",
+				"user": "someuser",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{
 				"user": "otheruser",
 			}, newSharedData().
-				SetDoer("regularuser"),
+				SetDoer("someuser"),
 			),
 			error: "doer should be the site admin or be same as the contextUser",
 		},

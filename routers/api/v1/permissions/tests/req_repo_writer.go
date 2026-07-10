@@ -34,7 +34,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 			},
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoer("regularuser").
+					SetDoer("someuser").
 					SetRepositoryName("userowner/repositorypublic").
 					SetDoerScope(scopes),
 				),
