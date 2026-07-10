@@ -19,13 +19,15 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 		},
 		{
 			data: newTestData(map[string]string{
-				"user": "IndividualPermsCheckerprivate",
+				"user":           "IndividualPermsCheckerOne",
+				"userVisibility": "private",
 			}, newSharedData()),
 			error: "Visit Project",
 		},
 		{
 			data: newTestData(map[string]string{
-				"user": "IndividualPermsCheckerlimited",
+				"user":           "IndividualPermsCheckerTwo",
+				"userVisibility": "limited",
 			}, newSharedData().SetAnonymous(true)),
 			error: "Visit Project",
 		},
@@ -37,7 +39,8 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {
 			name := data.Get("user")
-			fixtureCreateUser(t, &user_model.User{Name: name})
+			visibility := data.Get("userVisibility")
+			fixtureCreateUser(t, &user_model.User{Name: name, Visibility: stringToVisibility(visibility)})
 			permissions.SetUser(fixtureGetUser(t, name))
 		}
 	},

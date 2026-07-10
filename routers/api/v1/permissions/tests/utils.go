@@ -9,6 +9,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	unit_model "forgejo.org/models/unit"
+	api "forgejo.org/modules/structs"
 )
 
 func levelStringToLevel(levelString string) auth_model.AccessTokenScopeLevel {
@@ -64,4 +65,17 @@ func unitsToScopes(unitTypes []unit_model.Type, levelString string) string {
 		scopeStrings = append(scopeStrings, fmt.Sprintf("%s:%s", levelString, scope))
 	}
 	return strings.Join(scopeStrings, ",")
+}
+
+func stringToVisibility(str string) api.VisibleType {
+	switch str {
+	case "private":
+		return api.VisibleTypePrivate
+	case "limited":
+		return api.VisibleTypeLimited
+	case "":
+		return api.VisibleTypePublic
+	default:
+		panic(fmt.Sprintf("unexpected %s", str))
+	}
 }

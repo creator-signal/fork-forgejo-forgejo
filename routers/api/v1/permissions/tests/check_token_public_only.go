@@ -112,7 +112,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryUser,
-				"user":                    "privateuser",
+				"user":                    "username",
+				"userVisibility":          "private",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -129,7 +130,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryActivityPub,
-				"user":                    "privateuser",
+				"user":                    "username",
+				"userVisibility":          "private",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -173,7 +175,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		{
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryPackage,
-				"packageOwner":            "privateuser",
+				"packageOwner":            "username",
+				"packageOwnerVisibility":  "private",
 			}, newSharedData().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -190,13 +193,13 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {
-			fixtureCreateUser(t, &user_model.User{Name: data.Get("user")})
+			fixtureCreateUser(t, &user_model.User{Name: data.Get("user"), Visibility: stringToVisibility(data.Get("userVisibility"))})
 		}
 		if data.Has("org") {
 			fixtureCreateOrg(t, &org_model.Organization{Name: data.Get("org")}, &user_model.User{Name: data.shared.Doer()})
 		}
 		if data.Has("packageOwner") {
-			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner")})
+			fixtureCreateUser(t, &user_model.User{Name: data.Get("packageOwner"), Visibility: stringToVisibility(data.Get("packageOwnerVisibility"))})
 		}
 		if data.Has("requiredScopeCategories") {
 			var categories []auth_model.AccessTokenScopeCategory

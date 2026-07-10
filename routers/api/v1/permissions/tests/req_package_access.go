@@ -23,7 +23,8 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 			},
 			{
 				data: newTestData(map[string]string{
-					"packageOwner": "userprivate",
+					"packageOwner":           "userprivate",
+					"packageOwnerVisibility": "private",
 				}, newSharedData().
 					SetDoer("userregular"),
 				),
@@ -43,7 +44,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 			data.SetDefault("packageOwner", data.shared.Doer())
 		},
 		interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-			fixtureSetPackageOwner(t, permissions, data.Get("packageOwner"))
+			fixtureSetPackageOwner(t, permissions, data.Get("packageOwner"), data.Get("packageOwnerVisibility"))
 		},
 		staticArgs: 1,
 		call: func(t *testing.T, ctx apiv1_permissions.Context, _ *testData, args []any) {

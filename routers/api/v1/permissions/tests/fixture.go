@@ -97,16 +97,11 @@ func fixtureCreateUser(t *testing.T, user *user_model.User) *user_model.User {
 	if existingUser := fixtureGetUser(t, user.Name); existingUser != nil {
 		return existingUser
 	}
-	overwriteDefault := &user_model.CreateUserOverwriteOptions{}
 	user.Email = user.Name + "@test.forgejo.org"
 	user.Passwd = "password"
-	if strings.Contains(user.Name, "private") {
-		visibility := api.VisibleTypePrivate
-		overwriteDefault.Visibility = &visibility
-	} else if strings.Contains(user.Name, "limited") {
-		visibility := api.VisibleTypeLimited
-		overwriteDefault.Visibility = &visibility
-	}
+	overwriteDefault := &user_model.CreateUserOverwriteOptions{}
+	visibility := user.Visibility
+	overwriteDefault.Visibility = &visibility
 	require.NoError(t, user_model.CreateUser(t.Context(), user, overwriteDefault))
 	return user
 }
@@ -147,12 +142,12 @@ func fixtureCreateTeam(t *testing.T, org *org_model.Organization, memberName str
 	return team
 }
 
-func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permissions, packageOwner string) {
+func fixtureSetPackageOwner(t *testing.T, permissions *apiv1_permissions.Permissions, packageOwner, visibility string) {
 	t.Helper()
 	if packageOwner == "" {
 		return
 	}
-	owner := fixtureCreateUser(t, &user_model.User{Name: packageOwner})
+	owner := fixtureCreateUser(t, &user_model.User{Name: packageOwner, Visibility: stringToVisibility(visibility)})
 	permissions.SetPackageOwner(owner)
 	mode, err := packages_service.DeterminePackageAccessMode(permissions.Context(), permissions.PackageOwner(), permissions.Doer())
 	require.NoError(t, err)
