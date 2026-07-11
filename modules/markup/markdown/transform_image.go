@@ -21,17 +21,13 @@ func (g *ASTTransformer) transformImage(ctx *markup.RenderContext, v *ast.Image)
 	// Check if the destination is a real link
 	if len(v.Destination) > 0 && !markup.IsLink(v.Destination) {
 		dest := string(v.Destination)
-		isRootRelative := len(dest) > 0 && dest[0] == '/'
+		isRootRelative := strings.HasPrefix(dest, "/")
 		dest = strings.TrimLeft(dest, "/")
 
-		var base string
-		if isRootRelative && !ctx.IsWiki && ctx.Links.HasBranchInfo() {
-			base = ctx.Links.MediaLinkBase()
-		} else {
-			base = ctx.Links.ResolveMediaLink(ctx.IsWiki)
-		}
-
-		v.Destination = []byte(giteautil.URLJoin(base, dest))
+		v.Destination = []byte(giteautil.URLJoin(
+			ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative),
+			dest,
+		))
 	}
 
 	parent := v.Parent()

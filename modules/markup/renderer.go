@@ -128,10 +128,13 @@ func (l *Links) WikiRawLink() string {
 	return util.URLJoin(l.Base, "wiki/raw")
 }
 
-func (l *Links) ResolveMediaLink(isWiki bool) string {
+func (l *Links) ResolveMediaLink(isWiki, isRootRelative bool) string {
 	if isWiki {
 		return l.WikiRawLink()
 	} else if l.HasBranchInfo() {
+		if isRootRelative {
+			return l.MediaLinkBase()
+		}
 		return l.MediaLink()
 	}
 	return l.Base

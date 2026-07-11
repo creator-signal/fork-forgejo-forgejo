@@ -398,7 +398,16 @@ func visitNode(ctx *RenderContext, procs []processor, node *html.Node) {
 					continue
 				}
 				if len(attr.Val) > 0 && !IsLinkStr(attr.Val) && !strings.HasPrefix(attr.Val, "data:image/") {
-					attr.Val = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki), attr.Val)
+					// Skip URLs already resolved from markdown, they start with `/user/repo/media/branch/...`
+					// Only raw HTML <img> tags need processing here.
+					mediaBase := ctx.Links.ResolveMediaLink(ctx.IsWiki, true)
+					if !strings.HasPrefix(attr.Val, mediaBase+"/") {
+						isRootRelative := strings.HasPrefix(attr.Val, "/")
+						if isRootRelative {
+							attr.Val = strings.TrimLeft(attr.Val, "/")
+						}
+						attr.Val = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative), attr.Val)
+					}
 				}
 				attr.Val = camoHandleLink(attr.Val)
 				node.Attr[i] = attr
@@ -765,14 +774,10 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		if image {
 			if !absoluteLink {
 				isRootRelative := strings.HasPrefix(link, "/")
-				var base string
-				if isRootRelative && !ctx.IsWiki && ctx.Links.HasBranchInfo() {
-					base = ctx.Links.MediaLinkBase()
+				if isRootRelative {
 					link = strings.TrimLeft(link, "/")
-				} else {
-					base = ctx.Links.ResolveMediaLink(ctx.IsWiki)
 				}
-				link = util.URLJoin(base, link)
+				link = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative), link)
 			}
 			title := props["title"]
 			if title == "" {

@@ -6,6 +6,7 @@ package markdown
 import (
 	"bytes"
 	"slices"
+	"strings"
 
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/setting"
@@ -29,7 +30,7 @@ func (g *ASTTransformer) transformLink(ctx *markup.RenderContext, v *ast.Link) {
 
 	if processLink {
 		linkStr := string(link)
-		isRootRelative := len(linkStr) > 0 && linkStr[0] == '/'
+		isRootRelative := strings.HasPrefix(linkStr, "/")
 
 		var base string
 		if ctx.IsWiki {
@@ -45,7 +46,7 @@ func (g *ASTTransformer) transformLink(ctx *markup.RenderContext, v *ast.Link) {
 		}
 
 		if isRootRelative {
-			linkStr = linkStr[1:]
+			linkStr = strings.TrimLeft(linkStr, "/")
 		}
 
 		link = []byte(giteautil.URLJoin(base, linkStr))
