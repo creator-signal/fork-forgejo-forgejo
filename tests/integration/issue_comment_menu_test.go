@@ -13,8 +13,9 @@ import (
 )
 
 func testIssueCommentContextMenuItems(t *testing.T, page *HTMLDoc, quoteReference, editDelete, report bool) {
-	// Copy link button is always available
+	// Copy link and Copy Markdown buttons are always available
 	page.AssertElement(t, ".comment:nth-child(4) button[data-clipboard-text-type='url']", true)
+	page.AssertElement(t, ".comment:nth-child(4) button[data-clipboard-target$='-raw']", true)
 
 	// Buttons Quote reply and Reference in a new issue are only available to signed in users
 	page.AssertElement(t, ".comment:nth-child(4) button.quote-reply", quoteReference)
