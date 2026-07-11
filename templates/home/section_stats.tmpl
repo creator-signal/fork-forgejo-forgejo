@@ -4,8 +4,7 @@
 		{{range .Stats}}
 			<div class="home-stat">
 				{{svg .Icon 22 "home-stat-icon"}}
-				<span class="home-stat-value">{{CountFmt .Value}}</span>
-				<span class="home-stat-label">{{ctx.Locale.Tr .Label}}</span>
+				<span class="home-stat-label">{{ctx.Locale.TrPluralString .Value .Label (printf `<span class="home-stat-value">%s</span>` (CountFmt .Value) | TrustHTML)}}</span>
 			</div>
 		{{end}}
 	</div>

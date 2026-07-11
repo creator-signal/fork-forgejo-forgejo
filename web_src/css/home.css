@@ -144,6 +144,7 @@
 
 .home .home-stat-value {
   font-weight: var(--font-weight-bold);
+  color: var(--color-text);
 }
 
 .home .home-stat-label {

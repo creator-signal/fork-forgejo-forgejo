@@ -982,5 +982,22 @@
 	"form.website.valid_url_schemes": "Allowed URL schemes include: %s",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
+	"startpage.repos": "Repositories",
+	"startpage.orgs": "Organizations",
+	"startpage.powered_by": "Powered by <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"%[1]s\">Forgejo</a>",
+	"startpage.explore.repositories": "View all repositories",
+	"startpage.explore.organizations": "View all organizations",
+	"startpage.stats.repositories": {
+		"one": "%s repository",
+		"other": "%s repositories"
+	},
+	"startpage.stats.users": {
+		"one": "%s user",
+		"other": "%s users"
+	},
+	"startpage.stats.organizations": {
+		"one": "%s organization",
+		"other": "%s organizations"
+	},
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
