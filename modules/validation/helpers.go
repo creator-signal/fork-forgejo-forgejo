@@ -45,7 +45,7 @@ func IsValidOAuthRedirectURI(uri string) bool {
 	switch u.Scheme {
 	case "http", "https":
 		return IsValidURL(uri)
-	case "javascript", "data", "vbscript":
+	case "file", "javascript", "data", "vbscript":
 		return false
 	}
 

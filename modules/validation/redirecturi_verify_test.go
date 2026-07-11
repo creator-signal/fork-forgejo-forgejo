@@ -27,7 +27,9 @@ func Test_IsValidOAuthRedirectURI(t *testing.T) {
 		{"Fragment component", "https://example.com/cb#frag", false},
 		{"Invalid port", "http://example.com:99x/", false},
 		{"javascript pseudo-scheme", "javascript:alert(document.domain)", false},
+		{"file path-traversal attack", "file:///etc/passwd", false},
 		{"data pseudo-scheme", "data:text/html,<script>alert(1)</script>", false},
+		{"vbscript pseudo-scheme", "vbscript:msgbox('Hello')", false},
 	}
 
 	for _, testCase := range cases {
