@@ -186,7 +186,10 @@ func Count[T any](ctx context.Context, opts FindOptions) (int64, error) {
 func FindAndCount[T any](ctx context.Context, opts FindOptions) ([]*T, int64, error) {
 	sess := GetEngine(ctx).Where(opts.ToConds())
 	page, pageSize := opts.GetPage(), opts.GetPageSize()
-	if !opts.IsListAll() && pageSize > 0 && page >= 1 {
+	if !opts.IsListAll() && pageSize > 0 {
+		if page == 0 {
+			page = 1
+		}
 		sess.Limit(pageSize, (page-1)*pageSize)
 	}
 	if joinOpt, ok := opts.(FindOptionsJoin); ok {

@@ -44,7 +44,44 @@ func (tasks TaskList) LoadJobs(ctx context.Context) error {
 }
 
 func (tasks TaskList) LoadAttributes(ctx context.Context) error {
-	return tasks.LoadJobs(ctx)
+	if err := tasks.LoadJobs(ctx); err != nil {
+		return err
+	}
+	return tasks.LoadSteps(ctx)
+}
+
+// LoadSteps loads the Steps of every task in the list with a single batched
+// query instead of one query per task.
+func (tasks TaskList) LoadSteps(ctx context.Context) error {
+	taskIDs := make([]int64, 0, len(tasks))
+	for _, t := range tasks {
+		if t.Steps == nil { // be careful, an empty slice (not nil) also means loaded
+			taskIDs = append(taskIDs, t.ID)
+		}
+	}
+	if len(taskIDs) == 0 {
+		return nil
+	}
+
+	var steps []*ActionTaskStep
+	if err := db.GetEngine(ctx).In("task_id", taskIDs).OrderBy("task_id ASC, `index` ASC").Find(&steps); err != nil {
+		return err
+	}
+
+	stepsByTask := make(map[int64][]*ActionTaskStep, len(taskIDs))
+	for _, s := range steps {
+		stepsByTask[s.TaskID] = append(stepsByTask[s.TaskID], s)
+	}
+	for _, t := range tasks {
+		if t.Steps == nil {
+			if s, ok := stepsByTask[t.ID]; ok {
+				t.Steps = s
+			} else {
+				t.Steps = []*ActionTaskStep{}
+			}
+		}
+	}
+	return nil
 }
 
 type FindTaskOptions struct {

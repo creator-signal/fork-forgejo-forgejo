@@ -766,6 +766,14 @@ func ListActionTasks(ctx *context.APIContext) {
 		return
 	}
 
+	// Batch-load the Job/Run/Repo/Steps attributes for the whole page in a
+	// handful of queries instead of letting ToActionTask -> LoadAttributes
+	// issue several queries per task (N+1).
+	if err := actions_model.TaskList(tasks).LoadAttributes(ctx); err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadAttributes", err)
+		return
+	}
+
 	res := new(api.ActionTaskResponse)
 	res.TotalCount = total
 
