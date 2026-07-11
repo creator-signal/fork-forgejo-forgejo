@@ -73,6 +73,26 @@ sections:
 	assert.Contains(t, body, "DocsLink")
 }
 
+func TestHomeCustomConfigRequireSignInViewHidesSections(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	yaml := `
+sections:
+  - type: statistics
+    items: [repositories, users]
+`
+	useHomeConfig(t, yaml)
+
+	defer test.MockVariableValue(&setting.Service.RequireSignInView, true)()
+
+	req := NewRequest(t, "GET", "/")
+	resp := emptyTestSession(t).MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+
+	assert.Zero(t, htmlDoc.Find(".home-section").Length())
+	assert.Zero(t, htmlDoc.Find(".home-stats .home-stat").Length())
+}
+
 func TestHomeCustomConfigNavIsHomeOnly(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

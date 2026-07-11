@@ -15,7 +15,7 @@
 					</div>
 				{{end}}
 				{{if or (not $hero) $hero.ShowPoweredBy}}
-					<p class="home-hero-poweredby">{{ctx.Locale.Tr "startpage.powered_by" "https://forgejo.org"}}</p>
+					<p class="home-hero-poweredby">{{ctx.Locale.Tr "landing.powered_by" "https://forgejo.org" "Forgejo"}}</p>
 				{{end}}
 			</div>
 			{{if or (not $hero) $hero.ShowLogo}}
@@ -32,18 +32,18 @@
 				{{template "home/section_stats" .}}
 			{{else if eq .Type "repositories"}}
 				<section class="home-section">
-					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "startpage.repos"}}{{end}}</h2>
+					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "landing.repos"}}{{end}}</h2>
 					{{template "home/repo_cards" dict "Repos" .Repos "Context" $.Context}}
 					<div class="home-view-all">
-						<a href="{{AppSubUrl}}/explore/repos">{{ctx.Locale.Tr "startpage.explore.repositories"}}{{svg "octicon-arrow-right" 16}}</a>
+						<a href="{{AppSubUrl}}/explore/repos">{{ctx.Locale.Tr "landing.explore.repositories"}}{{svg "octicon-arrow-right" 16}}</a>
 					</div>
 				</section>
 			{{else if eq .Type "organizations"}}
 				<section class="home-section">
-					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "startpage.orgs"}}{{end}}</h2>
+					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "landing.orgs"}}{{end}}</h2>
 					{{template "home/org_cards" dict "Orgs" .Orgs}}
 					<div class="home-view-all">
-						<a href="{{AppSubUrl}}/explore/organizations">{{ctx.Locale.Tr "startpage.explore.organizations"}}{{svg "octicon-arrow-right" 16}}</a>
+						<a href="{{AppSubUrl}}/explore/organizations">{{ctx.Locale.Tr "landing.explore.organizations"}}{{svg "octicon-arrow-right" 16}}</a>
 					</div>
 				</section>
 			{{else if eq .Type "links"}}

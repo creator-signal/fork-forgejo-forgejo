@@ -91,7 +91,9 @@ func Home(ctx *context.Context) {
 	cfg := homepage.Get()
 	ctx.Data["HomeHero"] = cfg.Hero
 	ctx.Data["HomeNav"] = cfg.NavLinks
-	ctx.Data["HomeSections"] = homepage.Sections(ctx)
+	if !setting.Service.RequireSignInView {
+		ctx.Data["HomeSections"] = homepage.Sections(ctx)
+	}
 
 	ctx.HTML(http.StatusOK, tplHome)
 }

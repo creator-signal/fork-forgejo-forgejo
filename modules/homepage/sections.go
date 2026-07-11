@@ -140,11 +140,11 @@ func resolveStats(ctx context.Context, items []string) []Stat {
 	for _, item := range items {
 		switch item {
 		case "repositories":
-			stats = append(stats, Stat{"octicon-repo", countPublicRepos(ctx), "startpage.stats.repositories"})
+			stats = append(stats, Stat{"octicon-repo", countPublicRepos(ctx), "landing.stats.repositories"})
 		case "users":
-			stats = append(stats, Stat{"octicon-person", countPublicUsers(ctx, user_model.UserTypeIndividual), "startpage.stats.users"})
+			stats = append(stats, Stat{"octicon-person", countPublicUsers(ctx, user_model.UserTypeIndividual), "landing.stats.users"})
 		case "organizations":
-			stats = append(stats, Stat{"octicon-organization", countPublicUsers(ctx, user_model.UserTypeOrganization), "startpage.stats.organizations"})
+			stats = append(stats, Stat{"octicon-organization", countPublicUsers(ctx, user_model.UserTypeOrganization), "landing.stats.organizations"})
 		default:
 			log.Warn("homepage stats: unknown item %q", item)
 		}
