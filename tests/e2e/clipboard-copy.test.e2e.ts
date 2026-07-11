@@ -31,7 +31,7 @@ async function evaluateCommentCopyMarkdown(page: Page, url: string, commentId: s
   const response = await page.goto(url);
   expect(response?.status()).toBe(200);
 
-  const areaOfInterest = await page.locator(`#${commentId} .comment-container details.dropdown`);
+  const areaOfInterest = page.locator(`#${commentId} .comment-container details.dropdown`);
 
   // Open dropdown
   await areaOfInterest.locator('summary').click();
@@ -52,19 +52,21 @@ async function evaluateCommentCopyMarkdown(page: Page, url: string, commentId: s
 
 test.describe('Copy comment as Markdown to clipboard', () => {
   test('Issue top comment', async ({page}) => {
-    await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issue-1', ['content for the first issue'])
+    await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issue-1', ['content for the first issue']);
   });
+
   test('Issue reply comment', async ({page}) => {
     await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issuecomment-1001', [
       '## Lorem Ipsum',
       '**I am not appealed**',
       '`feature`',
-    ])
+    ]);
   });
+
   test('PR top comment', async ({page}) => {
-    await evaluateCommentCopyMarkdown(page, '/user2/repo1/pulls/5', 'issue-11', ['content for the a pull request'])
+    await evaluateCommentCopyMarkdown(page, '/user2/repo1/pulls/5', 'issue-11', ['content for the a pull request']);
   });
-})
+});
 
 test('copy diff file path to clipboard', async ({page}) => {
   const response = await page.goto('/user2/repo1/src/commit/65f1bf27bc3bf70f64657658635e66094edbcb4d/README.md');
