@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
@@ -141,6 +143,43 @@ func TestDangerZoneConfirmation(t *testing.T) {
 			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
 			assert.Equal(t, "success%3DThe%2Brepository%2Bwiki%2Bdata%2Bhas%2Bbeen%2Bdeleted.", flashCookie.Value)
+		})
+	})
+
+	t.Run("Run GC", func(t *testing.T) {
+		t.Run("Owner succeeds", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			session := loginUser(t, "user2")
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
+				"action": "run-gc",
+			})
+			session.MakeRequest(t, req, http.StatusSeeOther)
+
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
+			assert.NotNil(t, flashCookie)
+			assert.Contains(t, flashCookie.Value, "success%3D")
+		})
+
+		t.Run("Non-owner is rejected", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			session := loginUser(t, "user1")
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
+				"action": "run-gc",
+			})
+			session.MakeRequest(t, req, http.StatusNotFound)
+		})
+
+		t.Run("Disabled by admin", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			defer test.MockVariableValue(&setting.Repository.AllowManualGC, false)()
+
+			session := loginUser(t, "user2")
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
+				"action": "run-gc",
+			})
+			session.MakeRequest(t, req, http.StatusForbidden)
 		})
 	})
 

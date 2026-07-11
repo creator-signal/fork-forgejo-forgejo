@@ -63,6 +63,7 @@ var (
 		AllowDeleteOfUnadoptedRepositories      bool
 		DisableDownloadSourceArchives           bool
 		AllowForkWithoutMaximumLimit            bool
+		AllowManualGC                           bool
 
 		// Repository editor settings
 		Editor struct {
@@ -183,6 +184,7 @@ var (
 		DisableForks:                            false,
 		DefaultBranch:                           "main",
 		AllowForkWithoutMaximumLimit:            true,
+		AllowManualGC:                           true,
 
 		// Repository editor settings
 		Editor: struct {

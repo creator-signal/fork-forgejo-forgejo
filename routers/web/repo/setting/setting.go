@@ -97,6 +97,7 @@ func SettingsCtxData(ctx *context.Context) {
 	}
 	ctx.Data["PushMirrors"] = pushMirrors
 	ctx.Data["CanUseSSHMirroring"] = git.HasSSHExecutable
+	ctx.Data["AllowManualGC"] = setting.Repository.AllowManualGC
 }
 
 // Units show a repository's unit settings page
@@ -978,6 +979,24 @@ func SettingsPost(ctx *context.Context) {
 		log.Trace("Repository transfer process was cancelled: %s/%s ", ctx.Repo.Owner.Name, repo.Name)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_abort_success", repoTransfer.Recipient.Name))
 		ctx.Redirect(repo.Link() + "/settings")
+
+	case "run-gc":
+		if !ctx.Repo.IsOwner() {
+			ctx.Error(http.StatusNotFound)
+			return
+		}
+		if !setting.Repository.AllowManualGC {
+			ctx.Error(http.StatusForbidden)
+			return
+		}
+
+		if err := repo_service.RunManualGCForRepo(ctx, ctx.Repo.Repository); err != nil {
+			ctx.ServerError("RunManualGCForRepo", err)
+			return
+		}
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.gc_success"))
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 
 	case "delete":
 		if !ctx.Repo.IsOwner() {
