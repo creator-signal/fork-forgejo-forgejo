@@ -1,0 +1,9 @@
+{{if .Icon}}
+	{{if or (StringUtils.HasPrefix .Icon "http://") (StringUtils.HasPrefix .Icon "https://") (StringUtils.HasPrefix .Icon "/")}}
+		<img class="{{.Class}}" src="{{.Icon}}" alt="" width="{{.Size}}" height="{{.Size}}">
+	{{else if StringUtils.HasPrefix .Icon "octicon-"}}
+		{{svg .Icon .Size .Class}}
+	{{else}}
+		{{svg (printf "octicon-%s" .Icon) .Size .Class}}
+	{{end}}
+{{end}}

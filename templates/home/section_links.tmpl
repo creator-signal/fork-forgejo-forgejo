@@ -1,0 +1,19 @@
+<section class="home-section">
+	{{if .Title}}<h2 class="home-section-title">{{.Title}}</h2>{{end}}
+	<div class="home-card-grid home-resource-grid">
+		{{range .Links}}
+			<div class="home-card home-resource-card">
+				<div class="home-card-header">
+					{{template "home/link_icon" dict "Icon" .Icon "Size" 24 "Class" "home-link-icon"}}
+					<span class="home-card-title">{{.Text}}</span>
+				</div>
+				{{if .Description}}<div class="home-card-body">{{.Description}}</div>{{end}}
+				<div class="home-card-footer">
+					<a class="button primary" href="{{.URL}}" target="_blank" rel="noopener noreferrer">
+						{{if .Button}}{{.Button}}{{else}}{{.Text}}{{end}} {{svg "octicon-link-external" 14}}
+					</a>
+				</div>
+			</div>
+		{{end}}
+	</div>
+</section>

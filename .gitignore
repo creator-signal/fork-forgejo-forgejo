@@ -62,6 +62,7 @@ cpu.out
 /debug
 /integrations.test
 /forgejo
+/forgejo.org
 
 /bin
 /dist

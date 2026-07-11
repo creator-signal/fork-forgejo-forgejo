@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/eventsource"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/highlight"
+	"forgejo.org/modules/homepage"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/markup"
 	"forgejo.org/modules/markup/external"
@@ -113,6 +114,8 @@ func InitWebInstalled(ctx context.Context) {
 
 	setting.LoadSettings()
 	mustInit(storage.Init)
+
+	homepage.Init()
 
 	mailer.NewContext(ctx)
 	mustInit(cache.Init)

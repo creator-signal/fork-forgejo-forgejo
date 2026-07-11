@@ -162,6 +162,15 @@
   z-index: 1; /* prevent menu button background from overlaying icon */
 }
 
+#navbar a.item.primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+#navbar a.item.primary:hover {
+  background: var(--color-primary-hover)
+}
+
 .secondary-nav {
   background: var(--color-secondary-nav-bg) !important; /* important because of .ui.secondary.menu */
 }

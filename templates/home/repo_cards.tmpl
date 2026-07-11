@@ -1,0 +1,20 @@
+<div class="home-card-grid">
+	{{range .Repos}}
+		<a class="home-card" href="{{.Link}}">
+			<div class="home-card-header">
+				{{template "repo/icon" .}}
+				<span class="home-card-title">{{.Owner.Name}}/{{.Name}}</span>
+			</div>
+			{{$description := .DescriptionHTML $.Context}}
+			{{if $description}}
+				<div class="home-card-body">{{$description}}</div>
+			{{end}}
+			<div class="home-card-footer">
+				<span class="home-card-meta">{{svg "octicon-star" 16}} {{CountFmt .NumStars}}</span>
+				<span class="home-card-meta">{{svg "octicon-history" 16}} {{ctx.Locale.Tr "org.repo_updated" (DateUtils.TimeSince .UpdatedUnix)}}</span>
+			</div>
+		</a>
+	{{else}}
+		<div class="home-empty">{{ctx.Locale.Tr "search.no_results"}}</div>
+	{{end}}
+</div>

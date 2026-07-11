@@ -1,0 +1,15 @@
+<div class="home-card-grid">
+	{{range .Orgs}}
+		<a class="home-card" href="{{.HomeLink}}">
+			<div class="home-card-header">
+				{{ctx.AvatarUtils.Avatar . 28}}
+				<span class="home-card-title">{{.DisplayName}}</span>
+			</div>
+			{{if .Description}}
+				<div class="home-card-body">{{.Description}}</div>
+			{{end}}
+		</a>
+	{{else}}
+		<div class="home-empty">{{ctx.Locale.Tr "search.no_results"}}</div>
+	{{end}}
+</div>

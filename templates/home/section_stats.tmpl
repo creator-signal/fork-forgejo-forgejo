@@ -1,0 +1,12 @@
+<section class="home-section">
+	{{if .Title}}<h2 class="home-section-title">{{.Title}}</h2>{{end}}
+	<div class="home-stats">
+		{{range .Stats}}
+			<div class="home-stat">
+				{{svg .Icon 22 "home-stat-icon"}}
+				<span class="home-stat-value">{{CountFmt .Value}}</span>
+				<span class="home-stat-label">{{ctx.Locale.Tr .Label}}</span>
+			</div>
+		{{end}}
+	</div>
+</section>

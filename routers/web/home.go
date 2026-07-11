@@ -14,6 +14,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/homepage"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
@@ -68,10 +69,6 @@ func Home(ctx *context.Context) {
 
 		user.Dashboard(ctx)
 		return
-		// Check non-logged users landing page.
-	} else if setting.LandingPageURL != setting.LandingPageHome {
-		ctx.Redirect(setting.AppSubURL + string(setting.LandingPageURL))
-		return
 	}
 
 	// Check auto-login.
@@ -80,10 +77,21 @@ func Home(ctx *context.Context) {
 		return
 	}
 
+	// Check non-logged users landing page.
+	if setting.LandingPageURL != setting.LandingPageHome {
+		ctx.Redirect(setting.AppSubURL + string(setting.LandingPageURL))
+		return
+	}
+
 	ctx.Data["PageIsHome"] = true
 	ctx.Data["IsRepoIndexerEnabled"] = setting.Indexer.RepoIndexerEnabled
 
 	ctx.Data["OpenGraphDescription"] = setting.UI.Meta.Description
+
+	cfg := homepage.Get()
+	ctx.Data["HomeHero"] = cfg.Hero
+	ctx.Data["HomeNav"] = cfg.NavLinks
+	ctx.Data["HomeSections"] = homepage.Sections(ctx)
 
 	ctx.HTML(http.StatusOK, tplHome)
 }

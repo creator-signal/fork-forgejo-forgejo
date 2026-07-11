@@ -225,6 +225,12 @@
 				</div>
 			</details>
 		{{else}}
+			{{range .HomeNav}}
+				<a class="item{{if .Button}} primary{{end}}" href="{{.URL}}">
+					{{template "home/link_icon" dict "Icon" .Icon "Size" 16 "Class" "tw-mr-1"}}
+					<span>{{.Text}}</span>
+				</a>
+			{{end}}
 			{{if .ShowRegistrationButton}}
 				<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
 					{{svg "octicon-person" 16 "tw-mr-1"}}

@@ -1,16 +1,54 @@
 {{template "base/head" .}}
+{{$hero := .HomeHero}}
 <div role="main" aria-label="{{if .IsSigned}}{{ctx.Locale.Tr "dashboard"}}{{else}}{{ctx.Locale.Tr "home"}}{{end}}" class="page-content home">
-	<div class="tw-mb-8 tw-px-8">
-		<div class="center">
-			<img class="logo" width="220" height="220" src="{{AssetUrlPrefix}}/img/logo.svg" alt="{{ctx.Locale.Tr "logo"}}">
-			<div class="hero">
-				<h1 class="ui icon header title">
-					{{AppDisplayName}}
-				</h1>
-				<h2>{{ctx.Locale.Tr "startpage.app_desc"}}</h2>
+	<div class="home-hero">
+		<div class="home-hero-inner">
+			<div class="home-hero-text{{if and $hero (not $hero.ShowLogo)}} centered{{end}}">
+				<h1 class="home-hero-title title">{{if and $hero $hero.Title}}{{$hero.Title}}{{else}}{{AppDisplayName}}{{end}}</h1>
+				<h2 class="home-hero-sub">{{if and $hero $hero.Sub}}{{$hero.Sub}}{{else}}{{ctx.Locale.Tr "startpage.app_desc"}}{{end}}</h2>
+				{{if and $hero $hero.Description}}<p class="home-hero-desc">{{$hero.Description}}</p>{{end}}
+				{{if and $hero $hero.Buttons}}
+					<div class="home-hero-buttons">
+						{{range $hero.Buttons}}
+							<a class="button {{if .Primary}}primary{{else}}secondary{{end}}" href="{{.URL}}">{{.Text}}</a>
+						{{end}}
+					</div>
+				{{end}}
+				{{if or (not $hero) $hero.ShowPoweredBy}}
+					<p class="home-hero-poweredby">{{ctx.Locale.Tr "startpage.powered_by" "https://forgejo.org"}}</p>
+				{{end}}
 			</div>
+			{{if or (not $hero) $hero.ShowLogo}}
+				<div class="home-hero-logo-wrap">
+					<img class="home-hero-logo" src="{{AssetUrlPrefix}}/img/logo.svg" alt="{{ctx.Locale.Tr "logo"}}">
+				</div>
+			{{end}}
 		</div>
 	</div>
-	{{template "home_forgejo" .}}
+	<div class="home-sections">
+		{{range .HomeSections}}
+			{{if eq .Type "statistics"}}
+				{{template "home/section_stats" .}}
+			{{else if eq .Type "repositories"}}
+				<section class="home-section">
+					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "startpage.repos"}}{{end}}</h2>
+					{{template "home/repo_cards" dict "Repos" .Repos "Context" $.Context}}
+					<div class="home-view-all">
+						<a href="{{AppSubUrl}}/explore/repos">{{ctx.Locale.Tr "startpage.explore.repositories"}}{{svg "octicon-arrow-right" 16}}</a>
+					</div>
+				</section>
+			{{else if eq .Type "organizations"}}
+				<section class="home-section">
+					<h2 class="home-section-title">{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "startpage.orgs"}}{{end}}</h2>
+					{{template "home/org_cards" dict "Orgs" .Orgs}}
+					<div class="home-view-all">
+						<a href="{{AppSubUrl}}/explore/organizations">{{ctx.Locale.Tr "startpage.explore.organizations"}}{{svg "octicon-arrow-right" 16}}</a>
+					</div>
+				</section>
+			{{else if eq .Type "links"}}
+				{{template "home/section_links" .}}
+			{{end}}
+		{{end}}
+	</div>
 </div>
 {{template "base/footer" .}}
