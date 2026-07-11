@@ -1,6 +1,6 @@
 {{template "base/head" .}}
 {{$hero := .HomeHero}}
-<div role="main" aria-label="{{if .IsSigned}}{{ctx.Locale.Tr "dashboard"}}{{else}}{{ctx.Locale.Tr "home"}}{{end}}" class="page-content home">
+<div role="main" aria-label="{{if .IsSigned}}{{ctx.Locale.Tr "dashboard"}}{{else}}{{ctx.Locale.Tr "home"}}{{end}}" class="page-content home{{if not .HomeSections}} home-no-sections{{end}}">
 	<div class="home-hero">
 		<div class="home-hero-inner">
 			<div class="home-hero-text{{if and $hero (not $hero.ShowLogo)}} centered{{end}}">
@@ -25,6 +25,7 @@
 			{{end}}
 		</div>
 	</div>
+	{{if .HomeSections}}
 	<div class="home-sections">
 		{{range .HomeSections}}
 			{{if eq .Type "statistics"}}
@@ -50,5 +51,6 @@
 			{{end}}
 		{{end}}
 	</div>
+	{{end}}
 </div>
 {{template "base/footer" .}}
