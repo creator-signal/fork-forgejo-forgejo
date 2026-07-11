@@ -41,11 +41,12 @@ func IsValidOAuthRedirectURI(uri string) bool {
 	}
 
 	// http(s) URIs keep the stricter host/port validation of IsValidURL.
-	// Reject pseudo-schemes that execute in a browser context, as defense in depth.
+	// Reject pseudo-schemes that execute in a browser context and other
+	// potentially unsafe schemes, as defense in depth.
 	switch u.Scheme {
 	case "http", "https":
 		return IsValidURL(uri)
-	case "file", "javascript", "data", "vbscript":
+	case "file", "javascript", "data", "vbscript", "ftp", "intent", "":
 		return false
 	}
 
