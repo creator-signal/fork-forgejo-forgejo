@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1611,8 +1612,8 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	maxLines := setting.Git.MaxGitDiffLines
 
 	listOptions := utils.GetListOptions(ctx)
-	start, limit := listOptions.GetSkipTake()
-	limit += start
+	start, end := listOptions.GetSkipTake()
+	end += start
 
 	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, baseGitRepo, startCommitID, endCommitID, listOptions.PageSize)
 	if err != nil {
@@ -1625,8 +1626,8 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 		diffFileMetadata = skipFilesTo(diffFileMetadata, skipTo)
 	}
 
-	if limit > len(diffFileMetadata) {
-		limit = len(diffFileMetadata)
+	if end > len(diffFileMetadata) {
+		end = len(diffFileMetadata)
 	}
 
 	var apiFiles []*api.ChangedFile
@@ -1638,14 +1639,14 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 				MaxLines:           maxLines,
 				MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
 				WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
-			}, gitdiff.GetFileNames(diffFileMetadata[start:limit])...)
+			}, gitdiff.GetFileNames(diffFileMetadata[start:end])...)
 		if err != nil {
 			ctx.ServerError("GetDiff", err)
 			return
 		}
-		apiFiles = make([]*api.ChangedFile, 0, len(diff.Files))
-		for _, diffFile := range diff.Files {
-			apiFiles = append(apiFiles, convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID))
+		apiFiles = make([]*api.ChangedFile, len(diff.Files))
+		for i, diffFile := range diff.Files {
+			apiFiles[i] = convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID)
 		}
 	}
 
@@ -1665,10 +1666,11 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 }
 
 func skipFilesTo(list []*gitdiff.DiffFileMetadata, target string) []*gitdiff.DiffFileMetadata {
-	for i, s := range list {
-		if s.Name == target {
-			return list[i:]
-		}
+	i := slices.IndexFunc(list, func(diff *gitdiff.DiffFileMetadata) bool {
+		return diff.Name == target
+	})
+	if i != -1 {
+		return list[i:]
 	}
 	return []*gitdiff.DiffFileMetadata{}
 }
