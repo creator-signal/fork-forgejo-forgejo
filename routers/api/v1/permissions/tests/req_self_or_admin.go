@@ -13,11 +13,13 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 	testCases: []*testCase{
 		{
+			// The doer is an admin user
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer("root").
 				SetDoerAdmin(true)),
 		},
 		{
+			// The context user "someuser" is the same as the doer
 			data: newTestData(map[string]string{
 				"user": "someuser",
 			}, newSharedData().
@@ -25,6 +27,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
 			),
 		},
 		{
+			// The doer "someuser" is neither an admin nor is it equal to
+			// the context user
 			data: newTestData(map[string]string{
 				"user": "otheruser",
 			}, newSharedData().
