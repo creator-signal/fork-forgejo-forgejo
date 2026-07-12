@@ -5,7 +5,7 @@
 package allowlist
 
 import (
-	"net"
+	"errors"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -24,81 +24,57 @@ var (
 )
 
 // IsPushMirrorURLAllowed checks if an URL is allowed to be pushed to.
-func IsPushMirrorURLAllowed(remoteURL string, doer *user_model.User) error {
+func IsPushMirrorURLAllowed(remoteURL string, doer *user_model.User) (hostmatcher.ManualDialContext, error) {
 	return isURLAllowed(remoteURL, doer, true)
 }
 
 // IsMigrateURLAllowed checks if an URL is allowed to be migrated from.
-func IsMigrateURLAllowed(remoteURL string, doer *user_model.User) error {
+func IsMigrateURLAllowed(remoteURL string, doer *user_model.User) (hostmatcher.ManualDialContext, error) {
 	return isURLAllowed(remoteURL, doer, false)
 }
 
-func isURLAllowed(remoteURL string, doer *user_model.User, isPushMirror bool) error {
+func isURLAllowed(remoteURL string, doer *user_model.User, isPushMirror bool) (hostmatcher.ManualDialContext, error) {
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
 	u, err := url.Parse(remoteURL)
 	if err != nil {
-		return &models.ErrInvalidCloneAddr{IsURLError: true, Host: remoteURL}
+		return nil, &models.ErrInvalidCloneAddr{IsURLError: true, Host: remoteURL}
 	}
 
 	if u.Scheme == "file" || u.Scheme == "" {
 		if !doer.CanImportLocal() {
-			return &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsPermissionDenied: true, LocalPath: true}
+			return nil, &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsPermissionDenied: true, LocalPath: true}
 		}
 		isAbs := filepath.IsAbs(u.Host + u.Path)
 		if !isAbs {
-			return &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsInvalidPath: true, LocalPath: true}
+			return nil, &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsInvalidPath: true, LocalPath: true}
 		}
 		isDir, err := util.IsDir(u.Host + u.Path)
 		if err != nil {
 			log.Error("Unable to check if %s is a directory: %v", u.Host+u.Path, err)
-			return err
+			return nil, err
 		}
 		if !isDir {
-			return &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsInvalidPath: true, LocalPath: true}
+			return nil, &models.ErrInvalidCloneAddr{Host: "<LOCAL_FILESYSTEM>", IsInvalidPath: true, LocalPath: true}
 		}
 
-		return nil
+		return hostmatcher.NewNilManualDialContext(), nil
 	}
 
 	if u.Scheme == "git" && u.Port() != "" && (strings.Contains(remoteURL, "%0d") || strings.Contains(remoteURL, "%0a")) {
-		return &models.ErrInvalidCloneAddr{Host: u.Host, IsURLError: true}
+		return nil, &models.ErrInvalidCloneAddr{Host: u.Host, IsURLError: true}
 	}
 
 	if u.Opaque != "" || u.Scheme != "" && u.Scheme != "http" && u.Scheme != "https" && u.Scheme != "git" && u.Scheme != "ssh" || (!isPushMirror && u.Scheme == "ssh") {
-		return &models.ErrInvalidCloneAddr{Host: u.Host, IsProtocolInvalid: true, IsPermissionDenied: true, IsURLError: true}
+		return nil, &models.ErrInvalidCloneAddr{Host: u.Host, IsProtocolInvalid: true, IsPermissionDenied: true, IsURLError: true}
 	}
 
-	hostName, _, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		// u.Host can be "host" or "host:port"
-		err = nil //nolint
-		hostName = u.Host
+	mdc := hostmatcher.NewRemoteManualDialContext(u, allowList, blockList)
+	if err := mdc.Check(); errors.Is(err, hostmatcher.ErrManualDialContextCheckFailed) {
+		err = &models.ErrInvalidCloneAddr{Host: u.Hostname(), IsPermissionDenied: true}
+		return nil, err
 	}
 
-	// some users only use proxy, there is no DNS resolver. it's safe to ignore the LookupIP error
-	addrList, _ := net.LookupIP(hostName)
-	return checkByAllowBlockList(hostName, addrList)
-}
-
-func checkByAllowBlockList(hostName string, addrList []net.IP) error {
-	var ipAllowed bool
-	var ipBlocked bool
-	for _, addr := range addrList {
-		ipAllowed = ipAllowed || allowList.MatchIPAddr(addr)
-		ipBlocked = ipBlocked || blockList.MatchIPAddr(addr)
-	}
-	var blockedError error
-	if blockList.MatchHostName(hostName) || ipBlocked {
-		blockedError = &models.ErrInvalidCloneAddr{Host: hostName, IsPermissionDenied: true}
-	}
-	// if we have an allow-list, check the allow-list before return to get the more accurate error
-	if !allowList.IsEmpty() {
-		if !allowList.MatchHostName(hostName) && !ipAllowed {
-			return &models.ErrInvalidCloneAddr{Host: hostName, IsPermissionDenied: true}
-		}
-	}
-	// otherwise, we always follow the blocked list
-	return blockedError
+	return mdc, nil
 }
 
 // Init migrations service

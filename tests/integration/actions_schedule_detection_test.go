@@ -19,6 +19,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/migration"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
@@ -466,7 +467,7 @@ jobs:
 		})
 		require.NoError(t, err)
 
-		mirrorRepo, err = repo_service.MigrateRepositoryGitData(t.Context(), user2, mirrorRepo, migrateOptions, nil)
+		mirrorRepo, err = repo_service.MigrateRepositoryGitData(t.Context(), user2, mirrorRepo, migrateOptions, nil, hostmatcher.NewNilManualDialContext())
 		require.NoError(t, err)
 
 		assert.True(t, mirrorRepo.IsMirror)

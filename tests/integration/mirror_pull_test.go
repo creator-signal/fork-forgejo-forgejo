@@ -22,6 +22,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/migration"
@@ -86,7 +87,7 @@ func TestMirrorPull(t *testing.T) {
 
 		ctx := t.Context()
 
-		mirror, err := repo_service.MigrateRepositoryGitData(ctx, user, mirrorRepo, opts, nil)
+		mirror, err := repo_service.MigrateRepositoryGitData(ctx, user, mirrorRepo, opts, nil, hostmatcher.NewNilManualDialContext())
 		require.NoError(t, err)
 
 		gitRepo, err := gitrepo.OpenRepository(git.DefaultContext, repo)

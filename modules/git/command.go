@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"forgejo.org/modules/git/internal" //nolint:depguard // only this file can use the internal type CmdArg, other files and packages should use AddXxx functions
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/util"
@@ -493,6 +494,14 @@ func (c *Command) AddAuthCredentialHelperForRemote(remoteURL string) (commandURL
 	}
 
 	return remoteURL, func() {}, nil
+}
+
+// Must be invoked before the primary git subcommand ('push', 'fetch', etc.) in order to add config options.
+func (c *Command) AddManualDialContext(mdc hostmatcher.ManualDialContext) error {
+	return mdc.ConfigGitCommand(
+		func(s string) { c.AddArguments(internal.CmdArg(s)) },
+		func(s string) { c.AddDynamicArguments(s) },
+	)
 }
 
 // AllowLFSFiltersArgs return globalCommandArgs with lfs filter, it should only be used for tests

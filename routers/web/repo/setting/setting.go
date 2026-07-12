@@ -474,7 +474,8 @@ func SettingsPost(ctx *context.Context) {
 
 		address, err := forms.ParseRemoteAddr(form.MirrorAddress, form.MirrorUsername, form.MirrorPassword)
 		if err == nil {
-			err = migrations_allowlist.IsMigrateURLAllowed(address, ctx.Doer)
+			// ManualDialContext is not used here -- this routine doesn't actually pull, it will be rechecked later.
+			_, err = migrations_allowlist.IsMigrateURLAllowed(address, ctx.Doer)
 		}
 		if err != nil {
 			ctx.Data["Err_MirrorAddress"] = true
@@ -511,7 +512,8 @@ func SettingsPost(ctx *context.Context) {
 				ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_lfs_endpoint"), tplSettingsOptions, &form)
 				return
 			}
-			err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
+			// ManualDialContext is not used here -- this routine doesn't actually pull, it will be rechecked later.
+			_, err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
 			if err != nil {
 				ctx.Data["Err_LFSEndpoint"] = true
 				handleSettingRemoteAddrError(ctx, err, form)
@@ -688,7 +690,8 @@ func SettingsPost(ctx *context.Context) {
 
 		address, err := forms.ParseRemoteAddr(form.PushMirrorAddress, form.PushMirrorUsername, form.PushMirrorPassword)
 		if err == nil {
-			err = migrations_allowlist.IsPushMirrorURLAllowed(address, ctx.Doer)
+			// ManualDialContext is not used here -- this routine doesn't actually push, it will be rechecked later.
+			_, err = migrations_allowlist.IsPushMirrorURLAllowed(address, ctx.Doer)
 		}
 		if err != nil {
 			ctx.Data["Err_PushMirrorAddress"] = true

@@ -113,7 +113,8 @@ func Migrate(ctx *context.APIContext) {
 
 	remoteAddr, err := forms.ParseRemoteAddr(form.CloneAddr, form.AuthUsername, form.AuthPassword)
 	if err == nil {
-		err = migrations_allowlist.IsMigrateURLAllowed(remoteAddr, ctx.Doer())
+		// IsMigrateURLAllowed is rechecked in MigrateRepository; we don't need to use the ManualDialContext
+		_, err = migrations_allowlist.IsMigrateURLAllowed(remoteAddr, ctx.Doer())
 	}
 	if err != nil {
 		handleRemoteAddrError(ctx, err)
@@ -140,7 +141,8 @@ func Migrate(ctx *context.APIContext) {
 			ctx.Error(http.StatusInternalServerError, "", ctx.Tr("repo.migrate.invalid_lfs_endpoint"))
 			return
 		}
-		err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer())
+		// IsMigrateURLAllowed is rechecked in MigrateRepository; we don't need to use the ManualDialContext
+		_, err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer())
 		if err != nil {
 			handleRemoteAddrError(ctx, err)
 			return

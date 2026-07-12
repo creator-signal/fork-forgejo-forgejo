@@ -185,7 +185,8 @@ func MigratePost(ctx *context.Context) {
 
 	remoteAddr, err := forms.ParseRemoteAddr(form.CloneAddr, form.AuthUsername, form.AuthPassword)
 	if err == nil {
-		err = migrations_allowlist.IsMigrateURLAllowed(remoteAddr, ctx.Doer)
+		// FIXME: verify that net IP used here is used later
+		_, err = migrations_allowlist.IsMigrateURLAllowed(remoteAddr, ctx.Doer)
 	}
 	if err != nil {
 		ctx.Data["Err_CloneAddr"] = true
@@ -202,7 +203,8 @@ func MigratePost(ctx *context.Context) {
 			ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_lfs_endpoint"), tpl, &form)
 			return
 		}
-		err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
+		// FIXME: verify that net IP used here is used later
+		_, err = migrations_allowlist.IsMigrateURLAllowed(ep.String(), ctx.Doer)
 		if err != nil {
 			ctx.Data["Err_LFSEndpoint"] = true
 			handleMigrateRemoteAddrError(ctx, err, tpl, form)

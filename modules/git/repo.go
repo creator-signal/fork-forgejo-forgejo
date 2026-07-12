@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
@@ -122,6 +123,7 @@ type CloneRepoOptions struct {
 	Filter               string
 	SkipTLSVerify        bool
 	ProhibitHTTPRedirect bool
+	ManualDialContext    hostmatcher.ManualDialContext
 }
 
 // Clone clones original repository to target path.
@@ -151,6 +153,12 @@ func CloneWithArgs(ctx context.Context, args TrustedCmdArgs, from, to string, op
 		return err
 	}
 	defer cleanup()
+
+	if opts.ManualDialContext != nil {
+		if err := cmd.AddManualDialContext(opts.ManualDialContext); err != nil {
+			return err
+		}
+	}
 
 	cmd.AddArguments("clone")
 
@@ -214,6 +222,7 @@ type PushOptions struct {
 	Timeout              time.Duration
 	PrivateKeyPath       string
 	ProhibitHTTPRedirect bool
+	ManualDialContext    hostmatcher.ManualDialContext
 }
 
 // Push pushs local commits to given remote branch.
@@ -222,6 +231,11 @@ func Push(ctx context.Context, repoPath string, opts PushOptions) error {
 
 	if opts.ProhibitHTTPRedirect {
 		cmd.AddArguments("-c", "http.followRedirects=false")
+	}
+	if opts.ManualDialContext != nil {
+		if err := cmd.AddManualDialContext(opts.ManualDialContext); err != nil {
+			return err
+		}
 	}
 
 	cmd.AddArguments("push")

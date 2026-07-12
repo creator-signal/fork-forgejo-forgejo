@@ -5,10 +5,12 @@
 
 package migration
 
+import "forgejo.org/modules/hostmatcher"
+
 // Uploader uploads all the information of one repository
 type Uploader interface {
 	MaxBatchInsertSize(tp string) int
-	CreateRepo(repo *Repository, opts MigrateOptions) error
+	CreateRepo(repo *Repository, opts MigrateOptions, mdc hostmatcher.ManualDialContext) error
 	CreateTopics(topic ...string) error
 	CreateMilestones(milestones ...*Milestone) error
 	CreateReleases(releases ...*Release) error

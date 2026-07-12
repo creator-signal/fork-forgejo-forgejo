@@ -121,9 +121,6 @@ forgejo.org/modules/graceful
 forgejo.org/modules/hcaptcha
 	WithHTTP
 
-forgejo.org/modules/hostmatcher
-	HostMatchList.AppendPattern
-
 forgejo.org/modules/json
 	StdJSON.Marshal
 	StdJSON.Unmarshal

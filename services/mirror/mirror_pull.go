@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/git"
 	giturl "forgejo.org/modules/git/url"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
@@ -303,9 +304,9 @@ func ModernizePullMirrorConfig(ctx context.Context, m *repo_model.Mirror) error 
 	return nil
 }
 
-func recheckPullPermitted(ctx context.Context, m *repo_model.Mirror, remoteURL *url.URL) error {
+func recheckPullPermitted(ctx context.Context, m *repo_model.Mirror, remoteURL *url.URL) (hostmatcher.ManualDialContext, error) {
 	if err := m.Repo.LoadOwner(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	return migrations_allowlist.IsMigrateURLAllowed(remoteURL.String(), m.Repo.Owner)
 }
@@ -332,12 +333,17 @@ func runSync(ctx context.Context, m *repo_model.Mirror) ([]*mirrorSyncResult, bo
 	// Recheck that the remote address is still permitted before pulling. The address passed IsMigrateURLAllowed at
 	// creation time, but the allow/block lists may have changed since, or DNS for the remote host may now resolve to an
 	// internal address (DNS rebinding).
-	if err := recheckPullPermitted(ctx, m, remoteURL.URL); err != nil {
+	mdc, err := recheckPullPermitted(ctx, m, remoteURL.URL)
+	if err != nil {
 		log.Error("SyncMirrors [repo: %-v]: pull mirror failed to meet migration URL requirements: %v", m.Repo, err)
 		return nil, false
 	}
 
 	cmd := git.NewCommand(ctx)
+	if err := cmd.AddManualDialContext(mdc); err != nil {
+		log.Error("SyncMirrors [repo: %-v]: manual dial context failed: %v", m.Repo, err)
+		return nil, false
+	}
 
 	// Setup credential helper to authenticate the fetch; needs to occur before the `fetch` arg.
 	_, credCleanup, err := cmd.AddAuthCredentialHelperForRemote(remoteURL.URL.String())

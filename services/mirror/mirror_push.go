@@ -18,6 +18,7 @@ import (
 	"forgejo.org/modules/git"
 	giturl "forgejo.org/modules/git/url"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
@@ -180,9 +181,9 @@ func SyncPushMirror(ctx context.Context, mirrorID int64) bool {
 	return err == nil
 }
 
-func recheckPushPermitted(ctx context.Context, m *repo_model.PushMirror, remoteURL *giturl.GitURL) error {
+func recheckPushPermitted(ctx context.Context, m *repo_model.PushMirror, remoteURL *giturl.GitURL) (hostmatcher.ManualDialContext, error) {
 	if err := m.Repo.LoadOwner(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	return migrations_allowlist.IsPushMirrorURLAllowed(remoteURL.String(), m.Repo.Owner)
 }
@@ -206,7 +207,8 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 		// Recheck that the remote address is still permitted before pushing. The address passed IsPushMirrorURLAllowed
 		// at creation time, but the allow/block lists may have changed since, or DNS for the remote host may now
 		// resolve to an internal address (DNS rebinding).
-		if err := recheckPushPermitted(ctx, m, remoteURL); err != nil {
+		mdc, err := recheckPushPermitted(ctx, m, remoteURL)
+		if err != nil {
 			log.Error("SyncPushMirror [repo: %-v]: push mirror failed to meet migration URL requirements: %v", m.Repo, err)
 			return util.SanitizeErrorCredentialURLs(err)
 		}
@@ -275,6 +277,7 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 			// The remote URL passed IsPushMirrorURLAllowed, but any redirection URL may not. Prohibit redirects in
 			// order to protect against SSRF risks.
 			ProhibitHTTPRedirect: true,
+			ManualDialContext:    mdc,
 		}); err != nil {
 			log.Error("Error pushing %s mirror[%d] remote %s: %v", path, m.ID, m.RemoteName, err)
 

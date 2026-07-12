@@ -22,6 +22,7 @@ import (
 	base_module "forgejo.org/modules/base"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/label"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
@@ -95,7 +96,7 @@ func (g *GiteaLocalUploader) MaxBatchInsertSize(tp string) int {
 }
 
 // CreateRepo creates a repository
-func (g *GiteaLocalUploader) CreateRepo(repo *base.Repository, opts base.MigrateOptions) error {
+func (g *GiteaLocalUploader) CreateRepo(repo *base.Repository, opts base.MigrateOptions, mdc hostmatcher.ManualDialContext) error {
 	owner, err := user_model.GetUserByName(g.ctx, g.repoOwner)
 	if err != nil {
 		return err
@@ -132,7 +133,7 @@ func (g *GiteaLocalUploader) CreateRepo(repo *base.Repository, opts base.Migrate
 		Releases:       opts.Releases, // if didn't get releases, then sync them from tags
 		RepoName:       g.repoName,
 		Wiki:           opts.Wiki,
-	}, allowlist.NewMigrationHTTPTransport())
+	}, allowlist.NewMigrationHTTPTransport(), mdc)
 
 	g.sameApp = strings.HasPrefix(repo.OriginalURL, setting.AppURL)
 	g.repo = r

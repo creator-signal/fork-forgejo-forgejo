@@ -7,6 +7,7 @@ package migrations
 import (
 	"testing"
 
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/migration"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func (nullUploader) MaxBatchInsertSize(string) int {
 	return 1
 }
 
-func (nullUploader) CreateRepo(*migration.Repository, migration.MigrateOptions) error {
+func (nullUploader) CreateRepo(*migration.Repository, migration.MigrateOptions, hostmatcher.ManualDialContext) error {
 	return nil
 }
 
@@ -115,7 +116,7 @@ func TestMigrateRepository(t *testing.T) {
 	require.NoError(t, migrateRepository(nil, nil, testingDownloader{}, nullUploader{}, migration.MigrateOptions{
 		PullRequests: true,
 		Issues:       true,
-	}, messenger))
+	}, messenger, hostmatcher.NewNilManualDialContext()))
 
 	assert.Empty(t, messages)
 }

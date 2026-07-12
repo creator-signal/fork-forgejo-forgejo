@@ -15,6 +15,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/migration"
@@ -28,6 +29,7 @@ import (
 func MigrateRepositoryGitData(ctx context.Context, u *user_model.User,
 	repo *repo_model.Repository, opts migration.MigrateOptions,
 	httpTransport *http.Transport,
+	mdc hostmatcher.ManualDialContext,
 ) (*repo_model.Repository, error) {
 	repoPath := repo_model.RepoPath(u.Name, opts.RepoName)
 
@@ -56,6 +58,7 @@ func MigrateRepositoryGitData(ctx context.Context, u *user_model.User,
 		// CloneAddr would have passed IsMigrateURLAllowed, but any redirection URL may not. Prohibit redirects in order
 		// to protect against SSRF risks.
 		ProhibitHTTPRedirect: true,
+		ManualDialContext:    mdc,
 	}); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return repo, fmt.Errorf("Clone timed out. Consider increasing [git.timeout] MIGRATE in app.ini. Underlying Error: %w", err)

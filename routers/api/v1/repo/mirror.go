@@ -364,7 +364,8 @@ func CreatePushMirror(ctx *context.APIContext, mirrorOption *api.CreatePushMirro
 
 	address, err := forms.ParseRemoteAddr(mirrorOption.RemoteAddress, mirrorOption.RemoteUsername, mirrorOption.RemotePassword)
 	if err == nil {
-		err = migrations_allowlist.IsPushMirrorURLAllowed(address, ctx.User())
+		// ManualDialContext is not used; URL is rechecked later
+		_, err = migrations_allowlist.IsPushMirrorURLAllowed(address, ctx.User())
 	}
 	if err != nil {
 		HandleRemoteAddressError(ctx, err)

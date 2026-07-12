@@ -19,6 +19,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/optional"
@@ -57,7 +58,7 @@ func TestUpload(t *testing.T) {
 	}
 
 	// Create Repo
-	require.NoError(t, uploader.CreateRepo(repoMock, opts))
+	require.NoError(t, uploader.CreateRepo(repoMock, opts, hostmatcher.NewNilManualDialContext()))
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
 
@@ -202,7 +203,7 @@ func TestGiteaUploadRepo(t *testing.T) {
 		PullRequests: true,
 		Private:      true,
 		Mirror:       false,
-	}, nil)
+	}, nil, hostmatcher.NewNilManualDialContext())
 	require.NoError(t, err)
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: repoName})
@@ -455,7 +456,7 @@ func TestGiteaUploadUpdateGitForPullRequest(t *testing.T) {
 		GitServiceType: structs.GiteaService,
 		Private:        false,
 		Mirror:         true,
-	}))
+	}, hostmatcher.NewNilManualDialContext()))
 
 	for _, testCase := range []struct {
 		name        string

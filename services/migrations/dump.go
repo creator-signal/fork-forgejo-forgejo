@@ -18,6 +18,7 @@ import (
 
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/repository"
@@ -105,7 +106,7 @@ func (g *RepositoryDumper) setURLToken(remoteAddr string) (string, error) {
 }
 
 // CreateRepo creates a repository
-func (g *RepositoryDumper) CreateRepo(repo *base.Repository, opts base.MigrateOptions) error {
+func (g *RepositoryDumper) CreateRepo(repo *base.Repository, opts base.MigrateOptions, mdc hostmatcher.ManualDialContext) error {
 	f, err := os.Create(filepath.Join(g.baseDir, "repo.yml"))
 	if err != nil {
 		return err
@@ -151,10 +152,11 @@ func (g *RepositoryDumper) CreateRepo(repo *base.Repository, opts base.MigrateOp
 	}
 
 	err = git.Clone(g.ctx, remoteAddr, repoPath, git.CloneRepoOptions{
-		Mirror:        true,
-		Quiet:         true,
-		Timeout:       migrateTimeout,
-		SkipTLSVerify: setting.Migrations.SkipTLSVerify,
+		Mirror:            true,
+		Quiet:             true,
+		Timeout:           migrateTimeout,
+		SkipTLSVerify:     setting.Migrations.SkipTLSVerify,
+		ManualDialContext: mdc,
 	})
 	if err != nil {
 		return fmt.Errorf("Clone: %w", err)
@@ -656,7 +658,7 @@ func DumpRepository(ctx context.Context, baseDir, ownerName string, opts base.Mi
 		return err
 	}
 
-	if err := migrateRepository(ctx, doer, downloader, uploader, opts, nil); err != nil {
+	if err := migrateRepository(ctx, doer, downloader, uploader, opts, nil, hostmatcher.NewNilManualDialContext()); err != nil {
 		if err1 := uploader.Rollback(); err1 != nil {
 			log.Error("rollback failed: %v", err1)
 		}
@@ -728,7 +730,7 @@ func RestoreRepository(ctx context.Context, baseDir, ownerName, repoName string,
 		return err
 	}
 
-	if err = migrateRepository(ctx, doer, downloader, uploader, migrateOpts, nil); err != nil {
+	if err = migrateRepository(ctx, doer, downloader, uploader, migrateOpts, nil, hostmatcher.NewNilManualDialContext()); err != nil {
 		if err1 := uploader.Rollback(); err1 != nil {
 			log.Error("rollback failed: %v", err1)
 		}

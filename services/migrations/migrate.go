@@ -13,6 +13,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	system_model "forgejo.org/models/system"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/setting"
@@ -32,12 +33,14 @@ func RegisterDownloaderFactory(factory base.DownloaderFactory) {
 
 // MigrateRepository migrate repository according MigrateOptions
 func MigrateRepository(ctx context.Context, doer *user_model.User, ownerName string, opts base.MigrateOptions, messenger base.Messenger) (*repo_model.Repository, error) {
-	err := allowlist.IsMigrateURLAllowed(opts.CloneAddr, doer)
+	mdc, err := allowlist.IsMigrateURLAllowed(opts.CloneAddr, doer)
 	if err != nil {
 		return nil, err
 	}
 	if opts.LFS && len(opts.LFSEndpoint) > 0 {
-		err := allowlist.IsMigrateURLAllowed(opts.LFSEndpoint, doer)
+		// ManualDialContext here doesn't need to be preserved -- an http transport DialContext is used later when
+		// accessing the LFS endpoint
+		_, err := allowlist.IsMigrateURLAllowed(opts.LFSEndpoint, doer)
 		if err != nil {
 			return nil, err
 		}
@@ -50,12 +53,12 @@ func MigrateRepository(ctx context.Context, doer *user_model.User, ownerName str
 	uploader := NewGiteaLocalUploader(ctx, doer, ownerName, opts.RepoName)
 	uploader.gitServiceType = opts.GitServiceType
 
-	if err := migrateRepository(ctx, doer, downloader, uploader, opts, messenger); err != nil {
+	if err := migrateRepository(ctx, doer, downloader, uploader, opts, messenger, mdc); err != nil {
 		if err1 := uploader.Rollback(); err1 != nil {
 			log.Error("rollback failed: %v", err1)
 		}
 		if err2 := system_model.CreateRepositoryNotice(fmt.Sprintf("Migrate repository from %s failed: %v", opts.OriginalURL, err)); err2 != nil {
-			log.Error("create respotiry notice failed: ", err2)
+			log.Error("create repository notice failed: ", err2)
 		}
 		return nil, err
 	}
@@ -105,7 +108,7 @@ func newDownloader(ctx context.Context, ownerName string, opts base.MigrateOptio
 // migrateRepository will download information and then upload it to Uploader, this is a simple
 // process for small repository. For a big repository, save all the data to disk
 // before upload is better
-func migrateRepository(_ context.Context, doer *user_model.User, downloader base.Downloader, uploader base.Uploader, opts base.MigrateOptions, messenger base.Messenger) error {
+func migrateRepository(_ context.Context, doer *user_model.User, downloader base.Downloader, uploader base.Uploader, opts base.MigrateOptions, messenger base.Messenger, mdc hostmatcher.ManualDialContext) error {
 	if messenger == nil {
 		messenger = base.NilMessenger
 	}
@@ -129,9 +132,12 @@ func migrateRepository(_ context.Context, doer *user_model.User, downloader base
 	// SECURITY: If the downloader is not a RepositoryRestorer then we need to recheck the CloneURL
 	if _, ok := downloader.(*RepositoryRestorer); !ok {
 		// Now the clone URL can be rewritten by the downloader so we must recheck
-		if err := allowlist.IsMigrateURLAllowed(repo.CloneURL, doer); err != nil {
+		newMdc, err := allowlist.IsMigrateURLAllowed(repo.CloneURL, doer)
+		if err != nil {
 			return err
 		}
+		// Keep ManualDialContext from the last CloneURL check
+		mdc = newMdc
 
 		// SECURITY: Ensure that we haven't been redirected from an external to a local filesystem
 		// Now we know all of these must parse
@@ -149,7 +155,7 @@ func migrateRepository(_ context.Context, doer *user_model.User, downloader base
 
 	log.Trace("migrating git data from %s", repo.CloneURL)
 	messenger("migrate.in_progress.git")
-	if err = uploader.CreateRepo(repo, opts); err != nil {
+	if err = uploader.CreateRepo(repo, opts, mdc); err != nil {
 		return err
 	}
 	defer uploader.Close()

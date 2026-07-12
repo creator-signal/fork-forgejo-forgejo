@@ -46,14 +46,14 @@ func TestMigrateLocalPath(t *testing.T) {
 	err := os.Mkdir(lowercasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations_allowlist.IsMigrateURLAllowed(lowercasePath, adminUser)
+	_, err = migrations_allowlist.IsMigrateURLAllowed(lowercasePath, adminUser)
 	require.NoError(t, err, "case lowercase path")
 
 	mixedcasePath := filepath.Join(basePath, "mIxeDCaSe")
 	err = os.Mkdir(mixedcasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations_allowlist.IsMigrateURLAllowed(mixedcasePath, adminUser)
+	_, err = migrations_allowlist.IsMigrateURLAllowed(mixedcasePath, adminUser)
 	require.NoError(t, err, "case mixedcase path")
 
 	setting.ImportLocalPaths = old
