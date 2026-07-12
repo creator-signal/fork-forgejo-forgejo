@@ -18,7 +18,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
 			}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -44,7 +44,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 
 				"NilIssue": "true",
 			}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "Not Found",
@@ -57,7 +57,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 
 				"InconsistentID": "true",
 			}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "Not Found",

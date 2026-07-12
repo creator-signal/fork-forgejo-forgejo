@@ -156,7 +156,7 @@ func fixtureSetDoer(t *testing.T, permissions *apiv1_permissions.Permissions, te
 		permissions.SetAuthentication(&auth.UnauthenticatedResult{})
 		return
 	}
-	name := testData.shared.Doer()
+	name := testData.shared.DoerName()
 	if doer := permissions.Doer(); doer != nil {
 		if doer.Name != name {
 			panic(fmt.Sprintf("attempting to override doer %s with %s", doer.Name, name))
@@ -276,7 +276,7 @@ func fixtureSetDoerRegularUser(t *testing.T, permissions *apiv1_permissions.Perm
 	}
 	if !data.Anonymous() {
 		user := &user_model.User{
-			Name:    data.Doer(),
+			Name:    data.DoerName(),
 			IsAdmin: data.DoerAdmin(),
 		}
 		fixtureCreateUser(t, user)

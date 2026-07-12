@@ -21,7 +21,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 		testCases: []*testCase{
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoer("userowner").
+					SetDoerName("userowner").
 					SetRepositoryName("userowner/repositorypublic").
 					SetDoerScope(scopes),
 				),
@@ -34,7 +34,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 			},
 			{
 				data: newTestData(map[string]string{}, newSharedData().
-					SetDoer("someuser").
+					SetDoerName("someuser").
 					SetRepositoryName("userowner/repositorypublic").
 					SetDoerScope(scopes),
 				),
@@ -54,10 +54,10 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 			if data.shared.HasRepositoryName() {
 				owner, _, found := strings.Cut(data.shared.RepositoryName(), "/")
 				require.True(t, found)
-				data.shared.SetDoer(owner)
+				data.shared.SetDoerName(owner)
 			} else {
 				data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
-				data.shared.SetDoerDefault("userowner")
+				data.shared.SetDoerNameDefault("userowner")
 			}
 			data.shared.SetTokenLevelDefault("write")
 		},

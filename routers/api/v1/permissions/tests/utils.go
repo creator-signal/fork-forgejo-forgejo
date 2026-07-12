@@ -5,12 +5,27 @@ package tests
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	auth_model "forgejo.org/models/auth"
 	unit_model "forgejo.org/models/unit"
 	api "forgejo.org/modules/structs"
 )
+
+var (
+	letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	random  = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+func randomName() string {
+	b := make([]rune, 10)
+	for i := range b {
+		b[i] = letters[random.Intn(len(letters))]
+	}
+	return string(b)
+}
 
 func levelStringToLevel(levelString string) auth_model.AccessTokenScopeLevel {
 	level := auth_model.Read

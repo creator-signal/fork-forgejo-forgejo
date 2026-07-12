@@ -18,15 +18,15 @@ var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doername"),
+				SetDoer(),
 			),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerDefault("doername")
+		data.shared.SetDoerDefault()
 		if data.shared.DoerActions() {
-			data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
+			data.shared.SetRepositoryDefault()
 		}
 		data.shared.SetDoerScopeDefault("read:repository")
 		data.shared.SetTokenLevelDefault("read")

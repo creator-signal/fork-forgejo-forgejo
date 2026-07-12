@@ -165,24 +165,32 @@ func newSharedData() *sharedData {
 	return &sharedData{}
 }
 
-func (o sharedData) Doer() string {
+func (o sharedData) DoerName() string {
 	return getReferenceOrZero(o.doer.name)
 }
 
-func (o sharedData) HasDoer() bool {
+func (o sharedData) HasDoerName() bool {
 	return o.doer.name != nil
 }
 
-func (o *sharedData) SetDoerDefault(name string) *sharedData {
-	if !o.HasDoer() {
-		o.SetDoer(name)
+func (o *sharedData) SetDoerNameDefault(name string) *sharedData {
+	if !o.HasDoerName() {
+		o.SetDoerName(name)
 	}
 	return o
 }
 
-func (o *sharedData) SetDoer(name string) *sharedData {
+func (o *sharedData) SetDoerName(name string) *sharedData {
 	o.doer.name = &name
 	return o
+}
+
+func (o *sharedData) SetDoer() *sharedData {
+	return o.SetDoerName(randomName())
+}
+
+func (o *sharedData) SetDoerDefault() *sharedData {
+	return o.SetDoerNameDefault(randomName())
 }
 
 func (o sharedData) DoerAdmin() bool {
@@ -323,6 +331,14 @@ func (o *sharedData) SetRepositoryNameDefault(name string) *sharedData {
 func (o *sharedData) SetRepositoryName(name string) *sharedData {
 	o.repository.name = &name
 	return o
+}
+
+func (o *sharedData) SetRepositoryDefault() *sharedData {
+	return o.SetRepositoryNameDefault(fmt.Sprintf("%s/%s", randomName(), randomName()))
+}
+
+func (o *sharedData) SetRepository() *sharedData {
+	return o.SetRepositoryName(fmt.Sprintf("%s/%s", randomName(), randomName()))
 }
 
 func (o sharedData) RepositoryPrivate() bool {

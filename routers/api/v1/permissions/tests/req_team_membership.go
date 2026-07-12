@@ -26,7 +26,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}, newSharedData().
-				SetDoer("root").
+				SetDoerName("root").
 				SetDoerAdmin(true),
 			),
 		},
@@ -37,7 +37,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team1:someuser",
 				"team":     "team1",
 			}, newSharedData().
-				SetDoer("someuser"),
+				SetDoerName("someuser"),
 			),
 		},
 		{
@@ -47,7 +47,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team1:someuser,team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoer("someuser"),
+				SetDoerName("someuser"),
 			),
 			error: "Must be a team member",
 		},
@@ -58,7 +58,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoer("someuser"),
+				SetDoerName("someuser"),
 			),
 			error: "Not Found",
 		},
@@ -80,7 +80,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 		data.SetDefault("team", org_model.OwnerTeamName)
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
-		orgOwner := data.shared.Doer()
+		orgOwner := data.shared.DoerName()
 		if data.Has("orgOwner") {
 			orgOwner = data.Get("orgOwner")
 		}

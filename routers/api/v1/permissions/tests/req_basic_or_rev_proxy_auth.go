@@ -16,7 +16,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetDoerAuthentication("proxy"),
 			),
 		},
@@ -24,7 +24,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetDoerAuthentication("basic"),
 			),
 		},
@@ -32,7 +32,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetDoerAuthentication("token"),
 			),
 			error: "auth method not allowed",
@@ -41,7 +41,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "false",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetDoerAuthentication("token"),
 			),
 			error: "auth method not allowed",
@@ -49,7 +49,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerDefault("someuser")
+		data.shared.SetDoerNameDefault("someuser")
 		data.shared.SetDoerAuthenticationDefault("proxy")
 		data.SetDefault("Service.EnableReverseProxyAuthAPI", "true")
 	},

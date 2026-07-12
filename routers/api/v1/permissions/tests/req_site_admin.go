@@ -13,21 +13,21 @@ var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("root").
+				SetDoerName("root").
 				SetDoerAdmin(true),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("someuser"),
+				SetDoerName("someuser"),
 			),
 			error: "user should be the site admin",
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		if !data.shared.HasDoer() {
-			data.shared.SetDoer("root")
+		if !data.shared.HasDoerName() {
+			data.shared.SetDoerName("root")
 			data.shared.SetDoerAdmin(true)
 		}
 	},

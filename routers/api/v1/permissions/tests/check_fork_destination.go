@@ -22,7 +22,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrg":      "someorg1",
 				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
-				SetDoer("someorgowner").
+				SetDoerName("someorgowner").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -33,7 +33,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "true",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetRepositoryName("someuser/repositorypublic"),
 			),
 		},
@@ -44,7 +44,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "false",
 			}, newSharedData().
-				SetDoer("someuser").
+				SetDoerName("someuser").
 				SetRepositoryName("someuser/repositorypublic"),
 			),
 			error: "User is not allowed to create repos in Organisation",
@@ -54,7 +54,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrg":      "someorg2",
 				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "User is no Member of Organisation 'someorg2'",
@@ -63,7 +63,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 			data: newTestData(map[string]string{
 				"forkOrg": "unknownOrg",
 			}, newSharedData().
-				SetDoer("someorgowner").
+				SetDoerName("someorgowner").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 			error: "org does not exist",
@@ -80,7 +80,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 		org := fixtureCreateOrg(t, &org_model.Organization{Name: name}, &user_model.User{Name: owner})
 
 		if data.Has("team") {
-			fixtureCreateTeam(t, org, data.shared.Doer(), &forgery.CreateTeamOptions{
+			fixtureCreateTeam(t, org, data.shared.DoerName(), &forgery.CreateTeamOptions{
 				Name:             data.Get("team"),
 				CanCreateOrgRepo: data.Get("teamCanCreateOrgRepo") != "false",
 

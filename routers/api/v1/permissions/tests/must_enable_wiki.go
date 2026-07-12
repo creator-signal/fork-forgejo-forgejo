@@ -14,13 +14,13 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableWiki, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryDisabledUnits([]unit_model.Type{unit_model.TypeWiki}),
 			),

@@ -16,7 +16,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// The authenticated doer 'doername' can access to the publicly
 			// readable repository 'userowner/repositorypublic'
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
@@ -32,7 +32,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// The admin user 'root' can access the private repository
 			// 'userowner/repositoryname'
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("root").
+				SetDoerName("root").
 				SetDoerAdmin(true).
 				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
@@ -42,7 +42,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// The unprivileged authenticated user 'doername' is denied
 			// access to the private repository 'userowner/repositoryname'
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer("doername").
+				SetDoerName("doername").
 				SetRepositoryName("userowner/repositoryname").
 				SetRepositoryPrivate(true),
 			),
@@ -62,7 +62,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// The Forgejo Actions user token can access the repository
 			// 'userowner/repositorypublic' because it is bound to it
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer(user_model.ActionsUserName).
+				SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetRepositoryName("userowner/repositorypublic"),
 			),
@@ -72,7 +72,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// 'userowner/repositorypublic' although it is publicly readable
 			// because it is bound to a different repository
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer(user_model.ActionsUserName).
+				SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsRepoID(111111111111).
 				SetRepositoryName("userowner/repositorypublic"),
@@ -84,7 +84,7 @@ var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 			// 'userowner/repositorypublic' because it is bound to it
 			// even when it was created from a forked pull request event
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoer(user_model.ActionsUserName).
+				SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsIsForkPullRequest(true).
 				SetRepositoryName("userowner/repositorypublic"),
