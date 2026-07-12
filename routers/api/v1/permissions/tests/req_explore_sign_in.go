@@ -14,7 +14,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername"),
+				SetDoer(),
 			),
 		},
 		{
@@ -32,7 +32,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerNameDefault("someuser")
+		data.shared.SetDoerDefault()
 	},
 	protectSettingsBool: []*bool{
 		&setting.Service.RequireSignInView,

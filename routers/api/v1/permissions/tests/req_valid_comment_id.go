@@ -18,8 +18,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 				"issueAuthor": "issueAuthor",
 				"comment":     "comment for ReqValidCommentID",
 			}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 		},
 		// This fixture is unreachable because this permissions function is always used after
@@ -30,8 +30,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// 		"issueAuthor": "issueAuthor",
 		// 		"comment":     "comment for ReqValidCommentID",
 		// 	}, newSharedData().
-		// 		SetDoerName("doername").
-		// 		SetRepositoryName("userowner/repositoryname").
+		// 		SetDoer().
+		// 		SetRepository().
 		// 		SetRepositoryPrivate(true),
 		// 	),
 		// 	error: "Not Found",
@@ -44,8 +44,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 
 				"NilIssue": "true",
 			}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 			error: "Not Found",
 		},
@@ -57,8 +57,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 
 				"InconsistentID": "true",
 			}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 			error: "Not Found",
 		},

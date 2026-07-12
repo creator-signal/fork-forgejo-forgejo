@@ -11,12 +11,12 @@ var _ = registerFunctionTest(apiv1_permissions.MustNotBeArchived, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repository").
+				SetRepository().
 				SetRepositoryArchived(true),
 			),
 			error: "is archived",

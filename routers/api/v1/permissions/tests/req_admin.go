@@ -16,21 +16,21 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 	fixtures := []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("root").
+				SetRepository().
+				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("userowner"),
+				SetRepository().SetRepositoryName("userowner/repositorypublic").
+				SetDoer().SetDoerName("userowner"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
-				SetDoerName("someuser"),
+				SetRepository().
+				SetDoer(),
 			),
 			error: "user should be an owner or a collaborator with admin write of a repository",
 		},
@@ -57,7 +57,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerName("root")
+			data.shared.SetDoer()
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

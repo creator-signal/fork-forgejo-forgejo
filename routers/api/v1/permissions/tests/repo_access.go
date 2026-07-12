@@ -13,87 +13,86 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.RepoAccess, functionTest{
 	testCases: []*testCase{
 		{
-			// The authenticated doer 'doername' can access to the publicly
-			// readable repository 'userowner/repositorypublic'
+			// The authenticated doer can access to a publicly
+			// readable repository
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 		},
 		{
-			// An anonymous visitor can access to the publicly
-			// readable repository 'userowner/repositorypublic'
+			// An anonymous visitor can access to a publicly
+			// readable repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetAnonymous(true).
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 		},
 		{
-			// The admin user 'root' can access the private repository
-			// 'userowner/repositoryname'
+			// The admin user can access a private repository
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("root").
+				SetDoer().
 				SetDoerAdmin(true).
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true),
 			),
 		},
 		{
-			// The unprivileged authenticated user 'doername' is denied
-			// access to the private repository 'userowner/repositoryname'
+			// The unprivileged authenticated user is denied
+			// access to a private repository
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositoryname").
+				SetDoer().
+				SetRepository().
 				SetRepositoryPrivate(true),
 			),
 			error: "Not Found",
 		},
 		{
 			// An anonymous visitor is denied
-			// access to the private repository 'userowner/repositoryname'
+			// access to a private repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetAnonymous(true).
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true),
 			),
 			error: "Not Found",
 		},
 		{
 			// The Forgejo Actions user token can access the repository
-			// 'userowner/repositorypublic' because it is bound to it
+			// because it is bound to it
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer().SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 		},
 		{
 			// The Forgejo Actions user token cannot access the repository
-			// 'userowner/repositorypublic' although it is publicly readable
+			// although it is publicly readable
 			// because it is bound to a different repository
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer().SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsRepoID(111111111111).
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 			error: "Not Found",
 		},
 		{
 			// The Forgejo Actions user token can access the repository
-			// 'userowner/repositorypublic' because it is bound to it
-			// even when it was created from a forked pull request event
+			// because it is bound to it even when it was created from a
+			// forked pull request event
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer().SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true).
 				SetDoerActionsIsForkPullRequest(true).
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 		},
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetRepositoryNameDefault("userowner/repositorypublic")
+		data.shared.SetRepositoryDefault()
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit(), data.shared.RepositoryPrivate(), data.shared.RepositoryArchived())

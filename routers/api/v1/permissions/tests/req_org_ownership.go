@@ -25,7 +25,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			data: newTestData(map[string]string{
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoerName("root").
+				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
@@ -34,7 +34,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"org":    "ReqOrgOwnershipOrg",
 				"setOrg": "true",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 		},
 		{
@@ -43,7 +43,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"setOrg":   "true",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 			error: "Must be an organization owner",
 		},
@@ -52,7 +52,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"org":     "ReqOrgOwnershipOrg",
 				"setTeam": "true",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 		},
 		{
@@ -61,7 +61,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
 				"setTeam":  "true",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 			error: "Not Found",
 		},

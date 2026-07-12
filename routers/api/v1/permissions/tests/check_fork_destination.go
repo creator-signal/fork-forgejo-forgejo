@@ -22,8 +22,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrg":      "someorg1",
 				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
-				SetDoerName("someorgowner").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().SetDoerName("someorgowner").
+				SetRepository(),
 			),
 		},
 		{
@@ -33,8 +33,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "true",
 			}, newSharedData().
-				SetDoerName("someuser").
-				SetRepositoryName("someuser/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 		},
 		{
@@ -44,8 +44,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"team":                 "team1",
 				"teamCanCreateOrgRepo": "false",
 			}, newSharedData().
-				SetDoerName("someuser").
-				SetRepositoryName("someuser/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 			error: "User is not allowed to create repos in Organisation",
 		},
@@ -54,8 +54,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 				"forkOrg":      "someorg2",
 				"forkOrgOwner": "someorgowner",
 			}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 			error: "User is no Member of Organisation 'someorg2'",
 		},
@@ -63,8 +63,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckForkDestination, fun
 			data: newTestData(map[string]string{
 				"forkOrg": "unknownOrg",
 			}, newSharedData().
-				SetDoerName("someorgowner").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 			error: "org does not exist",
 		},

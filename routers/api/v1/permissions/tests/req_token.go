@@ -14,12 +14,12 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName(user_model.ActionsUserName).
+				SetDoer().SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true),
 			),
 		},
@@ -32,6 +32,6 @@ var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.shared.SetDoerNameDefault("doername")
+		data.shared.SetDoerDefault()
 	},
 })

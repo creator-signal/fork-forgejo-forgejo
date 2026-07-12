@@ -16,16 +16,16 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	fixtures := []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("userowner").
+				SetDoer().SetDoerName("userowner").
 				SetDoerScope("read:user,write:repository").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository().SetRepositoryName("userowner/repositorypublic"),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("some").
+				SetDoer().
 				SetDoerScope("read:user,write:repository").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetRepository(),
 			),
 			error: "user should be the owner of the repo",
 		},
@@ -48,7 +48,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 		},
 		fulfillNeeds: func(t *testing.T, data *testData) {
 			t.Helper()
-			data.shared.SetDoerName("root")
+			data.shared.SetDoer()
 			data.shared.SetDoerAdmin(true)
 		},
 		testCases:  fixtures,

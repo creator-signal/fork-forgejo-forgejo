@@ -43,7 +43,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
+				SetRepository().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
@@ -51,7 +51,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryRepository,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
+				SetRepository().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
@@ -59,7 +59,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryRepository,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true).
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -69,7 +69,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryIssue,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
+				SetRepository().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
@@ -77,7 +77,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryIssue,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true).
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -87,7 +87,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryNotification,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositorypublic").
+				SetRepository().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
@@ -95,7 +95,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryNotification,
 			}, newSharedData().
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true).
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
@@ -190,8 +190,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 		"CheckTokenPublicOnly",
 	},
 	fulfillNeeds: func(t *testing.T, data *testData) {
-		data.shared.SetDoerNameDefault("someuser")
-		data.shared.SetRepositoryNameDefault("someuser/repositorypublic")
+		data.shared.SetDoerDefault()
+		data.shared.SetRepositoryDefault()
 	},
 	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		if data.Has("user") {

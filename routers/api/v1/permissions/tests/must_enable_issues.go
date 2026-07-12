@@ -14,14 +14,14 @@ var _ = registerFunctionTest(apiv1_permissions.MustEnableIssues, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic").
+				SetDoer().
+				SetRepository().
 				SetRepositoryDisabledUnits([]unit.Type{unit.TypeIssues}),
 			),
 			error: "Not Found",

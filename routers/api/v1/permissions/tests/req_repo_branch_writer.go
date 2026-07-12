@@ -20,8 +20,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 				"pullRequestBranch": "ReqRepoBranchWriter",
 				"pullRequest":       "ReqRepoBranchWriter",
 			}, newSharedData().
-				SetDoerName("userowner").
-				SetRepositoryName("userowner/repositorypublic").
+				SetDoer().SetDoerName("userowner").
+				SetRepository().SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryInit(true),
 			),
 		},
@@ -31,7 +31,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 				"pullRequestBranch": "ReqRepoBranchWriter",
 				"pullRequest":       "ReqRepoBranchWriter",
 			}, newSharedData().
-				SetDoerName("someuser").
+				SetDoer().
 				SetRepositoryName("userowner/repositorypublic").
 				SetRepositoryInit(true),
 			),
@@ -49,6 +49,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 		t.Helper()
 		owner, _, found := strings.Cut(data.shared.RepositoryName(), "/")
 		require.True(t, found)
+		data.shared.SetDoer()
 		data.shared.SetDoerName(owner)
 		data.shared.SetRepositoryInitDefault(true)
 		data.SetDefault("pullRequestAuthor", owner)

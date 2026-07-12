@@ -11,15 +11,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 	testCases: []*testCase{
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("doername").
-				SetRepositoryName("userowner/repositorypublic"),
+				SetDoer().
+				SetRepository(),
 			),
 		},
 		{
 			data: newTestData(map[string]string{}, newSharedData().
-				SetDoerName("root").
+				SetDoer().
 				SetDoerAdmin(true).
-				SetRepositoryName("userowner/repositoryname").
+				SetRepository().
 				SetRepositoryPrivate(true),
 			),
 		},
@@ -27,8 +27,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 		// a RepoAccess that enforces the same restriction for non admin users
 		// {
 		// 	data: newTestData(map[string]string{}, newSharedData().
-		// 		SetDoerName("doername").
-		// 		SetRepositoryName("userowner/repositoryname").
+		// 		SetDoer().
+		// 		SetRepository().
 		// 		SetRepositoryPrivate(true),
 		// 	),
 		// 	error: "Denied",

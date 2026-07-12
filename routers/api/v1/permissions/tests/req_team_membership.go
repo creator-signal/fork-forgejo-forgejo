@@ -26,7 +26,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
 			}, newSharedData().
-				SetDoerName("root").
+				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
@@ -37,7 +37,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team1:someuser",
 				"team":     "team1",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer().SetDoerName("someuser"),
 			),
 		},
 		{
@@ -47,7 +47,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team1:someuser,team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer().SetDoerName("someuser"),
 			),
 			error: "Must be a team member",
 		},
@@ -58,7 +58,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 				"teams":    "team2:otheruser",
 				"team":     "team2",
 			}, newSharedData().
-				SetDoerName("someuser"),
+				SetDoer(),
 			),
 			error: "Not Found",
 		},
