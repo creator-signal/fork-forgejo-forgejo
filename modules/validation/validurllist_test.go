@@ -11,7 +11,7 @@ import (
 
 // This is a copy of all the URL tests cases, plus additional ones to
 // account for multiple URLs
-var urlListValidationTestCases = []validationTestCase{
+var redirectUriListValidationTestCases = []validationTestCase{
 	{
 		description: "Empty URL",
 		data: TestForm{
@@ -146,10 +146,10 @@ var urlListValidationTestCases = []validationTestCase{
 	},
 }
 
-func Test_ValidURLListValidation(t *testing.T) {
+func Test_ValidOauthRedirectUriListValidation(t *testing.T) {
 	AddBindingRules()
 
-	for _, testCase := range urlListValidationTestCases {
+	for _, testCase := range redirectUriListValidationTestCases {
 		t.Run(testCase.description, func(t *testing.T) {
 			performValidationTest(t, testCase)
 		})

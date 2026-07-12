@@ -39,7 +39,7 @@ const (
 func AddBindingRules() {
 	addValidDynGroupMapsRule()
 	addGitRefNameBindingRule()
-	addValidURLListBindingRule()
+	addValidOauthRedirectUriListBindingRule()
 	addValidURLBindingRule()
 	addValidSiteURLBindingRule()
 	addGlobPatternRule()
@@ -69,11 +69,11 @@ func addGitRefNameBindingRule() {
 	})
 }
 
-func addValidURLListBindingRule() {
+func addValidOauthRedirectUriListBindingRule() {
 	// URL validation rule
 	binding.AddRule(&binding.Rule{
 		IsMatch: func(rule string) bool {
-			return rule == "ValidUrlList"
+			return rule == "ValidOauthRedirectUriList"
 		},
 		IsValid: func(errs binding.Errors, name string, val any) (bool, binding.Errors) {
 			str := fmt.Sprintf("%v", val)
