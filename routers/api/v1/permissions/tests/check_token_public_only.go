@@ -156,6 +156,17 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public orgs",
 		},
 		{
+			// passes if public only is set and a context user is present
+			// but really is an organization
+			// and the token has an organization scope
+			data: newTestData(map[string]string{
+				"requiredScopeCategories": categoryOrganization,
+				"org":                     "orgname",
+				"orgAsUser":               "true",
+			}, newSharedData().
+				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
+			),
+		},
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "orgname",
