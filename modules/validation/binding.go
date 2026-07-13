@@ -39,7 +39,7 @@ const (
 func AddBindingRules() {
 	addValidDynGroupMapsRule()
 	addGitRefNameBindingRule()
-	addValidOauthRedirectUriListBindingRule()
+	addValidOauthRedirectURIListBindingRule()
 	addValidURLBindingRule()
 	addValidSiteURLBindingRule()
 	addGlobPatternRule()
@@ -69,7 +69,7 @@ func addGitRefNameBindingRule() {
 	})
 }
 
-func addValidOauthRedirectUriListBindingRule() {
+func addValidOauthRedirectURIListBindingRule() {
 	// URL validation rule
 	binding.AddRule(&binding.Rule{
 		IsMatch: func(rule string) bool {
