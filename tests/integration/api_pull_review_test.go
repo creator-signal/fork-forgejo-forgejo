@@ -152,6 +152,80 @@ func TestAPIPullReviewCreateDeleteComment(t *testing.T) {
 	}
 }
 
+func TestAPIPullReviewCommentReply(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	pullIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
+	require.NoError(t, pullIssue.LoadAttributes(db.DefaultContext))
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: pullIssue.RepoID})
+
+	session := loginUser(t, "user2")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	var review api.PullReview
+	req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews", repo.FullName(), pullIssue.Index), &api.CreatePullReviewOptions{
+		Body:  "review with comment",
+		Event: api.ReviewStateComment,
+		Comments: []api.CreatePullReviewComment{
+			{
+				Path:       "README.md",
+				Body:       "parent review comment",
+				NewLineNum: 1,
+			},
+		},
+	}).AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &review)
+
+	req = NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments", repo.FullName(), pullIssue.Index, review.ID).
+		AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	var reviewComments []*api.PullReviewComment
+	DecodeJSON(t, resp, &reviewComments)
+	require.Len(t, reviewComments, 1)
+	parentComment := reviewComments[0]
+
+	replyBody := "reply to parent review comment"
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/comments/%d/replies", repo.FullName(), pullIssue.Index, parentComment.ID), &api.CreatePullReviewCommentReplyOptions{
+		Body: replyBody,
+	}).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusCreated)
+	var reply api.PullReviewComment
+	DecodeJSON(t, resp, &reply)
+	assert.Equal(t, replyBody, reply.Body)
+	assert.Equal(t, parentComment.ReviewID, reply.ReviewID)
+	assert.Equal(t, parentComment.Path, reply.Path)
+	assert.Equal(t, parentComment.LineNum, reply.LineNum)
+	assert.Equal(t, parentComment.OldLineNum, reply.OldLineNum)
+	assert.Equal(t, parentComment.ExtraLinesCount, reply.ExtraLinesCount)
+
+	req = NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments", repo.FullName(), pullIssue.Index, review.ID).
+		AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusOK)
+	DecodeJSON(t, resp, &reviewComments)
+	require.Len(t, reviewComments, 2)
+
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/comments/%d/replies", repo.FullName(), pullIssue.Index+1, parentComment.ID), &api.CreatePullReviewCommentReplyOptions{
+		Body: replyBody,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusNotFound)
+
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/issues/%d/comments", repo.FullName(), pullIssue.Index), &api.CreateIssueCommentOption{
+		Body: "plain pull conversation comment",
+	}).AddTokenAuth(token)
+	resp = MakeRequest(t, req, http.StatusCreated)
+	var plainComment api.Comment
+	DecodeJSON(t, resp, &plainComment)
+
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/comments/%d/replies", repo.FullName(), pullIssue.Index, plainComment.ID), &api.CreatePullReviewCommentReplyOptions{
+		Body: replyBody,
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusBadRequest)
+
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/comments/%d/replies", repo.FullName(), pullIssue.Index, parentComment.ID), &api.CreatePullReviewCommentReplyOptions{}).
+		AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+}
+
 func TestAPIPullReviewMultiLineComment(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	pullIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
