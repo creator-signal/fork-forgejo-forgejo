@@ -22,8 +22,11 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgMembership, functionTest{
 			}, newSharedData()),
 		},
 		{
+			// pass because the doer admin although it is not a member of
+			// the org
 			data: newTestData(map[string]string{
-				"setOrg": "true",
+				"orgOwner": "ReqOrgMembershipOrgOwner",
+				"setOrg":   "true",
 			}, newSharedData().
 				SetDoer().
 				SetDoerAdmin(true),
