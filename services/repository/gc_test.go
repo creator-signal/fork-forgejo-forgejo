@@ -6,7 +6,6 @@ package repository
 import (
 	"bytes"
 	"testing"
-	"time"
 
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
@@ -51,8 +50,6 @@ func TestRunManualGCForRepo_RemovesOrphanedLFSObjects(t *testing.T) {
 	require.NoError(t, err)
 	store := lfs.NewContentStore()
 	require.NoError(t, store.Put(pointer, bytes.NewReader(content)))
-
-	defer test.MockVariableValue(&lfsOlderThan, -365*24*time.Hour)()
 
 	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
 

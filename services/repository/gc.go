@@ -11,8 +11,6 @@ import (
 	"forgejo.org/modules/setting"
 )
 
-var lfsOlderThan = 7 * 24 * time.Hour
-
 func RunManualGCForRepo(ctx context.Context, repo *repo_model.Repository) error {
 	cmd := git.NewCommand(ctx, "reflog", "expire", "--expire-unreachable=now", "--all").
 		SetDescription(fmt.Sprintf("Reflog expire: %s", repo.FullName()))
@@ -33,7 +31,6 @@ func RunManualGCForRepo(ctx context.Context, repo *repo_model.Repository) error 
 
 	return GarbageCollectLFSMetaObjectsForRepo(ctx, repo, GarbageCollectLFSMetaObjectsOptions{
 		LogDetail: log.Trace,
-		OlderThan: time.Now().Add(-lfsOlderThan),
 		AutoFix:   true,
 	})
 }
