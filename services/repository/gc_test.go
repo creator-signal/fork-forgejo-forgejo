@@ -89,7 +89,7 @@ func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 	assert.Less(t, repoAfterSecond.GitSize, repoAfterFirst.GitSize)
 
 	// Open a fresh repo handle to verify first commit is gone
-	// the first git repo hanlde is stale and will not display changes
+	// the first git gitRepo bariable is stale and will not display changes
 	gitRepo2, err := git.OpenRepository(t.Context(), repo.RepoPath())
 	require.NoError(t, err)
 	defer gitRepo2.Close()
