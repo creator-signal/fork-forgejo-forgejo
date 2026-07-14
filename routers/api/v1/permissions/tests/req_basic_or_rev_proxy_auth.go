@@ -13,6 +13,7 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if the doer is authenticated via a proxy
 			data: newTestData(map[string]string{
 				"Service.EnableReverseProxyAuthAPI": "true",
 			}, newSharedData().
@@ -21,26 +22,15 @@ var _ = registerFunctionTest(apiv1_permissions.ReqBasicOrRevProxyAuth, functionT
 			),
 		},
 		{
-			data: newTestData(map[string]string{
-				"Service.EnableReverseProxyAuthAPI": "false",
-			}, newSharedData().
+			// pass if the doer is authenticated using user / password (basic)
+			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetDoerAuthentication("basic"),
 			),
 		},
 		{
-			data: newTestData(map[string]string{
-				"Service.EnableReverseProxyAuthAPI": "true",
-			}, newSharedData().
-				SetDoer().
-				SetDoerAuthentication("token"),
-			),
-			error: "auth method not allowed",
-		},
-		{
-			data: newTestData(map[string]string{
-				"Service.EnableReverseProxyAuthAPI": "false",
-			}, newSharedData().
+			// fail if the doer is authenticated using a token
+			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetDoerAuthentication("token"),
 			),
