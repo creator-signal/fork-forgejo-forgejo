@@ -16,20 +16,7 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
-				"org":    "ReqOrgOwnershipOrg",
-				"setOrg": "true",
-			}, newSharedData()),
-		},
-		{
-			data: newTestData(map[string]string{
-				"setOrg": "true",
-			}, newSharedData().
-				SetDoer().
-				SetDoerAdmin(true),
-			),
-		},
-		{
+			// pass because the doer is the owner of the org
 			data: newTestData(map[string]string{
 				"org":    "ReqOrgOwnershipOrg",
 				"setOrg": "true",
@@ -38,6 +25,19 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			),
 		},
 		{
+			// pass because the doer is admin even though it is not the
+			// owner of the org
+			data: newTestData(map[string]string{
+				"org":      "ReqOrgOwnershipOrg",
+				"orgOwner": "ReqOrgOwnershipOrgOwner",
+				"setOrg":   "true",
+			}, newSharedData().
+				SetDoer().
+				SetDoerAdmin(true),
+			),
+		},
+		{
+			// fail because the doer is not the owner of the org
 			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
@@ -48,6 +48,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			error: "Must be an organization owner",
 		},
 		{
+			// pass because the doer is in the context team that owns the
+			// org
 			data: newTestData(map[string]string{
 				"org":     "ReqOrgOwnershipOrg",
 				"setTeam": "true",
@@ -56,6 +58,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			),
 		},
 		{
+			// fail because the doer is in the context team that does
+			// not own the org
 			data: newTestData(map[string]string{
 				"org":      "ReqOrgOwnershipOrg",
 				"orgOwner": "ReqOrgOwnershipOrgOwner",
@@ -66,6 +70,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqOrgOwnership, functionTest{
 			error: "Not Found",
 		},
 		{
+			// fail because the context org is not set
 			data: newTestData(map[string]string{
 				"setOrg": "true",
 			}, newSharedData()),
