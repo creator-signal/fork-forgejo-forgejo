@@ -40,6 +40,7 @@ var (
 	PasswordCheckPwn                   bool
 	SuccessfulTokensCacheSize          int
 	DisableQueryAuthToken              bool
+	OAuthRedirectSchemes               = defaultOAuthRedirectSchemes()
 )
 
 /*
@@ -493,6 +494,17 @@ func loadSecurityFrom(rootCfg ConfigProvider) {
 	if sectionHasDisableQueryAuthToken && !DisableQueryAuthToken {
 		log.Warn("Enabling Query API Auth tokens is not recommended. DISABLE_QUERY_AUTH_TOKEN will be removed in Forgejo v13.0.0.")
 	}
+
+	oauthSchemes := sec.Key("OAUTH_REDIRECT_SCHEMES").Strings(",")
+	if len(oauthSchemes) == 0 {
+		oauthSchemes = defaultOAuthRedirectSchemes()
+	}
+	OAuthRedirectSchemes = oauthSchemes
+}
+
+// defaultOAuthRedirectSchemes returns the default list of allowed OAuth redirect URI schemes.
+func defaultOAuthRedirectSchemes() []string {
+	return []string{"http", "https"}
 }
 
 type TwoFactorRequirementType string

@@ -5,11 +5,15 @@ package validation
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	"forgejo.org/modules/auth"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 
 	"code.forgejo.org/go-chi/binding"
@@ -39,7 +43,7 @@ const (
 func AddBindingRules() {
 	addValidDynGroupMapsRule()
 	addGitRefNameBindingRule()
-	addValidURLListBindingRule()
+	addValidOAuthRedirectURLListBindingRule()
 	addValidURLBindingRule()
 	addValidSiteURLBindingRule()
 	addGlobPatternRule()
@@ -69,11 +73,11 @@ func addGitRefNameBindingRule() {
 	})
 }
 
-func addValidURLListBindingRule() {
+func addValidOAuthRedirectURLListBindingRule() {
 	// URL validation rule
 	binding.AddRule(&binding.Rule{
 		IsMatch: func(rule string) bool {
-			return rule == "ValidUrlList"
+			return rule == "ValidOAuthRedirectUrlList"
 		},
 		IsValid: func(errs binding.Errors, name string, val any) (bool, binding.Errors) {
 			str := fmt.Sprintf("%v", val)
@@ -85,7 +89,20 @@ func addValidURLListBindingRule() {
 			ok := true
 			urls := util.SplitTrimSpace(str, "\n")
 			for _, u := range urls {
-				if !IsValidURL(u) {
+				valid := true
+
+				ru, err := url.Parse(u)
+				if err == nil {
+					valid = valid && slices.Contains(setting.OAuthRedirectSchemes, ru.Scheme)
+
+					if ru.Scheme == "http" || ru.Scheme == "https" {
+						valid = valid && IsValidURL(u)
+					}
+				} else {
+					log.Warn("invalid OAuth redirect URI: %w", err)
+					valid = false
+				}
+				if !valid {
 					ok = false
 					errs.Add([]string{name}, binding.ERR_URL, u)
 				}
