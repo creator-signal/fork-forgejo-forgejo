@@ -16,21 +16,27 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the doer is the owner of the org and therefore member of the owner team
 			data: newTestData(map[string]string{
 				"org":  "ReqTeamMembership",
 				"team": org_model.OwnerTeamName,
-			}, newSharedData()),
+			}, newSharedData().
+				SetDoer(),
+			),
 		},
 		{
+			// pass because the doer is admin although it is not a member of any team
 			data: newTestData(map[string]string{
-				"org":  "ReqTeamMembership",
-				"team": org_model.OwnerTeamName,
+				"orgOwner": "orgOwner",
+				"org":      "ReqTeamMembership",
+				"team":     org_model.OwnerTeamName,
 			}, newSharedData().
 				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
 		{
+			// pass because the doer is a member of the team1 in the org
 			data: newTestData(map[string]string{
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -41,6 +47,9 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			),
 		},
 		{
+			// fail because the doer is not a member of team2
+			// the doer is a member of team1 in the org, but it is not the
+			// team set in the context
 			data: newTestData(map[string]string{
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -52,6 +61,8 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Must be a team member",
 		},
 		{
+			// fail because the doer is not a member of the context team
+			// team2
 			data: newTestData(map[string]string{
 				"orgOwner": "orgOwner",
 				"org":      "ReqTeamMembership",
@@ -63,6 +74,7 @@ var _ = registerFunctionTest(apiv1_permissions.ReqTeamMembership, functionTest{
 			error: "Not Found",
 		},
 		{
+			// fail because team is not set in the context
 			data: newTestData(map[string]string{
 				"org": "ReqTeamMembership",
 			}, newSharedData()),
