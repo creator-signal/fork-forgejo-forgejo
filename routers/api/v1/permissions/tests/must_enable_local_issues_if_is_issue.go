@@ -16,15 +16,14 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIsIssue, functionTest{
 	testCases: []*testCase{
 		{
-			data: newTestData(map[string]string{
-				"issue":       "issue5000",
-				"issueAuthor": "issueAuthor",
-			}, newSharedData().
+			// pass if a repository with issues unit is present
+			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository(),
 			),
 		},
 		{
+			// fail if an issue exists in a repository with issues unit disabled
 			data: newTestData(map[string]string{
 				"issue":       "issue5000",
 				"issueAuthor": "issueAuthor",
@@ -35,7 +34,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 			),
 			error: "Not Found",
 		},
-		{ // does not fail because it is an issue instead of a pull request
+		{
+			// pass if a pull request exists in a repository with issues unit disabled
 			data: newTestData(map[string]string{
 				"pullRequestAuthor": "userowner",
 				"pullRequestBranch": "MustEnableLocalIssuesIfIsIssue",
@@ -63,14 +63,17 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.MustEnableLocalIssuesIfIs
 			require.True(t, data.Has("pullRequest"))
 			fixtureCreatePullRequest(t, permissions, data.Get("pullRequest"), data.Get("pullRequestAuthor"), data.Get("pullRequestBranch"))
 			require.Equal(t, data.Get("issue"), data.Get("pullRequest"))
-		} else {
+		} else if data.Has("issue") {
 			issueAuthor := fixtureCreateUser(t, &user_model.User{Name: data.Get("issueAuthor")})
 			fixtureSetIssue(t, permissions, data.Get("issue"), issueAuthor.Name)
 		}
 	},
 	call: func(t *testing.T, ctx apiv1_permissions.Context, data *testData, _ []any) {
 		t.Helper()
-		index := fixtureGetIssue(t, data.Get("issue")).Index
+		var index int64
+		if data.Has("issue") {
+			index = fixtureGetIssue(t, data.Get("issue")).Index
+		}
 		t.Logf("calling MustEnableLocalIssuesIfIsIssue(ctx, %d)", index)
 		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, index)
 	},
