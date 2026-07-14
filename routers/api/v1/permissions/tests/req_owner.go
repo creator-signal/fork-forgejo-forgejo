@@ -15,6 +15,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
+			// pass because the doer owns the repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().SetDoerName("userowner").
 				SetDoerScope("read:user,write:repository").
@@ -22,12 +23,21 @@ var _ = registerFunctionTestBuilder([]string{"ReqOwner ", "ReqOwner"}, func(t *t
 			),
 		},
 		{
+			// pass because the doer does not own the repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetDoerScope("read:user,write:repository").
 				SetRepository(),
 			),
 			error: "user should be the owner of the repo",
+		},
+		{
+			// pass because the doer is admin even if it does not own the repository
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer().
+				SetDoerAdmin(true).
+				SetRepository(),
+			),
 		},
 	}
 	for _, unitType := range unitTypes {
