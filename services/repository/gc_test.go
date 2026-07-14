@@ -22,6 +22,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRunManualGCForRepo(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+	require.NoError(t, storage.Init())
+
+	repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, "user2", "lfs")
+	require.NoError(t, err)
+
+	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
+
+	repoAfter, err := repo_model.GetRepositoryByID(db.DefaultContext, repo.ID)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, repoAfter.GitSize, int64(0))
+}
+
 func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
