@@ -13,9 +13,11 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqUsersExploreEnabled, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the Service.Explore.DisableUsersPage setting is false by default
 			data: newTestData(map[string]string{}, newSharedData()),
 		},
 		{
+			// fail because the Service.Explore.DisableUsersPage setting is true
 			data: newTestData(map[string]string{
 				"Service.Explore.DisableUsersPage": "true",
 			}, newSharedData()),

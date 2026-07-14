@@ -12,12 +12,14 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqSiteAdmin, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the doer is the admin
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
 		{
+			// fail because the doer is not the admin
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer(),
 			),

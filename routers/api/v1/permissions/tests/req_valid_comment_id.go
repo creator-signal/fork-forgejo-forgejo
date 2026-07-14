@@ -13,6 +13,8 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the ID is for a comment that belongs to an issue that
+			// belongs to the repository
 			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
@@ -37,6 +39,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 		// 	error: "Not Found",
 		// },
 		{
+			// fail because the comment pointer to the issue is nil, which
+			// can happen when it fails to load
 			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",
@@ -50,6 +54,9 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqValidCommentID, functi
 			error: "Not Found",
 		},
 		{
+			// fail because the issue associated with the comment belongs to
+			// a repository that is different from the repository found in
+			// the context
 			data: newTestData(map[string]string{
 				"issue":       "issueOne",
 				"issueAuthor": "issueAuthor",

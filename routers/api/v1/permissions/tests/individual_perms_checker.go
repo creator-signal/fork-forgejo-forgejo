@@ -13,11 +13,13 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if a public context user exists
 			data: newTestData(map[string]string{
 				"user": "IndividualPermsChecker",
 			}, newSharedData()),
 		},
 		{
+			// fail if a private context user exists
 			data: newTestData(map[string]string{
 				"user":           "IndividualPermsCheckerOne",
 				"userVisibility": "private",
@@ -25,6 +27,7 @@ var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionT
 			error: "Visit Project",
 		},
 		{
+			// fail if a limited context user exists
 			data: newTestData(map[string]string{
 				"user":           "IndividualPermsCheckerTwo",
 				"userVisibility": "limited",

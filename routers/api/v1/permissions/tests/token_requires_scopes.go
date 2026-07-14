@@ -45,6 +45,8 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
+				// pass because the doer token has the required scope read
+				// level
 				data: newTestData(map[string]string{}, newSharedData().
 					SetDoer().
 					SetDoerScope(readscope).
@@ -52,6 +54,8 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 				),
 			},
 			{
+				// fail because the doer token does not have write level for
+				// the required scope
 				data: newTestData(map[string]string{}, newSharedData().
 					SetDoer().
 					SetDoerScope(readscope).
@@ -60,6 +64,8 @@ var _ = registerFunctionTestBuilder([]string{"TokenRequiresScopes "}, func(t *te
 				error: "token does not have at least one of required scope(s)",
 			},
 			{
+				// fail because the doer token does not have the required
+				// scope at all
 				data: newTestData(map[string]string{}, newSharedData().
 					SetDoer().
 					SetDoerScope("read:misc").

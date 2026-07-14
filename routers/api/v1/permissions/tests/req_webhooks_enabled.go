@@ -13,9 +13,11 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the DisableWebhooks setting is false by default
 			data: newTestData(map[string]string{}, newSharedData()),
 		},
 		{
+			// fail because the DisableWebhooks setting is set to true
 			data: newTestData(map[string]string{
 				"DisableWebhooks": "true",
 			}, newSharedData()),

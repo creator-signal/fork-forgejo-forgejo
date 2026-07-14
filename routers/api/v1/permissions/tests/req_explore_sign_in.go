@@ -13,17 +13,22 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if the doer is signed in
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer(),
 			),
 		},
 		{
+			// fail for anonymous visitors when the viewing pages requires
+			// sign in
 			data: newTestData(map[string]string{
 				"Service.RequireSignInView": "true",
 			}, newSharedData().SetAnonymous(true)),
 			error: "you must be signed in",
 		},
 		{
+			// fail for anonymous visitors when visiting the explore page
+			// requires sign in
 			data: newTestData(map[string]string{
 				"Service.Explore.RequireSigninView": "true",
 			}, newSharedData().SetAnonymous(true)),

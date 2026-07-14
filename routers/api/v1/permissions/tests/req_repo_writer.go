@@ -20,6 +20,7 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
+				// pass because the doer is the owner of the repository
 				data: newTestData(map[string]string{}, newSharedData().
 					SetDoer().SetDoerName("userowner").
 					SetRepository().SetRepositoryName("userowner/repositorypublic").
@@ -27,16 +28,19 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoWriter "}, func(t *testing.
 				),
 			},
 			{
+				// fail because the repository unitTypes are disabled
 				data: newTestData(map[string]string{}, newSharedData().
 					SetRepositoryDisabledUnits(unitTypes),
 				),
 				error: "Not Found",
 			},
 			{
+				// fail because the doer is not the owner of the repository
+				// and does not have write permission
 				data: newTestData(map[string]string{}, newSharedData().
 					SetDoer().
-					SetRepositoryName("userowner/repositorypublic").
-					SetDoerScope(scopes),
+					SetDoerScope(scopes).
+					SetRepositoryName("userowner/repositorypublic"),
 				),
 				error: "user should have a permission to write to a repo",
 			},

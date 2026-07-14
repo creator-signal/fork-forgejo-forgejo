@@ -10,12 +10,14 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if the repository is public
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository(),
 			),
 		},
 		{
+			// pass if the repository is private and the doer is admin
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetDoerAdmin(true).

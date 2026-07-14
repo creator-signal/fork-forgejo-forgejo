@@ -13,17 +13,20 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the doer is authenticated with a token
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer(),
 			),
 		},
 		{
+			// pass because the Forgejo Actions doer is authenticated with a token
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().SetDoerName(user_model.ActionsUserName).
 				SetDoerActions(true),
 			),
 		},
 		{
+			// fail because an anonymous visitor is not authenticated with a token
 			data: newTestData(map[string]string{}, newSharedData().
 				SetAnonymous(true),
 			),

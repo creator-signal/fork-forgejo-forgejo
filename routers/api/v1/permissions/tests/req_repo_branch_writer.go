@@ -15,6 +15,7 @@ import (
 var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, functionTest{
 	testCases: []*testCase{
 		{
+			// pass because the doer is the owner of the repository
 			data: newTestData(map[string]string{
 				"pullRequestAuthor": "userowner",
 				"pullRequestBranch": "ReqRepoBranchWriter",
@@ -26,6 +27,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.ReqRepoBranchWriter, func
 			),
 		},
 		{
+			// fail because the doer has no write permissions on the repository
 			data: newTestData(map[string]string{
 				"pullRequestAuthor": "userowner",
 				"pullRequestBranch": "ReqRepoBranchWriter",

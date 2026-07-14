@@ -39,15 +39,19 @@ var categoryStringToCategory = map[string]auth_model.AccessTokenScopeCategory{
 var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if public only is not set
 			data: newTestData(map[string]string{}, newSharedData()),
 		},
 		{
+			// pass if public only is set and a public repository is present
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepository().
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
 		{
+			// pass if public only is set and a public repository is present
+			// and the token has a repository scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryRepository,
 			}, newSharedData().
@@ -56,6 +60,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private repository is present
+			// and the token has a repository scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryRepository,
 			}, newSharedData().
@@ -66,6 +72,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public repos",
 		},
 		{
+			// pass if public only is set and a public repository with issues is present
+			// and the token has an issue scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryIssue,
 			}, newSharedData().
@@ -74,6 +82,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private repository with issues is present
+			// and the token has an issue scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryIssue,
 			}, newSharedData().
@@ -84,6 +94,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public issues",
 		},
 		{
+			// pass if public only is set and a public repository is present
+			// and the token has a notification scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryNotification,
 			}, newSharedData().
@@ -92,6 +104,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private repository is present
+			// and the token has a notification scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryNotification,
 			}, newSharedData().
@@ -102,6 +116,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public notifications",
 		},
 		{
+			// pass if public only is set and a context user is present
+			// and the token has a user scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryUser,
 				"user":                    "someuser",
@@ -110,6 +126,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private context user is present
+			// and the token has a user scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryUser,
 				"user":                    "username",
@@ -120,6 +138,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public users",
 		},
 		{
+			// pass if public only is set and a context user is present
+			// and the token has an ActivityPub scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryActivityPub,
 				"user":                    "someuser",
@@ -128,6 +148,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private context user is present
+			// and the token has an ActivityPub scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryActivityPub,
 				"user":                    "username",
@@ -138,6 +160,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public activitypub",
 		},
 		{
+			// pass if public only is set and a context org is present
+			// and the token has an organization scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "orgname",
@@ -146,6 +170,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a private context org is present
+			// and the token has an organization scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "orgname",
@@ -156,7 +182,7 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public orgs",
 		},
 		{
-			// passes if public only is set and a context user is present
+			// pass if public only is set and a context user is present
 			// but really is an organization
 			// and the token has an organization scope
 			data: newTestData(map[string]string{
@@ -167,6 +193,10 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 				SetDoerScope(fmt.Sprintf("%s", auth_model.AccessTokenScopePublicOnly)),
 			),
 		},
+		{
+			// fail if public only is set and a context user is present
+			// but really is a private organization
+			// and the token has an organization scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryOrganization,
 				"org":                     "orgname",
@@ -178,6 +208,8 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			error: "token scope is limited to public orgs",
 		},
 		{
+			// pass if public only is set and a context package is present
+			// and the token has a package scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryPackage,
 				"packageOwner":            "someuser",
@@ -186,6 +218,9 @@ var _ = registerFunctionTestWithCall(apiv1_permissions.CheckTokenPublicOnly, fun
 			),
 		},
 		{
+			// fail if public only is set and a context package is present
+			// and the owner is a private user
+			// and the token has a package scope
 			data: newTestData(map[string]string{
 				"requiredScopeCategories": categoryPackage,
 				"packageOwner":            "username",

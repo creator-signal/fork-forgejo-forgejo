@@ -14,14 +14,16 @@ var _ = registerFunctionTestBuilder([]string{"ReqPackageAccess "}, func(_ *testi
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
+				// pass read / write access because the doer is admin
 				data: newTestData(map[string]string{
-					"packageOwner": "doer",
+					"packageOwner": "someuser",
 				}, newSharedData().
 					SetDoer().
 					SetDoerAdmin(true),
 				),
 			},
 			{
+				// fail read / write access because the doer does not own the package
 				data: newTestData(map[string]string{
 					"packageOwner":           "someuser",
 					"packageOwnerVisibility": "private",

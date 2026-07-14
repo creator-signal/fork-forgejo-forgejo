@@ -13,12 +13,14 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.MustEnableIssuesOrPulls, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if a repository with pull requests and issues unit set is present
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository(),
 			),
 		},
 		{
+			// fail if a repository is present and both pull requests and issues unit are disabled
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository().

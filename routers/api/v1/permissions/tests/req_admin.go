@@ -15,19 +15,21 @@ var _ = registerFunctionTestBuilder([]string{"ReqAdmin ", "ReqAdmin"}, func(t *t
 	unitTypes := signature[1].([]unit_model.Type)
 	fixtures := []*testCase{
 		{
+			// pass if the doer is admin
 			data: newTestData(map[string]string{}, newSharedData().
-				SetRepository().
 				SetDoer().
 				SetDoerAdmin(true),
 			),
 		},
 		{
+			// pass if the doer is the owner of the repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepository().SetRepositoryName("userowner/repositorypublic").
 				SetDoer().SetDoerName("userowner"),
 			),
 		},
 		{
+			// fail if the doer is neither admin nor the owner of the repository
 			data: newTestData(map[string]string{}, newSharedData().
 				SetRepository().
 				SetDoer(),

@@ -16,10 +16,17 @@ var _ = registerFunctionTestBuilder([]string{"ReqRepoReader "}, func(t *testing.
 	signatureStringToFunctionTest[signatureString] = functionTest{
 		testCases: []*testCase{
 			{
-				data: newTestData(map[string]string{}, newSharedData()),
+				// pass because the doer can read the public repository
+				data: newTestData(map[string]string{}, newSharedData().
+					SetDoer().
+					SetRepository(),
+				),
 			},
 			{
+				// fail because the repository unitType is disabled
 				data: newTestData(map[string]string{}, newSharedData().
+					SetDoer().
+					SetRepository().
 					SetRepositoryDisabledUnits([]unit_model.Type{unitType}),
 				),
 				error: "Not Found",

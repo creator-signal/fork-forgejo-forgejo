@@ -13,6 +13,7 @@ import (
 var _ = registerFunctionTest(apiv1_permissions.MustAllowPulls, functionTest{
 	testCases: []*testCase{
 		{
+			// pass if a repository with pull requests unit set is present
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository().
@@ -20,6 +21,7 @@ var _ = registerFunctionTest(apiv1_permissions.MustAllowPulls, functionTest{
 			),
 		},
 		{
+			// fail if a repository is present but the pull requests unit is disabled
 			data: newTestData(map[string]string{}, newSharedData().
 				SetDoer().
 				SetRepository().
