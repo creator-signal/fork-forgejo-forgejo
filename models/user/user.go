@@ -417,6 +417,75 @@ func GetUserFollowing(ctx context.Context, u, viewer *User, listOptions db.ListO
 	return users, count, err
 }
 
+func GetUserStarCount(ctx context.Context, profileUser, doer *User, orgName string) (int, error) {
+	e := db.GetEngine(ctx)
+
+	if doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin) {
+		count, err := e.
+			Table("star").
+			Where("uid = ?", profileUser.ID).
+			Count()
+		return int(count), err
+	}
+
+	if doer == nil {
+		count, err := e.
+			Table("star").
+			Join("INNER", "repository", "star.repo_id = repository.id").
+			Join("LEFT", "`user`", "repository.owner_id = `user`.id").
+			Where("star.uid = ?", profileUser.ID).
+			And("repository.is_private = ?", false).
+			And("`user`.visibility = ?", structs.VisibleTypePublic).
+			Count()
+		return int(count), err
+	}
+
+	// signed-in user
+
+	// Public repo whose owner is a fully public user/org — anonymous can see
+	isPublicOwnerRepo := builder.And(
+		builder.Eq{"repository.is_private": false},
+		builder.Eq{"`user`.visibility": structs.VisibleTypePublic},
+	)
+
+	// Limited orgs are visible to every signed-in user, even non-members.
+	isLimitedOrgPublicRepo := builder.And(
+		builder.Eq{"repository.is_private": false},
+		builder.Eq{"`user`.visibility": structs.VisibleTypeLimited},
+	)
+
+	// Doer is a direct collaborator on this (typically private) repo.
+	isCollabRepo := builder.Exists(
+		builder.Select("1").
+			From("collaboration").
+			Where(builder.And(
+				builder.Eq{"collaboration.repo_id": builder.Expr("repository.id")},
+				builder.Eq{"collaboration.user_id": doer.ID},
+			)),
+	)
+
+	// Any repo (public OR private) inside an org the doer is a member of.
+	doerOrgIDs := builder.Select("team_user.org_id").
+		From("team_user").
+		Where(builder.Eq{"team_user.uid": doer.ID})
+
+	isOrgMemberRepo := builder.In("repository.owner_id", doerOrgIDs)
+
+	count, err := e.
+		Table("star").
+		Join("INNER", "repository", "star.repo_id = repository.id").
+		Join("LEFT", "`user`", "repository.owner_id = `user`.id").
+		Where("star.uid = ?", profileUser.ID).
+		And(builder.Or(
+			isPublicOwnerRepo,
+			isLimitedOrgPublicRepo,
+			isCollabRepo,
+			isOrgMemberRepo,
+		)).
+		Count()
+	return int(count), err
+}
+
 // NewGitSig generates and returns the signature of given user.
 func (u *User) NewGitSig() *git.Signature {
 	return &git.Signature{

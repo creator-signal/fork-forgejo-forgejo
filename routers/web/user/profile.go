@@ -83,9 +83,9 @@ func userProfile(ctx *context.Context) {
 	if ctx.Org.Organization != nil {
 		orgName = ctx.Org.Organization.Name
 	}
-	starCount, err := repo_model.GetVisibleStarCount(ctx, ctx.ContextUser, ctx.Doer, orgName)
+	starCount, err := user_model.GetUserStarCount(ctx, ctx.ContextUser, ctx.Doer, orgName)
 	if err != nil {
-		ctx.ServerError("GetVisibleStarCount", err)
+		ctx.ServerError("GetUserStarCount", err)
 		return
 	}
 	ctx.Data["StarredRepos"] = int(starCount)
