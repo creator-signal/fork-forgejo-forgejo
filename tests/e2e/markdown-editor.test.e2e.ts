@@ -359,8 +359,8 @@ test('Markdown insert table', async ({page}) => {
 
     if (isEditing) {
       // Preparations for evaluating comment editing
-      await area.locator('.context-dropdown').click();
-      await area.locator('.context-dropdown .edit-content').click();
+      await area.locator('.comment-header-right.actions details.dropdown').click();
+      await area.locator('.comment-header-right.actions details.dropdown .edit-content').click();
       expectedContent = `good work!${expectedContent}`;
     }
 
@@ -395,7 +395,7 @@ test('Markdown insert table', async ({page}) => {
   await expect(async () => {
     await evaluateTableInsertion(page, '#comment-form', false);
     await evaluateTableInsertion(page, '#issuecomment-2', true);
-  }).toPass();
+  }).toPass({timeout: 3000});
 });
 
 test('Markdown insert link', async ({page}) => {
