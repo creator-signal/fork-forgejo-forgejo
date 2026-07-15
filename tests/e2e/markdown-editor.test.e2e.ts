@@ -409,8 +409,8 @@ test('Markdown insert link', async ({page}) => {
 
     if (isEditing) {
       // Preparations for evaluating comment editing
-      await area.locator('.context-dropdown').click();
-      await area.locator('.context-dropdown .edit-content').click();
+      await area.locator('.comment-header-right.actions details.dropdown').click();
+      await area.locator('.comment-header-right.actions details.dropdown .edit-content').click();
       expectedContent = `good work!${expectedContent}`;
     }
 
