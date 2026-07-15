@@ -62,10 +62,10 @@ test.describe('Copy comment as Markdown to clipboard', () => {
   test('Issue reply comment', async ({page}) => {
     await expect(async () => {
       await expect(await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issuecomment-1001', [
-          '## Lorem Ipsum',
-          '**I am not appealed**',
-          '`feature`',
-        ]),
+        '## Lorem Ipsum',
+        '**I am not appealed**',
+        '`feature`',
+      ]),
       );
     }).toPass({timeout: 3000});
   });
