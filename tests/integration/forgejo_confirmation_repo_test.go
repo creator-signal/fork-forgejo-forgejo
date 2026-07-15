@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"forgejo.org/modules/setting"
-	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
@@ -23,7 +21,8 @@ func TestDangerZoneConfirmation(t *testing.T) {
 		t.Helper()
 
 		htmlDoc := NewHTMLParser(t, resp.Body)
-		assert.Contains(t,
+		assert.Contains(
+			t,
 			htmlDoc.doc.Find(".ui.negative.message").Text(),
 			translation.NewLocale("en-US").Tr("form.enterred_invalid_repo_name"),
 		)
@@ -169,17 +168,6 @@ func TestDangerZoneConfirmation(t *testing.T) {
 				"action": "run-gc",
 			})
 			session.MakeRequest(t, req, http.StatusNotFound)
-		})
-
-		t.Run("Disabled by admin", func(t *testing.T) {
-			defer tests.PrintCurrentTest(t)()
-			defer test.MockVariableValue(&setting.Repository.AllowManualGC, false)()
-
-			session := loginUser(t, "user2")
-			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
-				"action": "run-gc",
-			})
-			session.MakeRequest(t, req, http.StatusForbidden)
 		})
 	})
 

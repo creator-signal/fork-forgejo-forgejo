@@ -455,7 +455,6 @@
 		</h4>
 		<div class="ui attached error danger segment">
 			<div class="flex-list">
-				{{if .AllowManualGC}}
 				<div class="flex-item">
 					<div class="flex-item-main">
 						<div class="flex-item-title">{{ctx.Locale.Tr "repo.settings.git_gc"}}</div>
@@ -465,7 +464,6 @@
 						<button class="danger button show-modal" data-modal="#run-gc-modal">{{ctx.Locale.Tr "repo.settings.git_gc"}}</button>
 					</div>
 				</div>
-				{{end}}
 				{{if .Repository.IsMirror}}
 					<div class="flex-item">
 						<div class="flex-item-main">
@@ -769,26 +767,24 @@
 	{{end}}
 	{{end}}
 
-	{{if .AllowManualGC}}
-		<dialog id="run-gc-modal">
-			<article>
-				<header>{{ctx.Locale.Tr "repo.settings.git_gc"}}</header>
-				<div class="content">
-					<div class="ui warning message">
-						{{ctx.Locale.Tr "repo.settings.git_gc_confirm_desc"}}
-					</div>
+	<dialog id="run-gc-modal">
+		<article>
+			<header>{{ctx.Locale.Tr "repo.settings.git_gc"}}</header>
+			<div class="content">
+				<div class="ui warning message">
+					{{ctx.Locale.Tr "repo.settings.git_gc_confirm_desc"}}
 				</div>
-				<form action="{{.Link}}" method="post">
-					{{$.CsrfTokenHtml}}
-					<input type="hidden" name="action" value="run-gc">
-					<div class="text right actions">
-						<button type="button" class="ui cancel button">{{ctx.Locale.Tr "settings.cancel"}}</button>
-						<button type="submit" class="ui red button">{{ctx.Locale.Tr "repo.settings.git_gc"}}</button>
-					</div>
-				</form>
-			</article>
-		</dialog>
-	{{end}}
+			</div>
+			<form action="{{.Link}}" method="post">
+				{{$.CsrfTokenHtml}}
+				<input type="hidden" name="action" value="run-gc">
+				<div class="text right actions">
+					<button type="button" class="ui cancel button">{{ctx.Locale.Tr "settings.cancel"}}</button>
+					<button type="submit" class="ui red button">{{ctx.Locale.Tr "repo.settings.git_gc"}}</button>
+				</div>
+			</form>
+		</article>
+	</dialog>
 	{{if not .Repository.IsMirror}}
 		<dialog id="archive-repo-modal">
 			<article>

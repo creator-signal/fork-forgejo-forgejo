@@ -97,7 +97,6 @@ func SettingsCtxData(ctx *context.Context) {
 	}
 	ctx.Data["PushMirrors"] = pushMirrors
 	ctx.Data["CanUseSSHMirroring"] = git.HasSSHExecutable
-	ctx.Data["AllowManualGC"] = setting.Repository.AllowManualGC
 }
 
 // Units show a repository's unit settings page
@@ -983,10 +982,6 @@ func SettingsPost(ctx *context.Context) {
 	case "run-gc":
 		if !ctx.Repo.IsOwner() {
 			ctx.Error(http.StatusNotFound)
-			return
-		}
-		if !setting.Repository.AllowManualGC {
-			ctx.Error(http.StatusForbidden)
 			return
 		}
 
