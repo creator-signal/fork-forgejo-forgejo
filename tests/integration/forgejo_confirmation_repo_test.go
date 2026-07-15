@@ -164,7 +164,7 @@ func TestDangerZoneConfirmation(t *testing.T) {
 		t.Run("Non-owner is rejected", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			session := loginUser(t, "user1")
+			session := loginUser(t, "user4")
 			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
 				"action": "run-gc",
 			})
