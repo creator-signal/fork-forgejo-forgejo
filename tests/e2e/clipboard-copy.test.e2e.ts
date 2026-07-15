@@ -27,7 +27,7 @@ test('copy src file path to clipboard', async ({page}) => {
   await screenshot(page, page.getByText('Copied'), 50);
 });
 
-async function evaluateCommentCopyMarkdown(page: Page, url: string, commentId: string, clipboardExpectations?: string[]) {
+async function evaluateCommentCopyMarkdown(page: Page, url: string, commentId: string, clipboardExpectations?: string[]): Promise<boolean> {
   const response = await page.goto(url);
   expect(response?.status()).toBe(200);
 
@@ -44,27 +44,30 @@ async function evaluateCommentCopyMarkdown(page: Page, url: string, commentId: s
     for (const expectation of clipboardExpectations) {
       expect(clipboardText).toContain(expectation);
     }
-  }).toPass();
+  }).toPass({timeout: 3000});
 
   // Dropdown should have been closed
   await expect(areaOfInterest).not.toHaveAttribute('open');
+
+  return true;
 }
 
 test.describe('Copy comment as Markdown to clipboard', () => {
   test('Issue top comment', async ({page}) => {
-    await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issue-1', ['content for the first issue']);
+    await expect(await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issue-1', ['content for the first issue'])).toBeTruthy();
   });
 
   test('Issue reply comment', async ({page}) => {
-    await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issuecomment-1001', [
-      '## Lorem Ipsum',
-      '**I am not appealed**',
-      '`feature`',
-    ]);
+    await expect(await evaluateCommentCopyMarkdown(page, '/user2/repo1/issues/1', 'issuecomment-1001', [
+        '## Lorem Ipsum',
+        '**I am not appealed**',
+        '`feature`',
+      ]),
+    ).toBeTruthy();
   });
 
   test('PR top comment', async ({page}) => {
-    await evaluateCommentCopyMarkdown(page, '/user2/repo1/pulls/5', 'issue-11', ['content for the a pull request']);
+    await expect(await evaluateCommentCopyMarkdown(page, '/user2/repo1/pulls/5', 'issue-11', ['content for the a pull request'])).toBeTruthy();
   });
 });
 
