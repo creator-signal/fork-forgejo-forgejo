@@ -318,24 +318,24 @@ func TestPackageContainer(t *testing.T) {
 
 	for _, image := range images {
 		t.Run(fmt.Sprintf("[Image:%s]", image), func(t *testing.T) {
-			url := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, image)
+			urlv2 := fmt.Sprintf("%sv2/%s/%s", setting.AppURL, user.Name, image)
 
 			t.Run("UploadBlob/Monolithic", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", url)).
+				req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", urlv2)).
 					AddTokenAuth(anonymousToken)
 				MakeRequest(t, req, http.StatusUnauthorized)
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", url)).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", urlv2)).
 					AddTokenAuth(readUserToken)
 				MakeRequest(t, req, http.StatusUnauthorized)
 
-				req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", url, unknownDigest), bytes.NewReader(blobContent)).
+				req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlv2, unknownDigest), bytes.NewReader(blobContent)).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusBadRequest)
 
-				req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", url, blobDigest), bytes.NewReader(blobContent)).
+				req = NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlv2, blobDigest), bytes.NewReader(blobContent)).
 					AddTokenAuth(userToken)
 				resp := MakeRequest(t, req, http.StatusCreated)
 
@@ -357,7 +357,7 @@ func TestPackageContainer(t *testing.T) {
 			t.Run("UploadBlob/Chunked", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", url)).
+				req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", urlv2)).
 					AddTokenAuth(userToken)
 				resp := MakeRequest(t, req, http.StatusAccepted)
 
@@ -410,7 +410,7 @@ func TestPackageContainer(t *testing.T) {
 				t.Run("Cancel", func(t *testing.T) {
 					defer tests.PrintCurrentTest(t)()
 
-					req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", url)).
+					req := NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads", urlv2)).
 						AddTokenAuth(userToken)
 					resp := MakeRequest(t, req, http.StatusAccepted)
 
@@ -445,26 +445,26 @@ func TestPackageContainer(t *testing.T) {
 					AddBasicAuth(privateUser.Name)
 				MakeRequest(t, req, http.StatusCreated)
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", url, unknownDigest)).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", urlv2, unknownDigest)).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusAccepted)
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", url, privateBlobDigest)).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", urlv2, privateBlobDigest)).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusAccepted)
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", url, blobDigest)).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s", urlv2, blobDigest)).
 					AddTokenAuth(userToken)
 				resp := MakeRequest(t, req, http.StatusCreated)
 
 				assert.Equal(t, fmt.Sprintf("/v2/%s/%s/blobs/%s", user.Name, image, blobDigest), resp.Header().Get("Location"))
 				assert.Equal(t, blobDigest, resp.Header().Get("Docker-Content-Digest"))
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s&from=%s", url, unknownDigest, "unknown/image")).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s&from=%s", urlv2, unknownDigest, "unknown/image")).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusAccepted)
 
-				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s&from=%s/%s", url, blobDigest, user.Name, image)).
+				req = NewRequest(t, "POST", fmt.Sprintf("%s/blobs/uploads?mount=%s&from=%s/%s", urlv2, blobDigest, user.Name, image)).
 					AddTokenAuth(userToken)
 				resp = MakeRequest(t, req, http.StatusCreated)
 
@@ -477,21 +477,21 @@ func TestPackageContainer(t *testing.T) {
 					t.Run("UploadManifest", func(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 
-						req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", url, configDigest), strings.NewReader(configContent)).
+						req := NewRequestWithBody(t, "POST", fmt.Sprintf("%s/blobs/uploads?digest=%s", urlv2, configDigest), strings.NewReader(configContent)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusCreated)
 
-						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
+						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(anonymousToken).
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 						MakeRequest(t, req, http.StatusUnauthorized)
 
-						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
+						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(readUserToken).
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 						MakeRequest(t, req, http.StatusUnauthorized)
 
-						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
+						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(userToken).
 							SetHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 						resp := MakeRequest(t, req, http.StatusCreated)
@@ -535,7 +535,7 @@ func TestPackageContainer(t *testing.T) {
 							}
 						}
 
-						req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, tag)).
+						req = NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", urlv2, tag)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusOK)
 
@@ -544,7 +544,7 @@ func TestPackageContainer(t *testing.T) {
 						assert.EqualValues(t, 1, pv.DownloadCount)
 
 						// Overwrite existing tag should keep the download count
-						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, tag), strings.NewReader(manifestContent)).
+						req = NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, tag), strings.NewReader(manifestContent)).
 							AddTokenAuth(userToken).
 							SetHeader("Content-Type", oci.MediaTypeImageManifest)
 						MakeRequest(t, req, http.StatusCreated)
@@ -557,11 +557,11 @@ func TestPackageContainer(t *testing.T) {
 					t.Run("HeadManifest", func(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 
-						req := NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/unknown-tag", url)).
+						req := NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/unknown-tag", urlv2)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusNotFound)
 
-						req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, tag)).
+						req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", urlv2, tag)).
 							AddTokenAuth(userToken)
 						resp := MakeRequest(t, req, http.StatusOK)
 
@@ -572,7 +572,7 @@ func TestPackageContainer(t *testing.T) {
 					t.Run("GetManifest unknown-tag", func(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 
-						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/unknown-tag", url)).
+						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/unknown-tag", urlv2)).
 							AddTokenAuth(userToken)
 						MakeRequest(t, req, http.StatusNotFound)
 					})
@@ -581,7 +581,7 @@ func TestPackageContainer(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 						defer test.MockVariableValue(&setting.Packages.Storage.MinioConfig.ServeDirect, false)()
 
-						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, tag)).
+						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", urlv2, tag)).
 							AddTokenAuth(userToken)
 						resp := MakeRequest(t, req, http.StatusOK)
 
@@ -600,7 +600,7 @@ func TestPackageContainer(t *testing.T) {
 						defer tests.PrintCurrentTest(t)()
 						defer test.MockVariableValue(&setting.Packages.Storage.MinioConfig.ServeDirect, true)()
 
-						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", url, tag)).
+						req := NewRequest(t, "GET", fmt.Sprintf("%s/manifests/%s", urlv2, tag)).
 							AddTokenAuth(userToken)
 						resp := MakeRequest(t, req, http.StatusTemporaryRedirect)
 
@@ -615,14 +615,14 @@ func TestPackageContainer(t *testing.T) {
 			t.Run("UploadUntaggedManifest", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, untaggedManifestDigest), strings.NewReader(untaggedManifestContent)).
+				req := NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, untaggedManifestDigest), strings.NewReader(untaggedManifestContent)).
 					AddTokenAuth(userToken).
 					SetHeader("Content-Type", oci.MediaTypeImageManifest)
 				resp := MakeRequest(t, req, http.StatusCreated)
 
 				assert.Equal(t, untaggedManifestDigest, resp.Header().Get("Docker-Content-Digest"))
 
-				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, untaggedManifestDigest)).
+				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", urlv2, untaggedManifestDigest)).
 					AddTokenAuth(userToken)
 				resp = MakeRequest(t, req, http.StatusOK)
 
@@ -655,7 +655,7 @@ func TestPackageContainer(t *testing.T) {
 			t.Run("UploadIndexManifest", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", url, multiTag), strings.NewReader(indexManifestContent)).
+				req := NewRequestWithBody(t, "PUT", fmt.Sprintf("%s/manifests/%s", urlv2, multiTag), strings.NewReader(indexManifestContent)).
 					AddTokenAuth(userToken).
 					SetHeader("Content-Type", oci.MediaTypeImageIndex)
 				resp := MakeRequest(t, req, http.StatusCreated)
@@ -702,22 +702,22 @@ func TestPackageContainer(t *testing.T) {
 			t.Run("HeadBlob", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, unknownDigest)).
+				req := NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", urlv2, unknownDigest)).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusNotFound)
 
-				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 					AddTokenAuth(userToken)
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				assert.Equal(t, fmt.Sprintf("%d", len(blobContent)), resp.Header().Get("Content-Length"))
 				assert.Equal(t, blobDigest, resp.Header().Get("Docker-Content-Digest"))
 
-				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 					AddTokenAuth(anonymousToken)
 				MakeRequest(t, req, http.StatusOK)
 
-				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+				req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 					AddTokenAuth(readUserToken)
 				MakeRequest(t, req, http.StatusOK)
 			})
@@ -725,11 +725,11 @@ func TestPackageContainer(t *testing.T) {
 			t.Run("GetBlob", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
-				req := NewRequest(t, "GET", fmt.Sprintf("%s/blobs/%s", url, unknownDigest)).
+				req := NewRequest(t, "GET", fmt.Sprintf("%s/blobs/%s", urlv2, unknownDigest)).
 					AddTokenAuth(userToken)
 				MakeRequest(t, req, http.StatusNotFound)
 
-				req = NewRequest(t, "GET", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+				req = NewRequest(t, "GET", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 					AddTokenAuth(userToken)
 				resp := MakeRequest(t, req, http.StatusOK)
 
@@ -754,27 +754,27 @@ func TestPackageContainer(t *testing.T) {
 						ExpectedLink string
 					}{
 						{
-							URL:          fmt.Sprintf("%s/tags/list", url),
+							URL:          fmt.Sprintf("%s/tags/list", urlv2),
 							ExpectedTags: []string{"artifact-v1", "latest", "main", "multi"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=multi>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=0", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=0", urlv2),
 							ExpectedTags: []string{},
 							ExpectedLink: "",
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=2", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=2", urlv2),
 							ExpectedTags: []string{"artifact-v1", "latest"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=latest&n=2>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?last=main", url),
+							URL:          fmt.Sprintf("%s/tags/list?last=main", urlv2),
 							ExpectedTags: []string{"multi"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=multi>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=1&last=latest", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=1&last=latest", urlv2),
 							ExpectedTags: []string{"main"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=main&n=1>; rel="next"`, user.Name, image),
 						},
@@ -786,27 +786,27 @@ func TestPackageContainer(t *testing.T) {
 						ExpectedLink string
 					}{
 						{
-							URL:          fmt.Sprintf("%s/tags/list", url),
+							URL:          fmt.Sprintf("%s/tags/list", urlv2),
 							ExpectedTags: []string{"latest", "main", "multi"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=multi>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=0", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=0", urlv2),
 							ExpectedTags: []string{},
 							ExpectedLink: "",
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=2", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=2", urlv2),
 							ExpectedTags: []string{"latest", "main"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=main&n=2>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?last=main", url),
+							URL:          fmt.Sprintf("%s/tags/list?last=main", urlv2),
 							ExpectedTags: []string{"multi"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=multi>; rel="next"`, user.Name, image),
 						},
 						{
-							URL:          fmt.Sprintf("%s/tags/list?n=1&last=latest", url),
+							URL:          fmt.Sprintf("%s/tags/list?n=1&last=latest", urlv2),
 							ExpectedTags: []string{"main"},
 							ExpectedLink: fmt.Sprintf(`</v2/%s/%s/tags/list?last=main&n=1>; rel="next"`, user.Name, image),
 						},
@@ -848,11 +848,11 @@ func TestPackageContainer(t *testing.T) {
 				t.Run("Blob", func(t *testing.T) {
 					defer tests.PrintCurrentTest(t)()
 
-					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusAccepted)
 
-					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", url, blobDigest)).
+					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/blobs/%s", urlv2, blobDigest)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusNotFound)
 				})
@@ -860,11 +860,11 @@ func TestPackageContainer(t *testing.T) {
 				t.Run("ManifestByDigest", func(t *testing.T) {
 					defer tests.PrintCurrentTest(t)()
 
-					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/manifests/%s", url, untaggedManifestDigest)).
+					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/manifests/%s", urlv2, untaggedManifestDigest)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusAccepted)
 
-					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, untaggedManifestDigest)).
+					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", urlv2, untaggedManifestDigest)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusNotFound)
 				})
@@ -872,11 +872,11 @@ func TestPackageContainer(t *testing.T) {
 				t.Run("ManifestByTag", func(t *testing.T) {
 					defer tests.PrintCurrentTest(t)()
 
-					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/manifests/%s", url, multiTag)).
+					req := NewRequest(t, "DELETE", fmt.Sprintf("%s/manifests/%s", urlv2, multiTag)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusAccepted)
 
-					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", url, multiTag)).
+					req = NewRequest(t, "HEAD", fmt.Sprintf("%s/manifests/%s", urlv2, multiTag)).
 						AddTokenAuth(userToken)
 					MakeRequest(t, req, http.StatusNotFound)
 				})
