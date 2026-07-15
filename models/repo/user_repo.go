@@ -11,7 +11,6 @@ import (
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
-	"forgejo.org/modules/structs"
 	api "forgejo.org/modules/structs"
 
 	"xorm.io/builder"
@@ -25,43 +24,40 @@ func GetStarredRepos(ctx context.Context, profileUser, doer *user_model.User, li
 		Join("INNER", "star", "repository.id = star.repo_id").
 		Where("star.uid = ?", profileUser.ID)
 
-	// viewer is the profile owner — sees ALL their starred repos
-	if doer != nil && doer.ID == profileUser.ID {
+	// viewer is the profile owner, or a site admin — sees ALL starred repos
+	if doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin) {
 		// continue
 	} else if doer == nil {
 		// anonymous visitor — only public repos + public owners
 		sess = sess.
 			Join("LEFT", "`user`", "repository.owner_id = `user`.id").
 			And("repository.is_private = ?", false).
-			And("`user`.visibility = ?", structs.VisibleTypePublic)
+			And("`user`.visibility = ?", api.VisibleTypePublic)
 	} else {
-		// signed-in non-owner — build accessible repo set
-
 		// public repos whose owners are public or limited
 		publicRepos := builder.Select("repository.id AS id").
 			From("repository").
 			Join("LEFT", "`user`", "repository.owner_id = `user`.id").
 			Where(builder.Eq{"repository.is_private": false}).
-			And(builder.Lte{"`user`.visibility": structs.VisibleTypeLimited})
+			And(builder.Lte{"`user`.visibility": api.VisibleTypeLimited})
 
 		// private repos where doer is a direct collaborator
 		collabRepos := builder.Select("repo_id AS id").
 			From("collaboration").
 			Where(builder.Eq{"user_id": doer.ID})
 
-		// private repos belonging to orgs the doer is a member of
+		// any repo (public or private) belonging to orgs the doer is a member of —
 		doerOrgs := builder.Select("org_id").
 			From("team_user").
 			Where(builder.Eq{"uid": doer.ID})
 
-		orgPrivateRepos := builder.Select("id").
+		orgMemberRepos := builder.Select("id").
 			From("repository").
-			Where(builder.Eq{"is_private": true}).
-			And(builder.In("owner_id", doerOrgs))
+			Where(builder.In("owner_id", doerOrgs))
 
 		accessibleRepos := builder.Select("id").
 			From(
-				publicRepos.Union("all", collabRepos).Union("all", orgPrivateRepos),
+				publicRepos.Union("all", collabRepos).Union("all", orgMemberRepos),
 				"accessible",
 			)
 

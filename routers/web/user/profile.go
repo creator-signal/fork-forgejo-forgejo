@@ -88,7 +88,7 @@ func userProfile(ctx *context.Context) {
 		ctx.ServerError("GetUserStarCount", err)
 		return
 	}
-	ctx.Data["StarredRepos"] = int(starCount)
+	ctx.Data["StarredRepos"] = starCount
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 
