@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -69,8 +70,11 @@ func TestPackageContainer(t *testing.T) {
 
 	blobContent, _ := base64.StdEncoding.DecodeString(`H4sIAAAJbogA/2IYBaNgFIxYAAgAAP//Lq+17wAEAAA=`)
 	blobDigest := "sha256:" + sha256Hash(string(blobContent))
+	maintainer := "contact@forgejo.org"
+	description := "PACKAGE DESCRIPTION"
+	labelDescription := "org.opencontainers.image.description"
 
-	configContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
+	configContent := `{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/true"],"ArgsEscaped":true,"Labels":{"maintainer":"` + maintainer + `","` + labelDescription + `":"` + description + `"},"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"container":"b89fe92a887d55c0961f02bdfbfd8ac3ddf66167db374770d2d9e9fab3311510","container_config":{"Hostname":"b89fe92a887d","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["/bin/sh","-c","#(nop) ","CMD [\"/true\"]"],"ArgsEscaped":true,"Image":"sha256:9bd8b88dc68b80cffe126cc820e4b52c6e558eb3b37680bfee8e5f3ed7b8c257"},"created":"2022-01-01T00:00:00.000000000Z","docker_version":"20.10.12","history":[{"created":"2022-01-01T00:00:00.000000000Z","created_by":"/bin/sh -c #(nop) COPY file:0e7589b0c800daaf6fa460d2677101e4676dd9491980210cb345480e513f3602 in /true "},{"created":"2022-01-01T00:00:00.000000001Z","created_by":"/bin/sh -c #(nop)  CMD [\"/true\"]","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":["sha256:0ff3b91bdf21ecdf2f2f3d4372c2098a14dbe06cd678e8f0a85fd4902d00e2e2"]}}`
 	configDigest := "sha256:" + sha256Hash(configContent)
 	configSize := fmt.Sprintf("%d", len(configContent))
 
@@ -552,6 +556,14 @@ func TestPackageContainer(t *testing.T) {
 						pv, err = packages_model.GetVersionByNameAndVersion(db.DefaultContext, user.ID, packages_model.TypeContainer, image, tag)
 						require.NoError(t, err)
 						assert.EqualValues(t, 1, pv.DownloadCount)
+
+						// Verify the template of the web UI renders correctly
+						req = NewRequest(t, "GET", fmt.Sprintf("%s/%s/-/packages/container/%s/%s", setting.AppURL, user.Name, url.QueryEscape(image), tag))
+						resp = MakeRequest(t, req, http.StatusOK)
+						htmlDoc := NewHTMLParser(t, resp.Body)
+						assert.Contains(t, htmlDoc.Find("#container-description").Text(), description)
+						assert.Contains(t, htmlDoc.Find("#container-layers").Text(), "CMD")
+						assert.Contains(t, htmlDoc.Find("#container-labels").Text(), maintainer)
 					})
 
 					t.Run("HeadManifest", func(t *testing.T) {
@@ -697,6 +709,14 @@ func TestPackageContainer(t *testing.T) {
 				assert.True(t, pd.Files[0].File.IsLead)
 				assert.Equal(t, oci.MediaTypeImageIndex, pd.Files[0].Properties.GetByName(container_module.PropertyMediaType))
 				assert.Equal(t, indexManifestDigest, pd.Files[0].Properties.GetByName(container_module.PropertyDigest))
+
+				// Verify the template of the web UI renders correctly
+				req = NewRequest(t, "GET", fmt.Sprintf("%s/%s/-/packages/container/%s/%s", setting.AppURL, user.Name, url.QueryEscape(image), multiTag))
+				resp = MakeRequest(t, req, http.StatusOK)
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				manifests := htmlDoc.Find("#container-manifests").Text()
+				assert.Contains(t, manifests, manifestDigest)
+				assert.Contains(t, manifests, untaggedManifestDigest)
 			})
 
 			t.Run("HeadBlob", func(t *testing.T) {
