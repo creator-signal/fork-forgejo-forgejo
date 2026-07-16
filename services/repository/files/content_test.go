@@ -105,17 +105,6 @@ func TestGetContentsOrListForDir(t *testing.T) {
 	})
 }
 
-// TestGetContentsOrListForDirWithNoEntries is a regression test for
-// https://codeberg.org/forgejo/forgejo/issues/13469
-//
-// A ref can legitimately point at a commit whose root tree has zero entries
-// (for example a placeholder branch created before any files were added).
-// This is different from an empty repository (repo.IsEmpty), which is
-// already handled separately above GetContentsOrList's directory-listing
-// branch. GetContentsOrList must still return a non-nil, empty
-// []*api.ContentsResponse in that case: a nil slice marshals to JSON `null`,
-// but API clients expect an array.// TestGetContentsOrListForDirWithNoEntries is a regression test for
-// https://codeberg.org/forgejo/forgejo/issues/13469
 func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 

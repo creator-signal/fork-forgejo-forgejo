@@ -91,11 +91,7 @@ func GetContentsOrList(ctx context.Context, repo *repo_model.Repository, treePat
 	}
 
 	// We are in a directory, so we return a list of FileContentResponse objects.
-	// NOTE: this must be initialized with make(), not `var`. A nil slice and an
-	// empty slice behave the same in Go, but they marshal to JSON differently:
-	// nil -> `null`, make(...) -> `[]`. API clients expect an array here even
-	// when the directory has zero entries (e.g. a branch pointing at an empty
-	// tree). See #13469.
+	// Ensure that it serializes to [] instead of null in JSON.
 	fileList := make([]*api.ContentsResponse, 0, len(entries))
 	for _, e := range entries {
 		subTreePath := path.Join(treePath, e.Name())
