@@ -374,65 +374,63 @@ func TestViewFileInRepoRSSFeed(t *testing.T) {
 	})
 }
 
-// TestBlameFileInRepo repo description, topics and summary should not be displayed when running blame on a file
 func TestBlameFileInRepo(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	session := loginUser(t, "user2")
-
-	t.Run("Assert", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		req := NewRequest(t, "GET", "/user2/repo1/blame/branch/master/README.md")
-		resp := session.MakeRequest(t, req, http.StatusOK)
-
-		htmlDoc := NewHTMLParser(t, resp.Body)
-		description := htmlDoc.doc.Find("#repo-desc")
-		repoTopics := htmlDoc.doc.Find("#repo-topics")
-		repoSummary := htmlDoc.doc.Find(".repository-summary")
-
-		assert.Equal(t, 0, description.Length())
-		assert.Equal(t, 0, repoTopics.Length())
-		assert.Equal(t, 0, repoSummary.Length())
-	})
-
-	t.Run("File size", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-		gitRepo, err := git.OpenRepository(git.DefaultContext, repo.RepoPath())
-		require.NoError(t, err)
-		defer gitRepo.Close()
-
-		commit, err := gitRepo.GetCommit("HEAD")
-		require.NoError(t, err)
-
-		blob, err := commit.GetBlobByPath("README.md")
-		require.NoError(t, err)
-
-		fileSize := blob.Size()
-		require.NotZero(t, fileSize)
-
-		t.Run("Above maximum", func(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, _ *url.URL) {
+		t.Run("Assert", func(t *testing.T) {
+			// TestBlameFileInRepo repo description, topics and summary should not be displayed when running blame on a file
 			defer tests.PrintCurrentTest(t)()
-			defer test.MockVariableValue(&setting.UI.MaxDisplayFileSize, fileSize)()
 
-			req := NewRequest(t, "GET", "/user2/repo1/blame/branch/master/README.md")
-			resp := session.MakeRequest(t, req, http.StatusOK)
+			repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					"README.md": forgery.MapFile("hello, world"),
+				},
+			})
+
+			req := NewRequest(t, "GET", fmt.Sprintf("/%s/blame/branch/main/README.md", repo.FullName()))
+			resp := MakeRequest(t, req, http.StatusOK)
 
 			htmlDoc := NewHTMLParser(t, resp.Body)
-			assert.Contains(t, htmlDoc.Find(".code-view").Text(), translation.NewLocale("en-US").Tr("repo.file_too_large"))
+			description := htmlDoc.doc.Find("#repo-desc")
+			repoTopics := htmlDoc.doc.Find("#repo-topics")
+			repoSummary := htmlDoc.doc.Find(".repository-summary")
+
+			assert.Equal(t, 0, description.Length())
+			assert.Equal(t, 0, repoTopics.Length())
+			assert.Equal(t, 0, repoSummary.Length())
 		})
 
-		t.Run("Under maximum", func(t *testing.T) {
+		t.Run("File size", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
-			defer test.MockVariableValue(&setting.UI.MaxDisplayFileSize, fileSize+1)()
 
-			req := NewRequest(t, "GET", "/user2/repo1/blame/branch/master/README.md")
-			resp := session.MakeRequest(t, req, http.StatusOK)
+			content := "hello, world"
+			fileSize := int64(len(content))
+			repo := forgery.CreateRepository(t, nil, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					"README.md": forgery.MapFile(content),
+				},
+			})
 
-			htmlDoc := NewHTMLParser(t, resp.Body)
-			assert.NotContains(t, htmlDoc.Find(".code-view").Text(), translation.NewLocale("en-US").Tr("repo.file_too_large"))
+			t.Run("Above maximum", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				defer test.MockVariableValue(&setting.UI.MaxDisplayFileSize, fileSize)()
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/blame/branch/main/README.md", repo.FullName()))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				assert.Contains(t, htmlDoc.Find(".code-view").Text(), translation.NewLocale("en-US").Tr("repo.file_too_large"))
+			})
+
+			t.Run("Under maximum", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				defer test.MockVariableValue(&setting.UI.MaxDisplayFileSize, fileSize+1)()
+
+				req := NewRequest(t, "GET", fmt.Sprintf("/%s/blame/branch/main/README.md", repo.FullName()))
+				resp := MakeRequest(t, req, http.StatusOK)
+
+				htmlDoc := NewHTMLParser(t, resp.Body)
+				assert.NotContains(t, htmlDoc.Find(".code-view").Text(), translation.NewLocale("en-US").Tr("repo.file_too_large"))
+			})
 		})
 	})
 }
