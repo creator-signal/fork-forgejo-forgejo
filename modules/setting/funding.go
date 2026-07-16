@@ -16,29 +16,29 @@ type FundingProviderConfig struct {
 	// The name of the funding platform
 	Name string
 
-	// A format string that defines a URL, ideally to a given user profile, to
+	// A template string that defines a URL, ideally to a given user profile, to
 	// which users should be sent to support a project. This string should
-	// contain at least one instance of %s or %[1]s, which will be replaced with
-	// the string given in a repo's funding config.
+	// contain at least one instance of '%s' or '%[1]s', which Forgejo will
+	// replace with the string given in a repo's funding config.
 	//
 	// This is the only required config key; the other details may be derived
 	// from this and the platform name.
-	URL string
+	Template string
 
 	// A regular expression which input values must match before they may be
-	// interpolated into the URL template.
+	// interpolated into the `Template`.
 	//
 	// The default value permits a single path segment.
 	InputPattern *regexp.Regexp
 
-	// A format string that defines the text that should show in place of a URL
+	// A template string that defines the text that should show in place of a URL
 	// in the UI. This string should contain at least one instance of %s or
 	// %[1]s, which will be replaced with the string given in a repo's funding
 	// config.
 	//
 	// When parsed from the server config, this value defaults to the value of
-	// `URL` without the scheme.
-	Text string
+	// `Template`, without the URI scheme if present.
+	Title string
 }
 
 var FundingProviders map[string]*FundingProviderConfig
@@ -115,74 +115,74 @@ func LoadBuiltInFundingProviders() {
 	// built-in providers are largely based on github's list at <https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files>
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "community_bridge", // aka LFX Mentorship, but the config calls it community_bridge for compat
-		Text:         "funding.communitybridge.org/projects/%[1]s",
-		URL:          "https://funding.communitybridge.org/projects/%[1]s", // we might consider using the new URL here if their redirect ever breaks
+		Title:        "funding.communitybridge.org/projects/%[1]s",
+		Template:     "https://funding.communitybridge.org/projects/%[1]s", // we might consider using the new URL here if their redirect ever breaks
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "github",
-		Text:         "github.com/sponsors/%[1]s",
-		URL:          "https://github.com/sponsors/%[1]s",
+		Title:        "github.com/sponsors/%[1]s",
+		Template:     "https://github.com/sponsors/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "issuehunt",
-		Text:         "issuehunt.io/r/%[1]s",
-		URL:          "https://issuehunt.io/r/%[1]s",
+		Title:        "issuehunt.io/r/%[1]s",
+		Template:     "https://issuehunt.io/r/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "ko_fi",
-		Text:         "ko-fi.com/%[1]s",
-		URL:          "https://ko-fi.com/%[1]s",
+		Title:        "ko-fi.com/%[1]s",
+		Template:     "https://ko-fi.com/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "liberapay",
-		Text:         "liberapay.com/%[1]s",
-		URL:          "https://liberapay.com/%[1]s",
+		Title:        "liberapay.com/%[1]s",
+		Template:     "https://liberapay.com/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "open_collective",
-		Text:         "opencollective.com/%[1]s",
-		URL:          "https://opencollective.com/%[1]s",
+		Title:        "opencollective.com/%[1]s",
+		Template:     "https://opencollective.com/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "patreon",
-		Text:         "patreon.com/%[1]s",
-		URL:          "https://patreon.com/%[1]s",
+		Title:        "patreon.com/%[1]s",
+		Template:     "https://patreon.com/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "tidelift",
-		Text:         "tidelift.com/funding/github/%[1]s",
-		URL:          "https://tidelift.com/funding/github/%[1]s",
+		Title:        "tidelift.com/funding/github/%[1]s",
+		Template:     "https://tidelift.com/funding/github/%[1]s",
 		InputPattern: twoSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "polar",
-		Text:         "polar.sh/%[1]s",
-		URL:          "https://polar.sh/%[1]s",
+		Title:        "polar.sh/%[1]s",
+		Template:     "https://polar.sh/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "buy_me_a_coffee",
-		Text:         "buymeacoffee.com/%[1]s",
-		URL:          "https://buymeacoffee.com/%[1]s",
+		Title:        "buymeacoffee.com/%[1]s",
+		Template:     "https://buymeacoffee.com/%[1]s",
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "thanks_dev",
-		Text:         "thanks.dev/%[1]s",
-		URL:          "https://thanks.dev/%[1]s",
+		Title:        "thanks.dev/%[1]s",
+		Template:     "https://thanks.dev/%[1]s",
 		InputPattern: threeSegmentRegex, // we expect something like "u/gh/example"
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "custom",
-		Text:         "%[1]s",
-		URL:          "%[1]s",
+		Title:        "%[1]s",
+		Template:     "%[1]s",
 		InputPattern: anythingRegex, // matches anything; the final value is treated like a URL in any case
 	})
 }
@@ -191,8 +191,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	LoadBuiltInFundingProviders()
 
 	const keyMaxFundingEntriesPerConfig = "MAX_FUNDING_ENTRIES_PER_CONFIG"
-	const keyText = "TEXT"
-	const keyURL = "URL"
+	const keyTitle = "TITLE"
+	const keyTemplate = "TEMPLATE"
 	const keyInputPattern = "INPUT_PATTERN"
 
 	fundingSection := rootCfg.Section("funding")
@@ -211,8 +211,8 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 			continue
 		}
 
-		rawText := sec.Key(keyText).MustString("")
-		rawURL := sec.Key(keyURL).MustString("")
+		rawTitle := sec.Key(keyTitle).MustString("")
+		rawTemplate := sec.Key(keyTemplate).MustString("")
 		rawInputPattern := sec.Key(keyInputPattern).MustString(singleSegmentPattern)
 
 		inputPattern, err := regexp.Compile(rawInputPattern)
@@ -222,31 +222,31 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 			inputPattern = singleSegmentRegex
 		}
 
-		url := cleanUpSigils(rawURL)
-		if !strings.Contains(url, "%[1]s") {
-			log.Warn("%s.%s contains no valid instances of '%%[1]s' or '%%s', funding %[1]s ignored", sec.Name(), keyURL)
+		template := cleanUpSigils(rawTemplate)
+		if !strings.Contains(template, "%[1]s") {
+			log.Warn("%s.%s contains no valid instances of '%%[1]s' or '%%s', funding %[1]s ignored", sec.Name(), keyTemplate)
 			continue
 		}
 
 		// get the url scheme, if any
-		scheme, _, found := strings.Cut(url, "://") // e.g. "https://localhost/%s"
+		scheme, _, found := strings.Cut(template, "://") // e.g. "https://localhost/%s"
 		if !found {
 			scheme = ""
 		}
 
-		// default text to just the url minus scheme
-		text := rawText
-		if text == "" {
-			text = strings.TrimPrefix(url, scheme+"://")
+		// default title to only template minus scheme
+		title := rawTitle
+		if title == "" {
+			title = strings.TrimPrefix(template, scheme+"://")
 			// the sigils are already tidy here, no need to clean them up again!
 		} else {
-			text = cleanUpSigils(text)
+			title = cleanUpSigils(title)
 		}
 
 		provider := new(FundingProviderConfig)
 		provider.Name = name
-		provider.Text = text
-		provider.URL = url
+		provider.Title = title
+		provider.Template = template
 		provider.InputPattern = inputPattern
 
 		if FundingProviders[name] != nil {

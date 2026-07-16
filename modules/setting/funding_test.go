@@ -58,7 +58,7 @@ func TestFundingProviderConfigCleanUpSigils(t *testing.T) {
 func TestFundingProviderConfigIgnoresInvalidTemplate(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
-	// a URL template string that doesn't take exactly one input may cause errors.
+	// a template string that doesn't take exactly one input may cause errors.
 	// the cleanUpSigils function handles extra sigils, but may result in strings that take zero inputs, which are invalid here!
 	cases := []string{
 		"",
@@ -67,16 +67,16 @@ func TestFundingProviderConfigIgnoresInvalidTemplate(t *testing.T) {
 		"%[2]s",
 	}
 
-	for _, url := range cases {
+	for _, template := range cases {
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
 [funding.mycustom]
-URL = "%s"
+TEMPLATE = "%s"
 
 [funding.mycustom2]
-URL = "%%s"
+TEMPLATE = "%%s"
 
 [funding.nothing]
-`, url))
+`, template))
 		require.NoError(t, err)
 		loadCustomFundingProvidersFrom(cfg)
 		assert.Nil(t, FundingProviders["mycustom"])
@@ -89,106 +89,106 @@ URL = "%%s"
 func TestFundingProviderConfig(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
-	// only requires url formatter. the text and icon can be derived automatically
+	// only requires template string. the title and icon can be derived automatically
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-URL = "https://mycustom.example.com/%s"
+TEMPLATE = "https://mycustom.example.com/%s"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)        // derived from URL
-	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL) // note that the %s becomes %[1]s as well, since this will only ever have the one input
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Title)            // derived from TEMPLATE
+	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.Template) // note that the %s becomes %[1]s as well, since this will only ever have the one input
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestFundingProviderConfigWithMailtoUrl(t *testing.T) {
+func TestFundingProviderConfigWithMailtoUrlTemplate(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	// not sure what an email domain would do for funding stuffs, but weird formatting cases are good to test
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-URL = "mailto:%s@localhost"
+TEMPLATE = "mailto:%s@localhost"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Text) // same as URL
-	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
+	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Title) // same as Template
+	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Template)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestFundingProviderConfigWithMailtoUrlWithText(t *testing.T) {
+func TestFundingProviderConfigWithMailtoUrlWithTitle(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-URL = "mailto:%s@localhost"
-TEXT = "Email %s@localhost for info"
+TEMPLATE = "mailto:%s@localhost"
+TITLE = "Email %s@localhost for info"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Text)
-	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.URL)
+	assert.Equal(t, "Email %[1]s@localhost for info", mycustom.Title)
+	assert.Equal(t, "mailto:%[1]s@localhost", mycustom.Template)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestFundingProviderConfigWithText(t *testing.T) {
+func TestFundingProviderConfigWithTitle(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-TEXT = "mycustom.example.lol/%s" # different from url
-URL = "https://mycustom.example.com/%s"
+TITLE = "mycustom.example.lol/%s" # different from template
+TEMPLATE = "https://mycustom.example.com/%s"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Text)
-	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, "mycustom.example.lol/%[1]s", mycustom.Title)
+	assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.Template)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestFundingProviderConfigWithSchemalessUrl(t *testing.T) {
+func TestFundingProviderConfigWithSchemalessUrlTemplate(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-URL = "mycustom.example.com/%s"
+TEMPLATE = "mycustom.example.com/%s"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Title)
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Template)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
-func TestFundingProviderConfigWithWeirdSchemalessUrl(t *testing.T) {
+func TestFundingProviderConfigWithWeirdSchemalessUrlTemplate(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.mycustom]
-URL = "://mycustom.example.com/%s"
+TEMPLATE = "://mycustom.example.com/%s"
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	mycustom := FundingProviders["mycustom"]
 	assert.Equal(t, "mycustom", mycustom.Name)
-	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.URL)
+	assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Title)
+	assert.Equal(t, "://mycustom.example.com/%[1]s", mycustom.Template)
 	assert.Equal(t, `^[^/]+$`, mycustom.InputPattern.String())
 }
 
@@ -207,20 +207,20 @@ func TestFundingProviderConfigHandlesSigils(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		url := c[0]
-		expectedText := c[1]
-		expectedURL := c[2]
+		template := c[0]
+		expectedTitle := c[1]
+		expectedTemplate := c[2]
 
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
 [funding.mycustom]
-URL = "%s"
-`, url))
+TEMPLATE = "%s"
+`, template))
 		require.NoError(t, err)
 		loadCustomFundingProvidersFrom(cfg)
 
 		mycustom := FundingProviders["mycustom"]
-		assert.Equal(t, expectedText, mycustom.Text)
-		assert.Equal(t, expectedURL, mycustom.URL)
+		assert.Equal(t, expectedTitle, mycustom.Title)
+		assert.Equal(t, expectedTemplate, mycustom.Template)
 	}
 }
 
@@ -242,7 +242,7 @@ func TestFundingProviderConfigWithCustomInputPattern(t *testing.T) {
 		expected := c[1]
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
 [funding.mycustom]
-URL = "https://mycustom.example.com/%%s"
+TEMPLATE = "https://mycustom.example.com/%%s"
 INPUT_PATTERN = %v
 `, input))
 		require.NoError(t, err)
@@ -250,8 +250,8 @@ INPUT_PATTERN = %v
 
 		mycustom := FundingProviders["mycustom"]
 		assert.Equal(t, "mycustom", mycustom.Name)
-		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Text)
-		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.URL)
+		assert.Equal(t, "mycustom.example.com/%[1]s", mycustom.Title)
+		assert.Equal(t, "https://mycustom.example.com/%[1]s", mycustom.Template)
 		assert.Equal(t, expected, mycustom.InputPattern.String())
 	}
 }
@@ -261,15 +261,15 @@ func TestFundingProviderConfigIgnoredOverride(t *testing.T) {
 
 	cfg, err := NewConfigProviderFromData(`
 [funding.ko_fi]
-URL = example.com/%[1]s
+TEMPLATE = example.com/%[1]s
 `)
 	require.NoError(t, err)
 	loadCustomFundingProvidersFrom(cfg)
 
 	koFi := FundingProviders["ko_fi"]
 	assert.Equal(t, "ko_fi", koFi.Name)
-	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text) // no change from builtin
-	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.URL)
+	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Title) // no change from builtin
+	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.Template)
 	assert.Equal(t, `^[^/]+$`, koFi.InputPattern.String())
 }
 
