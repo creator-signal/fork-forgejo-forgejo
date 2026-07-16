@@ -59,7 +59,7 @@
     "mini-css-extract-plugin": "2.10.0",
     "minimatch": "10.2.5",
     "pdfobject": "2.3.0",
-    "postcss": "8.5.16",
+    "postcss": "8.5.17",
     "postcss-loader": "8.2.1",
     "postcss-nesting": "14.0.0",
     "pretty-ms": "9.0.0",
@@ -79,7 +79,7 @@
     "vue-loader": "17.4.2",
     "vue3-calendar-heatmap": "2.0.5",
     "webpack": "5.108.4",
-    "webpack-cli": "7.1.0",
+    "webpack-cli": "7.2.1",
     "wrap-ansi": "10.0.0"
   },
   "devDependencies": {
@@ -119,7 +119,7 @@
     "stylelint-declaration-strict-value": "1.11.1",
     "stylelint-plugin-logical-css": "2.1.0",
     "stylelint-value-no-unknown-custom-properties": "6.1.1",
-    "svgo": "4.0.1",
+    "svgo": "4.0.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.60.1",
     "vite-string-plugin": "2.0.4",
