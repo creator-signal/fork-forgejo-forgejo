@@ -4,6 +4,7 @@
 package setting
 
 import (
+	"cmp"
 	"regexp"
 	"strings"
 
@@ -44,10 +45,7 @@ var FundingProviders map[string]*FundingProviderConfig
 
 // The maximum number of funding entries that may be present in a given funding
 // config, regardless of how many of those entries share a funding provider.
-//
-// This limit is arbitrary, and may be changed later, though this limit seems
-// reasonable for now.
-const MaxFundingEntriesPerConfig = 15
+var MaxFundingEntriesPerConfig int
 
 // Matches any formatting sigil, e.g. '%s', '%d', '%[3]f', '%%', etc.
 const sigilPattern = `%(\[\d+\])?.`
@@ -56,10 +54,10 @@ const sigilPattern = `%(\[\d+\])?.`
 // single input.
 //
 // Returns the given string, with the given modifications:
-//     - all instances of '%s' are transformed into '%[1]s'
-//     - all other formatting sigils (%d, %[2]s, etc.) are escaped by prepending
-//       '%', e.g. '%%d'
-//     - any dangling '%' characters are transformed into '%%'
+//   - all instances of '%s' are transformed into '%[1]s'
+//   - all other formatting sigils (%d, %[2]s, etc.) are escaped by prepending
+//     '%', e.g. '%%d'
+//   - any dangling '%' characters are transformed into '%%'
 //
 // Note that the resulting string may not contain a valid '%[1]s' sigil. Care
 // should be taken to ensure that the string can be used as a template string
@@ -81,10 +79,18 @@ func cleanUpSigils(s string) string {
 			return match // already safe
 		} else if !strings.HasSuffix(match, "s") || strings.HasPrefix(match, "%[") {
 			return "%" + match // escape away non-string or index-other-than-1 sigils
-		} else {
-			return "%[1]s" // positional string sigils become explicitly index-1
 		}
+		return "%[1]s" // positional string sigils become explicitly index-1
 	})
+}
+
+// Returns a value limited to the given inclusive range, and `true` if the
+// given value fell outside of that range.
+//
+// If T is a floating-point type and any of the arguments are NaNs, clamp will return NaN.
+func clamp[T cmp.Ordered](n, minN, maxN T) (new T, didClamp bool) {
+	new = min(max(n, minN), maxN)
+	return new, new != n
 }
 
 func addFundingProvider(providers map[string]*FundingProviderConfig, provider *FundingProviderConfig) {
@@ -184,11 +190,21 @@ func LoadBuiltInFundingProviders() {
 func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 	LoadBuiltInFundingProviders()
 
+	const keyMaxFundingEntriesPerConfig = "MAX_FUNDING_ENTRIES_PER_CONFIG"
 	const keyText = "TEXT"
 	const keyURL = "URL"
 	const keyInputPattern = "INPUT_PATTERN"
 
-	for _, sec := range rootCfg.Section("funding").ChildSections() {
+	fundingSection := rootCfg.Section("funding")
+
+	MaxFundingEntriesPerConfig = fundingSection.Key(keyMaxFundingEntriesPerConfig).MustInt(15)
+	newLimit, didClamp := clamp(MaxFundingEntriesPerConfig, 0, 20) // arbitrary "reasonable" max
+	if didClamp {
+		log.Warn("%s.%s name is out of bounds, clamping to %d", fundingSection.Name(), keyMaxFundingEntriesPerConfig, MaxFundingEntriesPerConfig)
+	}
+	MaxFundingEntriesPerConfig = newLimit
+
+	for _, sec := range fundingSection.ChildSections() {
 		name := strings.TrimPrefix(sec.Name(), "funding.")
 		if name == "" {
 			log.Warn("name is empty, funding %s ignored", sec.Name())

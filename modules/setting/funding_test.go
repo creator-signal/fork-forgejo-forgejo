@@ -60,7 +60,7 @@ func TestFundingProviderConfigIgnoresInvalidTemplate(t *testing.T) {
 
 	// a URL template string that doesn't take exactly one input may cause errors.
 	// the cleanUpSigils function handles extra sigils, but may result in strings that take zero inputs, which are invalid here!
-	cases := []string {
+	cases := []string{
 		"",
 		"s",
 		"https://example.com",
@@ -74,11 +74,15 @@ URL = "%s"
 
 [funding.mycustom2]
 URL = "%%s"
+
+[funding.nothing]
 `, url))
 		require.NoError(t, err)
 		loadCustomFundingProvidersFrom(cfg)
 		assert.Nil(t, FundingProviders["mycustom"])
+		assert.Nil(t, FundingProviders["nothing"])
 		assert.NotNil(t, FundingProviders["mycustom2"])
+		assert.Equal(t, 15, MaxFundingEntriesPerConfig) // default value
 	}
 }
 
@@ -252,7 +256,7 @@ INPUT_PATTERN = %v
 	}
 }
 
-func TestIgnoredOverrideFundingProviderConfig(t *testing.T) {
+func TestFundingProviderConfigIgnoredOverride(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
 	cfg, err := NewConfigProviderFromData(`
@@ -267,4 +271,31 @@ URL = example.com/%[1]s
 	assert.Equal(t, "ko-fi.com/%[1]s", koFi.Text) // no change from builtin
 	assert.Equal(t, "https://ko-fi.com/%[1]s", koFi.URL)
 	assert.Equal(t, `^[^/]+$`, koFi.InputPattern.String())
+}
+
+func TestFundingProviderConfigMaxEntries(t *testing.T) {
+	defer test.MockProtect(&MaxFundingEntriesPerConfig)()
+
+	cases := [][2]int{
+		{-1, 0}, // clamps to 0
+		{0, 0},
+		{1, 1},
+		{15, 15},
+		{16, 16},
+		{20, 20},
+		{21, 20}, // clamps to 20
+	}
+
+	for _, c := range cases {
+		limit := c[0]
+		expected := c[1]
+		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
+[funding]
+MAX_FUNDING_ENTRIES_PER_CONFIG = %d
+`, limit))
+		require.NoError(t, err)
+		loadCustomFundingProvidersFrom(cfg)
+
+		assert.Equal(t, expected, MaxFundingEntriesPerConfig)
+	}
 }
