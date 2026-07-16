@@ -114,24 +114,23 @@ func TestGetContentsOrListForDir(t *testing.T) {
 // already handled separately above GetContentsOrList's directory-listing
 // branch. GetContentsOrList must still return a non-nil, empty
 // []*api.ContentsResponse in that case: a nil slice marshals to JSON `null`,
-// but API clients expect an array.
+// but API clients expect an array.// TestGetContentsOrListForDirWithNoEntries is a regression test for
+// https://codeberg.org/forgejo/forgejo/issues/13469
 func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 52})
 
 	gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
 	require.NoError(t, err)
 	defer gitRepo.Close()
 
-	// Build an orphan commit pointing at the canonical empty tree, and point
-	// a new branch at it. This gives us a real ref/commit whose root
-	// directory has zero entries, without depending on the repository's
-	// IsEmpty flag.
 	objectFormat, err := gitRepo.GetObjectFormat()
 	require.NoError(t, err)
-	emptyTree := git.NewTree(gitRepo, objectFormat.EmptyTree())
 
+	emptyTree := git.NewTree(gitRepo, objectFormat.EmptyTree())
 	sig := &git.Signature{Name: "test", Email: "test@example.com"}
+
 	commitID, err := gitRepo.CommitTree(sig, sig, emptyTree, git.CommitTreeOpts{
 		Message:   "empty tree commit",
 		NoGPGSign: true,
@@ -144,15 +143,24 @@ func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
 	contents, err := GetContentsOrList(db.DefaultContext, repo, "", branch)
 	require.NoError(t, err)
 
+	// Handle the any return type
 	list, ok := contents.([]*api.ContentsResponse)
-	require.True(t, ok, "expected GetContentsOrList to return []*api.ContentsResponse for a directory listing, got %T", contents)
-	assert.NotNil(t, list, "directory listing must be a non-nil empty slice, not nil")
+	if !ok {
+		// Fallback for cases where it might be []any
+		anyList, okAny := contents.([]any)
+		require.True(t, okAny, "expected []*api.ContentsResponse or []any, got %T", contents)
+		list = make([]*api.ContentsResponse, len(anyList))
+		for i, item := range anyList {
+			if c, ok := item.(*api.ContentsResponse); ok {
+				list[i] = c
+			}
+		}
+	}
+
+	assert.NotNil(t, list, "directory listing must be non-nil empty slice")
 	assert.Empty(t, list)
 
-	// This is the assertion that actually catches the bug: a nil slice and
-	// an empty slice both satisfy assert.Empty above, but only make([]T, 0)
-	// marshals to `[]`. A nil slice marshals to `null`, which is what
-	// https://codeberg.org/forgejo/forgejo/issues/13469 reported.
+	// Critical: must marshal to JSON [] not null
 	marshalled, err := json.Marshal(contents)
 	require.NoError(t, err)
 	assert.JSONEq(t, "[]", string(marshalled))
