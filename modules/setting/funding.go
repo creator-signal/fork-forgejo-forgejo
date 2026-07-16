@@ -49,15 +49,42 @@ var FundingProviders map[string]*FundingProviderConfig
 // reasonable for now.
 const MaxFundingEntriesPerConfig = 15
 
-// Ensures that any formatting sigils (%s, etc.) are rendered inert, except for
-// %[1]s. Also transforms %s into %[1]s, because these format strings only
-// ever receive a single argument, which the template may use in multiple
-// places.
+// Matches any formatting sigil, e.g. '%s', '%d', '%[3]f', '%%', etc.
+const sigilPattern = `%(\[\d+\])?.`
+
+// Normalizes the given string for use as a formatting string that takes a
+// single input.
+//
+// Returns the given string, with the given modifications:
+//     - all instances of '%s' are transformed into '%[1]s'
+//     - all other formatting sigils (%d, %[2]s, etc.) are escaped by prepending
+//       '%', e.g. '%%d'
+//     - any dangling '%' characters are transformed into '%%'
+//
+// Note that the resulting string may not contain a valid '%[1]s' sigil. Care
+// should be taken to ensure that the string can be used as a template string
+// before attempting to use it with fmt.Sprintf, to avoid unexpected errors.
 func cleanUpSigils(s string) string {
-	result := strings.ReplaceAll(s, "%", "%%")             // escape away all sigils
-	result = strings.ReplaceAll(result, "%%s", "%[1]s")    // allow %s
-	result = strings.ReplaceAll(result, "%%[1]s", "%[1]s") // allow %[1]s
-	return result
+	if s == "%" {
+		return "%%" // escape away our lone percent sign
+	} else if len(s) < 2 {
+		return s // input too short to contain other formatting sigils
+	}
+
+	if strings.HasSuffix(s, "%") && !strings.HasSuffix(s, "%%") {
+		s += "%" // escape away the trailing percent sign
+	}
+
+	sigilRegex := regexp.MustCompile(sigilPattern)
+	return sigilRegex.ReplaceAllStringFunc(s, func(match string) string {
+		if match == "%%" || match == "%[1]s" {
+			return match // already safe
+		} else if !strings.HasSuffix(match, "s") || strings.HasPrefix(match, "%[") {
+			return "%" + match // escape away non-string or index-other-than-1 sigils
+		} else {
+			return "%[1]s" // positional string sigils become explicitly index-1
+		}
+	})
 }
 
 func addFundingProvider(providers map[string]*FundingProviderConfig, provider *FundingProviderConfig) {
@@ -180,6 +207,10 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		}
 
 		url := cleanUpSigils(rawURL)
+		if !strings.Contains(url, "%[1]s") {
+			log.Warn("%s.%s contains no valid instances of '%%[1]s' or '%%s', funding %[1]s ignored", sec.Name(), keyURL)
+			continue
+		}
 
 		// get the url scheme, if any
 		scheme, _, found := strings.Cut(url, "://") // e.g. "https://localhost/%s"
@@ -203,7 +234,7 @@ func loadCustomFundingProvidersFrom(rootCfg ConfigProvider) {
 		provider.InputPattern = inputPattern
 
 		if FundingProviders[name] != nil {
-			log.Warn("%s funding provider already exists, existing provider %s is unchanged", sec.Name(), name)
+			log.Warn("%s constructs a funding provider that already exists, existing provider %s is unchanged", sec.Name(), name)
 		} else {
 			FundingProviders[name] = provider
 		}

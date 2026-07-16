@@ -13,6 +13,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFundingProviderConfigCleanUpSigils(t *testing.T) {
+	// if the result expects more than one input, or an incomplete formatting sigil, then fmt.Sprintf may complain!
+	// we don't worry here about strings that take zero inputs, we don't know where one should go!
+	cases := [][2]string{
+		{"", ""},
+		{"%", "%%"},
+		{"a", "a"},
+		{"%s", "%[1]s"},
+		{"%%s", "%%s"},
+		{"%s%s", "%[1]s%[1]s"},
+		{"%s%%s", "%[1]s%%s"},
+		{"%%s%s", "%%s%[1]s"},
+		{"%[1]s", "%[1]s"},
+		{"%[1s", "%%[1s"},
+		{"%1s", "%%1s"},
+		{"%1]s", "%%1]s"},
+		{"%[2]s", "%%[2]s"},
+		{"%[14]s", "%%[14]s"},
+		{"%よ", "%%よ"},
+		{"%よ%", "%%よ%%"},
+		{"%yo", "%%yo"},
+		{"%yo%", "%%yo%%"},
+		{"http://example.com/%%s", "http://example.com/%%s"},
+		{"http://example.com/%%%%s", "http://example.com/%%%%s"},
+		{"http://example.com/%%%[1]s", "http://example.com/%%%[1]s"},
+		{"http://example.com/%%[1]s", "http://example.com/%%[1]s"},
+		{"https://example.com/%s?u=%s", "https://example.com/%[1]s?u=%[1]s"},
+		{"https://example.com/%[1]s", "https://example.com/%[1]s"},
+		{"https://example.com/%[1]s?q=%[1]s", "https://example.com/%[1]s?q=%[1]s"},
+		{"https://example.com/%[2]s", "https://example.com/%%[2]s"},
+		{"https://example.com/%[2]s/%s", "https://example.com/%%[2]s/%[1]s"},
+		{"https://example.com/%[2]s/%[1]s", "https://example.com/%%[2]s/%[1]s"},
+		{"https://example.com/%[2]s/%[1]s/%s", "https://example.com/%%[2]s/%[1]s/%[1]s"},
+	}
+
+	for _, c := range cases {
+		input := c[0]
+		expected := c[1]
+		assert.Equal(t, expected, cleanUpSigils(input))
+	}
+}
+
+func TestFundingProviderConfigIgnoresInvalidTemplate(t *testing.T) {
+	defer test.MockProtect(&FundingProviders)()
+
+	// a URL template string that doesn't take exactly one input may cause errors.
+	// the cleanUpSigils function handles extra sigils, but may result in strings that take zero inputs, which are invalid here!
+	cases := []string {
+		"",
+		"s",
+		"https://example.com",
+		"%[2]s",
+	}
+
+	for _, url := range cases {
+		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
+[funding.mycustom]
+URL = "%s"
+
+[funding.mycustom2]
+URL = "%%s"
+`, url))
+		require.NoError(t, err)
+		loadCustomFundingProvidersFrom(cfg)
+		assert.Nil(t, FundingProviders["mycustom"])
+		assert.NotNil(t, FundingProviders["mycustom2"])
+	}
+}
+
 func TestFundingProviderConfig(t *testing.T) {
 	defer test.MockProtect(&FundingProviders)()
 
@@ -126,7 +195,6 @@ func TestFundingProviderConfigHandlesSigils(t *testing.T) {
 		{"https://mycustom.example.com/%s?u=%s", "mycustom.example.com/%[1]s?u=%[1]s", "https://mycustom.example.com/%[1]s?u=%[1]s"},
 		{"https://mycustom.example.com/%[1]s", "mycustom.example.com/%[1]s", "https://mycustom.example.com/%[1]s"},
 		{"https://mycustom.example.com/%[1]s?q=%[1]s", "mycustom.example.com/%[1]s?q=%[1]s", "https://mycustom.example.com/%[1]s?q=%[1]s"},
-		{"https://mycustom.example.com/%[2]s", "mycustom.example.com/%%[2]s", "https://mycustom.example.com/%%[2]s"},
 		{"https://mycustom.example.com/%[2]s/%s", "mycustom.example.com/%%[2]s/%[1]s", "https://mycustom.example.com/%%[2]s/%[1]s"},
 		{"https://mycustom.example.com/%[2]s/%[1]s", "mycustom.example.com/%%[2]s/%[1]s", "https://mycustom.example.com/%%[2]s/%[1]s"},
 		{"https://mycustom.example.com/%[2]s/%[1]s/%s", "mycustom.example.com/%%[2]s/%[1]s/%[1]s", "https://mycustom.example.com/%%[2]s/%[1]s/%[1]s"},
