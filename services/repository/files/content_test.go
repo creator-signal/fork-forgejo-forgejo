@@ -1,7 +1,7 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package files
+package files_test
 
 import (
 	"encoding/json"
@@ -14,6 +14,8 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	api "forgejo.org/modules/structs"
+	files_service "forgejo.org/services/repository/files"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,7 +58,13 @@ func getExpectedReadmeContentsResponse() *api.ContentsResponse {
 
 func TestGetContents(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	opts := &forgery.CreateRepositoryOptions{
+		Files: &forgery.FilesInit{
+			Readme: "Default",
+		},
+	}
+	repo := forgery.CreateRepository(t, nil, opts)
 
 	treePath := "README.md"
 	ref := repo.DefaultBranch
@@ -64,13 +72,13 @@ func TestGetContents(t *testing.T) {
 	expectedContentsResponse := getExpectedReadmeContentsResponse()
 
 	t.Run("Get README.md contents with GetContents(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContents(db.DefaultContext, repo, treePath, ref, false)
+		fileContentResponse, err := files_service.GetContents(db.DefaultContext, repo, treePath, ref, false)
 		assert.Equal(t, expectedContentsResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
 
 	t.Run("Get README.md contents with ref as empty string (should then use the repo's default branch) with GetContents(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContents(db.DefaultContext, repo, treePath, "", false)
+		fileContentResponse, err := files_service.GetContents(db.DefaultContext, repo, treePath, "", false)
 		assert.Equal(t, expectedContentsResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
@@ -78,7 +86,13 @@ func TestGetContents(t *testing.T) {
 
 func TestGetContentsOrListForDir(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	opts := &forgery.CreateRepositoryOptions{
+		Files: &forgery.FilesInit{
+			Readme: "Default",
+		},
+	}
+	repo := forgery.CreateRepository(t, nil, opts)
 
 	treePath := "" // root dir
 	ref := repo.DefaultBranch
@@ -93,13 +107,13 @@ func TestGetContentsOrListForDir(t *testing.T) {
 	}
 
 	t.Run("Get root dir contents with GetContentsOrList(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, treePath, ref)
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, treePath, ref)
 		assert.EqualValues(t, expectedContentsListResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
 
 	t.Run("Get root dir contents with ref as empty string (should then use the repo's default branch) with GetContentsOrList(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, treePath, "")
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, treePath, "")
 		assert.EqualValues(t, expectedContentsListResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
@@ -129,7 +143,7 @@ func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
 	const branch = "test-empty-tree-branch"
 	require.NoError(t, gitRepo.SetReference(git.BranchPrefix+branch, commitID.String()))
 
-	contents, err := GetContentsOrList(db.DefaultContext, repo, "", branch)
+	contents, err := files_service.GetContentsOrList(db.DefaultContext, repo, "", branch)
 	require.NoError(t, err)
 
 	// Handle the any return type
@@ -157,7 +171,13 @@ func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
 
 func TestGetContentsOrListForFile(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	opts := &forgery.CreateRepositoryOptions{
+		Files: &forgery.FilesInit{
+			Readme: "Default",
+		},
+	}
+	repo := forgery.CreateRepository(t, nil, opts)
 
 	treePath := "README.md"
 	ref := repo.DefaultBranch
@@ -165,13 +185,13 @@ func TestGetContentsOrListForFile(t *testing.T) {
 	expectedContentsResponse := getExpectedReadmeContentsResponse()
 
 	t.Run("Get README.md contents with GetContentsOrList(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, treePath, ref)
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, treePath, ref)
 		assert.EqualValues(t, expectedContentsResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
 
 	t.Run("Get README.md contents with ref as empty string (should then use the repo's default branch) with GetContentsOrList(ctx, )", func(t *testing.T) {
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, treePath, "")
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, treePath, "")
 		assert.EqualValues(t, expectedContentsResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
@@ -179,21 +199,27 @@ func TestGetContentsOrListForFile(t *testing.T) {
 
 func TestGetContentsErrors(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	opts := &forgery.CreateRepositoryOptions{
+		Files: &forgery.FilesInit{
+			Readme: "Default",
+		},
+	}
+	repo := forgery.CreateRepository(t, nil, opts)
 
 	treePath := "README.md"
 	ref := repo.DefaultBranch
 
 	t.Run("bad treePath", func(t *testing.T) {
 		badTreePath := "bad/tree.md"
-		fileContentResponse, err := GetContents(db.DefaultContext, repo, badTreePath, ref, false)
+		fileContentResponse, err := files_service.GetContents(db.DefaultContext, repo, badTreePath, ref, false)
 		require.EqualError(t, err, "object does not exist [id: , rel_path: bad]")
 		assert.Nil(t, fileContentResponse)
 	})
 
 	t.Run("bad ref", func(t *testing.T) {
 		badRef := "bad_ref"
-		fileContentResponse, err := GetContents(db.DefaultContext, repo, treePath, badRef, false)
+		fileContentResponse, err := files_service.GetContents(db.DefaultContext, repo, treePath, badRef, false)
 		require.EqualError(t, err, "object does not exist [id: "+badRef+", rel_path: ]")
 		assert.Nil(t, fileContentResponse)
 	})
@@ -201,21 +227,27 @@ func TestGetContentsErrors(t *testing.T) {
 
 func TestGetContentsOrListErrors(t *testing.T) {
 	unittest.PrepareTestEnv(t)
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	opts := &forgery.CreateRepositoryOptions{
+		Files: &forgery.FilesInit{
+			Readme: "Default",
+		},
+	}
+	repo := forgery.CreateRepository(t, nil, opts)
 
 	treePath := "README.md"
 	ref := repo.DefaultBranch
 
 	t.Run("bad treePath", func(t *testing.T) {
 		badTreePath := "bad/tree.md"
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, badTreePath, ref)
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, badTreePath, ref)
 		require.EqualError(t, err, "object does not exist [id: , rel_path: bad]")
 		assert.Nil(t, fileContentResponse)
 	})
 
 	t.Run("bad ref", func(t *testing.T) {
 		badRef := "bad_ref"
-		fileContentResponse, err := GetContentsOrList(db.DefaultContext, repo, treePath, badRef)
+		fileContentResponse, err := files_service.GetContentsOrList(db.DefaultContext, repo, treePath, badRef)
 		require.EqualError(t, err, "object does not exist [id: "+badRef+", rel_path: ]")
 		assert.Nil(t, fileContentResponse)
 	})
@@ -226,7 +258,7 @@ func TestGetContentsOrListOfEmptyRepos(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 52})
 
 	t.Run("empty repo", func(t *testing.T) {
-		contents, err := GetContentsOrList(db.DefaultContext, repo, "", "")
+		contents, err := files_service.GetContentsOrList(db.DefaultContext, repo, "", "")
 		require.NoError(t, err)
 		assert.Empty(t, contents)
 	})
@@ -240,7 +272,7 @@ func TestGetBlobBySHA(t *testing.T) {
 	require.NoError(t, err)
 	defer gitRepo.Close()
 
-	gbr, err := GetBlobBySHA(db.DefaultContext, repo, gitRepo, "65f1bf27bc3bf70f64657658635e66094edbcb4d")
+	gbr, err := files_service.GetBlobBySHA(db.DefaultContext, repo, gitRepo, "65f1bf27bc3bf70f64657658635e66094edbcb4d")
 	expectedGBR := &api.GitBlob{
 		Content:  "dHJlZSAyYTJmMWQ0NjcwNzI4YTJlMTAwNDllMzQ1YmQ3YTI3NjQ2OGJlYWI2CmF1dGhvciB1c2VyMSA8YWRkcmVzczFAZXhhbXBsZS5jb20+IDE0ODk5NTY0NzkgLTA0MDAKY29tbWl0dGVyIEV0aGFuIEtvZW5pZyA8ZXRoYW50a29lbmlnQGdtYWlsLmNvbT4gMTQ4OTk1NjQ3OSAtMDQwMAoKSW5pdGlhbCBjb21taXQK",
 		Encoding: "base64",
@@ -260,7 +292,7 @@ func TestGetBlobsBySHA(t *testing.T) {
 	require.NoError(t, err)
 	defer gitRepo.Close()
 
-	gbr, err := GetBlobsBySHA(db.DefaultContext, repo, gitRepo, []string{
+	gbr, err := files_service.GetBlobsBySHA(db.DefaultContext, repo, gitRepo, []string{
 		"ea82fc8777a24b07c26b3a4bf4e2742c03733eab", // Home.md
 		"6395b68e1feebb1e4c657b4f9f6ba2676a283c0b", // line.svg
 		"26f842bcad37fa40a1bb34cbb5ee219ee35d863d", // test.xml
