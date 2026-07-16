@@ -199,10 +199,6 @@ func testAPIGetContentsListOfEmptyTree(t *testing.T, u *url.URL) {
 	req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/contents?ref=%s", user2.Name, repo1.Name, branch)
 	resp := MakeRequest(t, req, http.StatusOK)
 
-	// Assert on the raw response body: decoding into a Go slice would hide
-	// the bug, since json.Unmarshal("null", &slice) silently leaves the
-	// slice nil, same as unmarshalling "[]". The wire format is what
-	// clients (and this bug report) actually observe.
 	assert.JSONEq(t, "[]", strings.TrimSpace(resp.Body.String()))
 }
 
