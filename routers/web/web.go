@@ -404,21 +404,20 @@ func Routes() *web.Route {
 		},
 		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
 		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
-		user.GetNotificationCount, repo.GetActiveStopwatch,
-		goGet)
+		user.GetNotificationCount, repo.GetActiveStopwatch, goGet, smMiddleware)
 	routes.Group("",
 		func() {
 			registerMixedRoutes(routes)
 		},
-		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet)
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet, smMiddleware)
 	routes.Group("",
 		func() {
 			registerGitLFSRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet, smMiddleware)
 	routes.Group("",
 		func() {
 			registerGitRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet, smMiddleware)
 
 	// The only endpoint which can only be accessed with the OAuth2 authentication method is /userinfo, extracted here
 	// so that other auth methods can't be applied to it
