@@ -117,7 +117,7 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 		return
 	}
 	orgName := ""
-	if ctx.Org != nil && ctx.Org().Organization != nil {
+	if ctx.Org() != nil && ctx.Org().Organization != nil {
 		orgName = ctx.Org().Organization.Name
 	}
 	starCount, err := user_model.GetUserStarCount(ctx, ctx.Doer(), ctx.Doer(), orgName)
