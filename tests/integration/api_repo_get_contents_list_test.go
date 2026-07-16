@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,4 +172,48 @@ func testAPIGetContentsList(t *testing.T, u *url.URL) {
 	req = NewRequestf(t, "GET", "/api/v1/repos/%s/%s/contents/%s", org3.Name, repo3.Name, treePath).
 		AddTokenAuth(token2)
 	MakeRequest(t, req, http.StatusOK)
+}
+
+// TestAPIGetContentsListOfEmptyTree is a regression test for
+// https://codeberg.org/forgejo/forgejo/issues/13469 : GET .../contents on a
+// ref whose root directory has zero entries must return `[]`, not `null`.
+//
+// This is deliberately different from an empty repository: repo1 is a
+// normal, non-empty repo, but we point a branch at a commit with an empty
+// tree (comparable to a placeholder branch created before any files were
+// added, or a ref exposed by certain migrated/mirrored repositories).
+func TestAPIGetContentsListOfEmptyTree(t *testing.T) {
+	onApplicationRun(t, testAPIGetContentsListOfEmptyTree)
+}
+
+func testAPIGetContentsListOfEmptyTree(t *testing.T, u *url.URL) {
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	gitRepo, err := gitrepo.OpenRepository(git.DefaultContext, repo1)
+	require.NoError(t, err)
+	defer gitRepo.Close()
+
+	objectFormat, err := gitRepo.GetObjectFormat()
+	require.NoError(t, err)
+	emptyTree := git.NewTree(gitRepo, objectFormat.EmptyTree())
+
+	sig := &git.Signature{Name: user2.Name, Email: user2.GetEmail()}
+	commitID, err := gitRepo.CommitTree(sig, sig, emptyTree, git.CommitTreeOpts{
+		Message:   "empty tree commit",
+		NoGPGSign: true,
+	})
+	require.NoError(t, err)
+
+	const branch = "test-empty-tree-branch"
+	require.NoError(t, gitRepo.SetReference(git.BranchPrefix+branch, commitID.String()))
+
+	req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/contents?ref=%s", user2.Name, repo1.Name, branch)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	// Assert on the raw response body: decoding into a Go slice would hide
+	// the bug, since json.Unmarshal("null", &slice) silently leaves the
+	// slice nil, same as unmarshalling "[]". The wire format is what
+	// clients (and this bug report) actually observe.
+	assert.JSONEq(t, "[]", strings.TrimSpace(resp.Body.String()))
 }

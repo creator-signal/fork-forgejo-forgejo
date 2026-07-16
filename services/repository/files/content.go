@@ -81,9 +81,6 @@ func GetContentsOrList(ctx context.Context, repo *repo_model.Repository, treePat
 		return GetContents(ctx, repo, treePath, origRef, false)
 	}
 
-	// We are in a directory, so we return a list of FileContentResponse objects
-	var fileList []*api.ContentsResponse
-
 	gitTree, err := commit.SubTree(treePath)
 	if err != nil {
 		return nil, err
@@ -92,6 +89,14 @@ func GetContentsOrList(ctx context.Context, repo *repo_model.Repository, treePat
 	if err != nil {
 		return nil, err
 	}
+
+	// We are in a directory, so we return a list of FileContentResponse objects.
+	// NOTE: this must be initialized with make(), not `var`. A nil slice and an
+	// empty slice behave the same in Go, but they marshal to JSON differently:
+	// nil -> `null`, make(...) -> `[]`. API clients expect an array here even
+	// when the directory has zero entries (e.g. a branch pointing at an empty
+	// tree). See #13469.
+	fileList := make([]*api.ContentsResponse, 0, len(entries))
 	for _, e := range entries {
 		subTreePath := path.Join(treePath, e.Name())
 		fileContentResponse, err := GetContents(ctx, repo, subTreePath, origRef, true)

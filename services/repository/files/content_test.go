@@ -4,12 +4,14 @@
 package files
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
+	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	api "forgejo.org/modules/structs"
 
@@ -101,6 +103,59 @@ func TestGetContentsOrListForDir(t *testing.T) {
 		assert.EqualValues(t, expectedContentsListResponse, fileContentResponse)
 		require.NoError(t, err)
 	})
+}
+
+// TestGetContentsOrListForDirWithNoEntries is a regression test for
+// https://codeberg.org/forgejo/forgejo/issues/13469
+//
+// A ref can legitimately point at a commit whose root tree has zero entries
+// (for example a placeholder branch created before any files were added).
+// This is different from an empty repository (repo.IsEmpty), which is
+// already handled separately above GetContentsOrList's directory-listing
+// branch. GetContentsOrList must still return a non-nil, empty
+// []*api.ContentsResponse in that case: a nil slice marshals to JSON `null`,
+// but API clients expect an array.
+func TestGetContentsOrListForDirWithNoEntries(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+	require.NoError(t, err)
+	defer gitRepo.Close()
+
+	// Build an orphan commit pointing at the canonical empty tree, and point
+	// a new branch at it. This gives us a real ref/commit whose root
+	// directory has zero entries, without depending on the repository's
+	// IsEmpty flag.
+	objectFormat, err := gitRepo.GetObjectFormat()
+	require.NoError(t, err)
+	emptyTree := git.NewTree(gitRepo, objectFormat.EmptyTree())
+
+	sig := &git.Signature{Name: "test", Email: "test@example.com"}
+	commitID, err := gitRepo.CommitTree(sig, sig, emptyTree, git.CommitTreeOpts{
+		Message:   "empty tree commit",
+		NoGPGSign: true,
+	})
+	require.NoError(t, err)
+
+	const branch = "test-empty-tree-branch"
+	require.NoError(t, gitRepo.SetReference(git.BranchPrefix+branch, commitID.String()))
+
+	contents, err := GetContentsOrList(db.DefaultContext, repo, "", branch)
+	require.NoError(t, err)
+
+	list, ok := contents.([]*api.ContentsResponse)
+	require.True(t, ok, "expected GetContentsOrList to return []*api.ContentsResponse for a directory listing, got %T", contents)
+	assert.NotNil(t, list, "directory listing must be a non-nil empty slice, not nil")
+	assert.Empty(t, list)
+
+	// This is the assertion that actually catches the bug: a nil slice and
+	// an empty slice both satisfy assert.Empty above, but only make([]T, 0)
+	// marshals to `[]`. A nil slice marshals to `null`, which is what
+	// https://codeberg.org/forgejo/forgejo/issues/13469 reported.
+	marshalled, err := json.Marshal(contents)
+	require.NoError(t, err)
+	assert.JSONEq(t, "[]", string(marshalled))
 }
 
 func TestGetContentsOrListForFile(t *testing.T) {
