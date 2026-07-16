@@ -90,8 +90,7 @@ func GetContentsOrList(ctx context.Context, repo *repo_model.Repository, treePat
 		return nil, err
 	}
 
-	// We are in a directory, so we return a list of FileContentResponse objects.
-	// Ensure that it serializes to [] instead of null in JSON.
+
 	fileList := make([]*api.ContentsResponse, 0, len(entries))
 	for _, e := range entries {
 		subTreePath := path.Join(treePath, e.Name())

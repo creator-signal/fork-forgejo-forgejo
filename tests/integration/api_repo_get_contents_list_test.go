@@ -174,9 +174,6 @@ func testAPIGetContentsList(t *testing.T, u *url.URL) {
 	MakeRequest(t, req, http.StatusOK)
 }
 
-// TestAPIGetContentsListOfEmptyTree is a regression test for
-// https://codeberg.org/forgejo/forgejo/issues/13469: GET .../contents on a
-// ref whose root directory has zero entries must return [], not null.
 func testAPIGetContentsListOfEmptyTree(t *testing.T, u *url.URL) {
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
