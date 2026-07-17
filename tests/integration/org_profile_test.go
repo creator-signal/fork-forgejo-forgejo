@@ -78,7 +78,7 @@ func TestOrgProfile(t *testing.T) {
 		checkReadme(t, "readmee", "readmee", 0)
 		checkReadme(t, "test.md", "test.md", 0)
 
-		checkSponsor := func(t *testing.T, title, fundingConfigFilename string, expectedCount int) {
+		checkFunding := func(t *testing.T, title, fundingConfigFilename string, expectedCount int) {
 			t.Run(title, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
@@ -99,29 +99,29 @@ func TestOrgProfile(t *testing.T) {
 				resp := MakeRequest(t, req, http.StatusOK)
 
 				doc := NewHTMLParser(t, resp.Body)
-				sponsorButtonCount := doc.Find("button.sponsor").Length()
-				sponsorModalCount := doc.Find("#sponsor-modal").Length()
+				donationButtonCount := doc.Find("button.donation").Length()
+				fundingModalCount := doc.Find("#funding-modal").Length()
 
-				assert.Equal(t, expectedCount, sponsorButtonCount)
-				assert.Equal(t, expectedCount, sponsorModalCount)
+				assert.Equal(t, expectedCount, donationButtonCount)
+				assert.Equal(t, expectedCount, fundingModalCount)
 			})
 		}
 
-		checkSponsor(t, "No funding config", "", 0)
-		checkSponsor(t, "FUNDING.yml", "FUNDING.yml", 1)
-		checkSponsor(t, "funding.yml", "funding.yml", 1)
-		checkSponsor(t, "FundIng.Yml", "FundIng.Yml", 1)
-		checkSponsor(t, ".forgejo/Funding.yml", ".forgejo/Funding.yml", 1)
-		checkSponsor(t, ".github/funding.yml", ".github/funding.yml", 1)
-		checkSponsor(t, ".gitea/funding.yml", ".gitea/funding.yml", 0)
-		checkSponsor(t, "funding.org", "FUNDING.org", 0)
-		checkSponsor(t, "FUNDING.en-us.yml", "FUNDING.en-us.yml", 0)
-		checkSponsor(t, "README.txt", "README.txt", 0)
-		checkSponsor(t, "FUNDING", "FUNDING", 0)
-		checkSponsor(t, "FUNDING.yaml", "FUNDING.yaml", 1)
-		checkSponsor(t, "README.i18n.md", "README.i18n.md", 0)
-		checkSponsor(t, "funding.ymll", "funding.ymll", 0)
-		checkSponsor(t, "test.yml", "test.yml", 0)
+		checkFunding(t, "No funding config", "", 0)
+		checkFunding(t, "FUNDING.yml", "FUNDING.yml", 1)
+		checkFunding(t, "funding.yml", "funding.yml", 1)
+		checkFunding(t, "FundIng.Yml", "FundIng.Yml", 1)
+		checkFunding(t, ".forgejo/Funding.yml", ".forgejo/Funding.yml", 1)
+		checkFunding(t, ".github/funding.yml", ".github/funding.yml", 1)
+		checkFunding(t, ".gitea/funding.yml", ".gitea/funding.yml", 0)
+		checkFunding(t, "funding.org", "FUNDING.org", 0)
+		checkFunding(t, "FUNDING.en-us.yml", "FUNDING.en-us.yml", 0)
+		checkFunding(t, "README.txt", "README.txt", 0)
+		checkFunding(t, "FUNDING", "FUNDING", 0)
+		checkFunding(t, "FUNDING.yaml", "FUNDING.yaml", 1)
+		checkFunding(t, "README.i18n.md", "README.i18n.md", 0)
+		checkFunding(t, "funding.ymll", "funding.ymll", 0)
+		checkFunding(t, "test.yml", "test.yml", 0)
 
 		t.Run("readme-size", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()

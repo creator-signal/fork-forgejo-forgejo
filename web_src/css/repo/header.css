@@ -72,7 +72,7 @@
   --button-min-height: 33.133px;
 }
 
-.repo-buttons .ui.button.sponsor .svg.icon-sponsor,
-.button-sequence .button.sponsor .svg.icon-sponsor {
-  color: var(--color-icon-sponsor);
+.repo-buttons .ui.button.donation .svg.donation-icon,
+.button-sequence .button.donation .svg.donation-icon {
+  color: var(--color-donation-icon);
 }

@@ -32,12 +32,12 @@
   border-bottom: 1px solid var(--color-secondary);
 }
 
-.user.profile .ui.card .extra.content .ui.button.sponsor {
+.user.profile .ui.card .extra.content .ui.button.donation {
   width: 100%;
 }
 
-.user.profile .ui.card .extra.content .ui.button.sponsor .svg.icon-sponsor {
-  color: var(--color-icon-sponsor);
+.user.profile .ui.card .extra.content .ui.button.donation .svg.donation-icon {
+  color: var(--color-donation-icon);
 }
 
 .user.profile .ui.card .actions {

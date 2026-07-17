@@ -18,7 +18,7 @@ import (
 func TestRepoFundingConfigPrecedence(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user := forgery.CreateUser(t, nil)
-		checkSponsor := func(t *testing.T, fundingConfigFilename, configKind string) {
+		checkFunding := func(t *testing.T, fundingConfigFilename, configKind string) {
 			t.Run("prefers "+configKind+" .forgejo/FUNDING.yml over any "+fundingConfigFilename, func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
@@ -41,22 +41,22 @@ func TestRepoFundingConfigPrecedence(t *testing.T) {
 				doc := NewHTMLParser(t, resp.Body)
 
 				// expecting preferredConfig, never altConfig
-				sponsorEntryCount := doc.Find("#sponsor-modal li").Length()
+				fundingEntryCount := doc.Find("#funding-modal li").Length()
 				if configKind == "invalid" {
-					assert.Zero(t, sponsorEntryCount)
+					assert.Zero(t, fundingEntryCount)
 				} else {
-					assert.Equal(t, 1, sponsorEntryCount)
-					doc.AssertAttrEqual(t, "#sponsor-modal li:nth-child(1) a", "href", "http://example.com")
-					doc.AssertElement(t, "#sponsor-modal li:nth-child(1) svg.octicon-link", true)
+					assert.Equal(t, 1, fundingEntryCount)
+					doc.AssertAttrEqual(t, "#funding-modal li:nth-child(1) a", "href", "http://example.com")
+					doc.AssertElement(t, "#funding-modal li:nth-child(1) svg.octicon-link", true)
 				}
 			})
 		}
 
-		checkSponsor(t, "FUNDING.yml", "valid")
-		checkSponsor(t, "FUNDING.yml", "invalid")
-		checkSponsor(t, ".github/FUNDING.yml", "valid")
-		checkSponsor(t, ".github/FUNDING.yml", "invalid")
-		checkSponsor(t, "funding.yml", "valid")
-		checkSponsor(t, "funding.yml", "invalid")
+		checkFunding(t, "FUNDING.yml", "valid")
+		checkFunding(t, "FUNDING.yml", "invalid")
+		checkFunding(t, ".github/FUNDING.yml", "valid")
+		checkFunding(t, ".github/FUNDING.yml", "invalid")
+		checkFunding(t, "funding.yml", "valid")
+		checkFunding(t, "funding.yml", "invalid")
 	})
 }

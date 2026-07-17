@@ -152,7 +152,7 @@ dialog .toast-close {
   margin-inline-start: auto;
 }
 
-#sponsor-modal ul {
+#funding-modal ul {
   list-style-type: none;
   display: flex;
   flex-direction: column;
@@ -160,19 +160,19 @@ dialog .toast-close {
   padding: 0;
 }
 
-#sponsor-modal ul > li {
+#funding-modal ul > li {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-#sponsor-modal li > .icon {
+#funding-modal li > .icon {
   position: relative;
   width: 22px;
   height: 22px;
 }
 
-#sponsor-modal li > .icon > svg {
+#funding-modal li > .icon > svg {
   position: absolute;
 }

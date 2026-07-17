@@ -1,13 +1,13 @@
-<dialog closedby="any" id="sponsor-modal" aria-labelledby="sponsor-modal-header">
+<dialog closedby="any" id="funding-modal" aria-labelledby="funding-modal-header">
 	<article>
 		<header>
-			<span role="heading" aria-level="1" id="sponsor-modal-header">{{ctx.Locale.Tr "funding.sponsor.modal.header" .FundingTarget}}</span>
-			<button type="button" commandfor="sponsor-modal" command="close" aria-label="Close" class="toast-close">{{svg "octicon-x" 24}}</button>
+			<span role="heading" aria-level="1" id="funding-modal-header">{{ctx.Locale.Tr "funding.action.title" .FundingTarget}}</span>
+			<button type="button" commandfor="funding-modal" command="close" aria-label="Close" class="toast-close">{{svg "octicon-x" 24}}</button>
 		</header>
 		<div class="content">
 			{{if .FundingHasErrors}}
 			<div class="ui error message">
-				{{ctx.Locale.Tr "funding.sponsor.modal.config_has_errors" .FundingConfig}}
+				{{ctx.Locale.Tr "funding.config_has_errors" .FundingConfig}}
 			</div>
 			{{end}}
 			<ul>
