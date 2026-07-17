@@ -986,11 +986,12 @@ func SettingsPost(ctx *context.Context) {
 		}
 
 		if err := repo_service.RunManualGCForRepo(ctx, ctx.Repo.Repository); err != nil {
+			ctx.Flash.Error(ctx.Tr("repo.settings.garbage_collection.failure"))
 			ctx.ServerError("RunManualGCForRepo", err)
 			return
 		}
 
-		ctx.Flash.Success(ctx.Tr("repo.settings.gc_success"))
+		ctx.Flash.Success(ctx.Tr("repo.settings.garbage_collection.success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 
 	case "delete":
