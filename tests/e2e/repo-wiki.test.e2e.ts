@@ -1,6 +1,7 @@
 // @watch start
 // templates/repo/wiki/**
 // web_src/css/repo**
+// web_src/js/features/repo-wiki.js
 // @watch end
 
 import {expect} from '@playwright/test';
