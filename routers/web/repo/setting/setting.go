@@ -980,7 +980,7 @@ func SettingsPost(ctx *context.Context) {
 		ctx.Redirect(repo.Link() + "/settings")
 
 	case "run-gc":
-		if !ctx.Repo.IsOwner() && !ctx.Repo.IsAdmin() {
+		if !ctx.Repo.IsOwner() {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
