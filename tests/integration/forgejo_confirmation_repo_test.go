@@ -157,7 +157,7 @@ func TestDangerZoneConfirmation(t *testing.T) {
 
 			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.Contains(t, flashCookie.Value, "success%3D")
+			assert.Equal(t, "success%3DGarbage%2Bcollection%2Bhas%2Bbeen%2Bcompleted", flashCookie.Value)
 		})
 
 		t.Run("Non-owner is rejected", func(t *testing.T) {
