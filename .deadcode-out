@@ -83,9 +83,6 @@ forgejo.org/modules/cache
 forgejo.org/modules/emoji
 	ReplaceCodes
 
-forgejo.org/modules/eventsource
-	Event.String
-
 forgejo.org/modules/forgefed
 	NewForgeUndoLike
 	ForgeUndoLike.UnmarshalJSON
@@ -299,4 +296,3 @@ forgejo.org/services/stats
 
 forgejo.org/services/webhook
 	NewNotifier
-
