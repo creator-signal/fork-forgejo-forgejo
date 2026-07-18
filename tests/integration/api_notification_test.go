@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	activities_model "forgejo.org/models/activities"
 	auth_model "forgejo.org/models/auth"
@@ -14,6 +15,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/queue"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/tests"
 
@@ -213,4 +215,37 @@ func TestAPINotificationPUT(t *testing.T) {
 	assert.EqualValues(t, 2, apiNL[0].ID)
 	assert.True(t, apiNL[0].Unread)
 	assert.False(t, apiNL[0].Pinned)
+}
+
+func TestAPINotificationRelease(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+	sessionUser2 := loginUser(t, user2.Name)
+	sessionUser5 := loginUser(t, user5.Name)
+
+	tokenUser2 := getTokenForLoggedInUser(t, sessionUser2, auth_model.AccessTokenScopeWriteRepository)
+	tokenUser5 := getTokenForLoggedInUser(t, sessionUser5, auth_model.AccessTokenScopeReadNotification, auth_model.AccessTokenScopeWriteRepository)
+
+	req := NewRequest(t, "PUT", fmt.Sprintf("/api/v1/repos/%s/%s/subscription", repo.OwnerName, repo.Name)).
+		AddTokenAuth(tokenUser5)
+	MakeRequest(t, req, http.StatusOK)
+
+	release := createNewReleaseUsingAPI(t, tokenUser2, user2, repo, "releaseName", "", "releaseTitle", "")
+
+	queue.GetManager().FlushAll(t.Context(), 1*time.Second)
+
+	req = NewRequest(t, "GET", "/api/v1/notifications?subject-type=release").
+		AddTokenAuth(tokenUser5)
+	resp := MakeRequest(t, req, http.StatusOK)
+
+	var notifications []api.NotificationThread
+	DecodeJSON(t, resp, &notifications)
+
+	assert.Len(t, notifications, 1)
+	assert.Equal(t, release.ID, notifications[0].Release.ID)
 }

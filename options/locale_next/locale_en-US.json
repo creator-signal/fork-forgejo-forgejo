@@ -974,7 +974,6 @@
 	"repo.watch.issues": "Issues",
 	"repo.watch.pull_requests": "Pull requests",
 	"repo.watch.releases": "Releases",
-	"repo.watch.releases.hint": "(Email only)",
 	"markup.filepreview.line": "Line %[1]d in %[2]s",
 	"markup.filepreview.lines": "Lines %[1]d to %[2]d in %[3]s",
 	"markup.filepreview.truncated": "Preview has been truncated",

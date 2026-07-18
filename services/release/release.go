@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"forgejo.org/models"
+	activities_model "forgejo.org/models/activities"
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	repo_model "forgejo.org/models/repo"
@@ -419,6 +420,10 @@ func DeleteReleaseByID(ctx context.Context, repo *repo_model.Repository, rel *re
 
 		if _, err := db.DeleteByID[repo_model.Release](ctx, rel.ID); err != nil {
 			return fmt.Errorf("DeleteReleaseByID: %w", err)
+		}
+
+		if _, err := db.DeleteByBean(ctx, &activities_model.Notification{ReleaseID: rel.ID}); err != nil {
+			return fmt.Errorf("DeleteReleaseNotification: %w", err)
 		}
 	} else {
 		rel.IsTag = true

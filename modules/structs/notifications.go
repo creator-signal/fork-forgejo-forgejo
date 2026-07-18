@@ -12,6 +12,7 @@ type NotificationThread struct {
 	ID         int64                `json:"id"`
 	Repository *Repository          `json:"repository"`
 	Subject    *NotificationSubject `json:"subject"`
+	Release    *Release             `json:"release"`
 	Unread     bool                 `json:"unread"`
 	Pinned     bool                 `json:"pinned"`
 	UpdatedAt  time.Time            `json:"updated_at"`
@@ -46,4 +47,6 @@ const (
 	NotifySubjectCommit NotifySubjectType = "Commit"
 	// NotifySubjectRepository an repository is subject of an notification
 	NotifySubjectRepository NotifySubjectType = "Repository"
+	// NotifySubjectRelease an release is subject of an notification
+	NotifySubjectRelease NotifySubjectType = "Release"
 )

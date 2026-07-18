@@ -176,6 +176,40 @@ func createOrUpdateIssueNotifications(ctx context.Context, issueID, commentID, n
 	return nil
 }
 
+func CreateOrUpdateReleaseNotifications(ctx context.Context, releaseID int64) error {
+	release, err := repo_model.GetReleaseByID(ctx, releaseID)
+	if err != nil {
+		return err
+	}
+
+	err = release.LoadRepo(ctx)
+	if err != nil {
+		return err
+	}
+
+	watcherIDList, err := repo_model.GetSelectWatcherIDs(ctx, release.RepoID, repo_model.WatchSelection{Issues: false, PullRequests: false, Releases: true})
+	if err != nil {
+		return err
+	}
+
+	ctx, committer, err := db.TxContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer committer.Close()
+
+	for _, userID := range watcherIDList {
+		if userID != release.PublisherID {
+			err = createOrUpdateReleaseNotificationForUser(ctx, userID, release)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return committer.Commit()
+}
+
 // NotificationList contains a list of notifications
 type NotificationList []*Notification
 
@@ -191,6 +225,9 @@ func (nl NotificationList) LoadAttributes(ctx context.Context) error {
 		return err
 	}
 	if _, err := nl.LoadComments(ctx); err != nil {
+		return err
+	}
+	if _, err := nl.LoadReleases(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -370,6 +407,47 @@ func (nl NotificationList) LoadComments(ctx context.Context) ([]int, error) {
 				continue
 			}
 			notification.Comment.Issue = notification.Issue
+		}
+	}
+	return failures, nil
+}
+
+func (nl NotificationList) getPendingReleaseIDs() []int64 {
+	ids := make(container.Set[int64], len(nl))
+	for _, notification := range nl {
+		if notification.Release != nil {
+			continue
+		}
+		ids.Add(notification.ReleaseID)
+	}
+	return ids.Values()
+}
+
+// LoadReleases loads releases from database
+func (nl NotificationList) LoadReleases(ctx context.Context) ([]int, error) {
+	if len(nl) == 0 {
+		return []int{}, nil
+	}
+
+	releaseIDs := nl.getPendingReleaseIDs()
+	releases, err := db.GetByIDs(ctx, "id", releaseIDs, &repo_model.Release{})
+	if err != nil {
+		return nil, err
+	}
+
+	failures := []int{}
+
+	for i, notification := range nl {
+		if notification.Release == nil {
+			notification.Release = releases[notification.ReleaseID]
+			if notification.Release == nil {
+				if notification.ReleaseID != 0 {
+					log.Error("Notification[%d]: ReleaseID: %d Not Found", notification.ID, notification.ReleaseID)
+					failures = append(failures, i)
+				}
+				continue
+			}
+			notification.Release.Repo = notification.Repository
 		}
 	}
 	return failures, nil
