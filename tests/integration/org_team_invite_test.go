@@ -15,8 +15,10 @@ import (
 	"forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -497,6 +499,51 @@ func TestOrgTeamEmailInviteCannotBeAcceptedByOtherUser(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, isMember)
 	isMember, err = organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, attacker.ID)
+	require.NoError(t, err)
+	assert.False(t, isMember)
+}
+
+// Test that a user cannot accept an invite if it is expired
+func TestOrgTeamEmailInviteExpired(t *testing.T) {
+	if setting.MailService == nil {
+		t.Skip()
+		return
+	}
+
+	defer tests.PrepareTestEnv(t)()
+
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	inviter := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+	isMember, err := organization.IsTeamMember(t.Context(), team.OrgID, team.ID, user.ID)
+	require.NoError(t, err)
+	assert.False(t, isMember)
+
+	// create the invite
+	invite, err := organization.CreateTeamInviteForUser(t.Context(), inviter, user, team)
+	require.NoError(t, err)
+
+	// set a deadline in the past, so that the invite is expired
+	invite.ExpiryUnix = optional.Some(timeutil.TimeStamp(int64(timeutil.TimeStampNow()) - 500))
+	_, err = db.GetEngine(t.Context()).Table("team_invite").Cols("expiry_unix").Update(
+		&organization.TeamInvite{ExpiryUnix: optional.Some(timeutil.TimeStamp(int64(timeutil.TimeStampNow()) - 500))},
+	)
+	require.NoError(t, err)
+
+	// log in the invited user
+	session := loginUser(t, "user5")
+
+	// view the invite
+	inviteURL := fmt.Sprintf("/org/invite/%s", invite.Token)
+	req := NewRequest(t, "GET", inviteURL)
+	session.MakeRequest(t, req, http.StatusNotFound)
+
+	// attempt to accept the invite despite the 404
+	req = NewRequest(t, "POST", inviteURL)
+	session.MakeRequest(t, req, http.StatusNotFound)
+
+	isMember, err = organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, user.ID)
 	require.NoError(t, err)
 	assert.False(t, isMember)
 }
