@@ -1,5 +1,4 @@
 <script>
-import $ from 'jquery';
 import {SvgIcon} from '../svg.js';
 import {GET} from '../modules/fetch.js';
 

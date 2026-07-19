@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 class Dimmer {
   dimmerEl: HTMLDivElement;
   active: boolean;

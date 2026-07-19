@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {htmlEscape} from 'escape-goat';
 import {hideElem, showElem} from '../utils/dom.js';
 

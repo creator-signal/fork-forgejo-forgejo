@@ -1,4 +1,4 @@
-import {showGlobalErrorMessage} from './bootstrap.js';
+import {showGlobalErrorMessage} from './modules/errors.js';
 
 test('showGlobalErrorMessage', () => {
   document.body.innerHTML = '<div class="page-content"></div>';

@@ -952,7 +952,23 @@ export default tseslint.config(
       globals: {
         __webpack_public_path__: true,
         process: false,
+        // jquery.js (loaded synchronously by iife.js, before any module-type script runs) sets
+        // these on `window`; other web_src files must use them as globals rather than importing
+        // 'jquery' themselves, which would bundle a second, unpatched jQuery instance separate
+        // from the one fomantic.js/iife.js attaches plugins to. See the `no-restricted-imports`
+        // rule below.
+        $: 'readonly',
+        jQuery: 'readonly',
+        htmx: 'readonly',
       },
+    },
+  }, {
+    files: ['web_src/js/**/*'],
+    ignores: ['web_src/js/jquery.js', 'web_src/js/iife.js', 'web_src/js/vitest.setup.js'],
+    rules: {
+      'no-restricted-imports': [2, {paths: [
+        {name: 'jquery', message: 'Use the global $ / jQuery instead (see web_src/js/jquery.js)'},
+      ]}],
     },
   }, {
     files: ['web_src/**/*', 'docs/**/*'],

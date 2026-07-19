@@ -4,6 +4,8 @@
 package context
 
 import (
+	"bufio"
+	"net"
 	"net/http"
 
 	web_types "forgejo.org/modules/web/types"
@@ -57,6 +59,15 @@ func (r *Response) Status() int {
 
 func (r *Response) Size() int {
 	return r.written
+}
+
+// Hijack implements http.Hijacker, delegating to the underlying ResponseWriter.
+// This is needed for WebSocket upgrades (e.g. the Vite dev-server HMR proxy) through this wrapper.
+func (r *Response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hj, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, http.ErrNotSupported
 }
 
 // WriteHeader write status code

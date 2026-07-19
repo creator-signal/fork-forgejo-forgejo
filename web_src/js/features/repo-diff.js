@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import htmx from 'htmx.org';
 import {initCompReactionSelector} from './comp/ReactionSelector.js';
 import {initRepoIssueContentHistory} from './repo-issue-content.js';

@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {showModal} from '../../modules/modal.ts';
 
 export function initAdminEmails() {

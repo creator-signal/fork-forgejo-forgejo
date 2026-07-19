@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 export function initFomanticApiPatch() {
   //
   // Fomantic API module has some very buggy behaviors:

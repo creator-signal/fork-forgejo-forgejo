@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {contrastColor} from '../utils/color.js';
 import {createSortable} from '../modules/sortable.js';
 import {POST, DELETE, PUT} from '../modules/fetch.js';

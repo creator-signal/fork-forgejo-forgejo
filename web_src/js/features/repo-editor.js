@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {htmlEscape} from 'escape-goat';
 import {createCodeEditor} from './codeeditor.ts';
 import {hideElem, showElem, createElementFromHTML} from '../utils/dom.js';

@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {createCodemirror} from './codemirror.ts';
 
 export function initAuthorizedIntegrationClaimRuleEditor() {

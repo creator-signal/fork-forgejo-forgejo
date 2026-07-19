@@ -1,6 +1,7 @@
 import $ from 'jquery';
 
 $.fn.dropdown = () => undefined;
+window.$ = window.jQuery = $; // eslint-disable-line no-jquery/variable-pattern
 
 window.__webpack_public_path__ = '';
 

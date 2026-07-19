@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {initFomanticApiPatch} from './fomantic/api.js';
 import {initAriaCheckboxPatch} from './fomantic/checkbox.js';
 import {initAriaFormFieldPatch} from './fomantic/form.js';

@@ -1,5 +1,8 @@
-// bootstrap module must be the first one to be imported, it handles webpack lazy-loading and global errors
-import './bootstrap.js';
+// bootstrap.js, jquery.js and fomantic are loaded synchronously by iife.js before this
+// module-type entry runs; see vite.config.js for the two-entry (iife + module) split.
+import '../fomantic/build/semantic.css';
+import 'easymde/dist/easymde.min.css';
+import '../css/index.css';
 
 import {initRepoActivityTopAuthorsChart} from './features/repo-activity-top-authors.ts';
 import {initDashboardRepoList} from './features/dashboard-repo-list.ts';

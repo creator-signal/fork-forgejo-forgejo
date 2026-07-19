@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {POST} from '../../modules/fetch.js';
 
 export function initCompReactionSelector($parent) {

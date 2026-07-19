@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 const {appSubUrl} = window.config;
 
 export function initOrgTeamSearchRepoBox() {

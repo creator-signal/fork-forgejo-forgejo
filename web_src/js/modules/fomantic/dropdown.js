@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {generateAriaId} from './base.js';
 
 const ariaPatchKey = '_giteaAriaPatchDropdown';

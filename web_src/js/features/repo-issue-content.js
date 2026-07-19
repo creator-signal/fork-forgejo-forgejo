@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {svg} from '../svg.js';
 import {showErrorToast} from '../modules/toast.js';
 import {GET, POST} from '../modules/fetch.js';

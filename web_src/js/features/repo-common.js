@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {hideElem, queryElems, showElem} from '../utils/dom.js';
 import {POST} from '../modules/fetch.js';
 import {showErrorToast} from '../modules/toast.js';

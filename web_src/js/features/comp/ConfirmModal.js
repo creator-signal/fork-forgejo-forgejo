@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {svg} from '../../svg.js';
 import {htmlEscape} from 'escape-goat';
 

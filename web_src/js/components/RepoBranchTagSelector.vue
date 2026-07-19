@@ -1,6 +1,5 @@
 <script>
 import {nextTick} from 'vue';
-import $ from 'jquery';
 import {SvgIcon} from '../svg.js';
 import {pathEscapeSegments} from '../utils/url.js';
 import {showErrorToast} from '../modules/toast.js';

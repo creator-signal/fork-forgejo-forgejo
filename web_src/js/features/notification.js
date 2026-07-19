@@ -1,8 +1,7 @@
-import $ from 'jquery';
 import {GET} from '../modules/fetch.js';
 import {toggleElem} from '../utils/dom.js';
 
-const {appSubUrl, notificationSettings, assetVersionEncoded} = window.config;
+const {appSubUrl, notificationSettings, sharedWorkerUrl} = window.config;
 let notificationSequenceNumber = 0;
 
 export function initNotificationsTable() {
@@ -64,7 +63,7 @@ export function initNotificationCount() {
 
   if (notificationSettings.EventSourceUpdateTime > 0 && window.EventSource && window.SharedWorker) {
     // Try to connect to the event source via the shared worker first
-    const worker = new SharedWorker(`${__webpack_public_path__}js/eventsource.sharedworker.js?v=${assetVersionEncoded}`, 'notification-worker');
+    const worker = new SharedWorker(sharedWorkerUrl, 'notification-worker');
     worker.addEventListener('error', (event) => {
       console.error('worker error', event);
     });

@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 const fomanticModalFn = $.fn.modal;
 
 // use our own `$.fn.modal` to patch Fomantic's modal module

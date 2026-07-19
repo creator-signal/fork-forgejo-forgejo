@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {hideElem, showElem} from '../utils/dom.js';
 import {GET} from '../modules/fetch.js';
 

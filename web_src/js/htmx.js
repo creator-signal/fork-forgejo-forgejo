@@ -1,8 +1,16 @@
 import htmx from 'htmx.org';
 import {showErrorToast} from './modules/toast.js';
 
+// webpack's ProvidePlugin used to make `htmx` a free-standing global wherever referenced
+// (e.g. features/repo-diff.js calls bare `htmx.process(...)`); replicate that via `window.htmx`.
+window.htmx = htmx;
+
 // https://github.com/bigskysoftware/idiomorph#htmx
-import 'idiomorph/dist/idiomorph-ext.js';
+// NOTE: this must be a dynamic import. idiomorph-ext.js reads the bare global `htmx` eagerly at
+// module-evaluation time, but ESM static imports are hoisted and evaluated before this file's own
+// `window.htmx = htmx` assignment above, regardless of source order — so a static import here would
+// throw "htmx is not defined". A dynamic import defers evaluation until this line actually runs.
+import('idiomorph/dist/idiomorph-ext.js');
 
 // https://htmx.org/reference/#config
 htmx.config.requestClass = 'is-loading';

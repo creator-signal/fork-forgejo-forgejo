@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {minimatch} from 'minimatch';
 import {onInputDebounce, toggleElem} from '../utils/dom.js';
 import {POST} from '../modules/fetch.js';

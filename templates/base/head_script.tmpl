@@ -12,6 +12,7 @@ If you introduce mistakes in it, Gitea JavaScript code wouldn't run correctly.
 		appSubUrl: '{{AppSubUrl}}',
 		assetVersionEncoded: encodeURIComponent('{{AssetVersion}}'), // will be used in URL construction directly
 		assetUrlPrefix: '{{AssetUrlPrefix}}',
+		sharedWorkerUrl: '{{AssetURI "js/eventsource.sharedworker.js"}}',
 		runModeIsProd: {{.RunModeIsProd}},
 		customEmojis: new Set({{CustomEmojis}}),
 		pageData: {{.PageData}},
@@ -47,4 +48,4 @@ If you introduce mistakes in it, Gitea JavaScript code wouldn't run correctly.
 	{{/* in case some pages don't render the pageData, we make sure it is an object to prevent null access */}}
 	window.config.pageData = window.config.pageData || {};
 </script>
-<script src="{{AssetUrlPrefix}}/js/webcomponents.js?v={{AssetVersion}}"></script>
+<script src="{{AssetURI "js/webcomponents.js"}}"></script>

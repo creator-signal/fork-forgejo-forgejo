@@ -19,6 +19,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/markup"
+	"forgejo.org/modules/public"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/svg"
 	"forgejo.org/modules/templates/eval"
@@ -112,6 +113,11 @@ func NewFuncMap() template.FuncMap {
 		},
 		"AssetUrlPrefix": func() string {
 			return setting.StaticURLPrefix + "/assets"
+		},
+		// AssetURI resolves a logical frontend asset path (e.g. "js/index.js") to its
+		// content-hashed URI (e.g. "/assets/js/index.C6Z2MRVQ.js") via the Vite build manifest.
+		"AssetURI": func(originPath string) string {
+			return public.AssetURI(originPath)
 		},
 		"AppUrl": func() string {
 			// The usage of AppUrl should be avoided as much as possible,

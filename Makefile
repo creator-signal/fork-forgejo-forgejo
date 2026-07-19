@@ -125,10 +125,10 @@ GO_TEST_REMOTE_CACHER_PACKAGES ?= $(addprefix forgejo.org/modules/,$(REMOTE_CACH
 
 FOMANTIC_WORK_DIR := web_src/fomantic
 
-WEBPACK_SOURCES := $(shell find web_src/js web_src/css -type f)
-WEBPACK_CONFIGS := webpack.config.js tailwind.config.js
-WEBPACK_DEST := public/assets/js/index.js public/assets/css/index.css
-WEBPACK_DEST_ENTRIES := public/assets/js public/assets/css public/assets/fonts
+VITE_SOURCES := $(shell find web_src/js web_src/css -type f)
+VITE_CONFIGS := vite.config.js tailwind.config.js
+VITE_DEST := public/assets/.vite/manifest.json
+VITE_DEST_ENTRIES := public/assets/js public/assets/css public/assets/fonts public/assets/.vite
 
 BINDATA_DEST := modules/migration/bindata.go modules/public/bindata.go modules/options/bindata.go modules/templates/bindata.go
 BINDATA_HASH := $(addsuffix .hash,$(BINDATA_DEST))
@@ -242,7 +242,7 @@ help:
 	@echo " - coverage-show-html               display coverage-run results in an HTML page"
 	@echo " - coverage-show-percent            display coverage-run per package coverage percentage"
 	@echo " - test-e2e-sqlite[\#name.test.e2e] test end to end using playwright and sqlite"
-	@echo " - webpack                          build webpack files"
+	@echo " - vite                             build frontend files"
 	@echo " - svg                              build svg files"
 	@echo " - fomantic                         build fomantic files"
 	@echo " - generate                         run \"go generate\""
@@ -341,7 +341,7 @@ node-check:
 
 .PHONY: clean-all
 clean-all: clean
-	rm -rf $(WEBPACK_DEST_ENTRIES) node_modules
+	rm -rf $(VITE_DEST_ENTRIES) node_modules
 
 .PHONY: clean
 clean: clean-no-bindata
@@ -558,8 +558,8 @@ watch:
 
 .PHONY: watch-frontend
 watch-frontend: node-check node_modules
-	@rm -rf $(WEBPACK_DEST_ENTRIES)
-	NODE_ENV=development npx webpack --watch --progress
+	@rm -rf $(VITE_DEST_ENTRIES)
+	NODE_ENV=development npx vite dev
 
 .PHONY: watch-backend
 watch-backend: go-check
@@ -860,7 +860,7 @@ install: $(wildcard *.go) | verify-version
 build: frontend backend
 
 .PHONY: frontend
-frontend: $(WEBPACK_DEST)
+frontend: $(VITE_DEST)
 
 .PHONY: backend
 backend: go-check generate-backend $(EXECUTABLE)
@@ -1006,15 +1006,15 @@ fomantic:
 	$(SED_INPLACE) -e 's/\r//g' $(FOMANTIC_WORK_DIR)/build/semantic.css $(FOMANTIC_WORK_DIR)/build/semantic.js
 	rm -f $(FOMANTIC_WORK_DIR)/build/*.min.*
 
-.PHONY: webpack
-webpack: $(WEBPACK_DEST)
+.PHONY: vite
+vite: $(VITE_DEST)
 
-$(WEBPACK_DEST): $(WEBPACK_SOURCES) $(WEBPACK_CONFIGS) package-lock.json
+$(VITE_DEST): $(VITE_SOURCES) $(VITE_CONFIGS) package-lock.json
 	@$(MAKE) -s node-check node_modules
-	@rm -rf $(WEBPACK_DEST_ENTRIES)
-	@echo "Running webpack..."
-	@BROWSERSLIST_IGNORE_OLD_DATA=true npx webpack
-	@touch $(WEBPACK_DEST)
+	@rm -rf $(VITE_DEST_ENTRIES)
+	@echo "Running vite build..."
+	@BROWSERSLIST_IGNORE_OLD_DATA=true NODE_ENV=production npx vite build
+	@touch $(VITE_DEST)
 
 .PHONY: svg
 svg: node-check | node_modules

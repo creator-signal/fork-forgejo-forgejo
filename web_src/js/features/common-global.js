@@ -1,8 +1,7 @@
-import $ from 'jquery';
 import '../vendor/jquery.are-you-sure.js';
 import {clippie} from 'clippie';
 import {createDropzone} from './dropzone.js';
-import {showGlobalErrorMessage} from '../bootstrap.js';
+import {showGlobalErrorMessage} from '../modules/errors.js';
 import {handleGlobalEnterQuickSubmit} from './comp/QuickSubmit.js';
 import {svg} from '../svg.js';
 import {hideElem, showElem, toggleElem, resetForms, initSubmitEventPolyfill, submitEventSubmitter} from '../utils/dom.js';

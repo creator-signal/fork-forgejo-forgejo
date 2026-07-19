@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {updateIssuesMeta} from './repo-issue.js';
 import {toggleElem, hideElem, isElemHidden} from '../utils/dom.js';
 import {htmlEscape} from 'escape-goat';
