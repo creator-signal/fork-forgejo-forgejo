@@ -76,9 +76,6 @@ func runGCForRepo(ctx context.Context, repo *repo_model.Repository) error {
 		log.Warn("Reflog expire failed for %-v: %v", repo, err)
 	}
 
-	// Run git maintenance without --task flag spcified, running only gc by default
-	// but allowing other tasks to be specified via gits maintenance.<task>.enabled option
-	// https://git-scm.com/docs/git-maintenance
 	maintenanceCmd := git.NewCommand(ctx, "-c", "gc.pruneExpire=now", "maintenance", "run", "--task=gc").
 		SetDescription(fmt.Sprintf("Git maintenance: %s", repo.FullName()))
 	if _, _, err := maintenanceCmd.RunStdString(&git.RunOpts{
