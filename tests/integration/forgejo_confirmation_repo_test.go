@@ -8,11 +8,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDangerZoneConfirmation(t *testing.T) {
@@ -157,7 +161,7 @@ func TestDangerZoneConfirmation(t *testing.T) {
 
 			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.Equal(t, "success%3DGarbage%2Bcollection%2Bhas%2Bbeen%2Bcompleted", flashCookie.Value)
+			assert.Equal(t, "success%3DGarbage%2Bcollection%2Bhas%2Bbeen%2Bqueued", flashCookie.Value)
 		})
 
 		t.Run("Non-owner is rejected", func(t *testing.T) {
@@ -168,6 +172,26 @@ func TestDangerZoneConfirmation(t *testing.T) {
 				"action": "run-gc",
 			})
 			session.MakeRequest(t, req, http.StatusNotFound)
+		})
+
+		t.Run("Cooldown prevents re-run", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, "user2", "repo1")
+			require.NoError(t, err)
+			repo.LastGCUnix = timeutil.TimeStampNow()
+			_, err = db.GetEngine(db.DefaultContext).ID(repo.ID).Cols("last_gc_unix").NoAutoTime().Update(repo)
+			require.NoError(t, err)
+
+			session := loginUser(t, "user2")
+			req := NewRequestWithValues(t, "POST", "/user2/repo1/settings", map[string]string{
+				"action": "run-gc",
+			})
+			session.MakeRequest(t, req, http.StatusSeeOther)
+
+			flashCookie := session.GetCookie(app_context.CookieNameFlash)
+			assert.NotNil(t, flashCookie)
+			assert.Equal(t, "info%3DGarbage%2Bcollection%2Bran%2Btoo%2Brecently.%2BPlease%2Bwait%2Bbefore%2Brunning%2Bagain.", flashCookie.Value)
 		})
 	})
 

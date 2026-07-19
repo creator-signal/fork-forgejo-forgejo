@@ -124,6 +124,8 @@ var (
 
 		SettableFlags []string
 		EnableFlags   bool
+
+		GCCooldownMinutes int
 	}{
 		DetectedCharsetsOrder: []string{
 			"UTF-8",
@@ -285,6 +287,8 @@ var (
 		},
 
 		EnableFlags: false,
+
+		GCCooldownMinutes: 60,
 	}
 	RepoRootPath string
 	ScriptType   = "bash"

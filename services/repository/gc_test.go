@@ -22,25 +22,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunManualGCForRepo(t *testing.T) {
+func TestRunGCForRepo(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	require.NoError(t, storage.Init())
 
 	repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, "user2", "lfs")
 	require.NoError(t, err)
 
-	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
+	require.NoError(t, runGCForRepo(t.Context(), repo))
 
 	repoAfter, err := repo_model.GetRepositoryByID(db.DefaultContext, repo.ID)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, repoAfter.GitSize, int64(0))
 }
 
-func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
+func TestRunGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 	require.NoError(t, storage.Init())
-	defer test.MockVariableValue(&setting.Git.GCArgs, []string{"--prune=now"})()
 
 	author := &git.Signature{Name: "Test", Email: "test@test.com", When: time.Now()}
 
@@ -64,7 +63,7 @@ func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 
 	// run GC make sure gitSize is > 0
 	// to verify the initial commit is present
-	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
+	require.NoError(t, runGCForRepo(t.Context(), repo))
 	repoAfterFirst, err := repo_model.GetRepositoryByID(db.DefaultContext, repo.ID)
 	require.NoError(t, err)
 	assert.Positive(t, repoAfterFirst.GitSize)
@@ -83,7 +82,7 @@ func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 	assert.True(t, gitRepo.IsObjectExist(amendedID.String()))
 
 	// Run GC again, now the first commit should be pruned
-	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
+	require.NoError(t, runGCForRepo(t.Context(), repo))
 	repoAfterSecond, err := repo_model.GetRepositoryByID(db.DefaultContext, repo.ID)
 	require.NoError(t, err)
 	assert.Less(t, repoAfterSecond.GitSize, repoAfterFirst.GitSize)
@@ -98,7 +97,7 @@ func TestRunManualGCForRepo_RemovesOrphanedCommit(t *testing.T) {
 	assert.True(t, gitRepo2.IsObjectExist(amendedID.String()))
 }
 
-func TestRunManualGCForRepo_RemovesOrphanedLFSObjects(t *testing.T) {
+func TestRunGCForRepo_RemovesOrphanedLFSObjects(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 	require.NoError(t, storage.Init())
@@ -114,7 +113,7 @@ func TestRunManualGCForRepo_RemovesOrphanedLFSObjects(t *testing.T) {
 	store := lfs.NewContentStore()
 	require.NoError(t, store.Put(pointer, bytes.NewReader(content)))
 
-	require.NoError(t, RunManualGCForRepo(t.Context(), repo))
+	require.NoError(t, runGCForRepo(t.Context(), repo))
 
 	_, err = git_model.GetLFSMetaObjectByOid(db.DefaultContext, repo.ID, pointer.Oid)
 	require.ErrorIs(t, err, git_model.ErrLFSObjectNotExist)

@@ -189,6 +189,7 @@ type Repository struct {
 	CreatedUnix  timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix  timeutil.TimeStamp `xorm:"INDEX updated"`
 	ArchivedUnix timeutil.TimeStamp `xorm:"DEFAULT 0"`
+	LastGCUnix   timeutil.TimeStamp `xorm:"DEFAULT 0"`
 }
 
 // BeforeInsert will be invoked by XORM before updating a record

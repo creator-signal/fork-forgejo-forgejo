@@ -985,13 +985,17 @@ func SettingsPost(ctx *context.Context) {
 			return
 		}
 
-		if err := repo_service.RunManualGCForRepo(ctx, ctx.Repo.Repository); err != nil {
-			ctx.Flash.Error(ctx.Tr("repo.settings.garbage_collection.failure"))
-			ctx.ServerError("RunManualGCForRepo", err)
-			return
+		if err := repo_service.EnqueueRepoGC(ctx, ctx.Repo.Repository); err != nil {
+			if errors.Is(err, repo_service.ErrGCCooldown) {
+				ctx.Flash.Info(ctx.Tr("repo.settings.garbage_collection.cooldown"))
+			} else {
+				ctx.Flash.Error(ctx.Tr("repo.settings.garbage_collection.failure"))
+				ctx.ServerError("EnqueueRepoGC", err)
+				return
+			}
+		} else {
+			ctx.Flash.Success(ctx.Tr("repo.settings.garbage_collection.queued"))
 		}
-
-		ctx.Flash.Success(ctx.Tr("repo.settings.garbage_collection.success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 
 	case "delete":
