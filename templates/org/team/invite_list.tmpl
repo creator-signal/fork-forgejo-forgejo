@@ -1,0 +1,35 @@
+<div class="flex-list">
+	{{range .Invites}}
+		<div class="flex-item tw-items-center">
+			{{if .InvitedUser}}
+				<div class="flex-item-leading">
+					<a href="{{.InvitedUser.HomeLink}}">{{ctx.AvatarUtils.Avatar .InvitedUser 32}}</a>
+				</div>
+			{{end}}
+			<div class="flex-item-main">
+				<div class="flex-item-title">
+					{{if .InvitedUser}}
+						{{template "shared/user/name" .InvitedUser}}
+					{{else}}
+						{{.Email}}
+					{{end}}
+				</div>
+				{{if .ExpiryUnix}}
+					<div>
+						{{if .IsExpired}}
+							{{ctx.Locale.Tr "org.teams.invited_on" (DateUtils.AbsoluteShort .CreatedUnix)}}
+						{{else}}
+							{{ctx.Locale.Tr "org.teams.invite_expires_on" (DateUtils.AbsoluteShort .ExpiryUnix.Value)}}
+						{{end}}
+					</div>
+				{{end}}
+			</div>
+			<div class="flex-item-trailing">
+				<form action="{{$.OrgLink}}/teams/{{$.Team.LowerName | PathEscape}}/action/remove_invite" method="post">
+					<input type="hidden" name="iid" value="{{.ID}}">
+					<button class="ui red button">{{ctx.Locale.Tr "org.members.remove"}}</button>
+				</form>
+			</div>
+		</div>
+	{{end}}
+</div>

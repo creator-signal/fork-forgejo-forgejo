@@ -397,13 +397,21 @@ func TeamMembers(ctx *context.Context) {
 		ctx.ServerError("GetInvitesByTeamID", err)
 		return
 	}
+	pendingInvites := make([]*org_model.TeamInvite, 0, len(invites))
+	expiredInvites := make([]*org_model.TeamInvite, 0, len(invites))
 	for _, invite := range invites {
 		if invite.LoadInvitedUser(ctx) != nil {
 			ctx.ServerError("LoadInvitedUser", err)
 			return
 		}
+		if invite.IsExpired() {
+			expiredInvites = append(expiredInvites, invite)
+		} else {
+			pendingInvites = append(pendingInvites, invite)
+		}
 	}
-	ctx.Data["Invites"] = invites
+	ctx.Data["PendingInvites"] = pendingInvites
+	ctx.Data["ExpiredInvites"] = expiredInvites
 	ctx.Data["IsEmailInviteEnabled"] = setting.MailService != nil
 
 	ctx.HTML(http.StatusOK, tplTeamMembers)
