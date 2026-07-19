@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,14 @@ func TestOrgTeamEmailInvite(t *testing.T) {
 	}
 
 	defer tests.PrepareTestEnv(t)()
+	mailerCalled := false
+	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		assert.Len(t, msgs, 1)
+		assert.Equal(t, "user5@example.com", msgs[0].To)
+		assert.Equal(t, "User One has invited you to join the <<<< >> >> > >> > >>> >> organization", msgs[0].Subject)
+		assert.Contains(t, msgs[0].Body, "This invitation will expire in 14 days")
+		mailerCalled = true
+	})()
 
 	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
@@ -51,6 +60,9 @@ func TestOrgTeamEmailInvite(t *testing.T) {
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 	req = NewRequest(t, "GET", test.RedirectURL(resp))
 	session.MakeRequest(t, req, http.StatusOK)
+
+	// check that an invite email was sent
+	assert.True(t, mailerCalled)
 
 	// get the invite token
 	invites, err := organization.GetInvitesByTeamID(db.DefaultContext, team.ID)
