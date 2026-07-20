@@ -199,3 +199,76 @@
 .ui.vertical.menu.actions-menu .item .label {
   flex-shrink: 0;
 }
+
+/* Runner utilization stats */
+.runner-stats-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.runner-stats-card {
+  flex: 1;
+  min-width: 140px;
+  text-align: center;
+  padding: 1.2rem 0.5rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 6px;
+  background: var(--color-box-body);
+}
+
+.runner-stats-value {
+  font-size: 1.8rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.runner-stats-label {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-light-2);
+}
+
+.runner-stats-summary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.runner-stats-summary-item {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: 0.8rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-secondary);
+  border-top-width: 3px;
+}
+
+.runner-stats-summary-item.border-green {
+  border-top-color: var(--color-success);
+}
+
+.runner-stats-summary-item.border-red {
+  border-top-color: var(--color-error);
+}
+
+.runner-stats-summary-item.border-yellow {
+  border-top-color: var(--color-warning);
+}
+
+.runner-stats-summary-item.border-blue {
+  border-top-color: var(--color-primary);
+}
+
+.runner-stats-summary-value {
+  font-size: 1.2rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.runner-stats-summary-label {
+  font-size: 0.8rem;
+  color: var(--color-text-light-2);
+}

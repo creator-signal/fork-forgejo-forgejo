@@ -1,0 +1,110 @@
+# Tasks for TestGetRunnerStats
+# Recent success task - global scope (owner_id=0 means global context)
+-
+  id: 1001
+  job_id: 1
+  attempt: 1
+  runner_id: 1
+  status: 1  # StatusSuccess
+  started: 1784900000
+  stopped: 1784900120
+  repo_id: 4
+  owner_id: 1
+  commit_sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  is_fork_pull_request: false
+  token_hash: "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+  token_salt: "salt000001"
+  token_last_eight: "00000001"
+  log_filename: "test/1001.log"
+  log_in_storage: true
+  log_length: 100
+  log_size: 1000
+  log_expired: false
+
+# Recent failure task - owner_id=1
+-
+  id: 1002
+  job_id: 2
+  attempt: 1
+  runner_id: 2
+  status: 2  # StatusFailure
+  started: 1784900200
+  stopped: 1784900400
+  repo_id: 5
+  owner_id: 1
+  commit_sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  is_fork_pull_request: false
+  token_hash: "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+  token_salt: "salt000002"
+  token_last_eight: "00000002"
+  log_filename: "test/1002.log"
+  log_in_storage: true
+  log_length: 100
+  log_size: 1000
+  log_expired: false
+
+# Recent cancelled task - owner_id=2
+-
+  id: 1003
+  job_id: 3
+  attempt: 1
+  runner_id: 1
+  status: 3  # StatusCancelled
+  started: 1784900500
+  stopped: 1784900600
+  repo_id: 4
+  owner_id: 2
+  commit_sha: "cccccccccccccccccccccccccccccccccccccccc"
+  is_fork_pull_request: false
+  token_hash: "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+  token_salt: "salt000003"
+  token_last_eight: "00000003"
+  log_filename: "test/1003.log"
+  log_in_storage: true
+  log_length: 100
+  log_size: 1000
+  log_expired: false
+
+# Recent success task - repo_id=4, owner_id=1
+-
+  id: 1004
+  job_id: 4
+  attempt: 1
+  runner_id: 3
+  status: 1  # StatusSuccess
+  started: 1784901000
+  stopped: 1784901180
+  repo_id: 4
+  owner_id: 1
+  commit_sha: "dddddddddddddddddddddddddddddddddddddd"
+  is_fork_pull_request: false
+  token_hash: "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+  token_salt: "salt000004"
+  token_last_eight: "00000004"
+  log_filename: "test/1004.log"
+  log_in_storage: true
+  log_length: 100
+  log_size: 1000
+  log_expired: false
+
+# Recent skipped task - owner_id=2
+-
+  id: 1005
+  job_id: 5
+  attempt: 1
+  runner_id: 1
+  status: 4  # StatusSkipped
+  started: 1784901200
+  stopped: 1784901200
+  repo_id: 6
+  owner_id: 2
+  commit_sha: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  is_fork_pull_request: false
+  token_hash: "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"
+  token_salt: "salt000005"
+  token_last_eight: "00000005"
+  log_filename: "test/1005.log"
+  log_in_storage: true
+  log_length: 100
+  log_size: 1000
+  log_expired: false

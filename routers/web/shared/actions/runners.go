@@ -200,6 +200,18 @@ func RunnersList(ctx *context.Context) {
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
 
 	ctx.Data["Page"] = pager
+
+	// Compute runner stats using SQL aggregation, respecting scope
+	runnerStats, err := actions_model.GetRunnerStats(ctx, actions_model.RunnerStatsOptions{
+		OwnerID: opts.OwnerID,
+		RepoID:  opts.RepoID,
+	})
+	if err != nil {
+		log.Error("Failed to compute runner stats: %v", err)
+	} else {
+		ctx.Data["RunnerStats"] = runnerStats
+	}
+
 	ctx.HTML(http.StatusOK, rCtx.RunnersTemplate)
 }
 

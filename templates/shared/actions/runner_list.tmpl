@@ -33,6 +33,57 @@
 			</a>
 		</div>
 	</h4>
+
+	{{/* Runner Utilization Stats */}}
+	{{if .RunnerStats}}
+	<div class="ui attached segment">
+		<div class="runner-stats-grid">
+			<div class="runner-stats-card">
+				<div class="runner-stats-value text green">{{.RunnerStats.OnlineRunners}} / {{.RunnerStats.TotalRunners}}</div>
+				<div class="runner-stats-label">{{ctx.Locale.Tr "actions.runners.stats.runners_online"}}</div>
+			</div>
+			<div class="runner-stats-card">
+				<div class="runner-stats-value text orange">{{.RunnerStats.BusyRunners}}</div>
+				<div class="runner-stats-label">{{ctx.Locale.Tr "actions.runners.stats.currently_busy"}}</div>
+			</div>
+			<div class="runner-stats-card">
+				<div class="runner-stats-value text blue">{{.RunnerStats.TotalTasks}}</div>
+				<div class="runner-stats-label">{{ctx.Locale.Tr "actions.runners.stats.tasks_30d"}}</div>
+			</div>
+			<div class="runner-stats-card">
+				{{if ge .RunnerStats.SuccessRate 80.0}}
+				<div class="runner-stats-value text green">{{printf "%.0f" .RunnerStats.SuccessRate}}%</div>
+				{{else if ge .RunnerStats.SuccessRate 50.0}}
+				<div class="runner-stats-value text orange">{{printf "%.0f" .RunnerStats.SuccessRate}}%</div>
+				{{else}}
+				<div class="runner-stats-value text red">{{printf "%.0f" .RunnerStats.SuccessRate}}%</div>
+				{{end}}
+				<div class="runner-stats-label">{{ctx.Locale.Tr "actions.runners.stats.success_rate"}}</div>
+			</div>
+		</div>
+		{{if gt .RunnerStats.TotalTasks 0}}
+		<div class="runner-stats-summary">
+			<div class="runner-stats-summary-item border-green">
+				<div class="runner-stats-summary-value">{{.RunnerStats.SuccessTasks}}</div>
+				<div class="runner-stats-summary-label text green">{{ctx.Locale.Tr "actions.runners.stats.successful"}}</div>
+			</div>
+			<div class="runner-stats-summary-item border-red">
+				<div class="runner-stats-summary-value">{{.RunnerStats.FailureTasks}}</div>
+				<div class="runner-stats-summary-label text red">{{ctx.Locale.Tr "actions.runners.stats.failed"}}</div>
+			</div>
+			<div class="runner-stats-summary-item border-yellow">
+				<div class="runner-stats-summary-value">{{.RunnerStats.CancelledTasks}}</div>
+				<div class="runner-stats-summary-label text grey">{{ctx.Locale.Tr "actions.runners.stats.cancelled"}}</div>
+			</div>
+			<div class="runner-stats-summary-item border-blue">
+				<div class="runner-stats-summary-value">{{.RunnerStats.AvgDurationSecs}}s</div>
+				<div class="runner-stats-summary-label">{{ctx.Locale.Tr "actions.runners.stats.avg_duration"}}</div>
+			</div>
+		</div>
+		{{end}}
+	</div>
+	{{end}}
+
 	<div class="ui attached segment">
 		<form class="ui form ignore-dirty" id="user-list-search-form" action="{{$.Link}}">
 			{{template "shared/search/combo" dict "Value" .Keyword "Placeholder" (ctx.Locale.Tr "search.runner_kind")}}

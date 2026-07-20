@@ -1,0 +1,60 @@
+# Runners for TestGetRunnerStats
+# Global runner (owner_id=0, repo_id=0)
+-
+  id: 1
+  uuid: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+  name: "global-runner-1"
+  version: "v1.0.0"
+  owner_id: 0
+  repo_id: 0
+  description: ""
+  base: 0
+  repo_range: ""
+  token_hash: "aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa00aa"
+  token_salt: "aa00aa00aa00aa00aa00aa00aa00aa00"
+  last_online: 1784912045
+  last_active: 1784912045
+  agent_labels: '["ubuntu-latest"]'
+  created: 1716104432
+  updated: 1716104432
+  deleted: ~
+
+# Org-level runner (owner_id=1)
+-
+  id: 2
+  uuid: "11111111-2222-3333-4444-555555555555"
+  name: "org-runner-1"
+  version: "v1.0.0"
+  owner_id: 1
+  repo_id: 0
+  description: ""
+  base: 0
+  repo_range: ""
+  token_hash: "bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb"
+  token_salt: "bb00bb00bb00bb00bb00bb00bb00bb00"
+  last_online: 1784912045
+  last_active: 0
+  agent_labels: '["ubuntu-latest"]'
+  created: 1716104432
+  updated: 1716104432
+  deleted: ~
+
+# Repo-level runner (repo_id=4)
+-
+  id: 3
+  uuid: "66666666-7777-8888-9999-aaaaaaaaaaaa"
+  name: "repo-runner-1"
+  version: "v1.0.0"
+  owner_id: 0
+  repo_id: 4
+  description: ""
+  base: 0
+  repo_range: ""
+  token_hash: "cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc"
+  token_salt: "cc00cc00cc00cc00cc00cc00cc00cc00"
+  last_online: 0
+  last_active: 0
+  agent_labels: '["ubuntu-latest"]'
+  created: 1716104432
+  updated: 1716104432
+  deleted: ~
