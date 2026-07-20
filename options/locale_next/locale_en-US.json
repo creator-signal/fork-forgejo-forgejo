@@ -160,6 +160,8 @@
 	"migrate.cancel.title": "Cancel migration",
 	"migrate.cancel.confirmation": "Do you want to cancel this migration?",
 	"repo.issue_indexer.title": "Issue Indexer",
+	"repo.settings.admin_enable_repo_code_indexer": "Enable code indexer for this repository",
+	"repo.settings.admin_code_indexer_is_globally_disabled": "Note: Code indexer is disabled globally",
 	"search.milestone_kind": "Search milestones…",
 	"search.syntax": "Search syntax",
 	"search.fuzzy": "Fuzzy",
@@ -983,7 +985,5 @@
 	"form.website.valid_url_schemes": "Allowed URL schemes include: %s",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
-	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it.",
-	"repo.settings.admin_enable_repo_code_indexer": "Enable code indexer for this repository",
-	"repo.settings.admin_code_indexer_is_globally_disabled": "Note: Code indexer is disabled globally"
+	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
