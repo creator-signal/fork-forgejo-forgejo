@@ -4,7 +4,6 @@
 package setting
 
 import (
-	"sort"
 	"testing"
 
 	"forgejo.org/models/organization"
@@ -15,29 +14,38 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/services/context"
 	"forgejo.org/services/contexttest"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// org3 owns repo3, repo5 and repo21 in the fixtures and user2 is in its owners
-// team; org25 owns no repository and user1 is an instance admin.
-const (
-	orgWithRepos    = int64(3)
-	orgWithoutRepos = int64(25)
-	ownerUserID     = int64(2)
-	adminUserID     = int64(1)
-)
+// createOwner creates a user allowed to create organizations
+func createOwner(t *testing.T) *user_model.User {
+	t.Helper()
+	defer test.MockVariableValue(&setting.Service.DefaultAllowCreateOrganization, true)()
+	return forgery.CreateUser(t, nil)
+}
+
+// createOrgWithRepos creates an organization owning three repositories (one of
+// them private) on behalf of a freshly created owner.
+func createOrgWithRepos(t *testing.T) (*organization.Organization, *user_model.User) {
+	t.Helper()
+	owner := createOwner(t)
+	org := forgery.CreateOrganisation(t, owner)
+	forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-a"})
+	forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-b", IsPrivate: true})
+	forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-c"})
+	return org, owner
+}
 
 // runRepos executes the handler for the given query string and returns the
 // resulting context so the caller can assert on ctx.Data.
-func runRepos(t *testing.T, query string, orgID, doerID int64) *context.Context {
+func runRepos(t *testing.T, query string, org *organization.Organization, doer *user_model.User) *context.Context {
 	t.Helper()
-	ctx, _ := contexttest.MockContext(t, "/org/org/settings/repos"+query)
-	ctx.Doer = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: doerID})
-	ctx.Org = &context.Organization{
-		Organization: unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: orgID}),
-	}
+	ctx, _ := contexttest.MockContext(t, "/org/"+org.Name+"/settings/repos"+query)
+	ctx.Doer = doer
+	ctx.Org = &context.Organization{Organization: org}
 	Repos(ctx)
 	return ctx
 }
@@ -54,6 +62,7 @@ func repoNames(repos repo_model.RepositoryList) []string {
 // it rather than being passed through to the query layer.
 func TestReposSortType(t *testing.T) {
 	unittest.PrepareTestEnv(t)
+	org, owner := createOrgWithRepos(t)
 
 	cases := []struct{ query, expected string }{
 		{"", "recentupdate"},
@@ -64,40 +73,57 @@ func TestReposSortType(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.query, func(t *testing.T) {
-			ctx := runRepos(t, tc.query, orgWithRepos, ownerUserID)
+			ctx := runRepos(t, tc.query, org, owner)
 			assert.Equal(t, tc.expected, ctx.Data["SortType"])
 		})
 	}
 }
 
-// Sorting must actually order the returned repositories
-//
-//	Sizes are all 0 in the fixtures, so alphabetical ordering is the deterministic case we can assert on.
+// Sorting must actually order the returned repositories, for every sortable
+// column of the page.
 func TestReposSortOrdersResults(t *testing.T) {
 	unittest.PrepareTestEnv(t)
+	org, owner := createOrgWithRepos(t)
 
-	asc := repoNames(runRepos(t, "?sort=alphabetically", orgWithRepos, ownerUserID).Data["Repos"].(repo_model.RepositoryList))
-	desc := repoNames(runRepos(t, "?sort=reversealphabetically", orgWithRepos, ownerUserID).Data["Repos"].(repo_model.RepositoryList))
+	sorted := func(query string) []string {
+		return repoNames(runRepos(t, query, org, owner).Data["Repos"].(repo_model.RepositoryList))
+	}
 
-	require.NotEmpty(t, asc)
-	assert.True(t, sort.SliceIsSorted(asc, func(i, j int) bool { return asc[i] < asc[j] }),
-		"ascending sort must order repositories by name: %v", asc)
-	assert.True(t, sort.SliceIsSorted(desc, func(i, j int) bool { return desc[i] > desc[j] }),
-		"descending sort must reverse the order: %v", desc)
-	assert.NotEqual(t, asc, desc, "the two sort directions must differ")
+	// Sizes are all 0 on freshly created repositories: alphabetical ordering.
+	assert.Equal(t, []string{"repo-a", "repo-b", "repo-c"}, sorted("?sort=alphabetically"))
+	assert.Equal(t, []string{"repo-c", "repo-b", "repo-a"}, sorted("?sort=reversealphabetically"))
+
+	// Give the repositories sizes whose ordering differs from the alphabetical
+	// one, so a silent fallback to name ordering would fail the assertions.
+	for name, sizes := range map[string][2]int64{
+		"repo-a": {300, 10},
+		"repo-b": {100, 30},
+		"repo-c": {200, 20},
+	} {
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: org.ID, LowerName: name})
+		require.NoError(t, repo_model.UpdateRepoSize(t.Context(), repo.ID, sizes[0], sizes[1]))
+	}
+
+	assert.Equal(t, []string{"repo-b", "repo-c", "repo-a"}, sorted("?sort=gitsize"))
+	assert.Equal(t, []string{"repo-a", "repo-c", "repo-b"}, sorted("?sort=reversegitsize"))
+	assert.Equal(t, []string{"repo-a", "repo-c", "repo-b"}, sorted("?sort=lfssize"))
+	assert.Equal(t, []string{"repo-b", "repo-c", "repo-a"}, sorted("?sort=reverselfssize"))
 }
 
-// Only repositories owned by the organization must be listed, private ones
-// included.
+// Only repositories owned by the organization must be listed: private ones
+// included, and repositories of other owners excluded.
 func TestReposOnlyOrgRepos(t *testing.T) {
 	unittest.PrepareTestEnv(t)
+	org, owner := createOrgWithRepos(t)
+	// A repository owned by the owner personally must not appear in the
+	// organization list.
+	forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{Name: "personal-repo"})
 
-	ctx := runRepos(t, "", orgWithRepos, ownerUserID)
-	repos := ctx.Data["Repos"].(repo_model.RepositoryList)
-	require.NotEmpty(t, repos)
+	repos := runRepos(t, "", org, owner).Data["Repos"].(repo_model.RepositoryList)
+	require.Len(t, repos, 3)
 	hasPrivate := false
 	for _, r := range repos {
-		assert.Equal(t, orgWithRepos, r.OwnerID)
+		assert.Equal(t, org.ID, r.OwnerID)
 		hasPrivate = hasPrivate || r.IsPrivate
 	}
 	assert.True(t, hasPrivate, "the owner must see the organization private repositories")
@@ -108,26 +134,20 @@ func TestReposOnlyOrgRepos(t *testing.T) {
 func TestReposPagination(t *testing.T) {
 	unittest.PrepareTestEnv(t)
 	defer test.MockVariableValue(&setting.UI.Admin.RepoPagingNum, 2)()
+	org, owner := createOrgWithRepos(t)
 
-	ctx := runRepos(t, "?sort=alphabetically&page=1", orgWithRepos, ownerUserID)
+	ctx := runRepos(t, "?sort=alphabetically&page=1", org, owner)
 	page1 := ctx.Data["Repos"].(repo_model.RepositoryList)
 	total := ctx.Data["Total"].(int64)
-	require.Len(t, page1, 2, "the page must be capped at the configured page size")
-	assert.Greater(t, total, int64(2), "Total must count every repository, not just the current page")
+	assert.Equal(t, []string{"repo-a", "repo-b"}, repoNames(page1), "the page must be capped at the configured page size")
+	assert.Equal(t, int64(3), total, "Total must count every repository, not just the current page")
 
-	page2 := runRepos(t, "?sort=alphabetically&page=2", orgWithRepos, ownerUserID).Data["Repos"].(repo_model.RepositoryList)
-	require.NotEmpty(t, page2)
-	ids := make(map[int64]bool, len(page1))
-	for _, r := range page1 {
-		ids[r.ID] = true
-	}
-	for _, r := range page2 {
-		assert.False(t, ids[r.ID], "page 2 must not repeat repositories from page 1 (repo %d)", r.ID)
-	}
+	page2 := runRepos(t, "?sort=alphabetically&page=2", org, owner).Data["Repos"].(repo_model.RepositoryList)
+	assert.Equal(t, []string{"repo-c"}, repoNames(page2), "page 2 must hold the remaining repository")
 
 	// page=0 and page=-1 must behave like page 1.
 	for _, q := range []string{"?sort=alphabetically&page=0", "?sort=alphabetically&page=-1"} {
-		clamped := runRepos(t, q, orgWithRepos, ownerUserID).Data["Repos"].(repo_model.RepositoryList)
+		clamped := runRepos(t, q, org, owner).Data["Repos"].(repo_model.RepositoryList)
 		assert.Equal(t, repoNames(page1), repoNames(clamped), "%s must clamp to page 1", q)
 	}
 }
@@ -136,8 +156,10 @@ func TestReposPagination(t *testing.T) {
 // an empty list (Total == 0), exercising the {{else}} branch of the template.
 func TestReposNoRepos(t *testing.T) {
 	unittest.PrepareTestEnv(t)
+	owner := createOwner(t)
+	org := forgery.CreateOrganisation(t, owner)
 
-	ctx := runRepos(t, "", orgWithoutRepos, adminUserID)
+	ctx := runRepos(t, "", org, owner)
 	assert.Empty(t, ctx.Data["Repos"].(repo_model.RepositoryList))
 	assert.Equal(t, int64(0), ctx.Data["Total"].(int64))
 }
