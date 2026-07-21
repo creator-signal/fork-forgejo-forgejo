@@ -42,7 +42,7 @@ func Repos(ctx *context.Context) {
 		Actor:       ctx.Doer,
 		OwnerID:     ctx.Org.Organization.ID,
 		OrderBy:     repo_model.OrderByFlatMap[sortOrder],
-		Collaborate: optional.Some(false),
+		Collaborate: optional.Some(false), // organizations cannot collaborate on repositories; restrict the query to owned ones
 		Private:     true,
 	})
 	if err != nil {
