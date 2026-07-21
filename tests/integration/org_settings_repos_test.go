@@ -5,42 +5,77 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestOrgSettingsRepos verifies the end-to-end rendering of the organization
 // settings repositories page: a sortable table listing the organization's
-// repositories with their git and LFS size columns, reachable only by owners.
+// repositories with their git and LFS size columns and their state labels,
+// reachable only by owners.
 func TestOrgSettingsRepos(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	// user2 is in the owners team of org3.
-	session := loginUser(t, "user2")
+	owner := forgery.CreateUser(t, nil)
+	org := forgery.CreateOrganisation(t, owner)
 
-	req := NewRequest(t, "GET", "/org/org3/settings/repos")
+	normal := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-normal"})
+	private := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-private", IsPrivate: true})
+	template := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-template", IsTemplate: true})
+	archived := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{Name: "repo-archived"})
+	require.NoError(t, repo_model.SetArchiveRepoState(t.Context(), archived, true))
+
+	session := loginUser(t, owner.Name)
+
+	req := NewRequest(t, "GET", "/org/"+org.Name+"/settings/repos")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 	htmlDoc := NewHTMLParser(t, resp.Body)
 
 	// The page must be linked from the settings navigation.
-	assert.Positive(t, htmlDoc.doc.Find(".flex-container-nav a[href='/org/org3/settings/repos']").Length(),
+	assert.Positive(t, htmlDoc.doc.Find(".flex-container-nav a[href='/org/"+org.Name+"/settings/repos']").Length(),
 		"the settings navigation must link the repositories page")
 
 	// The table headers (name / size / lfs size) must be present.
 	assert.Equal(t, 3, htmlDoc.doc.Find("table thead tr th").Length())
 
-	// A known repository owned by org3 must be linked in the table body, and
-	// its row must carry the name and the two size columns.
-	row := htmlDoc.doc.Find("table tbody tr td a[href='/org3/repo3']").Closest("tr")
-	assert.Equal(t, 1, row.Length(), "repo3 must be listed for org3")
-	assert.Equal(t, 3, row.Find("td").Length())
+	// Each repository row must carry the name and the two size columns, plus
+	// the label matching its state.
+	cases := []struct {
+		repo  *repo_model.Repository
+		label string
+	}{
+		{normal, ""},
+		{private, "Private"},
+		{template, "Template"},
+		{archived, "Archived"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.repo.Name, func(t *testing.T) {
+			row := htmlDoc.doc.Find("table tbody tr td a[href='/" + org.Name + "/" + tc.repo.Name + "']").Closest("tr")
+			require.Equal(t, 1, row.Length(), "%s must be listed", tc.repo.Name)
+			assert.Equal(t, 3, row.Find("td").Length())
 
-	// user4 is a member of org3 but not an owner: the page must be denied.
-	memberSession := loginUser(t, "user4")
-	memberSession.MakeRequest(t, NewRequest(t, "GET", "/org/org3/settings/repos"), http.StatusNotFound)
+			labels := row.Find("td span.ui.basic.label")
+			if tc.label == "" {
+				assert.Equal(t, 0, labels.Length(), "%s must not carry any state label", tc.repo.Name)
+			} else {
+				require.Equal(t, 1, labels.Length(), "%s must carry exactly one state label", tc.repo.Name)
+				assert.Equal(t, tc.label, strings.TrimSpace(labels.Text()))
+			}
+		})
+	}
+
+	// A user that is not an owner of the organization must be denied.
+	stranger := forgery.CreateUser(t, nil)
+	strangerSession := loginUser(t, stranger.Name)
+	strangerSession.MakeRequest(t, NewRequest(t, "GET", "/org/"+org.Name+"/settings/repos"), http.StatusNotFound)
 }
 
 // TestOrgSettingsReposEmptyState verifies that an organization without any
@@ -48,11 +83,12 @@ func TestOrgSettingsRepos(t *testing.T) {
 func TestOrgSettingsReposEmptyState(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	// org25 owns no repositories; user1 is an instance admin and therefore has
-	// owner access to every organization.
-	session := loginUser(t, "user1")
+	owner := forgery.CreateUser(t, nil)
+	org := forgery.CreateOrganisation(t, owner)
 
-	req := NewRequest(t, "GET", "/org/org25/settings/repos")
+	session := loginUser(t, owner.Name)
+
+	req := NewRequest(t, "GET", "/org/"+org.Name+"/settings/repos")
 	resp := session.MakeRequest(t, req, http.StatusOK)
 
 	assert.Contains(t, resp.Body.String(), "You do not own any repositories.")
