@@ -342,7 +342,7 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 
 	var jobs []*ActionRunJob
 	if err := e.
-		Join("INNER", "action_run", "action_run_job.run_id=action_run.id").
+		Join("INNER", "action_run", "action_run_job.run_id = action_run.id").
 		Join("INNER", "repo_unit", "action_run_job.repo_id = repo_unit.repo_id").
 		Where("task_id=? AND action_run_job.status=? AND `repo_unit`.type=?", 0, StatusWaiting, unit.TypeActions).
 		And(jobCond).
