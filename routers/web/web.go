@@ -407,15 +407,15 @@ func Routes() *web.Route {
 		func() {
 			registerMixedRoutes(routes)
 		},
-		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet, smMiddleware)
+		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet)
 	routes.Group("",
 		func() {
 			registerGitLFSRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet, smMiddleware)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet)
 	routes.Group("",
 		func() {
 			registerGitRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet, smMiddleware)
+		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
 
 	// The only endpoint which can only be accessed with the OAuth2 authentication method is /userinfo, extracted here
 	// so that other auth methods can't be applied to it
