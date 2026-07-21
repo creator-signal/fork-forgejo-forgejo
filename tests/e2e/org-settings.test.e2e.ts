@@ -1,7 +1,9 @@
 // @watch start
 // templates/org/team/new.tmpl
+// templates/org/settings/repos.tmpl
 // web_src/css/form.css
 // web_src/js/features/org-team.js
+// web_src/js/features/tablesort.js
 // @watch end
 
 import {expect} from '@playwright/test';
@@ -58,4 +60,22 @@ test('org add and remove team repositories', async ({page}) => {
   await expect(page.getByText('org3/repo3')).toBeVisible();
   await expect(page.getByText('org3/repo21')).toBeVisible();
   await expect(page.getByText('org3/repo5')).toBeVisible();
+});
+
+test('org settings repositories list sorting', async ({page}) => {
+  const response = await page.goto('/org/org3/settings/repos');
+  expect(response?.status()).toBe(200);
+
+  const names = page.locator('table tbody tr td:first-child a');
+  await expect(names).toHaveCount(3);
+
+  // Clicking the name header sorts ascending, a second click reverses the order.
+  await page.locator('th[data-sortt-asc="alphabetically"]').click();
+  await page.waitForURL(/sort=alphabetically/);
+  await expect(names).toHaveText(['repo21', 'repo3', 'repo5']);
+  await screenshot(page);
+
+  await page.locator('th[data-sortt-asc="alphabetically"]').click();
+  await page.waitForURL(/sort=reversealphabetically/);
+  await expect(names).toHaveText(['repo5', 'repo3', 'repo21']);
 });
