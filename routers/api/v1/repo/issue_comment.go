@@ -402,16 +402,6 @@ func CreateIssueComment(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.Repo().CanReadIssuesOrPulls(issue.IsPull) {
-		ctx.NotFound()
-		return
-	}
-
-	if issue.IsLocked && !ctx.Repo().CanWriteIssuesOrPulls(issue.IsPull) && !ctx.IsUserSiteAdmin() {
-		ctx.Error(http.StatusForbidden, "CreateIssueComment", errors.New(ctx.Locale.TrString("repo.issues.comment_on_locked")))
-		return
-	}
-
 	err := issue_service.SetIssueUpdateDate(ctx, issue, form.Updated, ctx.Doer())
 	if err != nil {
 		ctx.Error(http.StatusForbidden, "SetIssueUpdateDate", err)

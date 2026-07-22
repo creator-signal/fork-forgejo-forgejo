@@ -173,11 +173,6 @@ func changeIssueCommentReaction(ctx *context.APIContext, form api.EditReactionOp
 		return
 	}
 
-	if comment.Issue.IsLocked && !ctx.Repo().CanWriteIssuesOrPulls(comment.Issue.IsPull) {
-		ctx.Error(http.StatusForbidden, "ChangeIssueCommentReaction", errors.New("no permission to change reaction"))
-		return
-	}
-
 	if isCreateType {
 		// PostIssueCommentReaction part
 		reaction, err := issue_service.CreateCommentReaction(ctx, ctx.Doer(), comment.Issue, comment, form.Reaction)
@@ -386,11 +381,6 @@ func changeIssueReaction(ctx *context.APIContext, form api.EditReactionOption, i
 		} else {
 			ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err)
 		}
-		return
-	}
-
-	if issue.IsLocked && !ctx.Repo().CanWriteIssuesOrPulls(issue.IsPull) {
-		ctx.Error(http.StatusForbidden, "ChangeIssueCommentReaction", errors.New("no permission to change reaction"))
 		return
 	}
 
