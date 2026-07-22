@@ -273,6 +273,25 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 		return
 	}
 
+	if ctx.opts.DeployKeyID != 0 {
+		deployKey, err := asymkey_model.GetDeployKeyByID(ctx, ctx.opts.DeployKeyID)
+		if err != nil {
+			log.Error("Unable to get DeployKey id %d Error: %v", ctx.opts.DeployKeyID, err)
+			ctx.JSON(http.StatusInternalServerError, private.Response{
+				Err: fmt.Sprintf("Unable to get DeployKey id %d Error: %v", ctx.opts.DeployKeyID, err),
+			})
+			return
+		}
+
+		if deployKey.UnitsMode[unit.TypeCode] >= perm_model.AccessModeWrite {
+			log.Warn("DeployKey id %d is not allowed to push to branch %s", ctx.opts.DeployKeyID, branchName)
+			ctx.JSON(http.StatusForbidden, private.Response{
+				UserMsg: fmt.Sprintf("DeployKey id %d is not allowed to push to branch %s", ctx.opts.DeployKeyID, branchName),
+			})
+			return
+		}
+	}
+
 	// Allow pushes to non-protected branches
 	if protectBranch == nil {
 		// ...unless the user is over quota, and the operation is not a delete

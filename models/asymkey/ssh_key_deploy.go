@@ -10,6 +10,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
+	"forgejo.org/models/unit"
 	"forgejo.org/modules/timeutil"
 
 	"xorm.io/builder"
@@ -33,7 +34,8 @@ type DeployKey struct {
 	Fingerprint string
 	Content     string `xorm:"-"`
 
-	Mode perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
+	Mode      perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
+	UnitsMode map[unit.Type]perm.AccessMode
 
 	CreatedUnix       timeutil.TimeStamp `xorm:"created"`
 	UpdatedUnix       timeutil.TimeStamp `xorm:"updated"`
