@@ -182,7 +182,7 @@ type ViewRunInfo struct {
 	Done                 bool            `json:"done"`
 	Jobs                 []*ViewJob      `json:"jobs"`
 	Commit               ViewCommit      `json:"commit"`
-	PreExecutionError    string          `json:"preExecutionError"`
+	PreExecutionError    template.HTML   `json:"preExecutionError"`
 	PreExecutionWarnings []template.HTML `json:"preExecutionWarnings"`
 }
 
