@@ -27,60 +27,6 @@ var (
 	ErrStepOutOfRange = errors.New("step index out of range")
 )
 
-// boundedReadSeekCloser exposes a [start, start+size) window of the underlying
-// reader as if it started at offset 0. It exists so the step-filtered path
-// can return an io.ReadSeekCloser (required by http.ServeContent for Range)
-// without buffering the entire step slice into memory.
-type boundedReadSeekCloser struct {
-	inner io.ReadSeekCloser
-	start int64
-	size  int64
-	pos   int64
-}
-
-func newBoundedReadSeekCloser(inner io.ReadSeekCloser, start, size int64) (*boundedReadSeekCloser, error) {
-	if _, err := inner.Seek(start, io.SeekStart); err != nil {
-		return nil, err
-	}
-	return &boundedReadSeekCloser{inner: inner, start: start, size: size}, nil
-}
-
-func (b *boundedReadSeekCloser) Read(p []byte) (int, error) {
-	if b.pos >= b.size {
-		return 0, io.EOF
-	}
-	if remaining := b.size - b.pos; int64(len(p)) > remaining {
-		p = p[:remaining]
-	}
-	n, err := b.inner.Read(p)
-	b.pos += int64(n)
-	return n, err
-}
-
-func (b *boundedReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
-	var abs int64
-	switch whence {
-	case io.SeekStart:
-		abs = offset
-	case io.SeekCurrent:
-		abs = b.pos + offset
-	case io.SeekEnd:
-		abs = b.size + offset
-	default:
-		return 0, errors.New("boundedReadSeekCloser: invalid whence")
-	}
-	if abs < 0 {
-		return 0, errors.New("boundedReadSeekCloser: negative position")
-	}
-	if _, err := b.inner.Seek(b.start+abs, io.SeekStart); err != nil {
-		return 0, err
-	}
-	b.pos = abs
-	return abs, nil
-}
-
-func (b *boundedReadSeekCloser) Close() error { return b.inner.Close() }
-
 // OpenJobLogReader returns a reader for an action job's log along with the
 // filename and modtime to expose via Content-Disposition / Last-Modified.
 //
@@ -136,62 +82,40 @@ func OpenJobLogReader(
 		return nil, "", time.Time{}, ErrLogsExpired
 	}
 
-	// Resolve the step's byte window (if any) BEFORE opening the log reader
-	// so a request that's going to 404 doesn't pay for an OpenLogs call.
-	var startByte, length int64
-	if hasStep {
-		// Targeted step load — task.LoadAttributes would also pull job + run
-		// which we don't need (and which makes unit-test setup heavier).
-		steps, err := actions_model.GetTaskStepsByTaskID(ctx, task.ID)
-		if err != nil {
-			return nil, "", time.Time{}, fmt.Errorf("could not load steps for task %d: %w", task.ID, err)
-		}
-		task.Steps = steps
-		full := actions.FullSteps(task)
-		if stepIdx < 0 || stepIdx >= len(full) {
-			return nil, "", time.Time{}, ErrStepOutOfRange
-		}
-		step := full[stepIdx]
-		// FullSteps populates LogIndex/LogLength uniformly for setup/real/complete.
-		// LogLength==0 (e.g. a tail on a still-running task) maps to an empty window.
-		if step.LogLength > 0 && step.LogIndex < int64(len(task.LogIndexes)) {
-			startByte = task.LogIndexes[step.LogIndex]
-			endIdx := step.LogIndex + step.LogLength
-			var endByte int64
-			if endIdx < int64(len(task.LogIndexes)) {
-				endByte = task.LogIndexes[endIdx]
-			} else {
-				// Step's log range extends beyond recorded indexes (step is
-				// still running or task hasn't fully landed yet).
-				endByte = task.LogSize
-			}
-			length = endByte - startByte
-		}
-	}
-
-	reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
-	if err != nil {
-		return nil, "", time.Time{}, fmt.Errorf("open logs for task %d: %w", task.ID, err)
-	}
-
 	modtime := task.Stopped.AsTime()
 	if task.Stopped == 0 {
 		modtime = task.Updated.AsTime() // Best-guess modtime while still running.
 	}
 
 	if !hasStep {
+		reader, err := actions.OpenLogs(ctx, task.LogInStorage, task.LogFilename)
+		if err != nil {
+			return nil, "", time.Time{}, fmt.Errorf("open logs for task %d: %w", task.ID, err)
+		}
 		filename := fmt.Sprintf("job-%d-attempt-%d.log", job.ID, task.Attempt)
 		return reader, filename, modtime, nil
 	}
 
-	bounded, err := newBoundedReadSeekCloser(reader, startByte, length)
+	// Resolve the step's byte window BEFORE opening the log reader so a
+	// request that's going to 404 doesn't pay for an OpenLogs call. Targeted
+	// step load — task.LoadAttributes would also pull job + run which we
+	// don't need (and which makes unit-test setup heavier).
+	steps, err := actions_model.GetTaskStepsByTaskID(ctx, task.ID)
 	if err != nil {
-		reader.Close()
-		return nil, "", time.Time{}, fmt.Errorf("could not position log reader at step %d start (offset %d): %w", stepIdx, startByte, err)
+		return nil, "", time.Time{}, fmt.Errorf("could not load steps for task %d: %w", task.ID, err)
 	}
-
+	task.Steps = steps
+	full := actions.FullSteps(task)
+	if stepIdx < 0 || stepIdx >= len(full) {
+		return nil, "", time.Time{}, ErrStepOutOfRange
+	}
+	startByte, endByte := actions.StepByteRange(task, full[stepIdx])
+	reader, err := actions.OpenLogsRange(ctx, task.LogInStorage, task.LogFilename, startByte, endByte-startByte)
+	if err != nil {
+		return nil, "", time.Time{}, fmt.Errorf("open logs for task %d step %d: %w", task.ID, stepIdx, err)
+	}
 	stepFilename := fmt.Sprintf("job-%d-attempt-%d-step-%d.log", job.ID, task.Attempt, stepIdx)
-	return bounded, stepFilename, modtime, nil
+	return reader, stepFilename, modtime, nil
 }
 
 // WriteRunLogsZip writes a ZIP of the latest per-job logs for the run to w.

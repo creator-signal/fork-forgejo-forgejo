@@ -1536,9 +1536,6 @@ func DeleteActionArtifact(ctx *context.APIContext) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// GetActionJob returns a single workflow job, including its step list
-// (head "Set up job", real steps, tail "Complete job"). Each step's `number`
-// is the value the job-logs endpoint's `?step=` filter accepts.
 func GetActionJob(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id} repository repoGetActionJob
 	// ---
