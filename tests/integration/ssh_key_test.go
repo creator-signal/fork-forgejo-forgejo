@@ -43,6 +43,56 @@ func doAddChangesToCheckout(dstPath, filename string) func(*testing.T) {
 	}
 }
 
+func TestPushDeployKeyAuthz(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		forEachObjectFormat(t, func(t *testing.T, objectFormat git.ObjectFormat) {
+			ctx := NewAPITestContext(t, "user2", "deploy-key-push-authz-"+objectFormat.Name(), auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			keyname := fmt.Sprintf("%s-push", ctx.Reponame)
+			u.Path = ctx.GitPath()
+
+			opts := &api.CreateRepoOption{
+				Description: "Temporary repo",
+				Name:        ctx.Reponame,
+				Private:     true,
+				Template:    true,
+			}
+			t.Run("CreateEmptyRepository", doAPICreateRepository(ctx, opts, objectFormat))
+			t.Run("CheckIsEmpty", doCheckRepositoryEmptyStatus(ctx, true))
+
+			withKeyFile(t, keyname, func(keyFile string) {
+				// TODO: with tag+code option
+				t.Run("CreatePushDeployKey", doAPICreateDeployKey(ctx, keyname, keyFile, false))
+
+				// Setup the testing repository
+				dstPath := t.TempDir()
+
+				t.Run("InitTestRepository", doGitInitTestRepository(dstPath, objectFormat))
+
+				// Setup remote link
+				sshURL := createSSHUrl(ctx.GitPath(), u)
+
+				t.Run("AddRemote", doGitAddRemote(dstPath, "origin", sshURL))
+
+				t.Run("SSHPushTestRepository", doGitPushTestRepository(dstPath, "origin", "master"))
+
+				t.Run("CheckIsNotEmpty", doCheckRepositoryEmptyStatus(ctx, false))
+
+				// TODO: set deploy key to tag only option
+
+				// TODO: try push code
+
+				// TODO: check error result!
+
+				// TODO: try to push tag
+
+				// TODO: check tag was applied
+
+				t.Run("DeleteRepository", doAPIDeleteRepository(ctx))
+			})
+		})
+	})
+}
+
 func TestPushDeployKeyOnEmptyRepo(t *testing.T) {
 	onApplicationRun(t, testPushDeployKeyOnEmptyRepo)
 }
