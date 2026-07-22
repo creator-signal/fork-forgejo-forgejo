@@ -78,4 +78,17 @@ test('org settings repositories list sorting', async ({page}) => {
   await page.locator('th[data-sortt-asc="alphabetically"]').click();
   await page.waitForURL(/sort=reversealphabetically/);
   await expect(names).toHaveText(['repo5', 'repo3', 'repo21']);
+
+  // The size columns cannot change the order of the all-zero-sized fixture
+  // repositories, but clicking them must still update the sort parameter.
+  await page.locator('th[data-sortt-asc="gitsize"]').click();
+  await page.waitForURL(/sort=gitsize/);
+  await page.locator('th[data-sortt-asc="gitsize"]').click();
+  await page.waitForURL(/sort=reversegitsize/);
+
+  await page.locator('th[data-sortt-asc="lfssize"]').click();
+  await page.waitForURL(/sort=lfssize/);
+  await page.locator('th[data-sortt-asc="lfssize"]').click();
+  await page.waitForURL(/sort=reverselfssize/);
+  await expect(names).toHaveCount(3);
 });
