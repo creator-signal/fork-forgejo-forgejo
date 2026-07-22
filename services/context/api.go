@@ -50,6 +50,7 @@ type APIContext struct {
 	user *user_model.User // the user which is being visited, in most cases it differs from Doer
 
 	repo       *Repository
+	issue      *issues_model.Issue
 	comment    *issues_model.Comment
 	org        *APIOrganization
 	pkg        *Package
@@ -227,6 +228,29 @@ func (ctx *APIContext) Repo() *Repository {
 
 func (ctx *APIContext) SetRepo(repo *Repository) {
 	ctx.repo = repo
+}
+
+func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
+	if ctx.issue == nil {
+		issue, err := issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, ctx.ParamsInt64(indexParam))
+		if err != nil {
+			if issues_model.IsErrIssueNotExist(err) {
+				ctx.NotFound("IsErrIssueNotExist", err)
+				return nil
+			}
+			ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err)
+			return nil
+		}
+
+		if err = issue.LoadRepo(ctx); err != nil {
+			ctx.InternalServerError(err)
+			return nil
+		}
+
+		ctx.issue = issue
+	}
+
+	return ctx.issue
 }
 
 func (ctx *APIContext) Repository() *repo_model.Repository {

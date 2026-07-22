@@ -73,13 +73,8 @@ func ListIssueComments(ctx *context.APIContext) {
 		ctx.Error(http.StatusUnprocessableEntity, "GetQueryBeforeSince", err)
 		return
 	}
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if issues_model.IsErrIssueNotExist(err) {
-			ctx.NotFound("IsErrIssueNotExist", err)
-			return
-		}
-		ctx.Error(http.StatusInternalServerError, "GetRawIssueByIndex", err)
+	issue := ctx.LoadIssue(":index")
+	if ctx.Written() {
 		return
 	}
 	if !ctx.Repo().CanReadIssuesOrPulls(issue.IsPull) {
@@ -185,16 +180,10 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		ctx.Error(http.StatusUnprocessableEntity, "GetQueryBeforeSince", err)
 		return
 	}
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if issues_model.IsErrIssueNotExist(err) {
-			ctx.NotFound("IsErrIssueNotExist", err)
-			return
-		}
-		ctx.Error(http.StatusInternalServerError, "GetRawIssueByIndex", err)
+	issue := ctx.LoadIssue(":index")
+	if ctx.Written() {
 		return
 	}
-	issue.Repo = ctx.Repo().Repository
 
 	opts := &issues_model.FindCommentsOptions{
 		ListOptions: utils.GetListOptions(ctx),
@@ -408,13 +397,8 @@ func CreateIssueComment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/internalServerError"
 
 	form := web.GetForm(ctx).(*api.CreateIssueCommentOption)
-	issue, err := issues_model.GetIssueByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if issues_model.IsErrIssueNotExist(err) {
-			ctx.NotFound("IsErrIssueNotExist", err)
-			return
-		}
-		ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err)
+	issue := ctx.LoadIssue(":index")
+	if ctx.Written() {
 		return
 	}
 
@@ -428,7 +412,7 @@ func CreateIssueComment(ctx *context.APIContext) {
 		return
 	}
 
-	err = issue_service.SetIssueUpdateDate(ctx, issue, form.Updated, ctx.Doer())
+	err := issue_service.SetIssueUpdateDate(ctx, issue, form.Updated, ctx.Doer())
 	if err != nil {
 		ctx.Error(http.StatusForbidden, "SetIssueUpdateDate", err)
 		return

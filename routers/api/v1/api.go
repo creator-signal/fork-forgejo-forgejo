@@ -433,7 +433,11 @@ func mustAllowPulls() func(ctx *context.APIContext) {
 func mustEnableLocalIssuesIfIsIssue() func(*context.APIContext) {
 	apiv1_permissions_testhelpers.RecordSignature(apiv1_permissions.MustEnableLocalIssuesIfIsIssue)
 	return func(ctx *context.APIContext) {
-		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, ctx.ParamsInt64(":index"))
+		issue := ctx.LoadIssue(":index")
+		if ctx.Written() {
+			return
+		}
+		apiv1_permissions.MustEnableLocalIssuesIfIsIssue(ctx, issue)
 	}
 }
 
