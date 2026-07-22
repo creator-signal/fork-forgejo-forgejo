@@ -51,7 +51,10 @@ func GetIssueCommentReactions(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	comment := ctx.Comment()
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
 
 	reactions, _, err := issues_model.FindCommentReactions(ctx, comment.IssueID, comment.ID)
 	if err != nil {
@@ -165,7 +168,10 @@ func DeleteIssueCommentReaction(ctx *context.APIContext) {
 }
 
 func changeIssueCommentReaction(ctx *context.APIContext, form api.EditReactionOption, isCreateType bool) {
-	comment := ctx.Comment()
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
 
 	if comment.Issue.IsLocked && !ctx.Repo().CanWriteIssuesOrPulls(comment.Issue.IsPull) {
 		ctx.Error(http.StatusForbidden, "ChangeIssueCommentReaction", errors.New("no permission to change reaction"))

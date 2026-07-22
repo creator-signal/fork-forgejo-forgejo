@@ -485,7 +485,10 @@ func GetIssueComment(ctx *context.APIContext) {
 	//   "500":
 	//     "$ref": "#/responses/internalServerError"
 
-	comment := ctx.Comment()
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
 
 	if comment.Type != issues_model.CommentTypeComment {
 		ctx.Status(http.StatusNoContent)
@@ -611,7 +614,10 @@ func EditIssueCommentDeprecated(ctx *context.APIContext) {
 }
 
 func editIssueComment(ctx *context.APIContext, form api.EditIssueCommentOption) {
-	comment := ctx.Comment()
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
 
 	if !ctx.IsSigned() || (ctx.Doer().ID != comment.PosterID && !ctx.Repo().CanWriteIssuesOrPulls(comment.Issue.IsPull)) {
 		ctx.Status(http.StatusForbidden)
@@ -717,7 +723,10 @@ func DeleteIssueCommentDeprecated(ctx *context.APIContext) {
 }
 
 func deleteIssueComment(ctx *context.APIContext, commentType issues_model.CommentType) {
-	comment := ctx.Comment()
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
 
 	if !ctx.IsSigned() || (ctx.Doer().ID != comment.PosterID && !ctx.Repo().CanWriteIssuesOrPulls(comment.Issue.IsPull)) {
 		ctx.Status(http.StatusForbidden)

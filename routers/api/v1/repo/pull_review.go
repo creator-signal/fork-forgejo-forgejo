@@ -257,12 +257,17 @@ func GetPullReviewComment(ctx *context.APIContext) {
 		return
 	}
 
-	if err := ctx.Comment().LoadPoster(ctx); err != nil {
+	comment := ctx.LoadComment("comment")
+	if ctx.Written() {
+		return
+	}
+
+	if err := comment.LoadPoster(ctx); err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 
-	apiComment, err := convert.ToPullReviewComment(ctx, review, ctx.Comment(), ctx.Doer())
+	apiComment, err := convert.ToPullReviewComment(ctx, review, comment, ctx.Doer())
 	if err != nil {
 		ctx.InternalServerError(err)
 		return

@@ -245,12 +245,29 @@ func (ctx *APIContext) SetPermission(permission *access_model.Permission) {
 	ctx.Repo().Permission = *permission
 }
 
-func (ctx *APIContext) Comment() *issues_model.Comment {
-	return ctx.comment
-}
+func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
+	if ctx.comment == nil {
+		comment, err := issues_model.GetCommentByID(ctx, ctx.ParamsInt64(idParam))
+		if err != nil {
+			if issues_model.IsErrCommentNotExist(err) {
+				ctx.NotFound(err)
+			} else {
+				ctx.InternalServerError(err)
+			}
+			return nil
+		}
 
-func (ctx *APIContext) SetComment(comment *issues_model.Comment) {
-	ctx.comment = comment
+		if err = comment.LoadIssue(ctx); err != nil {
+			ctx.InternalServerError(err)
+			return nil
+		}
+
+		if err = comment.Issue.LoadRepo(ctx); err != nil {
+			ctx.InternalServerError(err)
+			return nil
+		}
+	}
+	return ctx.comment
 }
 
 func (ctx *APIContext) Organization() *org_model.Organization {
