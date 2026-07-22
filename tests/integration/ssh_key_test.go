@@ -79,14 +79,11 @@ func TestPushDeployKeyAuthz(t *testing.T) {
 
 				// TODO: set deploy key to tag only option
 
-				// TODO: try push code
-
-				// TODO: check error result!
-
-				// TODO: try to push tag
-
-				// TODO: check tag was applied
-
+				t.Run("SSHPushTestRepository", func(t *testing.T) { doGitPushTestRepositoryFail(t, dstPath, "origin", "master") })
+				t.Run("AddTag", doGitTag(dstPath, "TestTag"))
+				t.Run("PushTag", doGitPushTestRepository(dstPath, "origin", "TestTag"))
+				tag := doAPIGetTag(ctx, "TestTag")(t)
+				assert.Equal(t, "TestTag", tag.Name)
 				t.Run("DeleteRepository", doAPIDeleteRepository(ctx))
 			})
 		})

@@ -239,3 +239,10 @@ func doGitFetch(dstPath string, args ...string) func(*testing.T) {
 		require.NoError(t, err)
 	}
 }
+func doGitTag(dstPath string, args ...string) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		_, _, err := git.NewCommandContextNoGlobals(git.DefaultContext, git.AllowLFSFiltersArgs()...).AddArguments("tag").AddArguments(git.ToTrustedCmdArgs(args)...).RunStdString(&git.RunOpts{Dir: dstPath})
+		require.NoError(t, err)
+	}
+}

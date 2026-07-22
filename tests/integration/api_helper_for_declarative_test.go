@@ -386,6 +386,22 @@ func doAPICreateTag(ctx APITestContext, tag, target, message string, callback ..
 	}
 }
 
+func doAPIGetTag(ctx APITestContext, tag string) func(*testing.T) api.Tag {
+	return func(t *testing.T) api.Tag {
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/tags/%s", ctx.Username, ctx.Reponame, tag).
+			AddTokenAuth(ctx.Token)
+		expected := http.StatusOK
+		if ctx.ExpectedCode != 0 {
+			expected = ctx.ExpectedCode
+		}
+		resp := ctx.Session.MakeRequest(t, req, expected)
+
+		tag := api.Tag{}
+		DecodeJSON(t, resp, &tag)
+		return tag
+	}
+}
+
 func doAPICreateFile(ctx APITestContext, treepath string, options *api.CreateFileOptions, callback ...func(*testing.T, api.FileResponse)) func(*testing.T) {
 	return func(t *testing.T) {
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", ctx.Username, ctx.Reponame, treepath), &options).
