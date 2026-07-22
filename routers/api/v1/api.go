@@ -60,7 +60,6 @@ import (
 	"strings"
 
 	auth_model "forgejo.org/models/auth"
-	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
@@ -191,38 +190,14 @@ func checkPermission(check func(ctx apiv1_permissions.Context)) func(*context.AP
 }
 
 // must be used within a group with a call to commentAssignment() to set ctx.Comment
-func reqValidCommentID() func(*context.APIContext) {
+func reqValidCommentID(idParam string) func(*context.APIContext) {
 	apiv1_permissions_testhelpers.RecordSignature(apiv1_permissions.ReqValidCommentID)
 	return func(ctx *context.APIContext) {
-		if ctx.Comment() == nil {
-			panic("reqValidCommentID requires commentAssignment to be called first")
-		}
-		apiv1_permissions.ReqValidCommentID(ctx, ctx.Comment())
-	}
-}
-
-// must be used within a group with a call to repoAssignment() to set ctx.Repo
-func commentAssignment(idParam string) func(ctx *context.APIContext) {
-	apiv1_permissions_testhelpers.FollowedBy(commentAssignment, apiv1_permissions.ReqValidCommentID)
-	return func(ctx *context.APIContext) {
-		comment, err := issues_model.GetCommentByID(ctx, ctx.ParamsInt64(idParam))
-		if err != nil {
-			if issues_model.IsErrCommentNotExist(err) {
-				ctx.NotFound(err)
-			} else {
-				ctx.InternalServerError(err)
-			}
+		comment := ctx.LoadComment(idParam)
+		if ctx.Written() {
 			return
 		}
-
-		if err = comment.LoadIssue(ctx); err != nil {
-			ctx.InternalServerError(err)
-			return
-		}
-
-		comment.Issue.Repo = ctx.Repo().Repository
-
-		ctx.SetComment(comment)
+		apiv1_permissions.ReqValidCommentID(ctx, comment)
 	}
 }
 
@@ -1015,7 +990,7 @@ func Routes() *web.Route {
 										m.Combo("").
 											Get(repo.GetPullReviewComment).
 											Delete(reqToken(), repo.DeletePullReviewComment)
-									}, commentAssignment("comment"), reqValidCommentID())
+									}, reqValidCommentID("comment"))
 								})
 								m.Post("/dismissals", reqToken(), bind(api.DismissPullReviewOptions{}), repo.DismissPullReview)
 								m.Post("/undismissals", reqToken(), repo.UnDismissPullReview)
@@ -1135,7 +1110,7 @@ func Routes() *web.Route {
 									Patch(reqToken(), mustNotBeArchived(), bind(api.EditAttachmentOptions{}), repo.EditIssueCommentAttachment).
 									Delete(reqToken(), mustNotBeArchived(), repo.DeleteIssueCommentAttachment)
 							}, mustEnableAttachments())
-						}, commentAssignment(":id"), reqValidCommentID())
+						}, reqValidCommentID(":id"))
 					})
 					m.Group("/{index}", func() {
 						m.Combo("").Get(repo.GetIssue).
@@ -1144,7 +1119,7 @@ func Routes() *web.Route {
 						m.Group("/comments", func() {
 							m.Combo("").Get(repo.ListIssueComments).
 								Post(reqToken(), mustNotBeArchived(), bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
-							m.Combo("/{id}", reqToken(), commentAssignment(":id"), reqValidCommentID()).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueCommentDeprecated).
+							m.Combo("/{id}", reqToken(), reqValidCommentID(":id")).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueCommentDeprecated).
 								Delete(repo.DeleteIssueCommentDeprecated)
 						})
 						m.Get("/timeline", repo.ListIssueCommentsAndTimeline)
