@@ -12,9 +12,6 @@
 		<a class="{{if .PageIsOrgSettingsLabels}}active {{end}}item" href="{{.OrgLink}}/settings/labels">
 			{{ctx.Locale.Tr "repo.labels"}}
 		</a>
-		<a class="{{if .PageIsOrgSettingsRepos}}active {{end}}item" href="{{.OrgLink}}/settings/repos">
-			{{ctx.Locale.Tr "settings.repos"}}
-		</a>
 		{{if .EnableOAuth2}}
 		<a class="{{if .PageIsSettingsApplications}}active {{end}}item" href="{{.OrgLink}}/settings/applications">
 			{{ctx.Locale.Tr "settings.applications"}}
@@ -41,6 +38,9 @@
 			</div>
 		</details>
 		{{end}}
+		<a class="{{if .PageIsOrgSettingsRepos}}active {{end}}item" href="{{.OrgLink}}/settings/repos">
+			{{ctx.Locale.Tr "settings.repos"}}
+		</a>
 		<a class="{{if .PageIsSettingsBlockedUsers}}active {{end}}item" href="{{.OrgLink}}/settings/blocked_users">
 			{{ctx.Locale.Tr "settings.blocked_users"}}
 		</a>
