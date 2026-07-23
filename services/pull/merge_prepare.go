@@ -249,15 +249,18 @@ func rebaseTrackingOnToBase(ctx *mergeContext, mergeStyle repo_model.MergeStyle)
 	ctx.outbuf.Reset()
 	ctx.errbuf.Reset()
 
-	// If the pull request is zero commits behind, then no rebasing needs to be done.
-	if ctx.pr.CommitsBehind == 0 {
+	// If the pull request is zero commits behind and its commits don't have to
+	// be signed, then no rebasing needs to be done. When a signature is
+	// required, always rebase so that every commit is rewritten and signed.
+	if ctx.pr.CommitsBehind == 0 && ctx.signKeyID == "" {
 		return nil
 	}
 
 	// If git-replay is available, use it for performance and to preserve
 	// unknown commit headers like the "change-id" header used by Jujutsu and
-	// GitButler to track changes across rebase, amend etc.
-	if git.SupportsGitReplay {
+	// GitButler to track changes across rebase, amend etc. It cannot be used
+	// when the rebased commits have to be signed: git-replay cannot sign them.
+	if git.SupportsGitReplay && ctx.signKeyID == "" {
 		if err := git.NewCommand(ctx, "replay", "--onto").AddDynamicArguments(baseBranch).
 			AddDynamicArguments(fmt.Sprintf("%s..%s", baseBranch, stagingBranch)).
 			Run(ctx.RunOpts()); err != nil {
@@ -295,8 +298,9 @@ func rebaseTrackingOnToBase(ctx *mergeContext, mergeStyle repo_model.MergeStyle)
 		return nil
 	}
 
-	// git-replay is not available, or it failed and we want to determine the
-	// first commit that produced a merge-conflict. Fall back to regular rebase.
+	// git-replay is not available or cannot sign, or it failed and we want to
+	// determine the first commit that produced a merge-conflict. Fall back to
+	// regular rebase.
 regular_rebase:
 
 	// Checkout head branch
@@ -308,7 +312,16 @@ regular_rebase:
 	ctx.errbuf.Reset()
 
 	// Rebase before merging
-	if err := git.NewCommand(ctx, "rebase").AddDynamicArguments(baseBranch).
+	cmdRebase := git.NewCommand(ctx, "rebase")
+	if ctx.signKeyID == "" {
+		cmdRebase.AddArguments("--no-gpg-sign")
+	} else {
+		// Rewrite the commits even when the branch could be fast-forwarded, so
+		// that they all carry a signature.
+		cmdRebase.AddArguments("--force-rebase")
+		cmdRebase.AddOptionFormat("-S%s", ctx.signKeyID)
+	}
+	if err := cmdRebase.AddDynamicArguments(baseBranch).
 		Run(ctx.RunOpts()); err != nil {
 		// Rebase will leave a REBASE_HEAD file in .git if there is a conflict
 		if _, statErr := os.Stat(filepath.Join(ctx.tmpBasePath, ".git", "REBASE_HEAD")); statErr == nil {
