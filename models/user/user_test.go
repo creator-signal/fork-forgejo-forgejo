@@ -1115,3 +1115,13 @@ func TestGetUserByEmailSimple(t *testing.T) {
 		assert.Nil(t, u)
 	})
 }
+
+func TestGetFederatedUserByUserID(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	t.Run("No federated user found", func(t *testing.T) {
+		badID := int64(-1)
+		_, _, err := user_model.GetFederatedUserByUserID(t.Context(), badID)
+		require.ErrorContains(t, err, fmt.Sprintf("user ID: %v", badID))
+	})
+}

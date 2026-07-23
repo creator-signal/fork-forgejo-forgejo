@@ -137,6 +137,7 @@ func FindFederatedUsersByHostID(ctx context.Context, federationHostID int64, opt
 func GetFederatedUserByUserID(ctx context.Context, userID int64) (*User, *FederatedUser, error) {
 	federatedUser := new(FederatedUser)
 	user := new(User)
+	federatedUser.UserID = userID
 	has, err := db.GetEngine(ctx).Where("user_id=?", userID).Get(federatedUser)
 	if err != nil {
 		return nil, nil, err
