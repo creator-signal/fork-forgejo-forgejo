@@ -73,7 +73,14 @@ func doMergeRebaseFastForward(ctx *mergeContext) error {
 	}
 
 	if newMessage != "" {
-		if err := git.NewCommand(ctx, "commit", "--amend").AddOptionFormat("--message=%s", newMessage).Run(&git.RunOpts{Dir: ctx.tmpBasePath}); err != nil {
+		// Amending rewrites the tip commit, so it has to be signed again.
+		cmdAmend := git.NewCommand(ctx, "commit", "--amend").AddOptionFormat("--message=%s", newMessage)
+		if ctx.signKeyID == "" {
+			cmdAmend.AddArguments("--no-gpg-sign")
+		} else {
+			cmdAmend.AddOptionFormat("-S%s", ctx.signKeyID)
+		}
+		if err := cmdAmend.Run(ctx.RunOpts()); err != nil {
 			log.Error("Unable to amend commit message: %v", err)
 			return err
 		}
