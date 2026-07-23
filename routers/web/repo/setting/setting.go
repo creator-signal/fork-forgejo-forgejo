@@ -987,7 +987,9 @@ func SettingsPost(ctx *context.Context) {
 
 		if err := repo_service.EnqueueRepoGC(ctx, ctx.Repo.Repository); err != nil {
 			if errors.Is(err, repo_service.ErrGCCooldown) {
-				ctx.Flash.Info(ctx.Tr("repo.settings.garbage_collection.cooldown"))
+				cooldown := time.Duration(setting.Repository.GCCooldownMinutes) * time.Minute
+				remaining := time.Until(ctx.Repo.Repository.LastGCUnix.AsTime().Add(cooldown))
+				ctx.Flash.Info(ctx.Tr("repo.settings.garbage_collection.cooldown", int(remaining.Minutes())+1))
 			} else {
 				ctx.Flash.Error(ctx.Tr("repo.settings.garbage_collection.failure"))
 				ctx.ServerError("EnqueueRepoGC", err)

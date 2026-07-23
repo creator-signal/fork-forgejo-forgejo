@@ -191,7 +191,8 @@ func TestDangerZoneConfirmation(t *testing.T) {
 
 			flashCookie := session.GetCookie(app_context.CookieNameFlash)
 			assert.NotNil(t, flashCookie)
-			assert.Equal(t, "info%3DGarbage%2Bcollection%2Bran%2Btoo%2Brecently.%2BPlease%2Bwait%2Bbefore%2Brunning%2Bagain.", flashCookie.Value)
+			assert.Contains(t, flashCookie.Value, "info%3DGarbage%2Bcollection%2Bran%2Btoo%2Brecently.%2BPlease%2Bwait%2B")
+			assert.Contains(t, flashCookie.Value, "minutes%2Bbefore%2Brunning%2Bagain.")
 		})
 	})
 
