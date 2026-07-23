@@ -69,14 +69,14 @@ func TestPushDeployKeyAuthz(t *testing.T) {
 
 			//test with full write access
 			withKeyFile(t, keynameFull, func(keyFile string) {
-				t.Run("CreatePushDeployKeyFullAccess", doAPICreateDeployKey(ctx, keynameFull, keyFile, false, false, false))
+				t.Run("CreatePushDeployKeyFullAccess", doAPICreateDeployKey(ctx, keynameFull, keyFile, false, true, true))
 				t.Run("SSHPushTestRepository", doGitPushTestRepository(dstPath, "origin", "master"))
 				t.Run("CheckIsNotEmpty", doCheckRepositoryEmptyStatus(ctx, false))
 			})
 
 			//test with only tag write access
 			withKeyFile(t, keynameTagOnly, func(keyFile string) {
-				t.Run("CreatePushDeployKeyTagOnly", doAPICreateDeployKey(ctx, keynameTagOnly, keyFile, false, true, false))
+				t.Run("CreatePushDeployKeyTagOnly", doAPICreateDeployKey(ctx, keynameTagOnly, keyFile, false, false, true))
 				t.Run("AddChanges", doAddChangesToCheckout(dstPath, "CHANGES1.md"))
 				t.Run("SSHPushTestRepository", func(t *testing.T) { doGitPushTestRepositoryFail(t, dstPath, "origin", "master") })
 				t.Run("AddTag", doGitTag(dstPath, "TestTag"))

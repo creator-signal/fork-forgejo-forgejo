@@ -16,11 +16,11 @@ type DeployKey struct {
 	Title       string `json:"title"`
 	Fingerprint string `json:"fingerprint"`
 	// swagger:strfmt date-time
-	Created        time.Time   `json:"created_at"`
-	ReadOnly       bool        `json:"read_only"`
-	ReadOnlyBranch bool        `json:"read_only_branch"`
-	ReadOnlyTag    bool        `json:"read_only_tag"`
-	Repository     *Repository `json:"repository,omitempty"`
+	Created      time.Time   `json:"created_at"`
+	ReadOnly     bool        `json:"read_only"`
+	CanWriteCode bool        `json:"can_write_code"`
+	CanWriteTags bool        `json:"can_write_tags"`
+	Repository   *Repository `json:"repository,omitempty"`
 }
 
 // CreateKeyOption options when creating a key
@@ -38,7 +38,7 @@ type CreateKeyOption struct {
 	// Describe if the key has only read access or read/write
 	//
 	// required: false
-	ReadOnly       bool `json:"read_only"`
-	ReadOnlyBranch bool `json:"read_only_branch"`
-	ReadOnlyTag    bool `json:"read_only_tag"`
+	ReadOnly     bool `json:"read_only"`
+	CanWriteCode bool `json:"can_write_code"`
+	CanWriteTags bool `json:"can_write_tags"`
 }

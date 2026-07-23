@@ -33,9 +33,9 @@ type DeployKey struct {
 	Fingerprint string
 	Content     string `xorm:"-"`
 
-	Mode       perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
-	TagMode    perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
-	BranchMode perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
+	Mode         perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
+	CanWriteTags bool
+	CanWriteCode bool
 
 	CreatedUnix       timeutil.TimeStamp `xorm:"created"`
 	UpdatedUnix       timeutil.TimeStamp `xorm:"updated"`
@@ -92,25 +92,25 @@ func checkDeployKey(ctx context.Context, keyID, repoID int64, name string) error
 }
 
 // addDeployKey adds new key-repo relation.
-func addDeployKey(ctx context.Context, keyID, repoID int64, name, fingerprint string, mode perm.AccessMode, branchMode perm.AccessMode, tagMode perm.AccessMode) (*DeployKey, error) {
+func addDeployKey(ctx context.Context, keyID, repoID int64, name, fingerprint string, mode perm.AccessMode, canWriteCode bool, canWriteTags bool) (*DeployKey, error) {
 	if err := checkDeployKey(ctx, keyID, repoID, name); err != nil {
 		return nil, err
 	}
 
 	key := &DeployKey{
-		KeyID:       keyID,
-		RepoID:      repoID,
-		Name:        name,
-		Fingerprint: fingerprint,
-		Mode:        mode,
-		BranchMode:  branchMode,
-		TagMode:     tagMode,
+		KeyID:        keyID,
+		RepoID:       repoID,
+		Name:         name,
+		Fingerprint:  fingerprint,
+		Mode:         mode,
+		CanWriteCode: canWriteCode,
+		CanWriteTags: canWriteTags,
 	}
 	return key, db.Insert(ctx, key)
 }
 
 // AddDeployKey add new deploy key to database and authorized_keys file.
-func AddDeployKey(ctx context.Context, repoID int64, name, content string, readOnly bool, readOnlyBranch bool, readOnlyTag bool) (*DeployKey, error) {
+func AddDeployKey(ctx context.Context, repoID int64, name, content string, readOnly bool, canWriteCode bool, canWriteTags bool) (*DeployKey, error) {
 	fingerprint, err := CalcFingerprint(content)
 	if err != nil {
 		return nil, err
@@ -119,16 +119,6 @@ func AddDeployKey(ctx context.Context, repoID int64, name, content string, readO
 	accessMode := perm.AccessModeRead
 	if !readOnly {
 		accessMode = perm.AccessModeWrite
-	}
-
-	accessModeBranch := perm.AccessModeRead
-	if !readOnlyBranch {
-		accessModeBranch = perm.AccessModeWrite
-	}
-
-	accessModeTag := perm.AccessModeRead
-	if !readOnlyTag {
-		accessModeTag = perm.AccessModeWrite
 	}
 
 	ctx, committer, err := db.TxContext(ctx)
@@ -158,7 +148,7 @@ func AddDeployKey(ctx context.Context, repoID int64, name, content string, readO
 		}
 	}
 
-	key, err := addDeployKey(ctx, pkey.ID, repoID, name, pkey.Fingerprint, accessMode, accessModeBranch, accessModeTag)
+	key, err := addDeployKey(ctx, pkey.ID, repoID, name, pkey.Fingerprint, accessMode, canWriteCode, canWriteTags)
 	if err != nil {
 		return nil, err
 	}

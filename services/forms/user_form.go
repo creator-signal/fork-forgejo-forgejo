@@ -326,15 +326,15 @@ type AddKeyForm struct {
 }
 
 type AddDeployKeyForm struct {
-	Type           string `binding:"OmitEmpty"`
-	Title          string `binding:"Required;MaxSize(50)"`
-	Content        string `binding:"Required"`
-	Signature      string `binding:"OmitEmpty"`
-	KeyID          string `binding:"OmitEmpty"`
-	Fingerprint    string `binding:"OmitEmpty"`
-	IsWritable     bool
-	BranchWritable bool
-	TagWritable    bool
+	Type         string `binding:"OmitEmpty"`
+	Title        string `binding:"Required;MaxSize(50)"`
+	Content      string `binding:"Required"`
+	Signature    string `binding:"OmitEmpty"`
+	KeyID        string `binding:"OmitEmpty"`
+	Fingerprint  string `binding:"OmitEmpty"`
+	IsWritable   bool
+	CanWriteCode bool
+	CanWriteTags bool
 }
 
 // Validate validates the fields

@@ -70,7 +70,7 @@ func DeployKeysPost(ctx *context.Context) {
 		return
 	}
 
-	key, err := asymkey_model.AddDeployKey(ctx, ctx.Repo.Repository.ID, form.Title, content, !form.IsWritable, !form.BranchWritable, !form.TagWritable)
+	key, err := asymkey_model.AddDeployKey(ctx, ctx.Repo.Repository.ID, form.Title, content, !form.IsWritable, form.CanWriteCode, form.CanWriteTags)
 	if err != nil {
 		ctx.Data["HasError"] = true
 		switch {

@@ -32,10 +32,12 @@ type preReceiveContext struct {
 	*app_context.PrivateContext
 
 	// loadedPusher indicates that where the following information are loaded
-	loadedPusher        bool
-	user                *user_model.User // it's the org user if a DeployKey is used
-	userPerm            access_model.Permission
-	deployKeyAccessMode perm_model.AccessMode
+	loadedPusher          bool
+	user                  *user_model.User // it's the org user if a DeployKey is used
+	userPerm              access_model.Permission
+	deployKeyAccessMode   perm_model.AccessMode
+	deployKeyCanWriteCode bool
+	deployKeyCanWriteTags bool
 
 	protectedTags    []*git_model.ProtectedTag
 	gotProtectedTags bool
@@ -273,25 +275,12 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 		return
 	}
 
-	if ctx.opts.DeployKeyID != 0 {
-		deployKey, err := asymkey_model.GetDeployKeyByID(ctx, ctx.opts.DeployKeyID)
-		if err != nil {
-			log.Error("Unable to get DeployKey id %d Error: %v", ctx.opts.DeployKeyID, err)
-			ctx.JSON(http.StatusInternalServerError, private.Response{
-				Err: fmt.Sprintf("Unable to get DeployKey id %d Error: %v", ctx.opts.DeployKeyID, err),
-			})
-			return
-		}
-
-		log.Warn("DeployKey id %d has BranchAccessMode %d, %d", ctx.opts.DeployKeyID, deployKey.BranchMode, perm_model.AccessModeWrite)
-
-		if deployKey.BranchMode < perm_model.AccessModeWrite {
-			log.Warn("DeployKey id %d is not allowed to push to branch %s", ctx.opts.DeployKeyID, branchName)
-			ctx.JSON(http.StatusForbidden, private.Response{
-				UserMsg: fmt.Sprintf("DeployKey id %d is not allowed to push to branch %s, Branch AccesMode is %d", ctx.opts.DeployKeyID, branchName, deployKey.BranchMode),
-			})
-			return
-		}
+	if !ctx.deployKeyCanWriteCode {
+		log.Warn("Forbidden: DeployKey %d is not allowed to push to branches", ctx.opts.DeployKeyID)
+		ctx.JSON(http.StatusForbidden, private.Response{
+			UserMsg: fmt.Sprintf("Forbidden: DeployKey %d is not allowed to push to branches", ctx.opts.DeployKeyID),
+		})
+		return
 	}
 
 	// Allow pushes to non-protected branches
@@ -515,6 +504,14 @@ func preReceiveTag(ctx *preReceiveContext, oldCommitID, newCommitID string, refF
 
 	tagName := refFullName.TagName()
 
+	if !ctx.deployKeyCanWriteTags {
+		log.Warn("Forbidden: DeployKey %d is not allowed to push tags", ctx.opts.DeployKeyID)
+		ctx.JSON(http.StatusForbidden, private.Response{
+			UserMsg: fmt.Sprintf("Forbidden: DeployKey %d is not allowed to push tags", ctx.opts.DeployKeyID),
+		})
+		return
+	}
+
 	if !ctx.gotProtectedTags {
 		var err error
 		ctx.protectedTags, err = git_model.GetProtectedTags(ctx, ctx.Repo.Repository.ID)
@@ -662,6 +659,12 @@ func (ctx *preReceiveContext) loadPusherAndPermission() bool {
 			return false
 		}
 		ctx.deployKeyAccessMode = deployKey.Mode
+		ctx.deployKeyCanWriteCode = deployKey.CanWriteCode
+		ctx.deployKeyCanWriteTags = deployKey.CanWriteTags
+
+		log.Info("DeployKey Can Write code %s", deployKey.CanWriteCode)
+		log.Info("DeployKey Can Write tags %s", deployKey.CanWriteTags)
+
 	}
 
 	ctx.loadedPusher = true
