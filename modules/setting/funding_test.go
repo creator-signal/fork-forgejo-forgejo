@@ -69,6 +69,9 @@ func TestFundingProviderConfigIgnoresInvalidTemplate(t *testing.T) {
 
 	for _, template := range cases {
 		cfg, err := NewConfigProviderFromData(fmt.Sprintf(`
+[funding.]
+# nop
+
 [funding.mycustom]
 TEMPLATE = "%s"
 
