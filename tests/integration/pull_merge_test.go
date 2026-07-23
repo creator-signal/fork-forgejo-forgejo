@@ -51,7 +51,6 @@ import (
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -303,9 +302,7 @@ func TestCantMergeConflict(t *testing.T) {
 		t.Run("Rebase", func(t *testing.T) {
 			t.Run("Git version without replay", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				oldVersion, err := version.NewVersion("2.43.0")
-				require.NoError(t, err)
-				defer test.MockVariableValue(&git.GitVersion, oldVersion)()
+				defer test.MockVariableValue(&git.SupportsGitReplay, false)()
 
 				err = pull.Merge(t.Context(), pr, user1, gitRepo, repo_model.MergeStyleRebase, "", "CONFLICT", false)
 				require.Error(t, err, "Merge should return an error due to conflict")
@@ -313,7 +310,7 @@ func TestCantMergeConflict(t *testing.T) {
 			})
 			t.Run("Git version with replay", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
-				if git.CheckGitVersionAtLeast("2.44") != nil {
+				if !git.SupportsGitReplay {
 					t.SkipNow()
 				}
 
