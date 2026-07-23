@@ -283,10 +283,12 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 			return
 		}
 
-		if deployKey.UnitsMode[unit.TypeCode] >= perm_model.AccessModeWrite {
+		log.Warn("DeployKey id %d has BranchAccessMode %d, %d", ctx.opts.DeployKeyID, deployKey.BranchMode, perm_model.AccessModeWrite)
+
+		if deployKey.BranchMode < perm_model.AccessModeWrite {
 			log.Warn("DeployKey id %d is not allowed to push to branch %s", ctx.opts.DeployKeyID, branchName)
 			ctx.JSON(http.StatusForbidden, private.Response{
-				UserMsg: fmt.Sprintf("DeployKey id %d is not allowed to push to branch %s", ctx.opts.DeployKeyID, branchName),
+				UserMsg: fmt.Sprintf("DeployKey id %d is not allowed to push to branch %s, Branch AccesMode is %d", ctx.opts.DeployKeyID, branchName, deployKey.BranchMode),
 			})
 			return
 		}

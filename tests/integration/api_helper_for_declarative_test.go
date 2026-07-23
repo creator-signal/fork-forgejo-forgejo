@@ -200,14 +200,16 @@ func doAPIDeleteUserKey(ctx APITestContext, keyID int64) func(*testing.T) {
 	}
 }
 
-func doAPICreateDeployKey(ctx APITestContext, keyname, keyFile string, readOnly bool) func(*testing.T) {
+func doAPICreateDeployKey(ctx APITestContext, keyname, keyFile string, readOnly bool, readOnlyBranch bool, readOnlyTag bool) func(*testing.T) {
 	return func(t *testing.T) {
 		dataPubKey, err := os.ReadFile(keyFile + ".pub")
 		require.NoError(t, err)
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/keys", ctx.Username, ctx.Reponame), api.CreateKeyOption{
-			Title:    keyname,
-			Key:      string(dataPubKey),
-			ReadOnly: readOnly,
+			Title:          keyname,
+			Key:            string(dataPubKey),
+			ReadOnly:       readOnly,
+			ReadOnlyBranch: readOnlyBranch,
+			ReadOnlyTag:    readOnlyTag,
 		}).AddTokenAuth(ctx.Token)
 
 		if ctx.ExpectedCode != 0 {
