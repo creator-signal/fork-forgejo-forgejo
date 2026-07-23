@@ -6,9 +6,16 @@ SPDX-License-Identifier: GPL-3.0-or-later
 <script>
 import {SvgIcon} from '../svg.js';
 import ActionRunStatus from './ActionRunStatus.vue';
-import {toggleElem} from '../utils/dom.js';
 import {formatDatetime} from '../utils/time.js';
 import {renderAnsiWithLinks} from '../render/ansi.js';
+import {htmlEscape} from 'escape-goat';
+
+// show/hide the step logs for a group
+window.actionJobStepToggleGroupLogs = function(event) {
+  const line = event.target.parentElement;
+  const list = line.nextSibling;
+  list.classList.toggle('hidden', event.newState !== 'open');
+};
 
 export default {
   name: 'ActionJobStep',
@@ -74,56 +81,48 @@ export default {
   methods: {
     createLogLine(line, startTime, group) {
       const lineNo = line.index - this.lineNumberOffset;
-      const div = document.createElement('div');
-      div.classList.add('job-log-line');
-      div.setAttribute('id', `jobstep-${this.stepId}-${lineNo}`);
-      div._jobLogTime = line.timestamp;
 
-      const lineNumber = document.createElement('a');
-      lineNumber.classList.add('line-num', 'muted');
-      lineNumber.textContent = lineNo;
-      lineNumber.setAttribute('href', `#jobstep-${this.stepId}-${lineNo}`);
-      div.append(lineNumber);
+      // Text chunk HTML construction is used here because it is faster than creating multiple DOM nodes, which can be
+      // relevant when viewing large collections of logs.  Special care must be taken to ensure that none of the data
+      // allows unescaped used-generated content, or else XSS-style vulnerabilities may exist.
+      const chunks = [];
+      chunks.push(
+        `<div class="job-log-line" id="jobstep-${this.stepId}-${lineNo}">`,
+        `<a class="line-num muted" href="#jobstep-${this.stepId}-${lineNo}">${lineNo}</a>`,
+      );
 
       // for "Show timestamps"
-      const logTimeStamp = document.createElement('span');
-      logTimeStamp.className = 'log-time-stamp';
       const date = new Date(parseFloat(line.timestamp * 1000));
-      const timeStamp = formatDatetime(date);
-      logTimeStamp.textContent = timeStamp;
-      toggleElem(logTimeStamp, this.timeVisibleTimestamp);
-      // for "Show seconds"
-      const logTimeSeconds = document.createElement('span');
-      logTimeSeconds.className = 'log-time-seconds';
-      const seconds = Math.floor(parseFloat(line.timestamp) - parseFloat(startTime));
-      logTimeSeconds.textContent = `${seconds}s`;
-      toggleElem(logTimeSeconds, this.timeVisibleSeconds);
+      const timeStamp = htmlEscape(formatDatetime(date));
+      const timeStampHidden = this.timeVisibleTimestamp ? '' : 'tw-hidden';
+      chunks.push(`<span class="log-time-stamp ${timeStampHidden}">${timeStamp}</span>`);
 
-      let logMessage = document.createElement('span');
-      logMessage.innerHTML = renderAnsiWithLinks(line.message);
+      const renderedMessage = renderAnsiWithLinks(line.message);
       // If the input to renderAnsi is not empty and the output is empty we can
       // assume the input was only ANSI escape codes that have been removed. In
       // that case we should not display this message
-      if (line.message !== '' && logMessage.innerHTML === '') {
+      if (line.message !== '' && renderedMessage === '') {
         this.lineNumberOffset++;
         return [];
       }
+
       if (group.isHeader) {
-        const details = document.createElement('details');
-        details.addEventListener('toggle', this.toggleGroupLogs);
-        const summary = document.createElement('summary');
-        summary.append(logMessage);
-        details.append(summary);
-        logMessage = details;
+        chunks.push(`<details class="log-msg" style="padding-left: ${group.depth}em" ontoggle="actionJobStepToggleGroupLogs(event)"><summary><span>${renderedMessage}</span></summary></details>`);
+      } else {
+        chunks.push(`<span class="log-msg" style="padding-left: ${group.depth}em">${renderedMessage}</span>`);
       }
-      logMessage.className = 'log-msg';
-      logMessage.style.paddingLeft = `${group.depth}em`;
 
-      div.append(logTimeStamp);
-      div.append(logMessage);
-      div.append(logTimeSeconds);
+      // for "Show seconds"
+      const secondsHidden = this.timeVisibleSeconds ? "" : "tw-hidden";
+      const seconds = Math.floor(parseFloat(line.timestamp) - parseFloat(startTime));
+      chunks.push(
+        `<span class="log-time-seconds ${secondsHidden}">${seconds}s</span>`,
+        '</div>',
+      );
 
-      return div;
+      const tmpl = document.createElement('template');
+      tmpl.innerHTML = chunks.join('');
+      return tmpl.content.firstElementChild;
     },
 
     appendLogs(logLines, startTime) {
