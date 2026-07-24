@@ -125,7 +125,7 @@ export default {
       return tmpl.content.firstElementChild;
     },
 
-    appendLogs(logLines, startTime) {
+    async appendLogs(logLines, startTime) {
       this.lineNumberOffset = 0;
 
       const groupStack = [];
@@ -158,6 +158,23 @@ export default {
           groupStack.pop();
         } else {
           el.append(this.createLogLine(line, startTime, group));
+        }
+
+        // When a user opens up a completed action step with many (100k+) log entries, we can end up invoking
+        // `appendLogs` with big chunks of data.  When a long JS tasks runs, it causes the browser UI to freeze up.  In
+        // order to provide a responsive user experience, invoke `scheduler.yield()` occasionally to allow the browser
+        // to suspend this task, layout and display the contents that have been updated, and then return to the task to
+        // continue appending more log lines.  Every 1000 lines is an frequency derived from experimental testing when
+        // viewing 100,000 log lines -- the more we yield the longer the overall process takes, and the less we yield
+        // the more the UI appears frozen.
+        //
+        // `scheduler.yield` is not supported in Safari, so its availability is checked before executing.
+        //
+        // The downside of yielding is that the logs appear in the browser while we're still appending them -- if you
+        // immediately do a "Find in page" search for something, you might not find results that are present and just
+        // haven't been rendered yet.
+        if ((line.index % 1000) === 0 && typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+          await scheduler.yield();
         }
       }
     },
