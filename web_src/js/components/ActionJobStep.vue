@@ -113,8 +113,8 @@ export default {
       }
 
       // for "Show seconds"
-      const secondsHidden = this.timeVisibleSeconds ? "" : "tw-hidden";
-      const seconds = Math.floor(parseFloat(line.timestamp) - parseFloat(startTime));
+      const secondsHidden = this.timeVisibleSeconds ? '' : 'tw-hidden';
+      const seconds = Math.max(Math.floor(parseFloat(line.timestamp) - parseFloat(startTime), 0));
       chunks.push(
         `<span class="log-time-seconds ${secondsHidden}">${seconds}s</span>`,
         '</div>',
