@@ -1,4 +1,5 @@
 // Copyright 2018 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package cmd
@@ -6,7 +7,6 @@ package cmd
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -33,39 +33,41 @@ func cmdKeys() *cli.Command {
 				Usage:   "Expected user for whom provide key commands",
 			},
 			&cli.StringFlag{
-				Name:    "username",
-				Aliases: []string{"u"},
-				Value:   "",
-				Usage:   "Username trying to log in by SSH",
+				Name:     "username",
+				Aliases:  []string{"u"},
+				Value:    "",
+				Usage:    "Username trying to log in by SSH",
+				Required: true,
 			},
 			&cli.StringFlag{
-				Name:    "type",
-				Aliases: []string{"t"},
-				Value:   "",
-				Usage:   "Type of the SSH key provided to the SSH Server (requires content to be provided too)",
+				Name:     "type",
+				Aliases:  []string{"t"},
+				Value:    "",
+				Usage:    "Type of the SSH key provided to the SSH Server",
+				Required: true,
 			},
 			&cli.StringFlag{
-				Name:    "content",
-				Aliases: []string{"k"},
-				Value:   "",
-				Usage:   "Base64 encoded content of the SSH key provided to the SSH Server (requires type to be provided too)",
+				Name:     "content",
+				Aliases:  []string{"k"},
+				Value:    "",
+				Usage:    "Base64 encoded content of the SSH key provided to the SSH Server",
+				Required: true,
 			},
 		},
 	}
 }
 
 func runKeys(ctx context.Context, c *cli.Command) error {
-	if !c.IsSet("username") {
-		return errors.New("No username provided")
-	}
 	// Check username matches the expected username
 	if strings.TrimSpace(c.String("username")) != strings.TrimSpace(c.String("expected")) {
 		return nil
 	}
 
+	// Decode content and parse it a SSH public key, verify the type is what was
+	// given to us.
 	key, err := base64.StdEncoding.DecodeString(c.String("content"))
 	if err != nil {
-		return err
+		return fmt.Errorf("is not valid base64 encoded content: %w", err)
 	}
 	publicKey, err := ssh.ParsePublicKey(key)
 	if err != nil {
