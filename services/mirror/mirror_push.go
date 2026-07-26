@@ -227,7 +227,7 @@ func runPushSync(ctx context.Context, m *repo_model.PushMirror) error {
 			defer gitRepo.Close()
 
 			endpoint := lfs.DetermineEndpoint(remoteURL.String(), "")
-			lfsClient := lfs.NewClient(endpoint, migrations_allowlist.NewMigrationHTTPTransport())
+			lfsClient := lfs.NewClient(endpoint, migrations_allowlist.NewMigrationHTTPTransport().Transport)
 			if err := pushAllLFSObjects(ctx, gitRepo, lfsClient); err != nil {
 				return util.SanitizeErrorCredentialURLs(err)
 			}
