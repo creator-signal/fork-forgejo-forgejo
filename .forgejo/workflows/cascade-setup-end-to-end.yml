@@ -1,6 +1,9 @@
 # Copyright 2024 The Forgejo Authors
 # SPDX-License-Identifier: MIT
 #
+# secrets.END_TO_END_CASCADING_PR_ORIGIN: <generated from codeberg.org/forgejo-end-to-end> scope write:issue, write:repository, read:user
+# secrets.END_TO_END_CASCADING_PR_DESTINATION: <generated from code.forgejo.org/cascading-pr> scope write:repository, write:issues
+#
 # To modify this workflow:
 #
 #  - push it to the wip-ci-end-to-end branch on the forgejo repository

@@ -1,3 +1,5 @@
+# secrets.MIRROR_TOKEN: <generated from code.forgejo.org/forgejo-mirror> scope write:repository
+
 name: mirror
 
 on:

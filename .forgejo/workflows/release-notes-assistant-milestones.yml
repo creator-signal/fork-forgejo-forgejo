@@ -1,3 +1,6 @@
+# secrets.RELEASE_NOTES_ASSISTANT_TOKEN: <generated from codeberg.org/forgejo-release-notes-assistant> scope write:issues
+# codeberg.org/forgejo-release-notes-assistant is a member of https://codeberg.org/org/forgejo/teams/contributors
+
 on:
   workflow_dispatch:
 

@@ -1,6 +1,9 @@
 # Copyright 2024 The Forgejo Authors
 # SPDX-License-Identifier: MIT
 #
+# secrets.SET_MILESTONE_TOKEN: <generated from codeberg.org/forgejo-release-notes-assistant> scope write:issue, write:repository, read:user
+# codeberg.org/forgejo-release-notes-assistant is a member of https://codeberg.org/org/forgejo/teams/contributors
+#
 name: milestone
 
 on:
