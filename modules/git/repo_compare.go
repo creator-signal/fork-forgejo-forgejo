@@ -330,7 +330,6 @@ func (repo *Repository) GetFilesChangedBetween(base, head string) ([]string, err
 	} else {
 		cmd.AddDynamicArguments(base, head)
 	}
-	logger.Info("%s", cmd.toString(true))
 	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
 	if err != nil {
 		logger.Error("error :( %s", err)

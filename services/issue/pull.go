@@ -105,12 +105,10 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 // complete flag is false when rule matching was cut short by the match budget, so
 // the returned slice is only a partial set of the matching rules.
 func getMatchingCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_model.PullRequest) (matchingRules []*issues_model.CodeOwnerRule, complete bool, err error) {
-	log.Info("LOADING RULES")
 	rules, err := getCodeOwnerRules(ctx, repo, pr)
 	if err != nil {
 		return nil, false, err
 	}
-	log.Info("OK")
 	if len(rules) == 0 {
 		return nil, true, nil
 	}
@@ -118,14 +116,12 @@ func getMatchingCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *is
 	// get the mergebase
 	mergeBase := pr.MergeBase
 
-	log.Info("GOT MERGEBASE")
 	// https://github.com/go-gitea/gitea/issues/29763, we need to get the files changed
 	// between the merge base and the head commit but not the base branch and the head commit
-	changedFiles, err := repo.GetFilesChangedBetween(mergeBase, pr.HeadCommitID)
+	changedFiles, err := repo.GetFilesChangedBetween(mergeBase, pr.GetGitRefName())
 	if err != nil {
 		return nil, false, err
 	}
-	log.Info("GOT CHANGES")
 
 	matchingRules = make([]*issues_model.CodeOwnerRule, 0)
 	complete = true
@@ -190,7 +186,6 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 	if len(matchingRules) == 0 {
 		return true
 	}
-
 	// OfficialOnly is intentionally false here: a code owner's approval satisfies this gate
 	// even if it wouldn't count as an "official" review toward RequiredApprovals (e.g. the
 	// owner lacks write access, or isn't on the approvals whitelist). Unlike the other
@@ -220,9 +215,9 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 
 	for _, rule := range matchingRules {
 		ruleReviewers := make([]*user_model.User, 0, len(rule.Users))
-		for _, u := range rule.Users {
-			if u.ID != pr.Issue.PosterID {
-				ruleReviewers = append(ruleReviewers, u)
+		for _, user := range rule.Users {
+			if user.ID != pr.Issue.PosterID {
+				ruleReviewers = append(ruleReviewers, user)
 			}
 		}
 		for _, t := range rule.Teams {

@@ -367,8 +367,9 @@ func TestPullView_CodeOwner(t *testing.T) {
 		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
 			Files: forgery.MapFS{
 				"README.md":  forgery.MapFile("# Hello CodeOwner\n"),
-				"CODEOWNERS": forgery.MapFile("README.md @user5\n"),
+				"CODEOWNERS": forgery.MapFile("README.md @user5\nuser8-file.md @user8\n"),
 			},
+			Name: "test_codeowner",
 		})
 		protectBranch := git_model.ProtectedBranch{
 			BlockOnCodeownerReviews: true,
@@ -383,7 +384,7 @@ func TestPullView_CodeOwner(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			// create a new branch to prepare for pull request
-			resp, err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
+			_, err := updateFileInBranch(user2, repo, "README.md", "codeowner-basebranch",
 				strings.NewReader("# This is a new project\n"),
 			)
 			require.NoError(t, err)
@@ -407,13 +408,23 @@ func TestPullView_CodeOwner(t *testing.T) {
 			prUpdated2 := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 			require.NoError(t, prUpdated2.LoadIssue(db.DefaultContext))
 			require.Equal(t, "Test Pull Request2", prUpdated2.Issue.Title)
+			resp, err := files_service.ChangeRepoFiles(t.Context(), repo, user2, &files_service.ChangeRepoFilesOptions{
+				OldBranch: "codeowner-basebranch",
+				Files: []*files_service.ChangeRepoFile{
+					{
+						Operation:     "create",
+						TreePath:      "user8-file.md",
+						ContentReader: strings.NewReader("# This is a new project2\n"),
+					},
+				},
+			})
+			require.NoError(t, err)
 			// ensure it cannot be merged
 			hasCodeownerReviews := issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
 			require.False(t, hasCodeownerReviews)
 
 			_, _, err = issues_model.SubmitReview(t.Context(), user5, pr.Issue, issues_model.ReviewTypeApprove, "Very good", resp.Commit.SHA, false, make([]string, 0))
 			require.NoError(t, err)
-
 			// should still fail (we also need user8)
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
 			require.False(t, hasCodeownerReviews)
