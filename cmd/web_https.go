@@ -12,8 +12,6 @@ import (
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
-
-	"github.com/klauspost/cpuid/v2"
 )
 
 var tlsVersionStringMap = map[string]uint16{
@@ -99,35 +97,6 @@ func toTLSCiphers(cipherStrings []string) []uint16 {
 	return ciphers
 }
 
-// defaultCiphers uses hardware support to check if AES is specifically
-// supported by the CPU.
-//
-// If AES is supported AES ciphers will be preferred over ChaCha based ciphers
-// (This code is directly inspired by the certmagic code.)
-func defaultCiphers() []uint16 {
-	if cpuid.CPU.Supports(cpuid.AESNI) {
-		return defaultCiphersAESfirst
-	}
-	return defaultCiphersChaChaFirst
-}
-
-var (
-	defaultCiphersAES = []uint16{
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	}
-
-	defaultCiphersChaCha = []uint16{
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-	}
-
-	defaultCiphersAESfirst    = append(defaultCiphersAES, defaultCiphersChaCha...)
-	defaultCiphersChaChaFirst = append(defaultCiphersChaCha, defaultCiphersAES...)
-)
-
 // runHTTPS listens on the provided network address and then calls
 // Serve to handle requests on incoming TLS connections.
 //
@@ -157,8 +126,6 @@ func runHTTPS(network, listenAddr, name, certFile, keyFile string, m http.Handle
 		tlsConfig.CurvePreferences = curves
 	}
 
-	// Set cipher suites
-	tlsConfig.CipherSuites = defaultCiphers()
 	if ciphers := toTLSCiphers(setting.SSLCipherSuites); len(ciphers) > 0 {
 		tlsConfig.CipherSuites = ciphers
 	}
