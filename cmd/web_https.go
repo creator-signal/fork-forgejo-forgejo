@@ -117,11 +117,6 @@ func runHTTPS(network, listenAddr, name, certFile, keyFile string, m http.Handle
 		tlsConfig.MaxVersion = version
 	}
 
-	// Set curve preferences
-	tlsConfig.CurvePreferences = []tls.CurveID{
-		tls.X25519,
-		tls.CurveP256,
-	}
 	if curves := toCurvePreferences(setting.SSLCurvePreferences); len(curves) > 0 {
 		tlsConfig.CurvePreferences = curves
 	}
