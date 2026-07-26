@@ -113,10 +113,11 @@ func LoadBuiltInFundingProviders() {
 	anythingRegex := regexp.MustCompile(anythingPattern)
 
 	// built-in providers are largely based on github's list at <https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository#about-funding-files>
+	// `polar` is intentionally omitted, see https://codeberg.org/forgejo/forgejo/pulls/13361#issuecomment-20078290
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "community_bridge", // aka LFX Mentorship, but the config calls it community_bridge for compat
 		Title:        "funding.communitybridge.org/projects/%[1]s",
-		Template:     "https://funding.communitybridge.org/projects/%[1]s", // we might consider using the new URL here if their redirect ever breaks
+		Template:     "https://crowdfunding.linuxfoundation.org/initiatives/%[1]s", // originally https://funding.communitybridge.org/projects/*
 		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
@@ -160,12 +161,6 @@ func LoadBuiltInFundingProviders() {
 		Title:        "tidelift.com/funding/github/%[1]s",
 		Template:     "https://tidelift.com/funding/github/%[1]s",
 		InputPattern: twoSegmentRegex,
-	})
-	addFundingProvider(FundingProviders, &FundingProviderConfig{
-		Name:         "polar",
-		Title:        "polar.sh/%[1]s",
-		Template:     "https://polar.sh/%[1]s",
-		InputPattern: singleSegmentRegex,
 	})
 	addFundingProvider(FundingProviders, &FundingProviderConfig{
 		Name:         "buy_me_a_coffee",
