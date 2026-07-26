@@ -220,19 +220,19 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 				ruleReviewers = append(ruleReviewers, user)
 			}
 		}
-		for _, t := range rule.Teams {
-			members, ok := teamMembersByID[t.ID]
+		for _, team := range rule.Teams {
+			members, ok := teamMembersByID[team.ID]
 			if !ok {
-				if err := t.LoadMembers(ctx); err != nil {
-					log.Error("HasAllRequiredCodeownerReviews: failed to load members of team %d for PR %d: %v", t.ID, pr.ID, err)
+				if err := team.LoadMembers(ctx); err != nil {
+					log.Error("HasAllRequiredCodeownerReviews: failed to load team members of %d for PR %d: %v", team.ID, pr.ID, err)
 					return false
 				}
-				members = t.Members
-				teamMembersByID[t.ID] = members
+				members = team.Members
+				teamMembersByID[team.ID] = members
 			}
-			for _, m := range members {
-				if m.ID != pr.Issue.PosterID {
-					ruleReviewers = append(ruleReviewers, m)
+			for _, member := range members {
+				if member.ID != pr.Issue.PosterID {
+					ruleReviewers = append(ruleReviewers, member)
 				}
 			}
 		}
