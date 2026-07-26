@@ -1,7 +1,7 @@
 package forgejo_migrations
 
 import (
-	"xorm.io/xorm"
+	"code.forgejo.org/xorm/xorm"
 )
 
 func init() {

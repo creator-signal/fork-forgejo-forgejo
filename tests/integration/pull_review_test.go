@@ -367,7 +367,7 @@ func TestPullView_CodeOwner(t *testing.T) {
 		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
 			Files: forgery.MapFS{
 				"README.md":  forgery.MapFile("# Hello CodeOwner\n"),
-				"CODEOWNERS": forgery.MapFile("README.md @user5\nuser8-file.md @user8\n"),
+				"CODEOWNERS": forgery.MapFile("README.md @user5\nuser8-file.md @user8\nboth.md @user8 @user5"),
 			},
 			Name: "test_codeowner",
 		})
@@ -444,7 +444,8 @@ func TestPullView_CodeOwner(t *testing.T) {
 			require.False(t, hasCodeownerReviews)
 		})
 
-		t.Run("Dismissed Code Owner Review", func(t *testing.T) {
+		t.Run("Dismissed Codeowner Review", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
 			_, err := files_service.ChangeRepoFiles(t.Context(), repo, user2, &files_service.ChangeRepoFilesOptions{
 				NewBranch: "codeowner-dismiss-branch",
 				Files: []*files_service.ChangeRepoFile{
@@ -484,6 +485,47 @@ func TestPullView_CodeOwner(t *testing.T) {
 
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
 			require.False(t, hasCodeownerReviews)
+		})
+
+		t.Run("Codeowner Edits Own", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+			_, err := files_service.ChangeRepoFiles(t.Context(), repo, user2, &files_service.ChangeRepoFilesOptions{
+				NewBranch: "codeowner-edit-own-branch",
+				Files: []*files_service.ChangeRepoFile{
+					{
+						Operation:     "update",
+						TreePath:      "README.md",
+						ContentReader: strings.NewReader("# New README content but AGAIN *gasp*\n"),
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			session := loginUser(t, "user5")
+			testPullCreate(t, session, repo.OwnerName, repo.Name, false, repo.DefaultBranch, "codeowner-edit-own-branch", "codeowner-edit-own-branch")
+			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: repo.ID, HeadBranch: "codeowner-edit-own-branch"})
+
+			require.True(t, issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr))
+
+			_, err = files_service.ChangeRepoFiles(t.Context(), repo, user2, &files_service.ChangeRepoFilesOptions{
+				NewBranch: "codeowner-edit-own-and-other-branch",
+				Files: []*files_service.ChangeRepoFile{
+					{
+						Operation:     "create",
+						TreePath:      "both.md",
+						ContentReader: strings.NewReader("both\n"),
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			testPullCreate(t, session, repo.OwnerName, repo.Name, false, repo.DefaultBranch, "codeowner-edit-own-and-other-branch", "codeowner-edit-own-and-other-branch\"")
+			pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{BaseRepoID: repo.ID, HeadBranch: "codeowner-edit-own-and-other-branch"})
+			require.False(t, issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr))
+
+			_, _, err = issues_model.SubmitReview(t.Context(), user8, pr.Issue, issues_model.ReviewTypeApprove, " LGTM", "", false, make([]string, 0))
+			require.NoError(t, err)
+			require.True(t, issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr))
 		})
 
 		// change the default branch CODEOWNERS file to change README.md's codeowner
