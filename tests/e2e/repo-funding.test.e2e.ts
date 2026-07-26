@@ -87,11 +87,7 @@ test('Repo funding config: no error on valid config file view', async ({browser}
   await expect(page.locator('.ui.error.message')).toBeHidden();
 });
 
-test('Funding modal (repo)', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal (repo)', async ({page}) => {
   // hidden on repo without funding config
   let response = await page.goto('/user2/long-diff-test', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
@@ -137,11 +133,7 @@ const appearanceCases = [
   {kind: 'org/.profile', badUrl: '/org25', goodUrl: '/org6/.profile', heading: 'Sponsor Org Six'},
 ] as const;
 for (const testCase of appearanceCases) {
-  test(`Donation button (${testCase.kind}): appears when a profile has a valid funding config`, async ({browser}) => {
-    // this test doesn't need JS
-    const context = await browser.newContext({javaScriptEnabled: false});
-    const page = await context.newPage();
-
+  test(`Donation button (${testCase.kind}): appears when a profile has a valid funding config`, async ({page}) => {
     // user/org without a funding config has no special button
     let response = await page.goto(testCase.badUrl, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
@@ -259,11 +251,7 @@ for (const testCase of [
   }
 }
 
-test('Funding modal: closes on Esc', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal: closes on Esc', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -276,11 +264,7 @@ test('Funding modal: closes on Esc', async ({browser}) => {
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: closes on outside click', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal: closes on outside click', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -291,17 +275,13 @@ test('Funding modal: closes on outside click', async ({browser}) => {
 
   // not sure if it's possible to select ::backdrop here, so we manually click just outside of the bounding box for the same effect
   const box = await fundingModal.boundingBox();
-  await page.mouse.click(box.x + 1, box.y + 1); // clicking the modal itself does nothing
+  await page.mouse.click(box.x + 2, box.y + 2); // clicking the modal itself does nothing
   await expect(fundingModal).toBeVisible();
   await page.mouse.click(box.x - 1, box.y);
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: closes on Close button', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal: closes on Close button', async ({page}) => {
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -314,11 +294,7 @@ test('Funding modal: closes on Close button', async ({browser}) => {
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: links to config file on error', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal: links to config file on error', async ({page}) => {
   const response = await page.goto('/user2/funding_some_valid', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -347,11 +323,7 @@ test('Funding modal: links to config file on error', async ({browser}) => {
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
 });
 
-test('Funding modal (repo): mitigates XSS', async ({browser}) => {
-  // this test doesn't need JS
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-
+test('Funding modal (repo): mitigates XSS', async ({page}) => {
   const response = await page.goto('/user2/funding_evil', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
