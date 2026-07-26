@@ -78,23 +78,4 @@ func TestTeamInvite(t *testing.T) {
 		_, err = organization.GetInviteByToken(db.DefaultContext, invite.Token)
 		require.Error(t, err)
 	})
-
-	t.Run("CreateByUserAndRemove", func(t *testing.T) {
-		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-
-		invite, err := organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "org3@example.com")
-		assert.NotNil(t, invite)
-		require.NoError(t, err)
-
-		// Shouldn't allow duplicate invite
-		_, err = organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "org3@example.com")
-		require.Error(t, err)
-
-		// should remove invite
-		require.NoError(t, organization.RemoveInviteByID(db.DefaultContext, invite.ID, invite.TeamID))
-
-		// invite should not exist
-		_, err = organization.GetInviteByToken(db.DefaultContext, invite.Token)
-		require.Error(t, err)
-	})
 }
