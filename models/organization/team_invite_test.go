@@ -11,6 +11,7 @@ import (
 	"forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
@@ -122,5 +123,54 @@ func TestTeamInvite(t *testing.T) {
 		// Shouldn't allow duplicate invite
 		_, err = organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "org3@example.com")
 		require.Error(t, err)
+	})
+
+	t.Run("RecreateByUserAfterExpiration", func(t *testing.T) {
+		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user12 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 12})
+
+		invite, err := organization.CreateTeamInviteForUser(db.DefaultContext, user1, user12, team)
+		assert.NotNil(t, invite)
+		require.NoError(t, err)
+		// manually make the invite expire
+		_, err = db.GetEngine(t.Context()).Table("team_invite").Cols("expiry_unix").Update(
+			&organization.TeamInvite{ExpiryUnix: optional.Some(timeutil.TimeStamp(int64(timeutil.TimeStampNow()) - 500))},
+		)
+		require.NoError(t, err)
+
+		// Creating the invite again succeeds
+		newInvite, err := organization.CreateTeamInviteForUser(db.DefaultContext, user1, user12, team)
+		require.NoError(t, err)
+		assert.Equal(t, newInvite.InvitedUser, user12)
+		assert.False(t, newInvite.IsExpired())
+
+		// The previous invite is deleted
+		oldInviteExists, err := db.GetEngine(t.Context()).Exist(&organization.TeamInvite{ID: invite.ID})
+		require.NoError(t, err)
+		assert.False(t, oldInviteExists)
+	})
+
+	t.Run("RecreateByEmailAfterExpiration", func(t *testing.T) {
+		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+		invite, err := organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "hello@example.com")
+		assert.NotNil(t, invite)
+		require.NoError(t, err)
+		// manually make the invite expire
+		_, err = db.GetEngine(t.Context()).Table("team_invite").Cols("expiry_unix").Update(
+			&organization.TeamInvite{ExpiryUnix: optional.Some(timeutil.TimeStamp(int64(timeutil.TimeStampNow()) - 500))},
+		)
+		require.NoError(t, err)
+
+		// Creating the invite again succeeds
+		newInvite, err := organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "hello@example.com")
+		require.NoError(t, err)
+		assert.Equal(t, "hello@example.com", newInvite.Email)
+		assert.False(t, newInvite.IsExpired())
+
+		// The previous invite is deleted
+		oldInviteExists, err := db.GetEngine(t.Context()).Exist(&organization.TeamInvite{ID: invite.ID})
+		require.NoError(t, err)
+		assert.False(t, oldInviteExists)
 	})
 }

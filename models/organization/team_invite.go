@@ -108,17 +108,25 @@ type TeamInvite struct {
 
 // CreateTeamInviteByEmail creates a TeamInvite for someone who does not have an account yet.
 func CreateTeamInviteByEmail(ctx context.Context, doer *user_model.User, team *Team, email string) (*TeamInvite, error) {
-	has, err := db.GetEngine(ctx).Exist(&TeamInvite{
+	existingInvite := TeamInvite{
 		TeamID: team.ID,
 		Email:  email,
-	})
+	}
+	has, err := db.GetEngine(ctx).Get(&existingInvite)
 	if err != nil {
 		return nil, err
 	}
 	if has {
-		return nil, ErrTeamInviteAlreadyExist{
-			TeamID: team.ID,
-			Email:  email,
+		if existingInvite.IsExpired() {
+			_, err := db.GetEngine(ctx).Delete(&existingInvite)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, ErrTeamInviteAlreadyExist{
+				TeamID: team.ID,
+				Email:  email,
+			}
 		}
 	}
 
@@ -158,17 +166,25 @@ func CreateTeamInviteByEmail(ctx context.Context, doer *user_model.User, team *T
 
 // CreateTeamInviteForUser creates a TeamInvite for someone who already has an account on the instance.
 func CreateTeamInviteForUser(ctx context.Context, doer, invited *user_model.User, team *Team) (*TeamInvite, error) {
-	has, err := db.GetEngine(ctx).Exist(&TeamInvite{
+	existingInvite := TeamInvite{
 		TeamID:    team.ID,
 		InvitedID: optional.Some(invited.ID),
-	})
+	}
+	has, err := db.GetEngine(ctx).Get(&existingInvite)
 	if err != nil {
 		return nil, err
 	}
 	if has {
-		return nil, ErrTeamInviteAlreadyExist{
-			TeamID: team.ID,
-			Email:  invited.Email,
+		if existingInvite.IsExpired() {
+			_, err := db.GetEngine(ctx).Delete(&existingInvite)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, ErrTeamInviteAlreadyExist{
+				TeamID: team.ID,
+				Email:  invited.Email,
+			}
 		}
 	}
 
