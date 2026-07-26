@@ -30,9 +30,9 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
+	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	repo_module "forgejo.org/modules/repository"
-	"forgejo.org/modules/structs"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	issue_service "forgejo.org/services/issue"
@@ -42,6 +42,7 @@ import (
 	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -376,7 +377,7 @@ func TestPullView_CodeOwner(t *testing.T) {
 			CanPush:                 true,
 		}
 		err := git_model.UpdateProtectBranch(t.Context(), repo, &protectBranch, git_model.WhitelistOptions{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		t.Run("First Pull Request", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -405,31 +406,31 @@ func TestPullView_CodeOwner(t *testing.T) {
 			require.NoError(t, err)
 			prUpdated2 := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: pr.ID})
 			require.NoError(t, prUpdated2.LoadIssue(db.DefaultContext))
-			assert.Equal(t, "Test Pull Request2", prUpdated2.Issue.Title)
+			require.Equal(t, "Test Pull Request2", prUpdated2.Issue.Title)
 			// ensure it cannot be merged
 			hasCodeownerReviews := issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.False(t, hasCodeownerReviews)
+			require.False(t, hasCodeownerReviews)
 
 			_, _, err = issues_model.SubmitReview(t.Context(), user5, pr.Issue, issues_model.ReviewTypeApprove, "Very good", resp.Commit.SHA, false, make([]string, 0))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// should still fail (we also need user8)
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.False(t, hasCodeownerReviews)
+			require.False(t, hasCodeownerReviews)
 
 			_, _, err = issues_model.SubmitReview(t.Context(), user8, pr.Issue, issues_model.ReviewTypeApprove, "Very good", resp.Commit.SHA, false, make([]string, 0))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// now we should be able to merge
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.True(t, hasCodeownerReviews)
+			require.True(t, hasCodeownerReviews)
 
 			// a later requested-changes review from a required code owner must override
 			// that user's earlier approval and no longer satisfy the requirement
 			_, _, err = issues_model.SubmitReview(t.Context(), user5, pr.Issue, issues_model.ReviewTypeReject, "Needs changes", resp.Commit.SHA, false, make([]string, 0))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.False(t, hasCodeownerReviews)
+			require.False(t, hasCodeownerReviews)
 		})
 
 		t.Run("Dismissed Code Owner Review", func(t *testing.T) {
@@ -443,7 +444,7 @@ func TestPullView_CodeOwner(t *testing.T) {
 					},
 				},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			session := loginUser(t, "user2")
 			testPullCreate(t, session, "user2", "test_codeowner", false, repo.DefaultBranch, "codeowner-dismiss-branch", "Test Code Owner Dismissal")
@@ -452,26 +453,26 @@ func TestPullView_CodeOwner(t *testing.T) {
 			unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID, Type: issues_model.ReviewTypeRequest, ReviewerID: 5})
 
 			hasCodeownerReviews := issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.False(t, hasCodeownerReviews)
+			require.False(t, hasCodeownerReviews)
 
 			_, _, err = issues_model.SubmitReview(t.Context(), user5, pr.Issue, issues_model.ReviewTypeApprove, " LGTM", "", false, make([]string, 0))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.True(t, hasCodeownerReviews)
+			require.True(t, hasCodeownerReviews)
 
 			review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{IssueID: pr.IssueID, ReviewerID: 5, Type: issues_model.ReviewTypeApprove})
-			assert.False(t, review.Dismissed)
+			require.False(t, review.Dismissed)
 
 			err = issues_model.DismissReview(t.Context(), review, true)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			review, err = issues_model.GetReviewByID(t.Context(), review.ID)
-			assert.NoError(t, err)
-			assert.True(t, review.Dismissed)
+			require.NoError(t, err)
+			require.True(t, review.Dismissed)
 
 			hasCodeownerReviews = issue_service.HasAllRequiredCodeownerReviews(t.Context(), &protectBranch, pr)
-			assert.False(t, hasCodeownerReviews)
+			require.False(t, hasCodeownerReviews)
 		})
 
 		// change the default branch CODEOWNERS file to change README.md's codeowner
@@ -542,7 +543,13 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 		forkedRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user1", Name: "repo1"})
 		baseGitRepo, err := gitrepo.OpenRepository(db.DefaultContext, baseRepo)
 		require.NoError(t, err)
-		defer baseGitRepo.Close()
+		defer func(repo *git.Repository) {
+			err := repo.Close()
+			if err != nil {
+				log.Error("PullRequestCodeOwnersReview: failed to close repo %s", err)
+				return
+			}
+		}(baseGitRepo)
 
 		t.Run("Submit approve/reject review on merged PR", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -579,7 +586,7 @@ func TestPullView_GivenApproveOrRejectReviewOnClosedPR(t *testing.T) {
 			resp := testPullCreate(t, user1Session, "user1", "repo1", false, "master", "a-test-branch", "This is a pull title")
 			elem := strings.Split(test.RedirectURL(resp), "/")
 			assert.Equal(t, "pulls", elem[3])
-			testIssueClose(t, user1Session, elem[1], elem[2], elem[4], true)
+			testIssueClose(t, user1Session, elem[1], elem[2], elem[4])
 
 			// Get the commit SHA
 			pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{
@@ -609,7 +616,13 @@ func TestPullReview_OldLatestCommitId(t *testing.T) {
 
 	baseGitRepo, err := gitrepo.OpenRepository(db.DefaultContext, baseRepo)
 	require.NoError(t, err)
-	defer baseGitRepo.Close()
+	defer func(repo *git.Repository) {
+		err := repo.Close()
+		if err != nil {
+			log.Error("PullRequestCodeOwnersReview: failed to close repo %s", err)
+			return
+		}
+	}(baseGitRepo)
 
 	headCommitSHA, err := baseGitRepo.GetRefCommitID(pr.GetGitRefName())
 	require.NoError(t, err)
@@ -750,7 +763,7 @@ func testSubmitReview(t *testing.T, session *TestSession, owner, repo, pullNumbe
 	return session.MakeRequest(t, req, expectedSubmitStatus)
 }
 
-func testIssueClose(t *testing.T, session *TestSession, owner, repo, issueNumber string, isPull bool) *httptest.ResponseRecorder {
+func testIssueClose(t *testing.T, session *TestSession, owner, repo, issueNumber string) *httptest.ResponseRecorder {
 	closeURL := path.Join(owner, repo, "issues", issueNumber, "comments")
 	req := NewRequestWithValues(t, "POST", closeURL, map[string]string{
 		"status": "close",
@@ -890,7 +903,7 @@ func TestPullRequestReplyMail(t *testing.T) {
 	})
 }
 
-func updateFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, newBranch string, content io.ReadSeeker) (*structs.FilesResponse, error) {
+func updateFileInBranch(user *user_model.User, repo *repo_model.Repository, treePath, newBranch string, content io.ReadSeeker) (*api.FilesResponse, error) {
 	oldBranch, err := gitrepo.GetDefaultBranch(git.DefaultContext, repo)
 	if err != nil {
 		return nil, err
@@ -2421,7 +2434,13 @@ func (tester *PullRequestCommentPlacementTester) multiLineCommentOnPreviousFromF
 func (tester *PullRequestCommentPlacementTester) getCommitParent(commitID string) string {
 	repo, err := gitrepo.OpenRepository(tester.t.Context(), tester.repo)
 	require.NoError(tester.t, err)
-	defer repo.Close()
+	defer func(repo *git.Repository) {
+		err := repo.Close()
+		if err != nil {
+			log.Error("PullRequestCodeOwnersReview: failed to close repo %s", err)
+			return
+		}
+	}(repo)
 	commit, err := repo.GetCommit(commitID)
 	require.NoError(tester.t, err)
 	require.Len(tester.t, commit.Parents, 1)
@@ -2567,7 +2586,7 @@ func nodeAttr(node *html.Node, key string) string {
 	return ""
 }
 
-func checkDiffTableRow(t *testing.T, tableRow *html.Node, rowAssertion diffTableRow) string {
+func checkDiffTableRow(tableRow *html.Node, rowAssertion diffTableRow) string {
 	switch rowAssertion.rowType {
 	case RowHasCode:
 		text := nodeText(tableRow)
@@ -2625,7 +2644,7 @@ func assertDiffTable(t *testing.T, doc *HTMLDoc, rowAssertions []diffTableRow, n
 	foundFirst := false
 	firstRowMismatches := []string{}
 	for ; tableFirstRowIndex < rows.Length(); tableFirstRowIndex++ {
-		mismatch := checkDiffTableRow(t, rows.Get(tableFirstRowIndex), rowAssertions[0])
+		mismatch := checkDiffTableRow(rows.Get(tableFirstRowIndex), rowAssertions[0])
 		if mismatch == "" {
 			foundFirst = true
 			break
@@ -2653,7 +2672,7 @@ func assertDiffTable(t *testing.T, doc *HTMLDoc, rowAssertions []diffTableRow, n
 		}
 
 		tableRow := rows.Get(tableIdx)
-		check := checkDiffTableRow(t, tableRow, assertion)
+		check := checkDiffTableRow(tableRow, assertion)
 		if check != "" {
 			assert.Failf(t, check, "test %s: row assertion at index %d couldn't be satisfied", note, idx)
 		}

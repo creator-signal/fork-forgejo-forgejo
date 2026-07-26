@@ -61,8 +61,8 @@ func TestDashboardTitleRendering(t *testing.T) {
 		_, err = issue_service.CreateIssueComment(t.Context(), user, repo, pr.Issue, "hi", nil)
 		require.NoError(t, err)
 
-		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(issue.Index)), false)
-		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(pr.Issue.Index)), true)
+		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(issue.Index)))
+		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(pr.Issue.Index)))
 
 		response := sess.MakeRequest(t, NewRequest(t, "GET", "/"), http.StatusOK)
 		htmlDoc := NewHTMLParser(t, response.Body)
@@ -97,7 +97,7 @@ func TestDashboardActionEscaping(t *testing.T) {
 		_, err := issue_service.CreateIssueComment(t.Context(), user, repo, issue, "Comment with a | in it", nil)
 		require.NoError(t, err)
 
-		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(issue.Index)), false)
+		testIssueClose(t, sess, repo.OwnerName, repo.Name, strconv.Itoa(int(issue.Index)))
 
 		response := sess.MakeRequest(t, NewRequest(t, "GET", "/"), http.StatusOK)
 		htmlDoc := NewHTMLParser(t, response.Body)

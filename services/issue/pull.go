@@ -33,10 +33,6 @@ var codeOwnerFiles = []string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNER
 // CODEOWNERS rules against all changed files for a single PR.
 const codeOwnerMatchBudget = 2 * time.Second
 
-func IsCodeOwnerFile(f string) bool {
-	return slices.Contains(codeOwnerFiles, f)
-}
-
 // Get all code owner rules for a given pr + repo combination.
 func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_model.PullRequest) ([]*issues_model.CodeOwnerRule, error) {
 	if err := pr.LoadBaseRepo(ctx); err != nil {
@@ -120,10 +116,8 @@ func getMatchingCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *is
 	}
 
 	// get the mergebase
-	var mergeBase = pr.MergeBase
-	if err != nil {
-		return nil, false, err
-	}
+	mergeBase := pr.MergeBase
+
 	log.Info("GOT MERGEBASE")
 	// https://github.com/go-gitea/gitea/issues/29763, we need to get the files changed
 	// between the merge base and the head commit but not the base branch and the head commit
@@ -148,7 +142,7 @@ ruleLoop:
 				complete = false
 				break ruleLoop
 			}
-			var matched = rule.Rule.MatchString(f) // err only happens when timeouts, any error can be considered as not matched
+			matched := rule.Rule.MatchString(f) // err only happens when timeouts, any error can be considered as not matched
 			if matched != rule.Negative {
 				matchingRules = append(matchingRules, rule)
 				break
@@ -158,6 +152,7 @@ ruleLoop:
 
 	return matchingRules, complete, nil
 }
+
 func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.ProtectedBranch, pr *issues_model.PullRequest) bool {
 	if !pb.BlockOnCodeownerReviews {
 		return true
@@ -174,7 +169,13 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 		return false
 	}
 
-	defer repo.Close()
+	defer func(repo *git.Repository) {
+		err := repo.Close()
+		if err != nil {
+			log.Error("HasAllRequiredCodeownerReviews: failed to close repo %s", err)
+			return
+		}
+	}(repo)
 
 	matchingRules, complete, err := getMatchingCodeOwnerRules(ctx, repo, pr)
 	if err != nil {
@@ -264,7 +265,6 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 }
 
 func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullRequest) ([]*ReviewRequestNotifier, error) {
-	log.Info("ENTERED PullRequestCodeOwnersReview")
 	if err := pr.LoadIssue(ctx); err != nil {
 		return nil, err
 	}
@@ -285,7 +285,13 @@ func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullReque
 		return nil, err
 	}
 	log.Info("OPENED REPO")
-	defer repo.Close()
+	defer func(repo *git.Repository) {
+		err := repo.Close()
+		if err != nil {
+			log.Error("PullRequestCodeOwnersReview: failed to close repo %s", err)
+			return
+		}
+	}(repo)
 	log.Info("CLOSED REPO")
 	// The notifier only requests reviews, so a partial (budget-truncated) rule set is
 	// acceptable here; the complete flag matters only for the merge gate.
