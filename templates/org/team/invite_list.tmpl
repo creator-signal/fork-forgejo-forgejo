@@ -1,4 +1,4 @@
-<div class="flex-list">
+<div class="flex-list invitation-list">
 	{{range .Invites}}
 		<div class="flex-item tw-items-center">
 			{{if .InvitedUser}}
@@ -24,10 +24,16 @@
 					</div>
 				{{end}}
 			</div>
-			<div class="flex-item-trailing">
+			<div class="actions">
+				{{if .IsExpired}}
+				<form action="{{$.OrgLink}}/teams/{{$.Team.LowerName | PathEscape}}/action/add" method="post">
+					<input type="hidden" name="uname" value="{{if .InvitedUser}}{{.InvitedUser.Name}}{{else}}{{.Email}}{{end}}">
+					<button class="ui button">{{ctx.Locale.Tr "org.teams.renew_invite"}}</button>
+				</form>
+				{{end}}
 				<form action="{{$.OrgLink}}/teams/{{$.Team.LowerName | PathEscape}}/action/remove_invite" method="post">
 					<input type="hidden" name="iid" value="{{.ID}}">
-					<button class="ui red button">{{ctx.Locale.Tr "org.members.remove"}}</button>
+					<button class="ui danger button">{{ctx.Locale.Tr "org.members.remove"}}</button>
 				</form>
 			</div>
 		</div>

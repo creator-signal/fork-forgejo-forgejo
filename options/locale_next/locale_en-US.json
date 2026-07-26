@@ -994,6 +994,7 @@
 	"org.teams.invite_team_member.expired_list": "Expired invitations",
 	"org.teams.invite_expires_on": "expires on %[1]s",
 	"org.teams.invited_on": "invited on %[1]s",
+	"org.teams.renew_invite": "Renew",
 	"markup.filepreview.line": "Line %[1]d in %[2]s",
 	"markup.filepreview.lines": "Lines %[1]d to %[2]d in %[3]s",
 	"markup.filepreview.truncated": "Preview has been truncated",
