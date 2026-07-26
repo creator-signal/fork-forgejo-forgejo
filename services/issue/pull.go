@@ -263,7 +263,6 @@ func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullReque
 	if err := pr.LoadIssue(ctx); err != nil {
 		return nil, err
 	}
-	log.Info("LOADED ISSUE")
 	issue := pr.Issue
 	if pr.IsWorkInProgress(ctx) {
 		return nil, nil
@@ -272,14 +271,12 @@ func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullReque
 	if err := pr.LoadBaseRepo(ctx); err != nil {
 		return nil, err
 	}
-	log.Info("LOADED REPO")
 	pr.Issue.Repo = pr.BaseRepo
 
 	repo, err := gitrepo.OpenRepository(ctx, pr.BaseRepo)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("OPENED REPO")
 	defer func(repo *git.Repository) {
 		err := repo.Close()
 		if err != nil {
@@ -287,14 +284,12 @@ func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullReque
 			return
 		}
 	}(repo)
-	log.Info("CLOSED REPO")
 	// The notifier only requests reviews, so a partial (budget-truncated) rule set is
 	// acceptable here; the complete flag matters only for the merge gate.
 	matchingRules, _, err := getMatchingCodeOwnerRules(ctx, repo, pr)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("LOADED RULES")
 	if len(matchingRules) == 0 {
 		return nil, nil
 	}
