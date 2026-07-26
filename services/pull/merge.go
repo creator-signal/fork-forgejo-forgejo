@@ -493,6 +493,7 @@ func IsUserAllowedToMerge(ctx context.Context, pr *issues_model.PullRequest, p a
 // CheckPullBranchProtections checks whether the PR is ready to be merged (reviews and status checks).
 // Returns the protected branch rule when `ErrDisallowedToMerge` is returned as error.
 func CheckPullBranchProtections(ctx context.Context, pr *issues_model.PullRequest, skipProtectedFilesCheck bool) (protectedBranchRule *git_model.ProtectedBranch, err error) {
+	log.Info("checking")
 	if err = pr.LoadBaseRepo(ctx); err != nil {
 		return nil, fmt.Errorf("LoadBaseRepo: %w", err)
 	}
@@ -534,6 +535,13 @@ func CheckPullBranchProtections(ctx context.Context, pr *issues_model.PullReques
 	if issues_model.MergeBlockedByOutdatedBranch(pb, pr) {
 		return pb, models.ErrDisallowedToMerge{
 			Reason: "The head branch is behind the base branch",
+		}
+	}
+
+	if (!issue_service.HasAllRequiredCodeownerReviews(ctx, pb, pr)) && pb.BlockOnCodeownerReviews {
+		log.Info("Awaiting codeowners")
+		return pb, models.ErrDisallowedToMerge{
+			Reason: "Awaiting codeowners",
 		}
 	}
 

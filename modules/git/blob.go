@@ -13,6 +13,7 @@ import (
 
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/typesniffer"
+	"forgejo.org/modules/util"
 )
 
 // Blob represents a Git object.
@@ -140,6 +141,25 @@ func (b *blobReader) Close() error {
 // Name returns name of the tree entry this blob object was created from (or empty string)
 func (b *Blob) Name() string {
 	return b.name
+}
+
+// GetBlobBytes Gets the limited content of the blob
+func (b *Blob) GetBlobBytes(limit int64) ([]byte, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	dataRc, err := b.DataAsync()
+	if err != nil {
+		return nil, err
+	}
+	defer dataRc.Close()
+	return util.ReadWithLimit(dataRc, int(limit))
+}
+
+// GetBlobContent Gets the limited content of the blob as raw text
+func (b *Blob) GetBlobContent(limit int64) (string, error) {
+	buf, err := b.GetBlobBytes(limit)
+	return string(buf), err
 }
 
 // NewReader return a blob-reader which fails immediately with [BlobTooLargeError] if the file is bigger than the limit

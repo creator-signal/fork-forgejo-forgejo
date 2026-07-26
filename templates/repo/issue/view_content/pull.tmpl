@@ -13,6 +13,7 @@
 	{{- else if .IsPullRequestBroken}}red
 	{{- else if .IsBlockedByApprovals}}red
 	{{- else if .IsBlockedByRejection}}red
+	{{- else if .IsBlockedByCodeownerReviews}}red
 	{{- else if .IsBlockedByOfficialReviewRequests}}red
 	{{- else if .IsBlockedByOutdatedBranch}}red
 	{{- else if .IsBlockedByChangedProtectedFiles}}red
@@ -114,7 +115,12 @@
 					{{ctx.Locale.Tr "repo.pulls.is_ancestor"}}
 				</div>
 			{{else if or .Issue.PullRequest.CanAutoMerge .Issue.PullRequest.IsEmpty}}
-				{{if .IsBlockedByApprovals}}
+				{{if .IsBlockedByCodeownerReviews}}
+      		<div class="item">
+      						{{svg "octicon-x"}}
+      		{{ctx.Locale.Tr "repo.pulls.blocked_by_codeowners"}}
+      		</div>
+				{{else if .IsBlockedByApprovals}}
 					<div class="item">
 						{{svg "octicon-x"}}
 						{{ctx.Locale.Tr "repo.pulls.blocked_by_approvals" .GrantedApprovals .ProtectedBranch.RequiredApprovals}}
@@ -165,7 +171,7 @@
 					</div>
 				{{end}}
 
-				{{$notAllOverridableChecksOk := or .IsBlockedByApprovals .IsBlockedByRejection .IsBlockedByOfficialReviewRequests .IsBlockedByOutdatedBranch .IsBlockedByChangedProtectedFiles (and .EnableStatusCheck (not .RequiredStatusCheckState.IsSuccess))}}
+				{{$notAllOverridableChecksOk := or .IsBlockedByApprovals .IsBlockedByRejection .IsBlockedByOfficialReviewRequests .IsBlockedByOutdatedBranch .IsBlockedByCodeownerReviews .IsBlockedByChangedProtectedFiles (and .EnableStatusCheck (not .RequiredStatusCheckState.IsSuccess))}}
 
 				{{/* admin can merge without checks, writer can merge when checks succeed */}}
 				{{$canMergeNow := and (or (and $.IsRepoAdmin (not .ProtectedBranch.ApplyToAdmins)) (not $notAllOverridableChecksOk)) (or (not .AllowMerge) (not $signingBlocksAllMergeStyles))}}
@@ -319,7 +325,12 @@
 				{{end}} {{/* end if user is allowed to merge or not */}}
 			{{else}}
 				{{/* Merge conflict without specific file. Suggest manual merge, only if all reviews and status checks OK. */}}
-				{{if .IsBlockedByApprovals}}
+				{{if .IsBlockedByCodeownerReviews}}
+					<div class="item text red">
+        		{{svg "octicon-x"}}
+        	{{ctx.Locale.Tr "repo.pulls.blocked_by_codeowners"}}
+        	</div>
+				{{else if .IsBlockedByApprovals}}
 					<div class="item text red">
 						{{svg "octicon-x"}}
 					{{ctx.Locale.Tr "repo.pulls.blocked_by_approvals" .GrantedApprovals .ProtectedBranch.RequiredApprovals}}
