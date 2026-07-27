@@ -33,6 +33,24 @@
 							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.is_writable_info"}}</small>
 						</div>
 					</div>
+					<div class="field">
+						<div class="ui checkbox {{if .Err_CanWriteCode}}error{{end}}">
+							<input id="ssh-key-can-write-code" name="can_write_code" type="checkbox" value="1">
+							<label for="ssh-key-can-write-code">
+								{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code"}}
+							</label>
+							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code_info"}}</small>
+						</div>
+					</div>
+					<div class="field">
+						<div class="ui checkbox {{if .Err_CanWriteTags}}error{{end}}">
+							<input id="ssh-key-can-write-tags" name="can_write_tags" type="checkbox" value="1">
+							<label for="ssh-key-can-write-tags">
+								{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags"}}
+							</label>
+							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags_info"}}</small>
+						</div>
+					</div>
 					<button class="ui primary button">
 						{{ctx.Locale.Tr "repo.settings.add_deploy_key"}}
 					</button>
@@ -54,7 +72,7 @@
 									{{.Fingerprint}}
 								</div>
 								<div class="flex-item-body">
-									<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}} —  {{svg "octicon-info"}} {{if .HasUsed}}{{ctx.Locale.Tr "settings.last_used"}} <span {{if .HasRecentActivity}}class="text green"{{end}}>{{DateUtils.AbsoluteShort .UpdatedUnix}}</span>{{else}}{{ctx.Locale.Tr "settings.no_activity"}}{{end}} - <span>{{ctx.Locale.Tr "settings.can_read_info"}}{{if not .IsReadOnly}} / {{ctx.Locale.Tr "settings.can_write_info"}} {{end}}</span></p>
+									<p>{{ctx.Locale.Tr "settings.added_on" (DateUtils.AbsoluteShort .CreatedUnix)}} —  {{svg "octicon-info"}} {{if .HasUsed}}{{ctx.Locale.Tr "settings.last_used"}} <span {{if .HasRecentActivity}}class="text green"{{end}}>{{DateUtils.AbsoluteShort .UpdatedUnix}}</span>{{else}}{{ctx.Locale.Tr "settings.no_activity"}}{{end}} - <span>{{ctx.Locale.Tr "settings.can_read_info"}}{{if not .IsReadOnly}} / {{ctx.Locale.Tr "settings.can_write_info"}} {{end}}</span> - <span>{{ctx.Locale.Tr "repo.code"}}: {{if .CanWriteCode}}{{ctx.Locale.Tr "settings.can_write_info"}} {{end}}</span> - <span>{{ctx.Locale.Tr "repo.tags"}}: {{if .CanWriteTags}}{{ctx.Locale.Tr "settings.can_write_info"}} {{end}}</span></p>
 								</div>
 							</div>
 							<div class="flex-item-trailing">
