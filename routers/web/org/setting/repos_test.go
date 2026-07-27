@@ -20,7 +20,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createOwner creates a user allowed to create organizations
+// createOwner creates a user allowed to create organizations: the
+// DefaultAllowCreateOrganization setting is copied into the user row at
+// creation time, so it only needs to be mocked while the user is created.
 func createOwner(t *testing.T) *user_model.User {
 	t.Helper()
 	defer test.MockVariableValue(&setting.Service.DefaultAllowCreateOrganization, true)()

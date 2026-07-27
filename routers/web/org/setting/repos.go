@@ -20,6 +20,7 @@ const tplSettingsRepositories base.TplName = "org/settings/repos"
 // organization; collaborations are excluded.
 func Repos(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings.repos")
+	ctx.Data["PageIsOrgSettings"] = true
 	ctx.Data["PageIsOrgSettingsRepos"] = true
 
 	sortOrder := ctx.FormString("sort")
@@ -28,10 +29,7 @@ func Repos(ctx *context.Context) {
 	}
 	ctx.Data["SortType"] = sortOrder
 
-	page := ctx.FormInt("page")
-	if page <= 0 {
-		page = 1
-	}
+	page := max(1, ctx.FormInt("page"))
 	pageSize := setting.UI.Admin.RepoPagingNum
 
 	repos, count, err := repo_model.SearchRepository(ctx, &repo_model.SearchRepoOptions{
