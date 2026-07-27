@@ -323,9 +323,11 @@ func TestSSHPushMirror(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				req := NewRequestWithValues(t, "POST", fmt.Sprintf("/%s/settings/keys", pushToRepo.FullName()), map[string]string{
-					"title":       "push mirror key",
-					"content":     publickey,
-					"is_writable": "true",
+					"title":          "push mirror key",
+					"content":        publickey,
+					"is_writable":    "true",
+					"can_write_code": "true",
+					"can_write_tags": "true",
 				})
 				sess.MakeRequest(t, req, http.StatusSeeOther)
 

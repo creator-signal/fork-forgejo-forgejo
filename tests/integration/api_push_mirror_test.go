@@ -386,9 +386,11 @@ func TestAPIPushMirrorSSH(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
 
 				req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/keys", pushToRepo.FullName()), &api.CreateKeyOption{
-					Title:    "push mirror key",
-					Key:      publickey,
-					ReadOnly: false,
+					Title:        "push mirror key",
+					Key:          publickey,
+					ReadOnly:     false,
+					CanWriteCode: true,
+					CanWriteTags: true,
 				}).AddTokenAuth(token)
 				MakeRequest(t, req, http.StatusCreated)
 

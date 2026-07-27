@@ -1286,7 +1286,7 @@ func registerRoutes(m *web.Route) {
 
 			m.Group("/keys", func() {
 				m.Combo("").Get(repo_setting.DeployKeys).
-					Post(web.Bind(forms.AddKeyForm{}), repo_setting.DeployKeysPost)
+					Post(web.Bind(forms.AddDeployKeyForm{}), repo_setting.DeployKeysPost)
 				m.Post("/delete", repo_setting.DeleteDeployKey)
 			})
 
