@@ -34,8 +34,8 @@ type DeployKey struct {
 	Content     string `xorm:"-"`
 
 	Mode         perm.AccessMode `xorm:"NOT NULL DEFAULT 1"`
-	CanWriteTags bool
-	CanWriteCode bool
+	CanWriteTags bool            `xorm:"DEFAULT 1"`
+	CanWriteCode bool            `xorm:"DEFAULT 1"`
 
 	CreatedUnix       timeutil.TimeStamp `xorm:"created"`
 	UpdatedUnix       timeutil.TimeStamp `xorm:"updated"`
