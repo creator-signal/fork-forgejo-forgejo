@@ -10,9 +10,11 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -20,6 +22,7 @@ import (
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/services/forms"
 	"forgejo.org/tests"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -415,6 +418,194 @@ func testCRUD(t *testing.T, u *url.URL, signingFormat string, objectFormat git.O
 			require.NotNil(t, branch.Commit)
 			require.NotNil(t, branch.Commit.Verification)
 			assert.True(t, branch.Commit.Verification.Verified)
+		})
+	})
+
+	assertCommitSignedByInstance := func(t *testing.T, commit api.Commit) {
+		t.Helper()
+		require.NotNil(t, commit.RepoCommit)
+		require.NotNil(t, commit.RepoCommit.Verification)
+		assert.True(t, commit.RepoCommit.Verification.Verified)
+		require.NotNil(t, commit.RepoCommit.Verification.Signer)
+		assert.Equal(t, "fox@example.com", commit.RepoCommit.Verification.Signer.Email)
+	}
+	assertCommitUnsigned := func(t *testing.T, commit api.Commit) {
+		t.Helper()
+		require.NotNil(t, commit.RepoCommit)
+		require.NotNil(t, commit.RepoCommit.Verification)
+		assert.False(t, commit.RepoCommit.Verification.Verified)
+		assert.Empty(t, commit.RepoCommit.Verification.Signature)
+	}
+	// Creates a repository with a "head2" branch holding two unsigned commits,
+	// so that rebase merges rewrite more than one commit.
+	createRepoWithUnsignedBranch := func(t *testing.T, testCtx APITestContext) {
+		t.Helper()
+		t.Run("CreateRepository", doAPICreateRepository(testCtx, nil, objectFormat))
+		t.Run("CreateHeadCommit1", crudActionCreateFile(
+			t, testCtx, user, "master", "head", "head-1.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+		t.Run("CreateHeadCommit2", crudActionCreateFile(
+			t, testCtx, user, "head", "head2", "head-2.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+	}
+
+	t.Run("AlwaysSignMerging-Rebase", func(t *testing.T) {
+		setting.Repository.Signing.InitialCommit = []string{"never"}
+		setting.Repository.Signing.CRUDActions = []string{"never"}
+		setting.Repository.Signing.Merges = []string{"always"}
+
+		t.Run("FastForward", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, username, "rebase-ff"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			createRepoWithUnsignedBranch(t, testCtx)
+
+			// Advance master with a rebase message template: the pull request
+			// gets behind (a real rebase happens) and the tip commit gets amended.
+			t.Run("CreateRebaseTemplate", doAPICreateFile(testCtx, ".forgejo/default_merge_message/REBASE_TEMPLATE.md", &api.CreateFileOptions{
+				FileOptions: api.FileOptions{
+					BranchName: "master",
+					Message:    "add rebase template",
+					Author:     api.Identity{Name: user.FullName, Email: user.Email},
+					Committer:  api.Identity{Name: user.FullName, Email: user.Email},
+				},
+				ContentBase64: base64.StdEncoding.EncodeToString([]byte("Rebased: ${CommitTitle}")),
+			}))
+
+			pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "head2")(t)
+			require.NoError(t, err)
+			doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+				Do: string(repo_model.MergeStyleRebase),
+			})
+
+			t.Run("CheckRebasedCommitsSigned", func(t *testing.T) {
+				// The tip is the rebased head commit, amended with the template message.
+				tip := doAPIGetCommit(testCtx, "master")(t)
+				require.Len(t, tip.Files, 1)
+				assert.Equal(t, "head-2.txt", tip.Files[0].Filename)
+				assert.True(t, strings.HasPrefix(tip.RepoCommit.Message, "Rebased: "))
+				assertCommitSignedByInstance(t, tip)
+
+				require.Len(t, tip.Parents, 1)
+				rebased := doAPIGetCommit(testCtx, tip.Parents[0].SHA)(t)
+				require.Len(t, rebased.Files, 1)
+				assert.Equal(t, "head-1.txt", rebased.Files[0].Filename)
+				assertCommitSignedByInstance(t, rebased)
+
+				// The commits were rebased onto the advanced master, whose own
+				// commit is left untouched.
+				require.Len(t, rebased.Parents, 1)
+				oldMaster := doAPIGetCommit(testCtx, rebased.Parents[0].SHA)(t)
+				require.Len(t, oldMaster.Files, 1)
+				assert.Equal(t, ".forgejo/default_merge_message/REBASE_TEMPLATE.md", oldMaster.Files[0].Filename)
+				assertCommitUnsigned(t, oldMaster)
+			})
+		})
+
+		t.Run("FastForwardZeroBehind", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, username, "rebase-ff-0b"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			createRepoWithUnsignedBranch(t, testCtx)
+
+			headBranch := doAPIGetBranch(testCtx, "head2")(t)
+			require.NotNil(t, headBranch.Commit)
+
+			pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "head2")(t)
+			require.NoError(t, err)
+			doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+				Do: string(repo_model.MergeStyleRebase),
+			})
+
+			t.Run("CheckCommitsRewrittenAndSigned", func(t *testing.T) {
+				// Even though master could be fast-forwarded onto the unsigned
+				// head commits, they are rewritten so that they carry a signature.
+				tip := doAPIGetCommit(testCtx, "master")(t)
+				assert.NotEqual(t, headBranch.Commit.ID, tip.SHA)
+				require.Len(t, tip.Files, 1)
+				assert.Equal(t, "head-2.txt", tip.Files[0].Filename)
+				assertCommitSignedByInstance(t, tip)
+
+				require.Len(t, tip.Parents, 1)
+				rebased := doAPIGetCommit(testCtx, tip.Parents[0].SHA)(t)
+				require.Len(t, rebased.Files, 1)
+				assert.Equal(t, "head-1.txt", rebased.Files[0].Filename)
+				assertCommitSignedByInstance(t, rebased)
+			})
+		})
+
+		t.Run("MergeCommit", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			testCtx := NewAPITestContext(t, username, "rebase-mc"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+			createRepoWithUnsignedBranch(t, testCtx)
+			t.Run("AdvanceMaster", crudActionCreateFile(
+				t, testCtx, user, "master", "", "master-ahead.txt", func(t *testing.T, response api.FileResponse) {
+					assert.False(t, response.Verification.Verified)
+				}))
+
+			pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "head2")(t)
+			require.NoError(t, err)
+			doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+				Do: string(repo_model.MergeStyleRebaseMerge),
+			})
+
+			t.Run("CheckRebasedCommitsSigned", func(t *testing.T) {
+				// The merge commit was already signed before rebase signing was
+				// supported; the rebased commits below it have to be signed too.
+				tip := doAPIGetCommit(testCtx, "master")(t)
+				require.Len(t, tip.Parents, 2)
+				assertCommitSignedByInstance(t, tip)
+
+				rebasedHead := doAPIGetCommit(testCtx, tip.Parents[1].SHA)(t)
+				require.Len(t, rebasedHead.Files, 1)
+				assert.Equal(t, "head-2.txt", rebasedHead.Files[0].Filename)
+				assertCommitSignedByInstance(t, rebasedHead)
+
+				require.Len(t, rebasedHead.Parents, 1)
+				rebased := doAPIGetCommit(testCtx, rebasedHead.Parents[0].SHA)(t)
+				require.Len(t, rebased.Files, 1)
+				assert.Equal(t, "head-1.txt", rebased.Files[0].Filename)
+				assertCommitSignedByInstance(t, rebased)
+
+				oldMaster := doAPIGetCommit(testCtx, tip.Parents[0].SHA)(t)
+				require.Len(t, oldMaster.Files, 1)
+				assert.Equal(t, "master-ahead.txt", oldMaster.Files[0].Filename)
+				assertCommitUnsigned(t, oldMaster)
+			})
+		})
+	})
+
+	t.Run("NeverSignMerging-Rebase", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		setting.Repository.Signing.Merges = []string{"never"}
+
+		testCtx := NewAPITestContext(t, username, "rebase-never"+suffix, auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteUser)
+		createRepoWithUnsignedBranch(t, testCtx)
+		t.Run("AdvanceMaster", crudActionCreateFile(
+			t, testCtx, user, "master", "", "master-ahead.txt", func(t *testing.T, response api.FileResponse) {
+				assert.False(t, response.Verification.Verified)
+			}))
+
+		pr, err := doAPICreatePullRequest(testCtx, testCtx.Username, testCtx.Reponame, "master", "head2")(t)
+		require.NoError(t, err)
+		doAPIMergePullRequestForm(t, testCtx, testCtx.Username, testCtx.Reponame, pr.Index, &forms.MergePullRequestForm{
+			Do: string(repo_model.MergeStyleRebase),
+		})
+
+		t.Run("CheckRebasedCommitsUnsigned", func(t *testing.T) {
+			tip := doAPIGetCommit(testCtx, "master")(t)
+			require.Len(t, tip.Files, 1)
+			assert.Equal(t, "head-2.txt", tip.Files[0].Filename)
+			assertCommitUnsigned(t, tip)
+
+			require.Len(t, tip.Parents, 1)
+			rebased := doAPIGetCommit(testCtx, tip.Parents[0].SHA)(t)
+			require.Len(t, rebased.Files, 1)
+			assert.Equal(t, "head-1.txt", rebased.Files[0].Filename)
+			assertCommitUnsigned(t, rebased)
 		})
 	})
 }

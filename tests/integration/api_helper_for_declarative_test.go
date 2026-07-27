@@ -364,6 +364,23 @@ func doAPIGetBranch(ctx APITestContext, branch string) func(*testing.T) api.Bran
 	}
 }
 
+func doAPIGetCommit(ctx APITestContext, ref string) func(*testing.T) api.Commit {
+	return func(t *testing.T) api.Commit {
+		t.Helper()
+		req := NewRequestf(t, "GET", "/api/v1/repos/%s/%s/git/commits/%s", ctx.Username, ctx.Reponame, ref).
+			AddTokenAuth(ctx.Token)
+		expected := http.StatusOK
+		if ctx.ExpectedCode != 0 {
+			expected = ctx.ExpectedCode
+		}
+		resp := ctx.Session.MakeRequest(t, req, expected)
+
+		commit := api.Commit{}
+		DecodeJSON(t, resp, &commit)
+		return commit
+	}
+}
+
 func doAPICreateTag(ctx APITestContext, tag, target, message string, callback ...func(*testing.T, api.Tag)) func(*testing.T) {
 	return func(t *testing.T) {
 		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/repos/%s/%s/tags", ctx.Username, ctx.Reponame), &api.CreateTagOption{
