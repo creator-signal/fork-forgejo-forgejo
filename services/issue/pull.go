@@ -68,7 +68,8 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 		}
 		// The file exists but is unreadable: propagate instead of swallowing, so
 		// callers can fail closed instead of treating it as "no code owners".
-		data, err = blob.GetBlobContent(setting.UI.MaxDisplayFileSize)
+		// We only need to check if there's *no* data so teensy buffer
+		data, err = blob.GetContentBase64(10)
 		if err != nil {
 			return nil, err
 		}
