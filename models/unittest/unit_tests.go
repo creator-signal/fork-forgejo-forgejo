@@ -6,6 +6,7 @@ package unittest
 import (
 	"math"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/services/stats"
@@ -64,6 +65,16 @@ func BeanExists(t testing.TB, bean any, conditions ...any) bool {
 	exists, err := LoadBeanIfExists(bean, conditions...)
 	require.NoError(t, err)
 	return exists
+}
+
+// AssertExistsAndLoadBeanEventually assert that a bean exists and load it from the test database, retrying until the timeout expires
+func AssertExistsAndLoadBeanEventually[T any](t require.TestingT, timeout time.Duration, bean T, conditions ...any) T {
+	assert.Eventually(t, func() bool {
+		exists, err := LoadBeanIfExists(bean, conditions...)
+		require.NoError(t, err)
+		return exists
+	}, timeout, time.Millisecond*10)
+	return bean
 }
 
 // AssertExistsAndLoadBean assert that a bean exists and load it from the test database
