@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	issues_model "forgejo.org/models/issues"
@@ -37,6 +38,58 @@ func ProcReceive(ctx context.Context, repo *repo_model.Repository, gitRepo *git.
 	}
 
 	for i := range opts.OldCommitIDs {
+		// Only process references that are in the form of:
+		// - refs/pull/.../head
+		// - refs/for/...
+
+		if opts.RefFullNames[i].IsPull() {
+			if opts.NewCommitIDs[i] == objectFormat.EmptyObjectID().String() {
+				// ignore deletion of refs/pull
+				// can happen when executing git push --mirror
+				results = append(results, private.HookProcReceiveRefResult{
+					OriginalRef: opts.RefFullNames[i],
+					OldOID:      opts.OldCommitIDs[i],
+					NewOID:      opts.OldCommitIDs[i],
+					Ref:         "(Forgejo ignored PR deletion attempt)",
+				})
+				continue
+			}
+
+			refFullName := opts.RefFullNames[i]
+			pullIndex, _ := strconv.ParseInt(refFullName.PullName(), 10, 64)
+			if pullIndex <= 0 {
+				results = append(results, private.HookProcReceiveRefResult{
+					OriginalRef: opts.RefFullNames[i],
+					OldOID:      opts.OldCommitIDs[i],
+					NewOID:      opts.NewCommitIDs[i],
+					Err:         "Malformed pull request id",
+				})
+				continue
+			}
+
+			pr, err := issues_model.GetPullRequestByIndex(ctx, repo.ID, pullIndex)
+			if err != nil {
+				if !issues_model.IsErrPullRequestNotExist(err) {
+					return nil, fmt.Errorf("failed to get AGit pull request %d in repository %q: %w", pullIndex, repo.FullName(), err)
+				}
+				results = append(results, private.HookProcReceiveRefResult{
+					OriginalRef: opts.RefFullNames[i],
+					OldOID:      opts.OldCommitIDs[i],
+					NewOID:      opts.NewCommitIDs[i],
+					Err:         "Unknown pull request id",
+				})
+				continue
+			}
+
+			pullForcePush := true // git already rejects push without the --force flag in previous steps
+			result, err := procReceivePullRequest(ctx, repo, gitRepo, pr, opts.NewCommitIDs[i], opts.OldCommitIDs[i], opts.RefFullNames[i], pusher, pullForcePush)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, *result)
+			continue
+		}
+
 		// Avoid processing this change if the new commit is empty.
 		if opts.NewCommitIDs[i] == objectFormat.EmptyObjectID().String() {
 			results = append(results, private.HookProcReceiveRefResult{
@@ -48,7 +101,6 @@ func ProcReceive(ctx context.Context, repo *repo_model.Repository, gitRepo *git.
 			continue
 		}
 
-		// Only process references that are in the form of refs/for/
 		if !opts.RefFullNames[i].IsFor() {
 			results = append(results, private.HookProcReceiveRefResult{
 				IsNotMatched: true,
@@ -210,7 +262,6 @@ func procReceivePullRequest(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect a force push: %w", err)
 		} else if len(output) > 0 {
-			// TODO: adjust message if for/pulls
 			return &private.HookProcReceiveRefResult{
 				OriginalRef: refFullName,
 				OldOID:      oldCommitID,
