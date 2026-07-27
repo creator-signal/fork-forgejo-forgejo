@@ -325,6 +325,12 @@ type AddKeyForm struct {
 	IsWritable  bool
 }
 
+// Validate validates the fields
+func (f *AddKeyForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 type AddDeployKeyForm struct {
 	Type         string `binding:"OmitEmpty"`
 	Title        string `binding:"Required;MaxSize(50)"`
@@ -338,7 +344,7 @@ type AddDeployKeyForm struct {
 }
 
 // Validate validates the fields
-func (f *AddKeyForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+func (f *AddDeployKeyForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
