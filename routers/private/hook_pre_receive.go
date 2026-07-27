@@ -275,7 +275,7 @@ func preReceiveBranch(ctx *preReceiveContext, oldCommitID, newCommitID string, r
 		return
 	}
 
-	if !ctx.deployKeyCanWriteCode {
+	if !ctx.deployKeyCanWriteCode && ctx.opts.DeployKeyID != 0 {
 		log.Warn("Forbidden: DeployKey %d is not allowed to push to branches", ctx.opts.DeployKeyID)
 		ctx.JSON(http.StatusForbidden, private.Response{
 			UserMsg: fmt.Sprintf("Forbidden: DeployKey %d is not allowed to push to branches", ctx.opts.DeployKeyID),
@@ -504,7 +504,7 @@ func preReceiveTag(ctx *preReceiveContext, oldCommitID, newCommitID string, refF
 
 	tagName := refFullName.TagName()
 
-	if !ctx.deployKeyCanWriteTags {
+	if !ctx.deployKeyCanWriteTags && ctx.opts.DeployKeyID != 0 {
 		log.Warn("Forbidden: DeployKey %d is not allowed to push tags", ctx.opts.DeployKeyID)
 		ctx.JSON(http.StatusForbidden, private.Response{
 			UserMsg: fmt.Sprintf("Forbidden: DeployKey %d is not allowed to push tags", ctx.opts.DeployKeyID),
@@ -661,9 +661,6 @@ func (ctx *preReceiveContext) loadPusherAndPermission() bool {
 		ctx.deployKeyAccessMode = deployKey.Mode
 		ctx.deployKeyCanWriteCode = deployKey.CanWriteCode
 		ctx.deployKeyCanWriteTags = deployKey.CanWriteTags
-
-		log.Info("DeployKey Can Write code %s", deployKey.CanWriteCode)
-		log.Info("DeployKey Can Write tags %s", deployKey.CanWriteTags)
 
 	}
 
