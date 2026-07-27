@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"time"
 
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
@@ -28,10 +27,6 @@ type ReviewRequestNotifier struct {
 }
 
 var codeOwnerFiles = []string{"CODEOWNERS", "docs/CODEOWNERS", ".gitea/CODEOWNERS"}
-
-// codeOwnerMatchBudget caps the total wall-clock time spent evaluating all
-// CODEOWNERS rules against all changed files for a single PR.
-const codeOwnerMatchBudget = 2 * time.Second
 
 // Get all code owner rules for a given pr + repo combination.
 func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_model.PullRequest) ([]*issues_model.CodeOwnerRule, error) {
@@ -127,18 +122,8 @@ func getMatchingCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *is
 	matchingRules = make([]*issues_model.CodeOwnerRule, 0)
 	complete = true
 
-	// Bound the total time spent matching rules×files. The per-rule MatchTimeout
-	// only caps a single match; without an aggregate budget a crafted CODEOWNERS
-	// plus a PR touching many files could still exhaust CPU inside this loop.
-	matchDeadline := time.Now().Add(codeOwnerMatchBudget)
-ruleLoop:
 	for _, rule := range rules {
 		for _, f := range changedFiles {
-			if time.Now().After(matchDeadline) {
-				log.Warn("CODEOWNERS matching for PR %s#%d exceeded its time budget; some rules were not evaluated", pr.BaseRepo.FullName(), pr.ID)
-				complete = false
-				break ruleLoop
-			}
 			matched := rule.Rule.MatchString(f) // err only happens when timeouts, any error can be considered as not matched
 			if matched != rule.Negative {
 				matchingRules = append(matchingRules, rule)
