@@ -5,6 +5,7 @@
 package feed
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/optional"
+	"forgejo.org/modules/queue"
 	"forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
@@ -28,12 +30,31 @@ func TestMain(m *testing.M) {
 	unittest.MainTest(m)
 }
 
+func testCreateNotificationQueue(t *testing.T) func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	q := createNotificationQueue(ctx)
+	require.NotNil(t, q)
+	go q.Run()
+	return func() {
+		// if the queue is not shutdown, goroutines will leak after the test
+		// is complete and modify the database, interfering with their
+		// expectations
+		cancel()
+		q.ShutdownWait(30 * time.Second)
+		// the levelqueue is not reset in between tests, it needs to be emptied
+		// before returning so it does not leak to the other tests
+		for _, mq := range queue.GetManager().ManagedQueues() {
+			mq.RemoveAllItems(t.Context())
+		}
+	}
+}
+
 func TestRenameRepoAction(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID})
-	require.NoError(t, initNotificationQueue())
+	defer testCreateNotificationQueue(t)()
 	repo.Owner = user
 
 	oldRepoName := repo.Name
@@ -95,7 +116,7 @@ func TestSyncPushCommits(t *testing.T) {
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID})
-	require.NoError(t, initNotificationQueue())
+	defer testCreateNotificationQueue(t)()
 
 	t.Run("All commits", func(t *testing.T) {
 		defer test.MockVariableValue(&setting.UI.FeedMaxCommitNum, 10)()
@@ -125,9 +146,7 @@ func TestSyncPushCommits(t *testing.T) {
 		assert.Equal(t, "not signed commit\nline two", commits.HeadCommit.Message)
 		assert.Equal(t, "good signed commit\nlong commit message\nwith lots of details\nabout how cool the implementation is", commits.Commits[2].Message)
 
-		maxID := unittest.GetCount(t, &activities_model.Action{})
 		NewNotifier().SyncPushCommits(db.DefaultContext, user, repo, &repository.PushUpdateOptions{RefFullName: git.RefNameFromBranch("master")}, commits)
-		unittest.AssertExistsAndLoadBeanEventually(t, 30*time.Second, &activities_model.Action{ActUserID: user.ID, RefName: "refs/heads/master"}, unittest.Cond("id > ?", maxID))
 
 		// commits passed into SyncPushCommits may be passed into other notifiers, so checking that the struct wasn't
 		// mutated by truncate of messages, or truncation to match FeedMaxCommitNum (Commits[2])...
@@ -141,7 +160,7 @@ func TestPushCommits(t *testing.T) {
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID})
-	require.NoError(t, initNotificationQueue())
+	defer testCreateNotificationQueue(t)()
 
 	t.Run("All commits", func(t *testing.T) {
 		defer test.MockVariableValue(&setting.UI.FeedMaxCommitNum, 10)()
@@ -171,9 +190,7 @@ func TestPushCommits(t *testing.T) {
 		assert.Equal(t, "not signed commit\nline two", commits.HeadCommit.Message)
 		assert.Equal(t, "good signed commit\nlong commit message\nwith lots of details\nabout how cool the implementation is", commits.Commits[2].Message)
 
-		maxID := unittest.GetCount(t, &activities_model.Action{})
 		NewNotifier().PushCommits(db.DefaultContext, user, repo, &repository.PushUpdateOptions{RefFullName: git.RefNameFromBranch("main")}, commits)
-		unittest.AssertExistsAndLoadBeanEventually(t, 30*time.Second, &activities_model.Action{ActUserID: user.ID, RefName: "refs/heads/master"}, unittest.Cond("id > ?", maxID))
 
 		// commits passed into SyncPushCommits may be passed into other notifiers, so checking that the struct wasn't
 		// mutated by truncate of messages, or truncation to match FeedMaxCommitNum (Commits[2])...

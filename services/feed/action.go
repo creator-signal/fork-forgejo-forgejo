@@ -90,13 +90,18 @@ func FromAction(a activities_model.Action) QueueableAction {
 	}
 }
 
+func createNotificationQueue(ctx context.Context) *queue.WorkerPoolQueue[notificationQueueItem] {
+	notificationQueue = queue.CreateSimpleQueue(ctx, "notification_queue", notificationQueueHandler)
+	return notificationQueue
+}
+
 func initNotificationQueue() error {
-	notificationQueue = queue.CreateSimpleQueue(graceful.GetManager().ShutdownContext(), "notification_queue", notificationQueueHandler)
-	if notificationQueue == nil {
+	q := createNotificationQueue(graceful.GetManager().ShutdownContext())
+	if q == nil {
 		return fmt.Errorf("Failed to create notification_queue")
 	}
 
-	go graceful.GetManager().RunWithCancel(notificationQueue)
+	go graceful.GetManager().RunWithCancel(q)
 
 	return nil
 }
