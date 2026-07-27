@@ -15,7 +15,6 @@ import (
 )
 
 var tlsVersionStringMap = map[string]uint16{
-	"":        tls.VersionTLS12, // Default to tls.VersionTLS12
 	"tlsv1.0": tls.VersionTLS10,
 	"tlsv1.1": tls.VersionTLS11,
 	"tlsv1.2": tls.VersionTLS12,
