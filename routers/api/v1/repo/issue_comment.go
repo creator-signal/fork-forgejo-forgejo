@@ -654,7 +654,7 @@ func DeleteIssueComment(ctx *context.APIContext) {
 	//   "500":
 	//     "$ref": "#/responses/internalServerError"
 
-	deleteIssueComment(ctx, issues_model.CommentTypeComment)
+	deleteIssueComment(ctx, "id", issues_model.CommentTypeComment)
 }
 
 // DeleteIssueCommentDeprecated delete a comment from an issue
@@ -693,11 +693,11 @@ func DeleteIssueCommentDeprecated(ctx *context.APIContext) {
 	//   "500":
 	//     "$ref": "#/responses/internalServerError"
 
-	deleteIssueComment(ctx, issues_model.CommentTypeComment)
+	deleteIssueComment(ctx, "id", issues_model.CommentTypeComment)
 }
 
-func deleteIssueComment(ctx *context.APIContext, commentType issues_model.CommentType) {
-	comment := ctx.LoadComment("id")
+func deleteIssueComment(ctx *context.APIContext, param string, commentType issues_model.CommentType) {
+	comment := ctx.LoadComment(param)
 	if ctx.Written() {
 		return
 	}

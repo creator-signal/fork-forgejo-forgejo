@@ -1096,7 +1096,7 @@ func DeletePullReviewComment(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	deleteIssueComment(ctx, issues_model.CommentTypeCode)
+	deleteIssueComment(ctx, "comment", issues_model.CommentTypeCode)
 }
 
 func dismissReview(ctx *context.APIContext, msg string, isDismiss, dismissPriors bool) {
