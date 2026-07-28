@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"testing"
@@ -378,5 +379,46 @@ func TestGitPushAllowMaintainerEditRestrictedHead(t *testing.T) {
 		doGitAddSomeCommits(baseRepoPath, branchName)(t)       // Ensure we have new commits ready to push
 		doGitAddSomeCommits(baseRepoPath, "another-branch")(t) // Ensure we have new commits ready to push
 		doGitPushTestRepositoryFail(t, baseRepoPath, "fork", branchName, "another-branch")
+	})
+}
+
+func TestGitPushMirror(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		owner := forgery.CreateUser(t, nil)
+		repo := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{
+			Files: forgery.FilesInit{},
+		})
+
+		repoPath := t.TempDir()
+		u.Path = repo.FullName() + ".git"
+		u.User = url.UserPassword(owner.LowerName, userPassword)
+		doGitClone(repoPath, u)(t)
+
+		// create a PR
+		branchName := "local-branch"
+		doGitCreateBranch(repoPath, branchName)(t)
+		doGitAddSomeCommits(repoPath, branchName)(t)
+		err := git.NewCommand(git.DefaultContext, "push", "origin").
+			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+		err = git.NewCommand(git.DefaultContext, "push", "origin").
+			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/second-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+
+		// push --mirror
+		var stderr bytes.Buffer
+		err = git.NewCommand(git.DefaultContext, "push", "--mirror").Run(&git.RunOpts{Dir: repoPath, Stderr: &stderr})
+		assert.Contains(t, stderr.String(), "(Forgejo ignored PR deletion attempt)")
+		require.NoError(t, err)
+
+		// ensure the PRs can still be fetched
+		err = git.NewCommand(git.DefaultContext, "fetch", "origin").
+			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 1, "first-agit-pr")).
+			Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+		err = git.NewCommand(git.DefaultContext, "fetch", "origin").
+			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-agit-pr")).
+			Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
 	})
 }
