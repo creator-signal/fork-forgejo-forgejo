@@ -50,8 +50,8 @@ type APIContext struct {
 	user *user_model.User // the user which is being visited, in most cases it differs from Doer
 
 	repo       *Repository
-	issue      *issues_model.Issue
-	comment    *issues_model.Comment
+	issues     map[int64]*issues_model.Issue
+	comments   map[int64]*issues_model.Comment
 	org        *APIOrganization
 	pkg        *Package
 	quotaGroup *quota_model.Group
@@ -231,8 +231,9 @@ func (ctx *APIContext) SetRepo(repo *Repository) {
 }
 
 func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
-	if ctx.issue == nil {
-		issue, err := issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, ctx.ParamsInt64(indexParam))
+	id := ctx.ParamsInt64(indexParam)
+	if _, ok := ctx.issues[id]; !ok {
+		issue, err := issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, id)
 		if err != nil {
 			if issues_model.IsErrIssueNotExist(err) {
 				ctx.NotFound("IsErrIssueNotExist", err)
@@ -244,10 +245,10 @@ func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
 
 		issue.Repo = ctx.Repo().Repository
 
-		ctx.issue = issue
+		ctx.issues[id] = issue
 	}
 
-	return ctx.issue
+	return ctx.issues[id]
 }
 
 func (ctx *APIContext) Repository() *repo_model.Repository {
@@ -290,8 +291,9 @@ func (ctx *APIContext) PackageOwner() *user_model.User {
 }
 
 func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
-	if ctx.comment == nil {
-		comment, err := issues_model.GetCommentByID(ctx, ctx.ParamsInt64(idParam))
+	id := ctx.ParamsInt64(idParam)
+	if _, ok := ctx.comments[id]; !ok {
+		comment, err := issues_model.GetCommentByID(ctx, id)
 		if err != nil {
 			if issues_model.IsErrCommentNotExist(err) {
 				ctx.NotFound(err)
@@ -308,9 +310,9 @@ func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
 
 		comment.Issue.Repo = ctx.Repo().Repository
 
-		ctx.comment = comment
+		ctx.comments[id] = comment
 	}
-	return ctx.comment
+	return ctx.comments[id]
 }
 
 func (ctx *APIContext) PackageAccessMode() perm.AccessMode {
@@ -461,10 +463,12 @@ func APIContexter() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			base, baseCleanUp := NewBaseContext(w, req)
 			ctx := &APIContext{
-				Base:  base,
-				cache: mc.GetCache(),
-				repo:  &Repository{PullRequest: &PullRequest{}},
-				org:   &APIOrganization{},
+				Base:     base,
+				issues:   make(map[int64]*issues_model.Issue),
+				comments: make(map[int64]*issues_model.Comment),
+				cache:    mc.GetCache(),
+				repo:     &Repository{PullRequest: &PullRequest{}},
+				org:      &APIOrganization{},
 			}
 			defer baseCleanUp()
 
