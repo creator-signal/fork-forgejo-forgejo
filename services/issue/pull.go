@@ -49,7 +49,7 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 		return nil, err
 	}
 
-	var buf = make([]byte, 10)
+	buf := make([]byte, 10)
 
 	for _, file := range codeOwnerFiles {
 		blob, err := commit.GetBlobByPath(file)
@@ -75,7 +75,7 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 		break
 	}
 	// no code owner file = no one to approve
-	if string(buf[:]) == "" {
+	if string(buf) == "" {
 		return nil, nil
 	}
 
