@@ -242,10 +242,7 @@ func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
 			return nil
 		}
 
-		if err = issue.LoadRepo(ctx); err != nil {
-			ctx.InternalServerError(err)
-			return nil
-		}
+		issue.Repo = ctx.Repo().Repository
 
 		ctx.issue = issue
 	}
@@ -309,10 +306,7 @@ func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
 			return nil
 		}
 
-		if err = comment.Issue.LoadRepo(ctx); err != nil {
-			ctx.InternalServerError(err)
-			return nil
-		}
+		comment.Issue.Repo = ctx.Repo().Repository
 
 		ctx.comment = comment
 	}
