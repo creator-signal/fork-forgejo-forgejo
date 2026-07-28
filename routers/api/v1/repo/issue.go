@@ -825,7 +825,7 @@ func EditIssue(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 
 	form := web.GetForm(ctx).(*api.EditIssueOption)
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -993,7 +993,7 @@ func DeleteIssue(ctx *context.APIContext) {
 	//     "$ref": "#/responses/forbidden"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -1044,7 +1044,7 @@ func UpdateIssueDeadline(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	form := web.GetForm(ctx).(*api.EditDeadlineOption)
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}

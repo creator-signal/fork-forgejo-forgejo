@@ -73,7 +73,7 @@ func ListIssueComments(ctx *context.APIContext) {
 		ctx.Error(http.StatusUnprocessableEntity, "GetQueryBeforeSince", err)
 		return
 	}
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -180,7 +180,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 		ctx.Error(http.StatusUnprocessableEntity, "GetQueryBeforeSince", err)
 		return
 	}
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -397,7 +397,7 @@ func CreateIssueComment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/internalServerError"
 
 	form := web.GetForm(ctx).(*api.CreateIssueCommentOption)
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -459,7 +459,7 @@ func GetIssueComment(ctx *context.APIContext) {
 	//   "500":
 	//     "$ref": "#/responses/internalServerError"
 
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -588,7 +588,7 @@ func EditIssueCommentDeprecated(ctx *context.APIContext) {
 }
 
 func editIssueComment(ctx *context.APIContext, form api.EditIssueCommentOption) {
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -697,7 +697,7 @@ func DeleteIssueCommentDeprecated(ctx *context.APIContext) {
 }
 
 func deleteIssueComment(ctx *context.APIContext, commentType issues_model.CommentType) {
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}

@@ -431,7 +431,7 @@ func mustAllowPulls() func(ctx *context.APIContext) {
 func mustEnableLocalIssuesIfIsIssue() func(*context.APIContext) {
 	apiv1_permissions_testhelpers.RecordSignature(apiv1_permissions.MustEnableLocalIssuesIfIsIssue)
 	return func(ctx *context.APIContext) {
-		issue := ctx.LoadIssue(":index")
+		issue := ctx.LoadIssue("index")
 		if ctx.Written() {
 			return
 		}
@@ -1122,8 +1122,8 @@ func Routes() *web.Route {
 								Delete(reqToken(), repo.DeleteIssueComment)
 							m.Combo("/reactions").
 								Get(repo.GetIssueCommentReactions).
-								Post(reqToken(), reqCommentIssueUnlockedOrCanWrite(":id"), bind(api.EditReactionOption{}), repo.PostIssueCommentReaction).
-								Delete(reqToken(), reqCommentIssueUnlockedOrCanWrite(":id"), bind(api.EditReactionOption{}), repo.DeleteIssueCommentReaction)
+								Post(reqToken(), reqCommentIssueUnlockedOrCanWrite("id"), bind(api.EditReactionOption{}), repo.PostIssueCommentReaction).
+								Delete(reqToken(), reqCommentIssueUnlockedOrCanWrite("id"), bind(api.EditReactionOption{}), repo.DeleteIssueCommentReaction)
 							m.Group("/assets", func() {
 								m.Combo("").
 									Get(repo.ListIssueCommentAttachments).
@@ -1133,7 +1133,7 @@ func Routes() *web.Route {
 									Patch(reqToken(), mustNotBeArchived(), bind(api.EditAttachmentOptions{}), repo.EditIssueCommentAttachment).
 									Delete(reqToken(), mustNotBeArchived(), repo.DeleteIssueCommentAttachment)
 							}, mustEnableAttachments())
-						}, reqValidCommentID(":id"))
+						}, reqValidCommentID("id"))
 					})
 					m.Group("/{index}", func() {
 						m.Combo("").Get(repo.GetIssue).
@@ -1141,8 +1141,8 @@ func Routes() *web.Route {
 							Delete(reqToken(), reqAdmin(), context.ReferencesGitRepo(), repo.DeleteIssue)
 						m.Group("/comments", func() {
 							m.Combo("").Get(repo.ListIssueComments).
-								Post(reqToken(), mustNotBeArchived(), reqIssueUnlockedOrCanWrite(":index"), bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
-							m.Combo("/{id}", reqToken(), reqValidCommentID(":id")).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueCommentDeprecated).
+								Post(reqToken(), mustNotBeArchived(), reqIssueUnlockedOrCanWrite("index"), bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
+							m.Combo("/{id}", reqToken(), reqValidCommentID("id")).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueCommentDeprecated).
 								Delete(repo.DeleteIssueCommentDeprecated)
 						})
 						m.Get("/timeline", repo.ListIssueCommentsAndTimeline)
@@ -1174,8 +1174,8 @@ func Routes() *web.Route {
 						})
 						m.Combo("/reactions").
 							Get(repo.GetIssueReactions).
-							Post(reqToken(), reqIssueUnlockedOrCanWrite(":index"), bind(api.EditReactionOption{}), repo.PostIssueReaction).
-							Delete(reqToken(), reqIssueUnlockedOrCanWrite(":index"), bind(api.EditReactionOption{}), repo.DeleteIssueReaction)
+							Post(reqToken(), reqIssueUnlockedOrCanWrite("index"), bind(api.EditReactionOption{}), repo.PostIssueReaction).
+							Delete(reqToken(), reqIssueUnlockedOrCanWrite("index"), bind(api.EditReactionOption{}), repo.DeleteIssueReaction)
 						m.Group("/assets", func() {
 							m.Combo("").
 								Get(repo.ListIssueAttachments).

@@ -80,7 +80,7 @@ func ListTrackedTimes(ctx *context.APIContext) {
 		ctx.NotFound("Timetracker is disabled")
 		return
 	}
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -183,7 +183,7 @@ func AddTime(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 	form := web.GetForm(ctx).(*api.AddTimeOption)
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -263,7 +263,7 @@ func ResetIssueTime(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -331,7 +331,7 @@ func DeleteTime(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}

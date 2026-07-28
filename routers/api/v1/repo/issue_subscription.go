@@ -104,7 +104,7 @@ func DelIssueSubscription(ctx *context.APIContext) {
 }
 
 func setIssueSubscription(ctx *context.APIContext, watch bool) {
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -179,7 +179,7 @@ func CheckIssueSubscription(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -239,7 +239,7 @@ func GetIssueSubscribers(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}

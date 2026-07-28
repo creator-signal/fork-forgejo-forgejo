@@ -56,7 +56,7 @@ func GetIssueAttachment(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/error"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -99,7 +99,7 @@ func ListIssueAttachments(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/error"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -167,7 +167,7 @@ func CreateIssueAttachment(ctx *context.APIContext) {
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -276,7 +276,7 @@ func EditIssueAttachment(ctx *context.APIContext) {
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -338,7 +338,7 @@ func DeleteIssueAttachment(ctx *context.APIContext) {
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}

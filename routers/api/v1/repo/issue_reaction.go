@@ -51,7 +51,7 @@ func GetIssueCommentReactions(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -168,7 +168,7 @@ func DeleteIssueCommentReaction(ctx *context.APIContext) {
 }
 
 func changeIssueCommentReaction(ctx *context.APIContext, form api.EditReactionOption, isCreateType bool) {
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}

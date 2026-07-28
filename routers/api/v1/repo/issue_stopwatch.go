@@ -160,7 +160,7 @@ func DeleteIssueStopwatch(ctx *context.APIContext) {
 }
 
 func prepareIssueStopwatch(ctx *context.APIContext, shouldExist bool) *issues_model.Issue {
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return nil
 	}

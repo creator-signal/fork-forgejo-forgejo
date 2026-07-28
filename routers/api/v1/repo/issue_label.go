@@ -48,7 +48,7 @@ func ListIssueLabels(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -163,7 +163,7 @@ func DeleteIssueLabel(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 	form := web.GetForm(ctx).(*api.DeleteLabelsOption)
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -306,7 +306,7 @@ func ClearIssueLabels(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 	form := web.GetForm(ctx).(*api.DeleteLabelsOption)
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -330,7 +330,7 @@ func ClearIssueLabels(ctx *context.APIContext) {
 }
 
 func prepareForReplaceOrAdd(ctx *context.APIContext, form api.IssueLabelsOption) (*issues_model.Issue, []*issues_model.Label, error) {
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return nil, nil, errors.New("LoadIssue")
 	}

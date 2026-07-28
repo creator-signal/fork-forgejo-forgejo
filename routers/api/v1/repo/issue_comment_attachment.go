@@ -56,7 +56,7 @@ func GetIssueCommentAttachment(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/error"
 
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -103,7 +103,7 @@ func ListIssueCommentAttachments(ctx *context.APIContext) {
 	//     "$ref": "#/responses/AttachmentList"
 	//   "404":
 	//     "$ref": "#/responses/error"
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -173,7 +173,7 @@ func CreateIssueCommentAttachment(ctx *context.APIContext) {
 
 	// Check if comment exists and load comment
 
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -290,7 +290,7 @@ func EditIssueCommentAttachment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/quotaExceeded"
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}
@@ -349,7 +349,7 @@ func DeleteIssueCommentAttachment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 	//   "423":
 	//     "$ref": "#/responses/repoArchivedError"
-	comment := ctx.LoadComment(":id")
+	comment := ctx.LoadComment("id")
 	if ctx.Written() {
 		return
 	}

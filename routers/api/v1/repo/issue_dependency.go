@@ -62,7 +62,7 @@ func GetIssueDependencies(ctx *context.APIContext) {
 		return
 	}
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -186,7 +186,7 @@ func CreateIssueDependency(ctx *context.APIContext) {
 	//     "$ref": "#/responses/repoArchivedError"
 
 	// We want to make <:index> depend on <Form>, i.e. <:index> is the target
-	target := ctx.LoadIssue(":index")
+	target := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -248,7 +248,7 @@ func RemoveIssueDependency(ctx *context.APIContext) {
 	//     "$ref": "#/responses/repoArchivedError"
 
 	// We want to make <:index> depend on <Form>, i.e. <:index> is the target
-	target := ctx.LoadIssue(":index")
+	target := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -314,7 +314,7 @@ func GetIssueBlocks(ctx *context.APIContext) {
 	// We need to list the issues that DEPEND on this issue not the other way round
 	// Therefore whether dependencies are enabled or not in this repository is potentially irrelevant.
 
-	issue := ctx.LoadIssue(":index")
+	issue := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -411,7 +411,7 @@ func CreateIssueBlocking(ctx *context.APIContext) {
 	//   "404":
 	//     description: the issue does not exist
 
-	dependency := ctx.LoadIssue(":index")
+	dependency := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
@@ -469,7 +469,7 @@ func RemoveIssueBlocking(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	dependency := ctx.LoadIssue(":index")
+	dependency := ctx.LoadIssue("index")
 	if ctx.Written() {
 		return
 	}
