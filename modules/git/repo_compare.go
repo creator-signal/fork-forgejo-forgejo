@@ -332,7 +332,6 @@ func (repo *Repository) GetFilesChangedBetween(base, head string) ([]string, err
 	}
 	stdout, _, err := cmd.RunStdString(&RunOpts{Dir: repo.Path})
 	if err != nil {
-		logger.Error("error :( %s", err)
 		return nil, err
 	}
 	split := strings.Split(stdout, "\000")
@@ -368,7 +367,12 @@ func (repo *Repository) ReadPatchCommit(prID int64) (commitSHA string, err error
 	if err != nil {
 		return "", err
 	}
-	defer loadPatch.Close()
+	defer func(loadPatch *os.File) {
+		err := loadPatch.Close()
+		if err != nil {
+			logger.Error("Error closing patch file: %v", err)
+		}
+	}(loadPatch)
 	// Read only the first line of the patch - usually it contains the first commit made in patch
 	scanner := bufio.NewScanner(loadPatch)
 	scanner.Scan()
