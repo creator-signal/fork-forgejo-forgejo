@@ -49,7 +49,7 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 		return nil, err
 	}
 
-	var data string
+	var buf = make([]byte, 10)
 
 	for _, file := range codeOwnerFiles {
 		blob, err := commit.GetBlobByPath(file)
@@ -63,16 +63,19 @@ func getCodeOwnerRules(ctx context.Context, repo *git.Repository, pr *issues_mod
 		}
 		// The file exists but is unreadable: propagate instead of swallowing, so
 		// callers can fail closed instead of treating it as "no code owners".
-		// We only need to check if there's *no* data so teensy buffer
-		data, err = blob.GetContentBase64(10)
+		reader, _, err := blob.NewReader(blob.Size())
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = reader.Read(buf)
 		if err != nil {
 			return nil, err
 		}
 		break
 	}
-
 	// no code owner file = no one to approve
-	if data == "" {
+	if string(buf[:]) == "" {
 		return nil, nil
 	}
 
