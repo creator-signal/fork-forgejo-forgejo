@@ -4219,12 +4219,6 @@
         "responses": {
           "201": {
             "$ref": "#/responses/Project"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "422": {
-            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -4700,7 +4694,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/CreateProjectIssueOptions"
+              "$ref": "#/definitions/UpdateProjectColumnIssueOptions"
             }
           }
         ],
@@ -19897,12 +19891,6 @@
         "responses": {
           "201": {
             "$ref": "#/responses/Project"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "422": {
-            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -20455,7 +20443,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/CreateProjectIssueOptions"
+              "$ref": "#/definitions/UpdateProjectColumnIssueOptions"
             }
           }
         ],
@@ -24255,12 +24243,6 @@
         "responses": {
           "201": {
             "$ref": "#/responses/Project"
-          },
-          "403": {
-            "$ref": "#/responses/forbidden"
-          },
-          "422": {
-            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -24736,7 +24718,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/CreateProjectIssueOptions"
+              "$ref": "#/definitions/UpdateProjectColumnIssueOptions"
             }
           }
         ],
@@ -31144,23 +31126,13 @@
           "format": "int64",
           "x-go-name": "ID"
         },
-        "owner_id": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "OwnerID"
-        },
         "owner_name": {
           "type": "string",
           "x-go-name": "OwnerName"
         },
         "project_type": {
           "type": "string",
-          "x-go-name": "ProjectType"
-        },
-        "repo_id": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "RepoID"
+          "x-go-name": "OwnerType"
         },
         "repo_name": {
           "type": "string",

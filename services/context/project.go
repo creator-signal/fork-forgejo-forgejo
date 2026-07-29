@@ -13,7 +13,6 @@ import (
 	"forgejo.org/models/perm"
 	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -72,29 +71,29 @@ func reqValidAndConsistentProject(ctx *Context, project *project_model.Project) 
 func reqPermissionToAssignProjectToIssue(ctx *Context, ownerType project_module.OwnerType) {
 	switch ownerType {
 	case project_module.TypeRepository:
-		if !ctx.Repo.Repository.UnitEnabled(ctx, unit.TypeProjects) {
+		if !ctx.Repo.Repository.UnitEnabled(ctx, unit_model.TypeProjects) {
 			ctx.NotFound("repository projects are disabled", nil)
 			return
 		}
-		if !ctx.Repo.CanRead(unit.TypeProjects) {
+		if !ctx.Repo.CanRead(unit_model.TypeProjects) {
 			ctx.Error(http.StatusForbidden, "doesn't have permissions to read repository projects")
 			return
 		}
-		if !ctx.Repo.CanWrite(unit.TypeIssues) {
+		if !ctx.Repo.CanWrite(unit_model.TypeIssues) {
 			ctx.Error(http.StatusForbidden, "doesn't have permissions to write repository issues")
 			return
 		}
 	case project_module.TypeOrganization:
-		if !ctx.Org.CanReadUnit(ctx, unit.TypeProjects) {
+		if !ctx.Org.CanReadUnit(ctx, unit_model.TypeProjects) {
 			ctx.Error(http.StatusForbidden, "doesn't have permissions to read the owner projects")
 			return
 		}
-		if !ctx.Org.CanWriteUnit(ctx, unit.TypeIssues) {
+		if !ctx.Org.CanWriteUnit(ctx, unit_model.TypeIssues) {
 			ctx.Error(http.StatusForbidden, "doesn't have permissions to write the repository issues and set the project")
 			return
 		}
 	case project_module.TypeIndividual:
-		if !ctx.Repo.CanWrite(unit.TypeIssues) {
+		if !ctx.Repo.CanWrite(unit_model.TypeIssues) {
 			ctx.Error(http.StatusForbidden, "doesn't have permissions to write the repository issues and set the project")
 			return
 		}

@@ -502,7 +502,7 @@ func (Project) UpdateProjectColumnIssue(ctx *context.APIContext) {
 	//   in: body
 	//   required: true
 	//   schema:
-	// 		"$ref": "#/definitions/CreateProjectIssueOptions"
+	// 		"$ref": "#/definitions/UpdateProjectColumnIssueOptions"
 	// responses:
 	//   "200":
 	//     "description": "Successfull update returns 200 OK"
