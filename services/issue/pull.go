@@ -11,6 +11,8 @@ import (
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
 	org_model "forgejo.org/models/organization"
+	access_model "forgejo.org/models/perm/access"
+	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
@@ -205,7 +207,7 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 	for _, rule := range matchingRules {
 		ruleReviewers := make([]*user_model.User, 0, len(rule.Users))
 		for _, user := range rule.Users {
-			if user.ID != pr.Issue.PosterID {
+			if IsValidCodeowner(ctx, user, pr) {
 				ruleReviewers = append(ruleReviewers, user)
 			}
 		}
@@ -220,7 +222,7 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 				teamMembersByID[team.ID] = members
 			}
 			for _, member := range members {
-				if member.ID != pr.Issue.PosterID {
+				if IsValidCodeowner(ctx, member, pr) {
 					ruleReviewers = append(ruleReviewers, member)
 				}
 			}
@@ -246,6 +248,22 @@ func HasAllRequiredCodeownerReviews(ctx context.Context, pb *git_model.Protected
 	}
 
 	return true
+}
+
+func IsValidCodeowner(ctx context.Context, user *user_model.User, pr *issues_model.PullRequest) bool {
+	// Don't require codeowners who can't read pull requests and check that they aren't the PR author
+	permission, err := access_model.GetUserRepoPermission(ctx, pr.Issue.Repo, user)
+	if err != nil {
+		log.Error("HasAllRequiredCodeownerReviews: failed to get permission for PR %d: %v", pr.ID, err)
+		return false
+	}
+	if user.ID != pr.Issue.PosterID && permission.CanRead(unit.TypePullRequests) {
+		return true
+	}
+	if !permission.CanRead(unit.TypePullRequests) {
+		log.Warn("A Codeowner was requested who can't read pull requests, ignoring. PR: ", pr.ID)
+	}
+	return false
 }
 
 func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullRequest) ([]*ReviewRequestNotifier, error) {
@@ -313,7 +331,12 @@ func PullRequestCodeOwnersReview(ctx context.Context, pr *issues_model.PullReque
 	}
 
 	for _, u := range uniqUsers {
-		if u.ID != issue.Poster.ID && !contain(latestReviews, u) {
+		permission, err := access_model.GetUserRepoPermission(ctx, issue.Repo, u)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserRepoPermission: %w", err)
+		}
+		// Don't request codeowners who can't read pull requests
+		if u.ID != issue.Poster.ID && !contain(latestReviews, u) && permission.CanRead(unit.TypePullRequests) {
 			comment, err := issues_model.AddReviewRequest(ctx, issue, u, issue.Poster)
 			if err != nil {
 				log.Warn("Failed add review user: %s to PR review: %s#%d, error: %s", u.Name, pr.BaseRepo.Name, pr.ID, err)
