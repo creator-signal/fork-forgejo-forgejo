@@ -105,6 +105,11 @@ func (org *Organization) IsOrgMember(ctx context.Context, uid int64) (bool, erro
 	return IsOrganizationMember(ctx, org.ID, uid)
 }
 
+// IsAutoWatchingOrgRepos returns true if given user is auto watching organization repositories.
+func (org *Organization) IsAutoWatchingOrgRepos(ctx context.Context, uid int64) (bool, error) {
+	return IsAutoWatchingOrgRepos(ctx, org.ID, uid)
+}
+
 // CanCreateOrgRepo returns true if given user can create repo in organization
 func (org *Organization) CanCreateOrgRepo(ctx context.Context, uid int64) (bool, error) {
 	return CanCreateOrgRepo(ctx, org.ID, uid)
@@ -520,7 +525,7 @@ func ChangeOrgUserStatus(ctx context.Context, orgID, uid int64, public bool) err
 }
 
 // AddOrgUser adds new user to given organization.
-func AddOrgUser(ctx context.Context, orgID, uid int64) error {
+func AddOrgUser(ctx context.Context, orgID, uid int64, autoWatchOrgRepos bool) error {
 	eligible, err := IsAnEligibleTeamMemberByID(ctx, uid)
 	if err != nil {
 		return err
@@ -546,9 +551,10 @@ func AddOrgUser(ctx context.Context, orgID, uid int64) error {
 	}
 
 	ou := &OrgUser{
-		UID:      uid,
-		OrgID:    orgID,
-		IsPublic: setting.Service.DefaultOrgMemberVisible,
+		UID:               uid,
+		OrgID:             orgID,
+		IsPublic:          setting.Service.DefaultOrgMemberVisible,
+		AutoWatchOrgRepos: autoWatchOrgRepos,
 	}
 
 	if err := db.Insert(ctx, ou); err != nil {
@@ -639,6 +645,46 @@ func (org *Organization) GetUserTeamIDs(ctx context.Context, userID int64) ([]in
 // and that the user has joined.
 func (org *Organization) GetUserTeams(ctx context.Context, userID int64) ([]*Team, error) {
 	return org.getUserTeams(ctx, userID)
+}
+
+// AutoWatchOrg changes the AutoWatchOrgRepos field of the OrgUser record
+// for the given user and organization to true and automatically watches
+// all repositories in the organization for the user.
+func (org *Organization) AutoWatchOrg(ctx context.Context, userID int64) error {
+	ou := new(OrgUser)
+	has, err := db.GetEngine(ctx).
+		Where("uid=?", userID).
+		And("org_id=?", org.ID).
+		Get(ou)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
+	ou.AutoWatchOrgRepos = true
+	_, err = db.GetEngine(ctx).ID(ou.ID).Cols("auto_watch_org_repos").Update(ou)
+	return err
+}
+
+// AutoUnwatchOrg changes the AutoWatchOrgRepos field of the OrgUser record
+// for the given user and organization to false and automatically unwatches
+// automatically watched repositories in the organization for the user.
+func (org *Organization) AutoUnwatchOrg(ctx context.Context, userID int64) error {
+	ou := new(OrgUser)
+	has, err := db.GetEngine(ctx).
+		Where("uid=?", userID).
+		And("org_id=?", org.ID).
+		Get(ou)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
+	ou.AutoWatchOrgRepos = false
+	_, err = db.GetEngine(ctx).ID(ou.ID).Cols("auto_watch_org_repos").Update(ou)
+	return err
 }
 
 // AccessibleReposEnvironment operations involving the repositories that are

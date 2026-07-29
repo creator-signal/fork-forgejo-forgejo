@@ -176,9 +176,17 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 	}
 	ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
 	ctx.Data["IsOrganizationMember"] = ctx.Org.IsMember
+	if ctx.IsSigned {
+		ctx.Data["IsAutoWatching"], err = organization.IsAutoWatchingOrgRepos(ctx, ctx.Org.Organization.ID, ctx.Doer.ID)
+		if err != nil {
+			ctx.ServerError("IsAutoWatchingOrgRepos", err)
+			return
+		}
+	}
 	ctx.Data["IsPackageEnabled"] = setting.Packages.Enabled
 	ctx.Data["IsRepoIndexerEnabled"] = setting.Indexer.RepoIndexerEnabled
 	ctx.Data["IsModerationEnabled"] = setting.Moderation.Enabled
+
 	ctx.Data["IsPublicMember"] = func(uid int64) bool {
 		is, _ := organization.IsPublicMembership(ctx, ctx.Org.Organization.ID, uid)
 		return is

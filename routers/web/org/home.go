@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	tplOrgHome base.TplName = "org/home"
+	tplOrgHome      base.TplName = "org/home"
+	tplWatchUnwatch base.TplName = "org/watch_unwatch"
 )
 
 // Home show organization home page
@@ -210,4 +211,27 @@ func prepareOrgProfileReadme(ctx *context.Context, profileGitRepo *git.Repositor
 			ctx.Data["IsProfileReadmePlain"] = true
 		}
 	}
+}
+
+func Action(ctx *context.Context) {
+	var err error
+	action := ctx.FormString("action")
+
+	switch action {
+	case "watch":
+		err = ctx.Org.Organization.AutoWatchOrg(ctx, ctx.Doer.ID)
+		ctx.Data["IsAutoWatching"] = true
+	case "unwatch":
+		err = ctx.Org.Organization.AutoUnwatchOrg(ctx, ctx.Doer.ID)
+		ctx.Data["IsAutoWatching"] = false
+	}
+
+	if err != nil {
+		log.Error("Failed to apply action %q: %v", ctx.FormString("action"), err)
+		ctx.Error(http.StatusBadRequest, fmt.Sprintf("Action %q failed", ctx.FormString("action")))
+		return
+	}
+
+	ctx.Data["Org"] = ctx.ContextUser
+	ctx.HTML(http.StatusOK, tplWatchUnwatch)
 }

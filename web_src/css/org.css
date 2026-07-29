@@ -158,7 +158,7 @@
 .organization.invite .invite-content {
   max-width: 420px;
   margin-inline: auto;
-  margin-block: 3rem;
+  margin-block-end: 3rem;
   text-align: center;
 }
 .organization.invite .invite-content :is(h2, p) {

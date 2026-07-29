@@ -24,10 +24,11 @@ import (
 
 // OrgUser represents an organization-user relation.
 type OrgUser struct {
-	ID       int64 `xorm:"pk autoincr"`
-	UID      int64 `xorm:"INDEX UNIQUE(s)"`
-	OrgID    int64 `xorm:"INDEX UNIQUE(s)"`
-	IsPublic bool  `xorm:"INDEX"`
+	ID                int64 `xorm:"pk autoincr"`
+	UID               int64 `xorm:"INDEX UNIQUE(s)"`
+	OrgID             int64 `xorm:"INDEX UNIQUE(s)"`
+	IsPublic          bool  `xorm:"INDEX"`
+	AutoWatchOrgRepos bool  `xorm:"INDEX"`
 }
 
 func init() {
@@ -73,6 +74,16 @@ func IsOrganizationMember(ctx context.Context, orgID, uid int64) (bool, error) {
 	return db.GetEngine(ctx).
 		Where("uid=?", uid).
 		And("org_id=?", orgID).
+		Table("org_user").
+		Exist()
+}
+
+// IsAutoWatchingOrgRepos returns true if given user is auto watching organization repositories.
+func IsAutoWatchingOrgRepos(ctx context.Context, orgID, uid int64) (bool, error) {
+	return db.GetEngine(ctx).
+		Where("uid=?", uid).
+		And("org_id=?", orgID).
+		And("auto_watch_org_repos=?", true).
 		Table("org_user").
 		Exist()
 }

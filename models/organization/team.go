@@ -181,6 +181,15 @@ func (t *Team) LoadPaginatedMembers(ctx context.Context, listOptions db.ListOpti
 	return err
 }
 
+func (t *Team) LoadMembersWatchingOrgRepos(ctx context.Context) (err error) {
+	t.Members, err = GetTeamMembers(ctx, &SearchMembersOptions{
+		ListOptions:       db.ListOptionsAll,
+		AutoWatchOrgRepos: true,
+		TeamID:            t.ID,
+	})
+	return err
+}
+
 // UnitEnabled returns if the team has the given unit type enabled
 func (t *Team) UnitEnabled(ctx context.Context, tp unit.Type) bool {
 	return t.UnitAccessMode(ctx, tp) > perm.AccessModeNone

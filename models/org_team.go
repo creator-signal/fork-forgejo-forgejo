@@ -17,7 +17,6 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
@@ -48,15 +47,13 @@ func InsertTeamRepository(ctx context.Context, t *organization.Team, repo *repo_
 		return nil, fmt.Errorf("recalculateAccesses: %w", err)
 	}
 
-	// Make all team members watch this repo if enabled in global settings
-	if setting.Service.AutoWatchNewRepos {
-		if err = t.LoadMembers(ctx); err != nil {
-			return nil, fmt.Errorf("getMembers: %w", err)
-		}
-		for _, u := range t.Members {
-			if err = repo_model.WatchIfAutoWatchNewRepos(ctx, u.ID, repo.ID); err != nil {
-				return nil, fmt.Errorf("watchRepo: %w", err)
-			}
+	// Make all team members enabling to watch organization repos watch this repo
+	if err = t.LoadMembersWatchingOrgRepos(ctx); err != nil {
+		return nil, fmt.Errorf("getMembers: %w", err)
+	}
+	for _, u := range t.Members {
+		if err = repo_model.WatchAsAutoWatch(ctx, u.ID, repo.ID); err != nil {
+			return nil, fmt.Errorf("watchRepo: %w", err)
 		}
 	}
 
@@ -364,20 +361,31 @@ func DeleteTeam(ctx context.Context, t *organization.Team) error {
 	return committer.Commit()
 }
 
-func AddTeamMember(ctx context.Context, team *organization.Team, userID int64) error {
-	_, err := InsertTeamMember(ctx, team, userID)
+func AddTeamMember(ctx context.Context, team *organization.Team, userID int64, autoWatchOrgRepos bool) error {
+	_, err := InsertTeamMember(ctx, team, userID, autoWatchOrgRepos)
 	return err
 }
 
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
-func InsertTeamMember(ctx context.Context, team *organization.Team, userID int64) (*organization.TeamUser, error) {
+func InsertTeamMember(ctx context.Context, team *organization.Team, userID int64, autoWatchOrgRepos bool) (*organization.TeamUser, error) {
 	isAlreadyMember, err := organization.IsTeamMember(ctx, team.OrgID, team.ID, userID)
 	if err != nil || isAlreadyMember {
 		return nil, err
 	}
 
-	if err := organization.AddOrgUser(ctx, team.OrgID, userID); err != nil {
+	isMember, err := organization.IsOrganizationMember(ctx, team.OrgID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use existing AutoWatchOrgRepos value if user is already a member of the organization.
+	if isMember {
+		autoWatchOrgRepos, err = organization.IsAutoWatchingOrgRepos(ctx, team.OrgID, userID)
+		if err != nil {
+			return nil, err
+		}
+	} else if err := organization.AddOrgUser(ctx, team.OrgID, userID, autoWatchOrgRepos); err != nil {
 		return nil, err
 	}
 
@@ -442,7 +450,7 @@ func InsertTeamMember(ctx context.Context, team *organization.Team, userID int64
 
 	// this behaviour may spend much time so run it in a goroutine
 	// FIXME: Update watch repos batchly
-	if setting.Service.AutoWatchNewRepos {
+	if autoWatchOrgRepos {
 		// Get team and its repositories.
 		if err := team.LoadRepositories(ctx); err != nil {
 			log.Error("team.LoadRepositories failed: %v", err)
@@ -450,7 +458,7 @@ func InsertTeamMember(ctx context.Context, team *organization.Team, userID int64
 		// FIXME: in the goroutine, it can't access the "ctx", it could only use db.DefaultContext at the moment
 		go func(repos []*repo_model.Repository) {
 			for _, repo := range repos {
-				if err = repo_model.WatchIfAutoWatchNewRepos(db.DefaultContext, userID, repo.ID); err != nil {
+				if err = repo_model.WatchAsAutoWatch(db.DefaultContext, userID, repo.ID); err != nil {
 					log.Error("watch repo failed: %v", err)
 				}
 			}

@@ -74,3 +74,12 @@ func (f *CreateTeamForm) Validate(req *http.Request, errs binding.Errors) bindin
 	ctx := context.GetValidateContext(req)
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+type AcceptTeamInviteForm struct {
+	AutoWatchOrgRepos bool
+}
+
+func (f *AcceptTeamInviteForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetValidateContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
+}

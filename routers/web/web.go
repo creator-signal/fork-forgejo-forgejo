@@ -1060,7 +1060,7 @@ func registerRoutes(m *web.Route) {
 
 		m.Group("/invite/{token}", func() {
 			m.Get("", org.TeamInvite)
-			m.Post("", org.TeamInvitePost)
+			m.Post("", web.Bind(forms.AcceptTeamInviteForm{}), org.TeamInvitePost)
 		})
 
 		m.Group("/{org}", func() {
@@ -1074,6 +1074,7 @@ func registerRoutes(m *web.Route) {
 			m.Get("/milestones/{team}", reqMilestonesDashboardPageEnabled, user.Milestones)
 			m.Post("/members/action/{action}", org.MembersAction)
 			m.Get("/teams", org.Teams)
+			m.Post("/", org.Action)
 		}, context.OrgAssignment(true, false, true))
 
 		m.Group("/{org}", func() {

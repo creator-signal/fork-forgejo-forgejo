@@ -41,13 +41,17 @@ func GetTeamUsersByTeamID(ctx context.Context, teamID int64) ([]*TeamUser, error
 // SearchMembersOptions holds the search options
 type SearchMembersOptions struct {
 	db.ListOptions
-	TeamID int64
+	TeamID            int64
+	AutoWatchOrgRepos bool
 }
 
 func (opts SearchMembersOptions) ToConds() builder.Cond {
 	cond := builder.NewCond()
 	if opts.TeamID > 0 {
 		cond = cond.And(builder.Eq{"": opts.TeamID})
+	}
+	if opts.AutoWatchOrgRepos {
+		cond = cond.And(builder.Eq{"auto_watch_org_repos": opts.AutoWatchOrgRepos})
 	}
 	return cond
 }
@@ -61,6 +65,13 @@ func GetTeamMembers(ctx context.Context, opts *SearchMembersOptions) ([]*user_mo
 			builder.Select("uid").
 				From("team_user").
 				Where(builder.Eq{"team_id": opts.TeamID}),
+		)
+	}
+	if opts.AutoWatchOrgRepos {
+		sess = sess.In("id",
+			builder.Select("uid").
+				From("team_user").
+				Where(builder.Eq{"auto_watch_org_repos": opts.AutoWatchOrgRepos}),
 		)
 	}
 	if opts.PageSize > 0 && opts.Page > 0 {

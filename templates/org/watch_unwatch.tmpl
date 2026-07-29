@@ -1,0 +1,8 @@
+<button class="secondary button" hx-post="{{.Org.OrganisationLink}}?action={{if $.IsAutoWatching}}unwatch{{else}}watch{{end}}" data-tooltip-content="{{if $.IsAutoWatching}}{{ctx.Locale.Tr "org.auto_watch.unwatch_desc"}}{{else}}{{ctx.Locale.Tr "org.auto_watch.watch_desc"}}{{end}}" hx-target="closest button" hx-swap="outerHTML">
+	{{svg "octicon-eye" 16}}
+	{{if $.IsAutoWatching}}
+		{{ctx.Locale.Tr "org.auto_watch.unwatch"}}
+	{{else}}
+		{{ctx.Locale.Tr "org.auto_watch.watch"}}
+	{{end}}
+</button>

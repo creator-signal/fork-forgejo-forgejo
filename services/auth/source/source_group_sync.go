@@ -16,6 +16,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/setting"
 )
 
 type syncType int
@@ -323,7 +324,7 @@ func syncGroupsToTeamsCached(ctx context.Context, user *user_model.User, orgTeam
 			}
 
 			if action == syncAdd && !isMember {
-				if err := models.AddTeamMember(ctx, team, user.ID); err != nil {
+				if err := models.AddTeamMember(ctx, team, user.ID, setting.Service.AutoWatchNewRepos); err != nil {
 					log.Error("group sync: Could not add user to team: %v", err)
 					return err
 				}

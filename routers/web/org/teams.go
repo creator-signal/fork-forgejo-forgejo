@@ -78,7 +78,7 @@ func TeamsAction(ctx *context.Context) {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
-		err = models.AddTeamMember(ctx, ctx.Org.Team, ctx.Doer.ID)
+		err = models.AddTeamMember(ctx, ctx.Org.Team, ctx.Doer.ID, setting.Service.AutoWatchNewRepos)
 	case "leave":
 		err = models.RemoveTeamMember(ctx, ctx.Org.Team, ctx.Doer.ID)
 		if err != nil {
@@ -596,17 +596,27 @@ func TeamInvite(ctx *context.Context) {
 		return
 	}
 
+	isOrgMember, err := org_model.IsOrganizationMember(ctx, org.ID, ctx.Doer.ID)
+	if err != nil {
+		ctx.ServerError("IsOrganizationMember", err)
+		return
+	}
+
 	ctx.Data["Title"] = ctx.Tr("org.teams.invite_team_member", team.Name)
 	ctx.Data["Invite"] = invite
 	ctx.Data["Organization"] = org
 	ctx.Data["Team"] = team
 	ctx.Data["Inviter"] = inviter
+	ctx.Data["ShowAutoWatchOrgRepos"] = !isOrgMember
+	ctx.Data["AutoWatchNewRepos"] = setting.Service.AutoWatchNewRepos
 
 	ctx.HTML(http.StatusOK, tplTeamInvite)
 }
 
 // TeamInvitePost handles the team invitation
 func TeamInvitePost(ctx *context.Context) {
+	form := web.GetForm(ctx).(*forms.AcceptTeamInviteForm)
+
 	invite, org, team, _, err := getTeamInviteFromContext(ctx)
 	if err != nil {
 		if org_model.IsErrTeamInviteNotFound(err) {
@@ -623,7 +633,7 @@ func TeamInvitePost(ctx *context.Context) {
 		return
 	}
 
-	if err := models.AddTeamMember(ctx, team, ctx.Doer.ID); err != nil {
+	if err := models.AddTeamMember(ctx, team, ctx.Doer.ID, form.AutoWatchOrgRepos); err != nil {
 		ctx.ServerError("AddTeamMember", err)
 		return
 	}

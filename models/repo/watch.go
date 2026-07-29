@@ -288,6 +288,12 @@ func WatchIfAutoWatchNewRepos(ctx context.Context, userID, repoID int64) error {
 	return autoWatch(ctx, userID, repoID)
 }
 
+// WatchAsAutoWatch subscribes to repo with automatic source set.
+// Used when auto watching is enabled per user setting, not global setting.
+func WatchAsAutoWatch(ctx context.Context, userID, repoID int64) error {
+	return autoWatch(ctx, userID, repoID)
+}
+
 // UnwatchRepos will unwatch the user from all given repositories.
 func UnwatchRepos(ctx context.Context, userID int64, repoIDs []int64) error {
 	// Unfortunatly, we can't simply delete the Watch records because we do watcher counting in the repo relation.

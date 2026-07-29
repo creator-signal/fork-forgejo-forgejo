@@ -109,7 +109,7 @@ func TestAddTeamMember(t *testing.T) {
 
 	test := func(teamID, userID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
-		require.NoError(t, AddTeamMember(db.DefaultContext, team, userID))
+		require.NoError(t, AddTeamMember(db.DefaultContext, team, userID, true))
 		unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{UID: userID, TeamID: teamID})
 		unittest.CheckConsistencyFor(t, &organization.Team{ID: teamID}, &user_model.User{ID: team.OrgID})
 	}
@@ -238,7 +238,7 @@ func TestRepository_RecalculateAccesses3(t *testing.T) {
 
 	// adding user29 to team5 should add an explicit access row for repo 23
 	// even though repo 23 is public
-	require.NoError(t, AddTeamMember(db.DefaultContext, team5, user29.ID))
+	require.NoError(t, AddTeamMember(db.DefaultContext, team5, user29.ID, true))
 
 	has, err = db.GetEngine(db.DefaultContext).Get(&access_model.Access{UserID: 29, RepoID: 23})
 	require.NoError(t, err)
