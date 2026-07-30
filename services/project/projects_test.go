@@ -395,9 +395,9 @@ func TestCRUDProject(t *testing.T) {
 		err = DeleteColumnInProject(t.Context(), column2.ID)
 		require.Error(t, err) // Can not delete default col
 
-		err = DeleteColumnInProject(t.Context(), column2.ID)
+		err = DeleteColumnInProject(t.Context(), column1.ID)
 		require.NoError(t, err)
-		unittest.AssertNotExistsBean(t, &project_model.Column{ID: column2.ID})
+		unittest.AssertNotExistsBean(t, &project_model.Column{ID: column1.ID})
 	})
 
 	t.Run("TestCRUDProjectIssues", func(t *testing.T) {
