@@ -131,7 +131,13 @@ func ListProjects(ctx *context.APIContext) {
 // GetProject gets a project by id
 func GetProject(ctx *context.APIContext) {
 	_, owner, repo := getOwnerTypeAndOwnerAndRepoFromData(ctx)
-	project, err := project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, owner.ID)
+	var err error
+	var project *project_model.Project
+	if repo != nil {
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, repo.ID)
+	} else {
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, owner.ID)
+	}
 	project_service.SetProjectOwnerAndRepo(project, owner, repo)
 	if err != nil {
 		if errors.Is(err, project_model.ErrProjectNotExist{}) {
@@ -150,8 +156,14 @@ func GetProject(ctx *context.APIContext) {
 // UpdateProject updates a project by id
 func UpdateProject(ctx *context.APIContext) {
 	form := web.GetForm(ctx).(*api.CreateProjectOptions)
-	_, owner, _ := getOwnerTypeAndOwnerAndRepoFromData(ctx)
-	project, err := project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, owner.ID)
+	_, owner, repo := getOwnerTypeAndOwnerAndRepoFromData(ctx)
+	var err error
+	var project *project_model.Project
+	if repo != nil {
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, repo.ID)
+	} else {
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project.ProjectID, owner.ID)
+	}
 	if err != nil {
 		if errors.Is(err, project_model.ErrProjectNotExist{}) {
 			ctx.NotFound("Update Project", err)
