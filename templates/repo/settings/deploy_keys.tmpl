@@ -1,4 +1,4 @@
-{{template "repo/settings/layout_head" (dict "ctxData" . "pageClass" "repository settings")}}
+{{template "repo/settings/layout_head" (dict "ctxData" . "pageClass" "repository settings options")}}
 	<div class="repo-setting-content">
 		<h4 class="ui top attached header">
 			{{ctx.Locale.Tr "repo.settings.deploy_keys"}}
@@ -26,30 +26,30 @@
 					</div>
 					<div class="field">
 						<div class="ui checkbox {{if .Err_IsWritable}}error{{end}}">
-							<input id="ssh-key-is-writable" name="is_writable" type="checkbox" value="1">
+							<input id="ssh-key-is-writable" name="is_writable" type="checkbox" value="1" class="enable-system" data-target="#key_prem_panel">
 							<label for="ssh-key-is-writable">
 								{{ctx.Locale.Tr "repo.settings.is_writable"}}
 							</label>
 							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.is_writable_info"}}</small>
 						</div>
 					</div>
-					<div class="field">
-						<div class="ui checkbox {{if .Err_CanWriteCode}}error{{end}}">
-							<input id="ssh-key-can-write-code" name="can_write_code" type="checkbox" value="1">
-							<label for="ssh-key-can-write-code">
-								{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code"}}
-							</label>
-							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code_info"}}</small>
+					<div id="key_prem_panel" class="field disabled">
+						<div class="field">
+							<div class="ui checkbox {{if .Err_CanWriteCode}}error{{end}}">
+								<input id="ssh-key-can-write-code" name="can_write_code" type="checkbox" checked value="1">
+								<label for="ssh-key-can-write-code">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code"}}</label>
+								<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_code_info"}}</small>
+							</div>
 						</div>
-					</div>
-					<div class="field">
-						<div class="ui checkbox {{if .Err_CanWriteTags}}error{{end}}">
-							<input id="ssh-key-can-write-tags" name="can_write_tags" type="checkbox" value="1">
-							<label for="ssh-key-can-write-tags">
-								{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags"}}
-							</label>
-							<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags_info"}}</small>
-						</div>
+						<div class="field">
+							<div class="ui checkbox {{if .Err_CanWriteTags}}error{{end}}">
+								<input id="ssh-key-can-write-tags" name="can_write_tags" type="checkbox" checked value="1">
+								<label for="ssh-key-can-write-tags">
+									{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags"}}
+								</label>
+								<small class="tw-pl-[26px]">{{ctx.Locale.Tr "repo.settings.deploy_key_can_write_tags_info"}}</small>
+							</div>
+						</div>						
 					</div>
 					<button class="ui primary button">
 						{{ctx.Locale.Tr "repo.settings.add_deploy_key"}}
