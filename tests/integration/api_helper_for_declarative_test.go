@@ -200,7 +200,7 @@ func doAPIDeleteUserKey(ctx APITestContext, keyID int64) func(*testing.T) {
 	}
 }
 
-func doAPICreateDeployKey(ctx APITestContext, keyname, keyFile string, readOnly bool, canWriteCode bool, canWriteTags bool) func(*testing.T) {
+func doAPICreateDeployKey(ctx APITestContext, keyname, keyFile string, readOnly, canWriteCode, canWriteTags bool) func(*testing.T) {
 	return func(t *testing.T) {
 		dataPubKey, err := os.ReadFile(keyFile + ".pub")
 		require.NoError(t, err)

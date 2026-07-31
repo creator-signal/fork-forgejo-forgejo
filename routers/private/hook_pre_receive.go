@@ -661,7 +661,6 @@ func (ctx *preReceiveContext) loadPusherAndPermission() bool {
 		ctx.deployKeyAccessMode = deployKey.Mode
 		ctx.deployKeyCanWriteCode = deployKey.CanWriteCode
 		ctx.deployKeyCanWriteTags = deployKey.CanWriteTags
-
 	}
 
 	ctx.loadedPusher = true

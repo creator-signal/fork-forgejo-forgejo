@@ -239,6 +239,7 @@ func doGitFetch(dstPath string, args ...string) func(*testing.T) {
 		require.NoError(t, err)
 	}
 }
+
 func doGitTag(dstPath string, args ...string) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
