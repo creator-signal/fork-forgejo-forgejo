@@ -24897,6 +24897,14 @@
         "key"
       ],
       "properties": {
+        "can_write_code": {
+          "type": "boolean",
+          "x-go-name": "CanWriteCode"
+        },
+        "can_write_tags": {
+          "type": "boolean",
+          "x-go-name": "CanWriteTags"
+        },
         "key": {
           "description": "An armored SSH key to add",
           "type": "string",
@@ -25726,6 +25734,14 @@
       "description": "DeployKey a deploy key",
       "type": "object",
       "properties": {
+        "can_write_code": {
+          "type": "boolean",
+          "x-go-name": "CanWriteCode"
+        },
+        "can_write_tags": {
+          "type": "boolean",
+          "x-go-name": "CanWriteTags"
+        },
         "created_at": {
           "type": "string",
           "format": "date-time",
