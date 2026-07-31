@@ -1808,21 +1808,14 @@ func newPullRequestCommentPlacementTester(t *testing.T) *PullRequestCommentPlace
 		content.WriteString(fmt.Sprintf("Line %d\n", i+1)) // +1 -> make "Line N" appear on the Nth line and avoid off-by-one confusions
 	}
 
-	repo, initialSHA, reset := tests.CreateDeclarativeRepoWithOptions(t, user2, tests.DeclarativeRepoOptions{
-		Files: optional.Some([]*files_service.ChangeRepoFile{
-			{
-				Operation:     "create",
-				TreePath:      "file1.md",
-				ContentReader: strings.NewReader(content.String()),
-			},
-			{
-				Operation:     "create",
-				TreePath:      "file2.md",
-				ContentReader: strings.NewReader(content.String()),
-			},
-		}),
+	var initialSHA string
+	repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+		Files: forgery.MapFS{
+			"file1.md": forgery.MapFile(content.String()),
+			"file2.md": forgery.MapFile(content.String()),
+		},
+		LatestSha: &initialSHA,
 	})
-	t.Cleanup(reset)
 
 	return &PullRequestCommentPlacementTester{
 		t:           t,
