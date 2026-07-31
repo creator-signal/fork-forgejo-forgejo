@@ -457,7 +457,7 @@ func ListPageRevisions(ctx *context.APIContext) {
 // findEntryForFile finds the tree entry for a target filepath.
 func findEntryForFile(commit *git.Commit, target string) (*git.TreeEntry, error) {
 	entry, err := commit.GetTreeEntryByPath(target)
-	if err != nil {
+	if err != nil && !git.IsErrNotExist(err) {
 		return nil, err
 	}
 	if entry != nil {
