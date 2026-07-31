@@ -215,8 +215,8 @@ func syncGitConfig() (err error) {
 	// TODO: need to confirm whether users really need to change these values manually. It seems that these values are dummy only and not really used.
 	// If these values are not really used, then they can be set (overwritten) directly without considering about existence.
 	for configKey, defaultValue := range map[string]string{
-		"user.name":  "Gitea",
-		"user.email": "gitea@fake.local",
+		"user.name":  "Forgejo",
+		"user.email": "forgejo@fake.local",
 	} {
 		if err := configSetNonExist(configKey, defaultValue); err != nil {
 			return err
