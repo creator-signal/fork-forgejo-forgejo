@@ -131,15 +131,15 @@ func (cf *ClientFactory) setHostMatcher(hosts []*url.URL) error {
 		hostMatchAllow = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
 		for _, host := range hosts {
 			if host != nil {
-				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
+				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Hostname())
 			}
 		}
 	} else {
 		for i, host := range hosts {
 			if i == 0 {
-				hostMatchAllow = host.Host
+				hostMatchAllow = host.Hostname()
 			} else {
-				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Host)
+				hostMatchAllow = fmt.Sprintf("%s, %s", hostMatchAllow, host.Hostname())
 			}
 		}
 		hostMatchBlock = fmt.Sprintf("%s, %s", hostmatcher.MatchBuiltinPrivate, hostmatcher.MatchBuiltinLoopback)
