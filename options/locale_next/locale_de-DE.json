@@ -603,7 +603,7 @@
 	"actions.runners.new_notice": "Wie man einen Runner startet",
 	"actions.runners.status": "Status",
 	"actions.runners.status.unspecified": "Unbekannt",
-	"actions.runners.status.idle": "Inaktiv",
+	"actions.runners.status.idle": "Untätig",
 	"actions.runners.status.active": "Aktiv",
 	"actions.runners.status.offline": "Offline",
 	"actions.runners.name": "Name",
