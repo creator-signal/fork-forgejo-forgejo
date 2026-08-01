@@ -23,7 +23,7 @@ func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
 	pushCommits := NewPushCommits()
 	pushCommits.Commits = []*PushCommit{
 		{
-			Sha1:           "69554a6",
+			CommitID:       "69554a6",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -31,7 +31,7 @@ func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
 			Message:        "not signed commit",
 		},
 		{
-			Sha1:           "27566bd",
+			CommitID:       "27566bd",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -39,7 +39,7 @@ func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
 			Message:        "good signed commit (with not yet validated email)",
 		},
 		{
-			Sha1:           "5099b81",
+			CommitID:       "5099b81",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -47,7 +47,7 @@ func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
 			Message:        "good signed commit",
 		},
 	}
-	pushCommits.HeadCommit = &PushCommit{Sha1: "69554a6"}
+	pushCommits.HeadCommit = &PushCommit{CommitID: "69554a6"}
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 16})
 	payloadCommits, headCommit, err := pushCommits.ToAPIPayloadCommits(git.DefaultContext, repo.RepoPath(), "/user2/repo16")
@@ -106,7 +106,7 @@ func TestPushCommits_AvatarLink(t *testing.T) {
 	pushCommits := NewPushCommits()
 	pushCommits.Commits = []*PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user4@example.com",
@@ -114,7 +114,7 @@ func TestPushCommits_AvatarLink(t *testing.T) {
 			Message:        "message1",
 		},
 		{
-			Sha1:           "abcdef2",
+			CommitID:       "abcdef2",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -143,7 +143,7 @@ func TestPushCommitToCommit(t *testing.T) {
 	sha1, err := git.NewIDFromString(hexString)
 	require.NoError(t, err)
 	commit, err := PushCommitToCommit(&PushCommit{
-		Sha1:           sha1.String(),
+		CommitID:       sha1.String(),
 		Message:        "Commit Message",
 		AuthorEmail:    "example@example.com",
 		AuthorName:     "John Doe",
@@ -164,7 +164,7 @@ func TestPushCommitToCommitInvalidSha(t *testing.T) {
 	now := time.Now()
 	const hexString = "012"
 	_, err := PushCommitToCommit(&PushCommit{
-		Sha1:           hexString,
+		CommitID:       hexString,
 		Message:        "Commit Message",
 		AuthorEmail:    "example@example.com",
 		AuthorName:     "John Doe",
@@ -192,7 +192,7 @@ func TestCommitToPushCommit(t *testing.T) {
 		Committer:     sig,
 		CommitMessage: "Commit Message",
 	})
-	assert.Equal(t, hexString, pushCommit.Sha1)
+	assert.Equal(t, hexString, pushCommit.CommitID)
 	assert.Equal(t, "Commit Message", pushCommit.Message)
 	assert.Equal(t, "example@example.com", pushCommit.AuthorEmail)
 	assert.Equal(t, "John Doe", pushCommit.AuthorName)
@@ -234,12 +234,12 @@ func TestListToPushCommits(t *testing.T) {
 	pushCommits := GitToPushCommits(l)
 	if assert.Len(t, pushCommits.Commits, 2) {
 		assert.Equal(t, "Message1", pushCommits.Commits[0].Message)
-		assert.Equal(t, hexString1, pushCommits.Commits[0].Sha1)
+		assert.Equal(t, hexString1, pushCommits.Commits[0].CommitID)
 		assert.Equal(t, "example@example.com", pushCommits.Commits[0].AuthorEmail)
 		assert.Equal(t, now, pushCommits.Commits[0].Timestamp)
 
 		assert.Equal(t, "Message2", pushCommits.Commits[1].Message)
-		assert.Equal(t, hexString2, pushCommits.Commits[1].Sha1)
+		assert.Equal(t, hexString2, pushCommits.Commits[1].CommitID)
 		assert.Equal(t, "example@example.com", pushCommits.Commits[1].AuthorEmail)
 		assert.Equal(t, now, pushCommits.Commits[1].Timestamp)
 	}

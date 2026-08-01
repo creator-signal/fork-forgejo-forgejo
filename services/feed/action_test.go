@@ -78,7 +78,7 @@ func pushCommits() *repository.PushCommits {
 	pushCommits := repository.NewPushCommits()
 	pushCommits.Commits = []*repository.PushCommit{
 		{
-			Sha1:           "69554a6",
+			CommitID:       "69554a6",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -86,7 +86,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "not signed commit\nline two",
 		},
 		{
-			Sha1:           "27566bd",
+			CommitID:       "27566bd",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -94,7 +94,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "good signed commit (with not yet validated email)",
 		},
 		{
-			Sha1:           "5099b81",
+			CommitID:       "5099b81",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -102,7 +102,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "good signed commit\nlong commit message\nwith lots of details\nabout how cool the implementation is",
 		},
 	}
-	pushCommits.HeadCommit = &repository.PushCommit{Sha1: "69554a6", Message: "not signed commit\nline two"}
+	pushCommits.HeadCommit = &repository.PushCommit{CommitID: "69554a6", Message: "not signed commit\nline two"}
 	return pushCommits
 }
 

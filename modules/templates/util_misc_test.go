@@ -23,7 +23,7 @@ func pushCommits() *repository.PushCommits {
 	pushCommits := repository.NewPushCommits()
 	pushCommits.Commits = []*repository.PushCommit{
 		{
-			Sha1:           "x",
+			CommitID:       "x",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -31,7 +31,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "invalid sha1",
 		},
 		{
-			Sha1:           "2c54faec6c45d31c1abfaecdab471eac6633738a",
+			CommitID:       "2c54faec6c45d31c1abfaecdab471eac6633738a",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -39,7 +39,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "not signed commit",
 		},
 		{
-			Sha1:           "2d491b2985a7ff848d5c02748e7ea9f9f7619f9f",
+			CommitID:       "2d491b2985a7ff848d5c02748e7ea9f9f7619f9f",
 			CommitterEmail: "non-existent",
 			CommitterName:  "user2",
 			AuthorEmail:    "non-existent",
@@ -63,7 +63,7 @@ AAAAQIMufOuSjZeDUujrkVK4sl7ICa0WwEftas8UAYxx0Thdkiw2qWjR1U1PKfTLm16/w8
 			},
 		},
 		{
-			Sha1:           "853694aae8816094a0d875fee7ea26278dbf5d0f",
+			CommitID:       "853694aae8816094a0d875fee7ea26278dbf5d0f",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "user2",
 			AuthorEmail:    "user2@example.com",

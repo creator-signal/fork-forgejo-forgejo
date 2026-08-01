@@ -156,8 +156,8 @@ func UpdateIssuesCommit(ctx context.Context, doer *user_model.User, repo *repo_m
 				continue
 			}
 
-			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, html.EscapeString(repo.Link()), html.EscapeString(url.PathEscape(c.Sha1)), html.EscapeString(strings.SplitN(c.Message, "\n", 2)[0]))
-			if err = CreateRefComment(ctx, doer, refRepo, refIssue, message, c.Sha1); err != nil {
+			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, html.EscapeString(repo.Link()), html.EscapeString(url.PathEscape(c.CommitID)), html.EscapeString(strings.SplitN(c.Message, "\n", 2)[0]))
+			if err = CreateRefComment(ctx, doer, refRepo, refIssue, message, c.CommitID); err != nil {
 				return err
 			}
 
@@ -191,7 +191,7 @@ func UpdateIssuesCommit(ctx context.Context, doer *user_model.User, repo *repo_m
 			}
 			if isClosed != refIssue.IsClosed {
 				refIssue.Repo = refRepo
-				if err := ChangeStatus(ctx, refIssue, doer, c.Sha1, isClosed); err != nil {
+				if err := ChangeStatus(ctx, refIssue, doer, c.CommitID, isClosed); err != nil {
 					return err
 				}
 			}

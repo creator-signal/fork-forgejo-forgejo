@@ -217,8 +217,8 @@ func feedActionsToFeedItems(ctx *context.Context, actions activities_model.Actio
 						desc += "\n\n"
 					}
 					desc += fmt.Sprintf("<a href=\"%s\">%s</a>\n%s",
-						html.EscapeString(fmt.Sprintf("%s/commit/%s", act.GetRepoAbsoluteLink(ctx), commit.Sha1)),
-						commit.Sha1,
+						html.EscapeString(fmt.Sprintf("%s/commit/%s", act.GetRepoAbsoluteLink(ctx), commit.CommitID)),
+						commit.CommitID,
 						templates.RenderCommitMessage(ctx, commit.Message, nil),
 					)
 				}
@@ -226,7 +226,7 @@ func feedActionsToFeedItems(ctx *context.Context, actions activities_model.Actio
 				if push.Len > 1 {
 					link = &feeds.Link{Href: setting.AppURL + push.CompareURL}
 				} else if push.Len == 1 {
-					link = &feeds.Link{Href: fmt.Sprintf("%s/commit/%s", act.GetRepoAbsoluteLink(ctx), push.Commits[0].Sha1)}
+					link = &feeds.Link{Href: fmt.Sprintf("%s/commit/%s", act.GetRepoAbsoluteLink(ctx), push.Commits[0].CommitID)}
 				}
 
 			case activities_model.ActionCreateIssue, activities_model.ActionCreatePullRequest:

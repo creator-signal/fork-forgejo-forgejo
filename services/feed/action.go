@@ -590,7 +590,7 @@ func prepareCommitsForFeed(commits *repository.PushCommits) *repository.PushComm
 
 func prepareCommitForFeed(commit *repository.PushCommit) *repository.PushCommit {
 	return &repository.PushCommit{
-		Sha1:           commit.Sha1,
+		CommitID:       commit.CommitID,
 		Message:        abbreviatedComment(commit.Message),
 		AuthorEmail:    commit.AuthorEmail,
 		AuthorName:     commit.AuthorName,

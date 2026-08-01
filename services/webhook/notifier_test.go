@@ -29,7 +29,7 @@ func pushCommits() *repository.PushCommits {
 	pushCommits := repository.NewPushCommits()
 	pushCommits.Commits = []*repository.PushCommit{
 		{
-			Sha1:           "2c54faec6c45d31c1abfaecdab471eac6633738a",
+			CommitID:       "2c54faec6c45d31c1abfaecdab471eac6633738a",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -37,7 +37,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "not signed commit",
 		},
 		{
-			Sha1:           "205ac761f3326a7ebe416e8673760016450b5cec",
+			CommitID:       "205ac761f3326a7ebe416e8673760016450b5cec",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -45,7 +45,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "good signed commit (with not yet validated email)",
 		},
 		{
-			Sha1:           "1032bbf17fbc0d9c95bb5418dabe8f8c99278700",
+			CommitID:       "1032bbf17fbc0d9c95bb5418dabe8f8c99278700",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User2",
 			AuthorEmail:    "user2@example.com",
@@ -53,7 +53,7 @@ func pushCommits() *repository.PushCommits {
 			Message:        "good signed commit",
 		},
 	}
-	pushCommits.HeadCommit = &repository.PushCommit{Sha1: "2c54faec6c45d31c1abfaecdab471eac6633738a"}
+	pushCommits.HeadCommit = &repository.PushCommit{CommitID: "2c54faec6c45d31c1abfaecdab471eac6633738a"}
 	return pushCommits
 }
 

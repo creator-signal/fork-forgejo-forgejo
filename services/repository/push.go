@@ -231,7 +231,7 @@ func pushUpdates(optsList []*repo_module.PushUpdateOptions) error {
 
 				oldCommitID := opts.OldCommitID
 				if oldCommitID == objectFormat.EmptyObjectID().String() && len(commits.Commits) > 0 {
-					oldCommit, err := gitRepo.GetCommit(commits.Commits[len(commits.Commits)-1].Sha1)
+					oldCommit, err := gitRepo.GetCommit(commits.Commits[len(commits.Commits)-1].CommitID)
 					if err != nil && !git.IsErrNotExist(err) {
 						log.Error("unable to GetCommit %s from %-v: %v", oldCommitID, repo, err)
 					}

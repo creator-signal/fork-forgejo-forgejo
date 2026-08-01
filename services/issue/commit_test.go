@@ -22,7 +22,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user4@example.com",
@@ -30,7 +30,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 			Message:        "start working on #FST-1, #1",
 		},
 		{
-			Sha1:           "abcdef2",
+			CommitID:       "abcdef2",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -38,7 +38,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 			Message:        "a plain message",
 		},
 		{
-			Sha1:           "abcdef2",
+			CommitID:       "abcdef2",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -69,7 +69,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 	// Test that push to a non-default branch closes no issue.
 	pushCommits = []*repository.PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user4@example.com",
@@ -95,7 +95,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 
 	pushCommits = []*repository.PushCommit{
 		{
-			Sha1:           "abcdef3",
+			CommitID:       "abcdef3",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -124,7 +124,7 @@ func TestUpdateIssuesCommit_Colon(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef2",
+			CommitID:       "abcdef2",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -152,7 +152,7 @@ func TestUpdateIssuesCommit_Issue5957(t *testing.T) {
 	// Test that push to a non-default branch closes an issue.
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user4@example.com",
@@ -187,7 +187,7 @@ func TestUpdateIssuesCommit_AnotherRepo(t *testing.T) {
 	// If the user also has push permissions to that repo
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -222,7 +222,7 @@ func TestUpdateIssuesCommit_AnotherRepo_FullAddress(t *testing.T) {
 	// If the user also has push permissions to that repo
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef1",
+			CommitID:       "abcdef1",
 			CommitterEmail: "user2@example.com",
 			CommitterName:  "User Two",
 			AuthorEmail:    "user2@example.com",
@@ -257,7 +257,7 @@ func TestUpdateIssuesCommit_AnotherRepoNoPermission(t *testing.T) {
 	// If the committer doesn't have push rights in that repo
 	pushCommits := []*repository.PushCommit{
 		{
-			Sha1:           "abcdef3",
+			CommitID:       "abcdef3",
 			CommitterEmail: "user10@example.com",
 			CommitterName:  "User Ten",
 			AuthorEmail:    "user10@example.com",
@@ -265,7 +265,7 @@ func TestUpdateIssuesCommit_AnotherRepoNoPermission(t *testing.T) {
 			Message:        "close org3/repo3#1",
 		},
 		{
-			Sha1:           "abcdef4",
+			CommitID:       "abcdef4",
 			CommitterEmail: "user10@example.com",
 			CommitterName:  "User Ten",
 			AuthorEmail:    "user10@example.com",

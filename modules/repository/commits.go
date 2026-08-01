@@ -22,7 +22,7 @@ import (
 
 // PushCommit represents a commit in a push operation.
 type PushCommit struct {
-	Sha1           string
+	CommitID       string
 	Message        string
 	AuthorEmail    string
 	AuthorName     string
@@ -74,15 +74,15 @@ func (pc *PushCommits) toAPIPayloadCommit(ctx context.Context, emailUsers map[st
 		committerUsername = committer.Name
 	}
 
-	fileStatus, err := git.GetCommitFileStatus(ctx, repoPath, commit.Sha1)
+	fileStatus, err := git.GetCommitFileStatus(ctx, repoPath, commit.CommitID)
 	if err != nil {
-		return nil, fmt.Errorf("FileStatus [commit_sha1: %s]: %w", commit.Sha1, err)
+		return nil, fmt.Errorf("FileStatus [commit_id: %s]: %w", commit.CommitID, err)
 	}
 
 	return &api.PayloadCommit{
-		ID:      commit.Sha1,
+		ID:      commit.CommitID,
 		Message: commit.Message,
-		URL:     fmt.Sprintf("%s/commit/%s", repoLink, url.PathEscape(commit.Sha1)),
+		URL:     fmt.Sprintf("%s/commit/%s", repoLink, url.PathEscape(commit.CommitID)),
 		Author: &api.PayloadUser{
 			Name:     commit.AuthorName,
 			Email:    commit.AuthorEmail,
@@ -115,7 +115,7 @@ func (pc *PushCommits) ToAPIPayloadCommits(ctx context.Context, repoPath, repoLi
 		}
 
 		commits[i] = apiCommit
-		if pc.HeadCommit != nil && pc.HeadCommit.Sha1 == commits[i].ID {
+		if pc.HeadCommit != nil && pc.HeadCommit.CommitID == commits[i].ID {
 			headCommit = apiCommit
 		}
 	}
@@ -153,7 +153,7 @@ func (pc *PushCommits) AvatarLink(ctx context.Context, email string) string {
 //
 // Attention: Converting a Commit to a PushCommit and converting back to a Commit will not result in an identical object!
 func PushCommitToCommit(commit *PushCommit) (*git.Commit, error) {
-	id, err := git.NewIDFromString(commit.Sha1)
+	id, err := git.NewIDFromString(commit.CommitID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func PushCommitToCommit(commit *PushCommit) (*git.Commit, error) {
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
 func CommitToPushCommit(commit *git.Commit) *PushCommit {
 	return &PushCommit{
-		Sha1:           commit.ID.String(),
+		CommitID:       commit.ID.String(),
 		Message:        commit.Message(),
 		AuthorEmail:    commit.Author.Email,
 		AuthorName:     commit.Author.Name,
