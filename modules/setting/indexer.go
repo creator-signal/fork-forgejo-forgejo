@@ -70,25 +70,25 @@ func requiresConnectionString(indexerType string) bool {
 }
 
 func buildConnectionString(sec ConfigSection) string {
-	connUrl := &url.URL{}
-	connUrl.Scheme = sec.Key("ISSUE_INDEXER_PROTOCOL").String()
-	connUrl.Host = sec.Key("ISSUE_INDEXER_HOST").String()
-	connUrl.Path = sec.Key("ISSUE_INDEXER_PATH").String()
+	connURL := &url.URL{}
+	connURL.Scheme = sec.Key("ISSUE_INDEXER_PROTOCOL").String()
+	connURL.Host = sec.Key("ISSUE_INDEXER_HOST").String()
+	connURL.Path = sec.Key("ISSUE_INDEXER_PATH").String()
 
 	username := sec.Key("ISSUE_INDEXER_USER").String()
 	passwd := loadSecret(sec, "ISSUE_INDEXER_PASSWD_URI", "ISSUE_INDEXER_PASSWD")
 	if passwd != "" {
 		// If password is set we need to generate the user info part of the URL, the username being empty/unset is a feature (for instance with meilisearch)
-		connUrl.User = url.UserPassword(username, passwd)
+		connURL.User = url.UserPassword(username, passwd)
 	} else if username != "" {
 		// If password is not set but the username is we'll include the username in the URL
-		connUrl.User = url.User(username)
+		connURL.User = url.User(username)
 	} else {
 		// Neither auth configs were set so don't generate that part of the connection string
-		connUrl.User = nil
+		connURL.User = nil
 	}
 
-	return connUrl.String()
+	return connURL.String()
 }
 
 func loadIndexerFrom(rootCfg ConfigProvider) {
