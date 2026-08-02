@@ -49,8 +49,8 @@ func apiError(ctx *context.Context, status int, obj any) {
 	})
 }
 
-// HTMLPackageMetadata returns the metadata for a single package in Simple HTML per PEP691
-func HTMLPackageMetadata(ctx *context.Context, accept string) {
+// v1HTMLPackageMetadata returns the metadata for a single package in Simple HTML per PEP691
+func v1HTMLPackageMetadata(ctx *context.Context, ctype string) {
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
@@ -79,12 +79,12 @@ func HTMLPackageMetadata(ctx *context.Context, accept string) {
 	ctx.Data["PackageDescriptors"] = pds
 	// PEP 691 defines `text/html` as an alias for this media type, so a single
 	// Content-Type header is sufficient.
-	ctx.Resp.Header().Set("Content-Type", accept)
+	ctx.Resp.Header().Set("Content-Type", ctype)
 	ctx.HTML(http.StatusOK, "api/packages/pypi/simple")
 }
 
-// JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
-func JSONPackageMetadata(ctx *context.Context, accept string) {
+// v1JSONPackageMetadata returns the metadata for a single package in Simple JSON per PEP691
+func v1JSONPackageMetadata(ctx *context.Context, ctype string) {
 	packageName := normalizer.Replace(ctx.Params("id"))
 
 	pvs, err := packages_model.GetVersionsByPackageName(ctx, ctx.Package.Owner.ID, packages_model.TypePyPI, packageName)
@@ -138,7 +138,7 @@ func JSONPackageMetadata(ctx *context.Context, accept string) {
 	}
 	// PEP 691 requires the canonical media type for JSON responses. Sending an
 	// additional `application/json` header breaks strict clients (e.g. uv).
-	ctx.Resp.Header().Set("Content-Type", accept)
+	ctx.Resp.Header().Set("Content-Type", ctype)
 	if err := json.NewEncoder(ctx.Resp).Encode(content); err != nil {
 		log.Error("Render JSON failed: %v", err)
 		apiError(ctx, http.StatusInternalServerError, err)
@@ -148,47 +148,19 @@ func JSONPackageMetadata(ctx *context.Context, accept string) {
 func PackageMetadata(ctx *context.Context) {
 	types := ctx.Req.Header.Values("Accept")
 	if len(types) == 0 {
-		HTMLPackageMetadata(ctx, "text/html")
+		v1HTMLPackageMetadata(ctx, "text/html")
 		return
 	}
 
-	accepts := goautoneg.ParseAccept(strings.Join(types, ","))
-	accepts = slices.DeleteFunc(accepts, func(accept goautoneg.Accept) bool {
-		return accept.Q == 0
-	})
-	slices.SortStableFunc(accepts, func(a, b goautoneg.Accept) int {
-		if a.Q > b.Q {
-			return -1
-		}
-		if a.Q < b.Q {
-			return 1
-		}
-		return 0
-	})
+	accept := goautoneg.Negotiate(strings.Join(types, ","), []string{"application/vnd.pypi.simple.v1+json", "application/vnd.pypi.simple.latest+json", "application/vnd.pypi.simple.v1+html", "application/vnd.pypi.simple.latest+html", "text/html"})
 
-	for _, accept := range accepts {
-		switch accept.Type {
-		case "application":
-			switch accept.SubType {
-			case "vnd.pypi.simple.v1+json", "vnd.pypi.simple.latest+json":
-				JSONPackageMetadata(ctx, "application/vnd.pypi.simple.v1+json")
-				return
-			case "vnd.pypi.simple.v1+html", "vnd.pypi.simple.latest+html":
-				HTMLPackageMetadata(ctx, "application/vnd.pypi.simple.v1+html")
-				return
-			}
-		case "*":
-			if accept.SubType == "*" {
-				HTMLPackageMetadata(ctx, "text/html")
-				return
-			}
-		case "text":
-			switch accept.SubType {
-			case "html", "*":
-				HTMLPackageMetadata(ctx, "text/html")
-				return
-			}
-		}
+	switch accept {
+	case "application/vnd.pypi.simple.v1+json", "application/vnd.pypi.simple.latest+json":
+		v1JSONPackageMetadata(ctx, accept)
+		return
+	case "application/vnd.pypi.simple.latest+html", "application/vnd.pypi.simple.v1+html", "text/html":
+		v1HTMLPackageMetadata(ctx, accept)
+		return
 	}
 
 	ctx.PlainText(http.StatusNotAcceptable, "no supported content type in Accept header")
