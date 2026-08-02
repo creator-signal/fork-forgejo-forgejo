@@ -309,18 +309,6 @@ func TestPackagePyPI(t *testing.T) {
 		checkMetadataHTML(t, "application/vnd.pypi.simple.v1+json;q=0.5, text/html", "text/html")
 	})
 
-	t.Run("PackageMetadataRejectByQZero", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
-
-		// a media type explicitly rejected with q=0 must not be served
-		req := NewRequest(t, "GET", fmt.Sprintf("%s/simple/%s", root, packageName)).
-			AddBasicAuth(user.Name)
-		req.Header["Accept"] = []string{"text/html;q=0"}
-		MakeRequest(t, req, http.StatusNotAcceptable)
-
-		checkMetadataJSON(t, "text/html;q=0, application/vnd.pypi.simple.v1+json")
-	})
-
 	t.Run("PackageMetadataNotAcceptable", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 

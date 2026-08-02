@@ -152,14 +152,21 @@ func PackageMetadata(ctx *context.Context) {
 		return
 	}
 
-	accept := goautoneg.Negotiate(strings.Join(types, ","), []string{"application/vnd.pypi.simple.v1+json", "application/vnd.pypi.simple.latest+json", "application/vnd.pypi.simple.v1+html", "application/vnd.pypi.simple.latest+html", "text/html"})
+	// `text/html` is listed first so that an `Accept: */*` request falls back
+	// to the HTML representation instead of the JSON one.
+	accept := goautoneg.Negotiate(strings.Join(types, ","), []string{"text/html", "application/vnd.pypi.simple.v1+json", "application/vnd.pypi.simple.v1+html", "application/vnd.pypi.simple.latest+json", "application/vnd.pypi.simple.latest+html"})
 
 	switch accept {
 	case "application/vnd.pypi.simple.v1+json", "application/vnd.pypi.simple.latest+json":
-		v1JSONPackageMetadata(ctx, accept)
+		// The `latest` media types are aliases for the `v1` media types, so the
+		// canonical `v1` type is used in the response.
+		v1JSONPackageMetadata(ctx, "application/vnd.pypi.simple.v1+json")
 		return
-	case "application/vnd.pypi.simple.latest+html", "application/vnd.pypi.simple.v1+html", "text/html":
-		v1HTMLPackageMetadata(ctx, accept)
+	case "application/vnd.pypi.simple.v1+html", "application/vnd.pypi.simple.latest+html":
+		v1HTMLPackageMetadata(ctx, "application/vnd.pypi.simple.v1+html")
+		return
+	case "text/html": // alias of v1+ html
+		v1HTMLPackageMetadata(ctx, "text/html")
 		return
 	}
 
