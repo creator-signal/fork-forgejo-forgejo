@@ -54,14 +54,11 @@ func TestGetOwnerType(t *testing.T) {
 	assert.Equal(t, project_module.APIOwnerTypeIndividual, pT)
 
 	pT = GetAPIOwnerType(true, false)
-	pT = GetAPIOwnerType(true, false)
 	assert.Equal(t, project_module.APIOwnerTypeOrganization, pT)
 
 	pT = GetAPIOwnerType(false, true)
-	pT = GetAPIOwnerType(false, true)
 	assert.Equal(t, project_module.APIOwnerTypeRepository, pT)
 
-	pT = GetAPIOwnerType(true, true)
 	pT = GetAPIOwnerType(true, true)
 	assert.Equal(t, project_module.APIOwnerTypeOrganization, pT)
 }
