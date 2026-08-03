@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 
 	"forgejo.org/modules/log"
@@ -56,6 +57,14 @@ func OpenRepository(ctx context.Context, repoPath string) (*Repository, error) {
 
 // CatFileBatch obtains a CatFileBatch for this repository
 func (repo *Repository) CatFileBatch(ctx context.Context) (WriteCloserError, *bufio.Reader, func(), error) {
+	if os.Getenv("DISABLE_BATCH_REUSE") != "" {
+		tempBatch, err := repo.NewBatch(ctx)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return tempBatch.Writer, tempBatch.Reader, tempBatch.Close, nil
+	}
+
 	if repo.batch == nil {
 		var err error
 		repo.batch, err = repo.NewBatch(ctx)
@@ -81,6 +90,14 @@ func (repo *Repository) CatFileBatch(ctx context.Context) (WriteCloserError, *bu
 
 // CatFileBatchCheck obtains a CatFileBatchCheck for this repository
 func (repo *Repository) CatFileBatchCheck(ctx context.Context) (WriteCloserError, *bufio.Reader, func(), error) {
+	if os.Getenv("DISABLE_BATCH_REUSE") != "" {
+		tempBatchCheck, err := repo.NewBatchCheck(ctx)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return tempBatchCheck.Writer, tempBatchCheck.Reader, tempBatchCheck.Close, nil
+	}
+
 	if repo.check == nil {
 		var err error
 		repo.check, err = repo.NewBatchCheck(ctx)
