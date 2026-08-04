@@ -524,5 +524,8 @@ func wikiContentsByName(ctx *context.APIContext, commit *git.Commit, wikiName wi
 		}
 		return "", ""
 	}
-	return wikiContentsByEntry(ctx, entry), gitFilename
+	// Return the name of the file the entry was found in rather than
+	// gitFilename. findEntryForFile falls back to unescaped names and
+	// callers use the returned name to look up commits
+	return wikiContentsByEntry(ctx, entry), entry.Name()
 }
