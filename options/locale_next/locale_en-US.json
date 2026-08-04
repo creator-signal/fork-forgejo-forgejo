@@ -983,5 +983,6 @@
 	"form.website.valid_url_schemes": "Allowed URL schemes include: %s",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
+	"project.missing_issue_connection": "One or more issues did not point to existing issues. Check if they were deleted.",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }
