@@ -46,7 +46,7 @@ func TestActionsIDToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
+	gitCtx, err := actions_service.GenerateGiteaContext(db.DefaultContext, task.Job.Run, task.Job)
 	require.NoError(t, err)
 
 	token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
@@ -155,7 +155,7 @@ func TestActionsIDToken(t *testing.T) {
 		// Change ID to be invalid
 		task.ID = 123456
 
-		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
+		gitCtx, err := actions_service.GenerateGiteaContext(db.DefaultContext, task.Job.Run, task.Job)
 		require.NoError(t, err)
 
 		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})
@@ -176,7 +176,7 @@ func TestActionsIDToken(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gitCtx, err := actions_service.GenerateGiteaContext(task.Job.Run, task.Job)
+		gitCtx, err := actions_service.GenerateGiteaContext(db.DefaultContext, task.Job.Run, task.Job)
 		require.NoError(t, err)
 
 		token, err := actions_service.CreateAuthorizationToken(task, gitCtx, true, &repo_model.ActionsConfig{})

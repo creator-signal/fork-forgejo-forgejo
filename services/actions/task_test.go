@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
@@ -64,7 +65,7 @@ jobs:
 	t.Run("openid connect enabled", func(t *testing.T) {
 		task := createTask(fmt.Sprintf(workflowFormat, "true"), false, "push")
 
-		taskContext, err := generateTaskContext(task, &repo_model.ActionsConfig{})
+		taskContext, err := generateTaskContext(db.DefaultContext, task, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 		require.NotEmpty(t, taskContext.Fields["forgejo_actions_id_token_request_token"].GetStringValue())
 		require.NotEmpty(t, taskContext.Fields["forgejo_actions_id_token_request_url"].GetStringValue())
@@ -75,7 +76,7 @@ jobs:
 	t.Run("openid connect enabled from fork with pull_request_target event", func(t *testing.T) {
 		task := createTask(fmt.Sprintf(workflowFormat, "true"), true, "pull_request_target")
 
-		taskContext, err := generateTaskContext(task, &repo_model.ActionsConfig{})
+		taskContext, err := generateTaskContext(db.DefaultContext, task, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 		require.NotEmpty(t, taskContext.Fields["forgejo_actions_id_token_request_token"].GetStringValue())
 		require.NotEmpty(t, taskContext.Fields["forgejo_actions_id_token_request_url"].GetStringValue())
@@ -86,7 +87,7 @@ jobs:
 	t.Run("openid connect enabled from fork with pull_request event", func(t *testing.T) {
 		task := createTask(fmt.Sprintf(workflowFormat, "true"), true, "pull_request")
 
-		taskContext, err := generateTaskContext(task, &repo_model.ActionsConfig{})
+		taskContext, err := generateTaskContext(db.DefaultContext, task, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 		require.Empty(t, taskContext.Fields["forgejo_actions_id_token_request_token"].GetStringValue())
 		require.Empty(t, taskContext.Fields["forgejo_actions_id_token_request_url"].GetStringValue())
@@ -97,7 +98,7 @@ jobs:
 	t.Run("openid connect disabled", func(t *testing.T) {
 		task := createTask(fmt.Sprintf(workflowFormat, "false"), false, "push")
 
-		taskContext, err := generateTaskContext(task, &repo_model.ActionsConfig{})
+		taskContext, err := generateTaskContext(db.DefaultContext, task, &repo_model.ActionsConfig{})
 		require.NoError(t, err)
 		require.Empty(t, taskContext.Fields["forgejo_actions_id_token_request_token"].GetStringValue())
 		require.Empty(t, taskContext.Fields["forgejo_actions_id_token_request_url"].GetStringValue())

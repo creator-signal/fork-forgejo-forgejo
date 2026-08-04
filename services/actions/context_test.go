@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
@@ -69,7 +71,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      `{"repository": {"name": "testrepo"}}`,
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "testuser", context["actor"])
@@ -138,7 +140,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			WorkflowPayload: []byte("on: [push]"),
 		}
 
-		context, err := GenerateGiteaContext(run, job)
+		context, err := GenerateGiteaContext(t.Context(), run, job)
 		require.NoError(t, err)
 
 		assert.Equal(t, "test-job", context["job"])
@@ -178,7 +180,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
@@ -220,7 +222,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
@@ -254,10 +256,82 @@ func TestGenerateGiteaContext(t *testing.T) {
 			WorkflowPayload: []byte("on: { workflow_call: { inputs: {} } }\n__metadata:\n  workflow_call_parent: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed\n"),
 		}
 
-		context, err := GenerateGiteaContext(run, job)
+		context, err := GenerateGiteaContext(t.Context(), run, job)
 		require.NoError(t, err)
 
 		assert.Equal(t, "workflow_call", context["event_name"])
+	})
+
+	t.Run("Protected branch", func(t *testing.T) {
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		protectedRepo := &repo.Repository{
+			ID:        123456,
+			OwnerName: "testowner",
+			Name:      "testrepo",
+		}
+		require.NoError(t, db.Insert(t.Context(), &git_model.ProtectedBranch{
+			RepoID:   protectedRepo.ID,
+			RuleName: "main",
+		}))
+		defer func() {
+			_, err := db.GetEngine(t.Context()).Delete(&git_model.ProtectedBranch{RepoID: protectedRepo.ID})
+			require.NoError(t, err)
+		}()
+
+		run := &actions_model.ActionRun{
+			ID:                1,
+			Index:             42,
+			TriggerUser:       testUser,
+			RepoID:            protectedRepo.ID,
+			Repo:              protectedRepo,
+			TriggerEvent:      "push",
+			Ref:               "refs/heads/main",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      `{}`,
+		}
+
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, context["ref_protected"])
+
+		unprotectedRun := &actions_model.ActionRun{
+			ID:                2,
+			Index:             43,
+			TriggerUser:       testUser,
+			RepoID:            protectedRepo.ID,
+			Repo:              protectedRepo,
+			TriggerEvent:      "push",
+			Ref:               "refs/heads/feature",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      `{}`,
+		}
+
+		context, err = GenerateGiteaContext(t.Context(), unprotectedRun, nil)
+		require.NoError(t, err)
+		assert.Equal(t, false, context["ref_protected"])
+
+		tagRun := &actions_model.ActionRun{
+			ID:                3,
+			Index:             44,
+			TriggerUser:       testUser,
+			RepoID:            protectedRepo.ID,
+			Repo:              protectedRepo,
+			TriggerEvent:      "push",
+			Ref:               "refs/tags/main",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      `{}`,
+		}
+
+		context, err = GenerateGiteaContext(t.Context(), tagRun, nil)
+		require.NoError(t, err)
+		assert.Equal(t, false, context["ref_protected"])
 	})
 }
 

@@ -74,7 +74,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner, requestKe
 			return fmt.Errorf("GetUnit: %w", err)
 		}
 
-		taskContext, err := generateTaskContext(t, unit.ActionsConfig())
+		taskContext, err := generateTaskContext(ctx, t, unit.ActionsConfig())
 		if err != nil {
 			return fmt.Errorf("generateTaskContext: %w", err)
 		}
@@ -141,7 +141,7 @@ func RecoverTasks(ctx context.Context, tasks []*actions_model.ActionTask) ([]*ru
 				return fmt.Errorf("GetUnit: %w", err)
 			}
 
-			taskContext, err := generateTaskContext(t, unit.ActionsConfig())
+			taskContext, err := generateTaskContext(ctx, t, unit.ActionsConfig())
 			if err != nil {
 				return fmt.Errorf("generateTaskContext: %w", err)
 			}
@@ -164,9 +164,9 @@ func RecoverTasks(ctx context.Context, tasks []*actions_model.ActionTask) ([]*ru
 	return retval, nil
 }
 
-func generateTaskContext(t *actions_model.ActionTask, ac *repo_model.ActionsConfig) (*structpb.Struct, error) {
+func generateTaskContext(ctx context.Context, t *actions_model.ActionTask, ac *repo_model.ActionsConfig) (*structpb.Struct, error) {
 	run := t.Job.Run
-	gitCtx, err := GenerateGiteaContext(run, t.Job)
+	gitCtx, err := GenerateGiteaContext(ctx, run, t.Job)
 	if err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	git_model "forgejo.org/models/git"
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/git"
@@ -81,7 +82,7 @@ func generateGiteaContextForRun(run *actions_model.ActionRun) *model.GithubConte
 
 // GenerateGiteaContext generate the gitea context without token and gitea_runtime_token
 // job can be nil when generating a context for parsing workflow-level expressions
-func GenerateGiteaContext(run *actions_model.ActionRun, job *actions_model.ActionRunJob) (map[string]any, error) {
+func GenerateGiteaContext(ctx context.Context, run *actions_model.ActionRun, job *actions_model.ActionRunJob) (map[string]any, error) {
 	gitContextObj := generateGiteaContextForRun(run)
 
 	if job != nil {
@@ -103,7 +104,16 @@ func GenerateGiteaContext(run *actions_model.ActionRun, job *actions_model.Actio
 	gitContext["actor_id"] = strconv.FormatInt(run.TriggerUserID, 10)           // string, Immutable unique identifier of the triggering user (unlike actor, which can be renamed)
 	gitContext["env"] = ""                                                      // string, Path on the runner to the file that sets environment variables from workflow commands. This file is unique to the current step and is a different file for each step in a job. For more information, see "Workflow commands for GitHub Actions."
 	gitContext["path"] = ""                                                     // string, Path on the runner to the file that sets system PATH variables from workflow commands. This file is unique to the current step and is a different file for each step in a job. For more information, see "Workflow commands for GitHub Actions."
-	gitContext["ref_protected"] = false                                         // boolean, true if branch protections are configured for the ref that triggered the workflow run.
+
+	refProtected := false
+	if refName := git.RefName(gitContextObj.Ref); refName.IsBranch() {
+		isProtected, err := git_model.IsBranchProtected(ctx, run.RepoID, refName.BranchName())
+		if err != nil {
+			return nil, fmt.Errorf("IsBranchProtected: %w", err)
+		}
+		refProtected = isProtected
+	}
+	gitContext["ref_protected"] = refProtected // boolean, true if branch protections are configured for the ref that triggered the workflow run.
 	gitContext["repository_owner"] = run.Repo.OwnerName                         // string, The repository owner's name. For example, Codertocat.
 	gitContext["repository_owner_id"] = strconv.FormatInt(run.Repo.OwnerID, 10) // string, Immutable unique identifier for the repository owner (unlike repository_owner, which can change with a user rename)
 	gitContext["repository"] = run.Repo.OwnerName + "/" + run.Repo.Name         // string, The owner and repository name. For example, Codertocat/Hello-World.
