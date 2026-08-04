@@ -98,7 +98,7 @@ func TestAPIGetWikiPageUnescapedFilename(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	username := "user2"
-  // The page has unescaped special chars on the filesystem, we should still be
+	// The page has unescaped special chars on the filesystem, we should still be
 	// able to fetch it.
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/wiki/page/Page-With-Unescaped-Special-Chars%%3A-%%281%%29", username, "repo1")
 
@@ -139,8 +139,6 @@ func TestAPIGetWikiPageUnescapedFilename(t *testing.T) {
 		Footer:      "",
 	}, page)
 }
-
-
 
 func TestAPIListWikiPages(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
