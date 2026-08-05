@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"fmt"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
@@ -29,7 +30,7 @@ func TestCleanup(t *testing.T) {
 		assert.Nil(t, task.LogIndexes)
 	})
 
-	t.Run("Ignores tasks without logs", func(t *testing.T) {
+	t.Run("Expires tasks without logs", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
 		unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{ID: 1001, LogExpired: false, LogIndexes: []int64{}, LogFilename: "", Stopped: timeutil.TimeStamp(1)})
@@ -38,8 +39,33 @@ func TestCleanup(t *testing.T) {
 
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 1001})
 		assert.Empty(t, task.LogFilename)
-		assert.False(t, task.LogExpired)
+		assert.True(t, task.LogExpired)
 		assert.Nil(t, task.LogIndexes)
+	})
+
+	t.Run("Terminates on a full batch of tasks without logs", func(t *testing.T) {
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		// A task without logs used to be skipped without being marked as expired.
+		// FindOldTasksToExpire selects on log_expired and has no ORDER BY, and the
+		// loop only stops on a short batch, so a full batch of such tasks was
+		// selected again on every iteration and the cleanup never returned.
+		for i := range deleteLogBatchSize {
+			unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{
+				ID:          int64(1001 + i),
+				LogExpired:  false,
+				LogFilename: "",
+				TokenHash:   fmt.Sprintf("cleanup-logs-token-%d", i),
+				Stopped:     timeutil.TimeStamp(1),
+			})
+		}
+
+		require.NoError(t, CleanupLogs(db.DefaultContext))
+
+		for i := range deleteLogBatchSize {
+			task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: int64(1001 + i)})
+			assert.True(t, task.LogExpired)
+		}
 	})
 }
 

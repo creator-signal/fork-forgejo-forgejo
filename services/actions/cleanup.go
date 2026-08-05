@@ -110,15 +110,19 @@ func CleanupLogs(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("find old tasks: %w", err)
 		}
+		countAtBatchStart := count
 		for _, task := range tasks {
-			if !task.HasLogs() {
-				continue
-			}
-
-			if err := actions_module.RemoveLogs(ctx, task.LogInStorage, task.LogFilename); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error("Failed to remove log %s (in storage %v) of task %v: %v", task.LogFilename, task.LogInStorage, task.ID, err)
-				// do not return error here, continue to next task
-				continue
+			// A task without logs has nothing to remove, but it still has to be
+			// marked as expired. FindOldTasksToExpire selects on log_expired, so
+			// leaving it unset keeps the task in every subsequent batch. Placeholder
+			// tasks, created for a workflow call's outer job, are never dispatched to
+			// a runner and so never get a log filename.
+			if task.HasLogs() {
+				if err := actions_module.RemoveLogs(ctx, task.LogInStorage, task.LogFilename); err != nil && !errors.Is(err, os.ErrNotExist) {
+					log.Error("Failed to remove log %s (in storage %v) of task %v: %v", task.LogFilename, task.LogInStorage, task.ID, err)
+					// do not return error here, continue to next task
+					continue
+				}
 			}
 			task.LogIndexes = nil // clear log indexes since it's a heavy field
 			task.LogExpired = true
@@ -131,6 +135,12 @@ func CleanupLogs(ctx context.Context) error {
 			log.Trace("Removed log %s of task %v", task.LogFilename, task.ID)
 		}
 		if len(tasks) < deleteLogBatchSize {
+			break
+		}
+		if count == countAtBatchStart {
+			// Not a single task in a full batch could be expired. The next iteration
+			// would select the same rows again, so stop instead of looping forever.
+			log.Warn("Cleanup of Actions logs made no progress on a batch of %d tasks, stopping", len(tasks))
 			break
 		}
 	}
