@@ -39,14 +39,16 @@ var fundingCandidates = []string{
 }
 
 // Transforms unicode in the given URL's domain name into its punycode
-// representation. Modifies the input URL, and returns a reference to the same.
-func toASCII(url *url.URL) (*url.URL, error) {
+// representation. Modifies the input URL.
+//
+// Returns an error and aborts conversion if something went wrong.
+func convertToASCII(url *url.URL) error {
 	port := url.Port()
 
 	// Punycode!
 	hostname, err := idna.ToASCII(url.Hostname())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// domain names are always lowercase
@@ -62,7 +64,7 @@ func toASCII(url *url.URL) (*url.URL, error) {
 		url.Host += ":" + port
 	}
 
-	return url, nil
+	return nil
 }
 
 // Constructs a funding entry from the known funding providers config and the
@@ -97,7 +99,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 		}}
 	}
 
-	urlValue, err = toASCII(urlValue)
+	err = convertToASCII(urlValue)
 	if err != nil {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}

@@ -456,6 +456,7 @@ type RepoFundingEntryKind string
 
 const (
 	URLFundingEntryKind RepoFundingEntryKind = "url" // The entry should be interpreted as a hyperlink, with Title as title and Value as target
+	// TODO: support other semantic kinds of funding entry data (e.g. email address, credit card, phone number, etc), see #13435 for reference
 )
 
 // RepoFundingEntry is a funding option for a repo
