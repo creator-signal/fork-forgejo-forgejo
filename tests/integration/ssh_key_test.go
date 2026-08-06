@@ -112,7 +112,7 @@ func testPushDeployKeyOnEmptyRepo(t *testing.T, u *url.URL) {
 		t.Run("CheckIsEmpty", doCheckRepositoryEmptyStatus(ctx, true))
 
 		withKeyFile(t, keyname, func(keyFile string) {
-			t.Run("CreatePushDeployKey", doAPICreateDeployKey(ctx, keyname, keyFile, false, false, false))
+			t.Run("CreatePushDeployKey", doAPICreateDeployKey(ctx, keyname, keyFile, false, true, true))
 
 			// Setup the testing repository
 			dstPath := t.TempDir()
@@ -175,7 +175,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 
 			t.Run("FailToAddReadOnlyDeployKey", doAPICreateDeployKey(failCtx, keyname, keyFile, true, true, true))
 
-			t.Run("FailToAddDeployKey", doAPICreateDeployKey(failCtx, keyname, keyFile, false, false, false))
+			t.Run("FailToAddDeployKey", doAPICreateDeployKey(failCtx, keyname, keyFile, false, true, true))
 
 			t.Run("Clone", doGitClone(dstPath, sshURL))
 
@@ -207,7 +207,7 @@ func testKeyOnlyOneType(t *testing.T, u *url.URL) {
 			otherSSHURL := createSSHUrl(otherCtx.GitPath(), u)
 			dstOtherPath := t.TempDir()
 
-			t.Run("AddWriterDeployKeyToOther", doAPICreateDeployKey(otherCtx, keyname, keyFile, false, false, false))
+			t.Run("AddWriterDeployKeyToOther", doAPICreateDeployKey(otherCtx, keyname, keyFile, false, true, true))
 
 			t.Run("CloneOther", doGitClone(dstOtherPath, otherSSHURL))
 
