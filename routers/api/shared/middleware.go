@@ -84,6 +84,11 @@ func apiAuthentication(authMethod auth.Method) func(*context.APIContext) {
 		case *auth.AuthenticationError:
 			ctx.ServerError("authentication error", v.Error)
 			return
+		case *auth.AuthenticationCancelled:
+			// The client went away before authentication finished, so nothing can be delivered to it anymore.
+			log.Debug("Request canceled during authentication: %v", v.Error)
+			ctx.Error(context.StatusClientClosedRequest, "APIAuth", "request canceled")
+			return
 		default:
 			ctx.ServerError("authentication error", errors.New("unexpected result from common.AuthShared"))
 			return

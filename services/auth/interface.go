@@ -31,8 +31,8 @@ type Method interface {
 
 // When attempting to authenticate with an authentication [Method], one of the MethodOutput implementations must be
 // returned. This interface serves as a enum of supported outputs, plus related values for each enum. Outputs are
-// [AuthenticationSuccess], [AuthenticationNotAttempted], [AuthenticationAttemptedWithFailure], and
-// [AuthenticationError].
+// [AuthenticationSuccess], [AuthenticationNotAttempted], [AuthenticationAttemptedWithFailure],
+// [AuthenticationError], and [AuthenticationCancelled].
 type MethodOutput interface {
 	isMethodOutput()
 }
@@ -68,10 +68,19 @@ type AuthenticationError struct {
 	Error error
 }
 
+// Authentication was attempted but the request was canceled or timed out before it could complete, because the client
+// went away. Clients that open many concurrent requests and abandon the ones they no longer need, such as `docker push`
+// with its blob HEAD requests, cause this routinely. The server did not fail, so this must not be reported as an
+// internal error.
+type AuthenticationCancelled struct {
+	Error error
+}
+
 func (*AuthenticationSuccess) isMethodOutput()                      {}
 func (*AuthenticationNotAttempted) isMethodOutput()                 {}
 func (*AuthenticationAttemptedIncorrectCredential) isMethodOutput() {}
 func (*AuthenticationError) isMethodOutput()                        {}
+func (*AuthenticationCancelled) isMethodOutput()                    {}
 
 // PasswordAuthenticator represents a source of authentication
 type PasswordAuthenticator interface {

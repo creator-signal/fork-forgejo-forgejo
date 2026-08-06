@@ -4,7 +4,6 @@
 package packages
 
 import (
-	stdctx "context"
 	"errors"
 	"net/http"
 	"regexp"
@@ -114,15 +113,6 @@ func enforcePackagesQuota() func(ctx *context.Context) {
 	}
 }
 
-// isRequestCanceled reports whether err is a context cancellation or deadline,
-// which happens when the client goes away mid-request (e.g. docker push
-// aborting some of its many concurrent blob HEAD requests). Such errors surface
-// from the auth token lookup and must not be reported as 500 server errors.
-// See https://codeberg.org/forgejo/forgejo/issues/13782
-func isRequestCanceled(err error) bool {
-	return errors.Is(err, stdctx.Canceled) || errors.Is(err, stdctx.DeadlineExceeded)
-}
-
 func verifyAuth(r *web.Route, authMethods []auth.Method) {
 	if setting.Service.EnableReverseProxyAuth {
 		authMethods = append(authMethods, &auth_method.ReverseProxy{})
@@ -138,14 +128,12 @@ func verifyAuth(r *web.Route, authMethods []auth.Method) {
 		case *auth.AuthenticationNotAttempted:
 			ar = &auth.UnauthenticatedResult{}
 		case *auth.AuthenticationError:
-			if isRequestCanceled(v.Error) {
-				// The client canceled the request (e.g. docker push aborting
-				// some of its many concurrent blob HEAD requests). Not a server
-				// error; do not emit a 500.
-				ctx.Error(context.StatusClientClosedRequest, "request canceled")
-				return
-			}
 			ctx.ServerError("authentication error", v.Error)
+			return
+		case *auth.AuthenticationCancelled:
+			// The client went away before authentication finished, so nothing can be delivered to it anymore.
+			log.Debug("Request canceled during authentication: %v", v.Error)
+			ctx.Error(context.StatusClientClosedRequest, "request canceled")
 			return
 		case *auth.AuthenticationAttemptedIncorrectCredential:
 			ctx.Error(http.StatusUnauthorized, "authGroup.Verify")
@@ -179,14 +167,12 @@ func verifyContainerAuth(r *web.Route, authMethods []auth.Method) {
 		case *auth.AuthenticationNotAttempted:
 			ar = &auth.UnauthenticatedResult{}
 		case *auth.AuthenticationError:
-			if isRequestCanceled(v.Error) {
-				// The client canceled the request (e.g. docker push aborting
-				// some of its many concurrent blob HEAD requests). Not a server
-				// error; do not emit a 500.
-				ctx.Error(context.StatusClientClosedRequest, "request canceled")
-				return
-			}
 			ctx.ServerError("authentication error", v.Error)
+			return
+		case *auth.AuthenticationCancelled:
+			// The client went away before authentication finished, so nothing can be delivered to it anymore.
+			log.Debug("Request canceled during authentication: %v", v.Error)
+			ctx.Error(context.StatusClientClosedRequest, "request canceled")
 			return
 		case *auth.AuthenticationAttemptedIncorrectCredential:
 			log.Info("Failed to verify user: %v", v.Error)
