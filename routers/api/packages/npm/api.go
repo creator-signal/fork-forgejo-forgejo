@@ -1,4 +1,5 @@
 // Copyright 2021 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package npm
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"time"
 
 	packages_model "forgejo.org/models/packages"
 	npm_module "forgejo.org/modules/packages/npm"
@@ -20,9 +22,11 @@ func createPackageMetadataResponse(registryURL string, pds []*packages_model.Pac
 		return a.SemVer.Compare(b.SemVer)
 	})
 
+	time := make(map[string]time.Time)
 	versions := make(map[string]*npm_module.PackageMetadataVersion)
 	distTags := make(map[string]string)
 	for _, pd := range pds {
+		time[pd.SemVer.String()] = pd.Version.CreatedUnix.AsTime()
 		versions[pd.SemVer.String()] = createPackageMetadataVersion(registryURL, pd)
 
 		for _, pvp := range pd.VersionProperties {
@@ -42,6 +46,7 @@ func createPackageMetadataResponse(registryURL string, pds []*packages_model.Pac
 		DistTags:    distTags,
 		Description: metadata.Description,
 		Readme:      metadata.Readme,
+		Time:        time,
 		Homepage:    metadata.ProjectURL,
 		Author:      npm_module.User{Name: metadata.Author},
 		License:     metadata.License,
