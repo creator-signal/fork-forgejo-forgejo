@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
-	"sort"
+	"slices"
 
 	packages_model "forgejo.org/models/packages"
 	npm_module "forgejo.org/modules/packages/npm"
@@ -16,8 +16,8 @@ import (
 )
 
 func createPackageMetadataResponse(registryURL string, pds []*packages_model.PackageDescriptor) *npm_module.PackageMetadata {
-	sort.Slice(pds, func(i, j int) bool {
-		return pds[i].SemVer.LessThan(pds[j].SemVer)
+	slices.SortFunc(pds, func(a, b *packages_model.PackageDescriptor) int {
+		return a.SemVer.Compare(b.SemVer)
 	})
 
 	versions := make(map[string]*npm_module.PackageMetadataVersion)
