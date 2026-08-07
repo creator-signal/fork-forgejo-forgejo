@@ -161,6 +161,9 @@ forgejo.org/modules/markup/mdstripper
 forgejo.org/modules/markup/orgmode
 	RenderString
 
+forgejo.org/modules/migration
+	UserAgentTransport.RoundTrip
+
 forgejo.org/modules/process
 	Manager.ExecTimeout
 
