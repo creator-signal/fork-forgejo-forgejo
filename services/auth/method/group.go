@@ -4,7 +4,7 @@
 package method
 
 import (
-	stdctx "context"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,14 +12,10 @@ import (
 	"forgejo.org/services/auth"
 )
 
-// isRequestCanceled reports whether the request was abandoned by the client, either because err carries a context
-// cancellation or deadline, or because the request context is already done. Both mean the response can no longer be
-// delivered, so the failure did not originate on the server.
-func isRequestCanceled(req *http.Request, err error) bool {
-	if errors.Is(err, stdctx.Canceled) || errors.Is(err, stdctx.DeadlineExceeded) {
-		return true
-	}
-	return req != nil && req.Context().Err() != nil
+// isRequestCanceled reports whether err was caused by the client abandoning the request. The response can no longer be
+// delivered in that case, and the failure did not originate on the server.
+func isRequestCanceled(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // Ensure the struct implements the interface.
@@ -53,10 +49,9 @@ func (b *Group) Verify(req *http.Request, w http.ResponseWriter, sess auth.Sessi
 
 		switch v := output.(type) {
 		case *auth.AuthenticationError:
-			// A canceled or timed out request context means the client went away while the method was talking to the
-			// database, not that authentication failed. Report it as such so callers do not treat it as an internal
-			// error. See https://codeberg.org/forgejo/forgejo/issues/13782
-			if isRequestCanceled(req, v.Error) {
+			// The client went away while the method was talking to the database, which is not an authentication
+			// failure and not a server error. See https://codeberg.org/forgejo/forgejo/issues/13782
+			if isRequestCanceled(v.Error) {
 				return &auth.AuthenticationCancelled{Error: v.Error}
 			}
 			return v

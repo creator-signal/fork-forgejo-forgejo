@@ -11,6 +11,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	apiv1_permissions_testhelpers "forgejo.org/routers/api/v1/permissions/testhelpers"
 	"forgejo.org/routers/common"
@@ -87,7 +88,7 @@ func apiAuthentication(authMethod auth.Method) func(*context.APIContext) {
 		case *auth.AuthenticationCancelled:
 			// The client went away before authentication finished, so nothing can be delivered to it anymore.
 			log.Debug("Request canceled during authentication: %v", v.Error)
-			ctx.Error(context.StatusClientClosedRequest, "APIAuth", "request canceled")
+			ctx.Error(web.StatusClientClosedRequest, "APIAuth", "request canceled")
 			return
 		default:
 			ctx.ServerError("authentication error", errors.New("unexpected result from common.AuthShared"))

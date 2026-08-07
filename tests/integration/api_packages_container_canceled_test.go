@@ -4,7 +4,7 @@
 package integration
 
 import (
-	stdctx "context"
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -12,14 +12,11 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
-	app_context "forgejo.org/services/context"
+	"forgejo.org/modules/web"
 	"forgejo.org/tests"
 )
 
-// A client that abandons a request, which `docker push` does routinely with the many concurrent blob HEAD requests it
-// opens, must not be answered with an internal server error. The authentication lookup runs against the request
-// context, so cancelling it makes that lookup fail the same way it does in production.
-// See https://codeberg.org/forgejo/forgejo/issues/13782
+// Cancelling the request makes the authentication lookup fail the way it does for a client that hung up.
 func TestPackageContainerCanceledRequest(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
@@ -29,7 +26,7 @@ func TestPackageContainerCanceledRequest(t *testing.T) {
 		t.Helper()
 		req := NewRequest(t, "GET", url)
 		auth(req)
-		ctx, cancel := stdctx.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
 		req.Request = req.Request.WithContext(ctx)
 		return req
@@ -42,11 +39,9 @@ func TestPackageContainerCanceledRequest(t *testing.T) {
 			r.AddBasicAuth(user.Name)
 		})
 
-		MakeRequest(t, req, app_context.StatusClientClosedRequest)
+		MakeRequest(t, req, web.StatusClientClosedRequest)
 	})
 
-	// The token endpoint is what a container client authenticates against first, and it is served by the other
-	// router that had to be fixed.
 	t.Run("token endpoint", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
@@ -54,7 +49,7 @@ func TestPackageContainerCanceledRequest(t *testing.T) {
 			r.AddBasicAuth(user.Name)
 		})
 
-		MakeRequest(t, req, app_context.StatusClientClosedRequest)
+		MakeRequest(t, req, web.StatusClientClosedRequest)
 	})
 
 	t.Run("uncanceled request still succeeds", func(t *testing.T) {

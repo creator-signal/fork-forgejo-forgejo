@@ -13,16 +13,9 @@ import (
 	"forgejo.org/models/perm"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/templates"
+	"forgejo.org/modules/web"
 	packages_service "forgejo.org/services/packages"
 )
-
-// StatusClientClosedRequest (499, non-standard) signals that the client closed
-// the connection before the server finished. It is returned instead of a 500
-// when a package request fails because its context was canceled (e.g. docker
-// push aborting some of its many concurrent blob HEAD requests), so a normal
-// client cancellation is not misreported as a server error.
-// See https://codeberg.org/forgejo/forgejo/issues/13782
-const StatusClientClosedRequest = 499
 
 // Package contains owner, access mode and optional the package descriptor
 type Package struct {
@@ -47,10 +40,9 @@ func PackageAssignment() func(ctx *Context) {
 			}
 			switch {
 			case errors.Is(err, stdctx.Canceled), errors.Is(err, stdctx.DeadlineExceeded):
-				// The client canceled the request (e.g. docker push aborting
-				// some of its many concurrent blob HEAD requests). Not a server
-				// error; do not emit a 500.
-				ctx.Error(StatusClientClosedRequest)
+				// The client abandoned the request, so the response cannot be delivered anymore and the server did
+				// not fail.
+				ctx.Error(web.StatusClientClosedRequest)
 			case status == http.StatusNotFound:
 				ctx.NotFound(title, err)
 			default:

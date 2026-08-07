@@ -133,7 +133,7 @@ func verifyAuth(r *web.Route, authMethods []auth.Method) {
 		case *auth.AuthenticationCancelled:
 			// The client went away before authentication finished, so nothing can be delivered to it anymore.
 			log.Debug("Request canceled during authentication: %v", v.Error)
-			ctx.Error(context.StatusClientClosedRequest, "request canceled")
+			ctx.Error(web.StatusClientClosedRequest, "request canceled")
 			return
 		case *auth.AuthenticationAttemptedIncorrectCredential:
 			ctx.Error(http.StatusUnauthorized, "authGroup.Verify")
@@ -172,7 +172,7 @@ func verifyContainerAuth(r *web.Route, authMethods []auth.Method) {
 		case *auth.AuthenticationCancelled:
 			// The client went away before authentication finished, so nothing can be delivered to it anymore.
 			log.Debug("Request canceled during authentication: %v", v.Error)
-			ctx.Error(context.StatusClientClosedRequest, "request canceled")
+			ctx.Error(web.StatusClientClosedRequest, "request canceled")
 			return
 		case *auth.AuthenticationAttemptedIncorrectCredential:
 			log.Info("Failed to verify user: %v", v.Error)
