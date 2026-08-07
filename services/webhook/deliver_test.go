@@ -132,7 +132,7 @@ func TestWebhookDeliverHookTask(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "PUT", r.Method)
 		switch r.URL.Path {
-		case "/webhook/66d222a5d6349e1311f551e50722d837e30fce98":
+		case "/webhook/ZtIipdY0nhMR9VHlByLYN-MPzpg":
 			// Version 1
 			assert.Equal(t, "push", r.Header.Get("X-GitHub-Event"))
 			assert.Empty(t, r.Header.Get("Content-Type"))
@@ -140,7 +140,7 @@ func TestWebhookDeliverHookTask(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, `{"data": 42}`, string(body))
 
-		case "/webhook/86aaa4d69df5aa487cb0148af4ae7e546933057b":
+		case "/webhook/jno0C6X42rk37jAam34aU4Akeow":
 			// Version 2
 			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 			body, err := io.ReadAll(r.Body)
