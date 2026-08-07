@@ -10,6 +10,6 @@ type UserAgentTransport struct {
 }
 
 func (t *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("User-Agent", "Forgejo-migration-http-client/1.1")
+	req.Header.Set("User-Agent", "Forgejo-migration-http-client/1.1")
 	return t.Transport.RoundTrip(req)
 }
