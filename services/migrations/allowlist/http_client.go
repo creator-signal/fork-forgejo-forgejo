@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"forgejo.org/modules/hostmatcher"
-	"forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/setting"
 )
@@ -21,12 +20,10 @@ func NewMigrationHTTPClient() *http.Client {
 }
 
 // NewMigrationHTTPTransport returns a HTTP transport for migration
-func NewMigrationHTTPTransport() *migration.CustomTransport {
-	return &migration.CustomTransport{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: setting.Migrations.SkipTLSVerify},
-			Proxy:           proxy.Proxy(),
-			DialContext:     hostmatcher.NewDialContext("migration", allowList, blockList, setting.Proxy.ProxyURLFixed),
-		},
+func NewMigrationHTTPTransport() *http.Transport {
+	return &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: setting.Migrations.SkipTLSVerify},
+		Proxy:           proxy.Proxy(),
+		DialContext:     hostmatcher.NewDialContext("migration", allowList, blockList, setting.Proxy.ProxyURLFixed),
 	}
 }

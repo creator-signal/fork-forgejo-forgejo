@@ -5,11 +5,11 @@ package migration
 
 import "net/http"
 
-type CustomTransport struct {
+type UserAgentTransport struct {
 	*http.Transport
 }
 
-func (t *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("User-Agent", "Forgejo-migration-http-client/1.1")
 	return t.Transport.RoundTrip(req)
 }

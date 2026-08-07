@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"forgejo.org/models/db"
@@ -26,7 +27,7 @@ import (
 // MigrateRepositoryGitData starts migrating git related data after created migrating repository
 func MigrateRepositoryGitData(ctx context.Context, u *user_model.User,
 	repo *repo_model.Repository, opts migration.MigrateOptions,
-	httpTransport *migration.CustomTransport,
+	httpTransport http.RoundTripper,
 ) (*repo_model.Repository, error) {
 	repoPath := repo_model.RepoPath(u.Name, opts.RepoName)
 
@@ -172,7 +173,7 @@ func MigrateRepositoryGitData(ctx context.Context, u *user_model.User,
 
 		if opts.LFS {
 			endpoint := lfs.DetermineEndpoint(opts.CloneAddr, opts.LFSEndpoint)
-			lfsClient := lfs.NewClient(endpoint, httpTransport.Transport)
+			lfsClient := lfs.NewClient(endpoint, httpTransport)
 			if err = repo_module.StoreMissingLfsObjectsInRepository(ctx, repo, gitRepo, lfsClient); err != nil {
 				log.Error("Failed to store missing LFS objects for repository: %v", err)
 				return repo, fmt.Errorf("StoreMissingLfsObjectsInRepository: %w", err)
