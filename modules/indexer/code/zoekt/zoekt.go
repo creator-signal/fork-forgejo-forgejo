@@ -465,7 +465,9 @@ func (f *zoektFormatter) Format(r *internal.SearchResult) (*internal.Result, err
 	lineOffsets = append(lineOffsets, len(r.Content)) // end offset for the last line
 
 	// Line numbers (1-based)
-	lineNumbers := make([]int, len(lineOffsets)-1)
+	totalLines := len(lineOffsets) - 1
+
+	lineNumbers := make([]int, totalLines)
 	for i := range lineNumbers {
 		lineNumbers[i] = i + 1
 	}
@@ -474,7 +476,7 @@ func (f *zoektFormatter) Format(r *internal.SearchResult) (*internal.Result, err
 	sortedLines := make([]int, 0, len(r.Matches)*3)
 	for _, m := range r.Matches {
 		for i := m.LineNumber - 1; i <= m.LineNumber+1; i++ {
-			if i > 0 {
+			if i > 0 && i <= totalLines {
 				sortedLines = append(sortedLines, i)
 			}
 		}
