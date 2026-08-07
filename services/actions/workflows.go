@@ -167,7 +167,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		return nil, nil, err
 	}
 
-	err = ConfigureActionRunConcurrency(wf, run, vars, inputsAny)
+	err = ConfigureActionRunConcurrency(ctx, wf, run, vars, inputsAny)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -182,6 +182,11 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		}
 	}
 
+	giteaContext, err := generateGiteaContextForRun(ctx, run)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not generate Gitea context for run %d: %w", run.ID, err)
+	}
+
 	jobs, err := actions.JobParser(content,
 		jobparser.WithVars(vars),
 		jobparser.WithInputs(inputsAny),
@@ -191,7 +196,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(entry.Commit)),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
-		jobparser.WithGitContext(generateGiteaContextForRun(run)),
+		jobparser.WithGitContext(giteaContext),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -263,9 +268,19 @@ func ConfigureActionRunTitle(workflows []*jobparser.SingleWorkflow, run *actions
 
 // Sets the ConcurrencyGroup & ConcurrencyType on the provided ActionRun based upon the Workflow's `concurrency` data,
 // or appropriate defaults if not present.
-func ConfigureActionRunConcurrency(workflow *act_model.Workflow, run *actions_model.ActionRun, vars map[string]string, inputs map[string]any) error {
+func ConfigureActionRunConcurrency(
+	ctx context.Context,
+	workflow *act_model.Workflow,
+	run *actions_model.ActionRun,
+	vars map[string]string,
+	inputs map[string]any,
+) error {
+	giteaContext, err := generateGiteaContextForRun(ctx, run)
+	if err != nil {
+		return fmt.Errorf("could not generate Gitea context for run %d: %w", run.ID, err)
+	}
 	concurrencyGroup, cancelInProgress, err := jobparser.EvaluateWorkflowConcurrency(
-		workflow.RawConcurrency, generateGiteaContextForRun(run), vars, inputs)
+		workflow.RawConcurrency, giteaContext, vars, inputs)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate workflow `concurrency` block: %w", err)
 	}

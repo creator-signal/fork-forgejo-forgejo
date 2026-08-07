@@ -314,6 +314,11 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 	// one-or-more new jobs:
 	expandLocalReusableWorkflow, expandCleanup := lazyRepoExpandLocalReusableWorkflow(ctx, blockedJob.RepoID, blockedJob.CommitSHA)
 	defer expandCleanup()
+
+	giteaContext, err := generateGiteaContextForRun(ctx, blockedJob.Run)
+	if err != nil {
+		return behaviourError, fmt.Errorf("could not generate Gitea context for run %d: %w", blockedJob.Run.ID, err)
+	}
 	newJobWorkflows, err := jobparser.Parse(blockedJob.WorkflowPayload, false,
 		jobparser.WithJobOutputs(jobOutputs),
 		jobparser.WithJobResults(jobResults),
@@ -323,7 +328,7 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 		jobparser.WithVars(vars),
 		jobparser.WithInputs(getRunInputs(blockedJob.Run)),
-		jobparser.WithGitContext(generateGiteaContextForRun(blockedJob.Run)),
+		jobparser.WithGitContext(giteaContext),
 	)
 	if err != nil {
 		// Reparsing errors are quite rare here since we were already able to parse this workflow in the past to
@@ -632,7 +637,10 @@ func tryHandleWorkflowCallOuterJob(ctx context.Context, job *actions_model.Actio
 	if err != nil {
 		return nil, fmt.Errorf("failure to load run's repo: %w", err)
 	}
-	githubContext := generateGiteaContextForRun(job.Run)
+	githubContext, err := generateGiteaContextForRun(ctx, job.Run)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate Gitea context for run %d: %w", job.Run.ID, err)
+	}
 	taskNeeds, err := FindTaskNeeds(ctx, job)
 	if err != nil {
 		return nil, fmt.Errorf("failure to 'needs' for job: %w", err)

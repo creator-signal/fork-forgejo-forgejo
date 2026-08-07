@@ -4,9 +4,11 @@
 package actions
 
 import (
+	"fmt"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/git"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/models/user"
@@ -69,7 +71,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      `{"repository": {"name": "testrepo"}}`,
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "testuser", context["actor"])
@@ -78,6 +80,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 		assert.Equal(t, "push", context["event_name"])
 		assert.Equal(t, "refs/heads/main", context["ref"])
 		assert.Equal(t, "main", context["ref_name"])
+		assert.False(t, context["ref_protected"].(bool))
 		assert.Equal(t, "branch", context["ref_type"])
 		assert.Equal(t, "789", context["repository_owner_id"])
 		assert.Equal(t, "testowner/testrepo", context["repository"])
@@ -138,7 +141,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			WorkflowPayload: []byte("on: [push]"),
 		}
 
-		context, err := GenerateGiteaContext(run, job)
+		context, err := GenerateGiteaContext(t.Context(), run, job)
 		require.NoError(t, err)
 
 		assert.Equal(t, "test-job", context["job"])
@@ -178,7 +181,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
@@ -220,7 +223,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		context, err := GenerateGiteaContext(run, nil)
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", context["base_ref"])
@@ -229,6 +232,7 @@ func TestGenerateGiteaContext(t *testing.T) {
 		assert.Equal(t, "refs/heads/main", context["ref"])
 		assert.Equal(t, "base123sha", context["sha"])
 		assert.Equal(t, "main", context["ref_name"])
+		assert.False(t, context["ref_protected"].(bool))
 		assert.Equal(t, "branch", context["ref_type"])
 		assert.Equal(t, "testowner/testrepo/.github/workflows/test-workflow.yml@refs/heads/main", context["workflow_ref"])
 	})
@@ -254,10 +258,82 @@ func TestGenerateGiteaContext(t *testing.T) {
 			WorkflowPayload: []byte("on: { workflow_call: { inputs: {} } }\n__metadata:\n  workflow_call_parent: b5a9f46f1f2513d7777fde50b169d323a6519e349cc175484c947ac315a209ed\n"),
 		}
 
-		context, err := GenerateGiteaContext(run, job)
+		context, err := GenerateGiteaContext(t.Context(), run, job)
 		require.NoError(t, err)
 
 		assert.Equal(t, "workflow_call", context["event_name"])
+	})
+
+	t.Run("Protected tag", func(t *testing.T) {
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 2})
+		repo62 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 62, OwnerID: user2.ID})
+
+		protectedTag := git.ProtectedTag{ID: 839, RepoID: repo62.ID, NamePattern: "v*"}
+		unittest.AssertSuccessfulInsert(t, &protectedTag)
+
+		run := &actions_model.ActionRun{
+			ID:                1,
+			Index:             42,
+			TriggerUserID:     user2.ID,
+			TriggerUser:       user2,
+			RepoID:            repo62.ID,
+			Repo:              repo62,
+			TriggerEvent:      "push",
+			Ref:               "refs/tags/v1",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      fmt.Sprintf(`{"repository": {"name": "%s"}}`, repo62.Name),
+		}
+
+		context, err := GenerateGiteaContext(t.Context(), run, nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, "user2", context["actor"])
+		assert.Equal(t, "2", context["actor_id"])
+		assert.Equal(t, setting.AppURL+"api/v1", context["api_url"])
+		assert.Equal(t, "push", context["event_name"])
+		assert.Equal(t, "refs/tags/v1", context["ref"])
+		assert.Equal(t, "v1", context["ref_name"])
+		assert.True(t, context["ref_protected"].(bool))
+		assert.Equal(t, "tag", context["ref_type"])
+		assert.Equal(t, "2", context["repository_owner_id"])
+		assert.Equal(t, "user2/test_workflows", context["repository"])
+		assert.Equal(t, "62", context["repository_id"])
+		assert.Equal(t, "user2", context["repository_owner"])
+		assert.Equal(t, "abc123def456", context["sha"])
+		assert.Equal(t, "42", context["run_number"])
+		assert.Equal(t, "test-workflow.yaml", context["workflow"])
+		assert.Equal(t, "user2/test_workflows/.forgejo/workflows/test-workflow.yaml@refs/tags/v1", context["workflow_ref"])
+		assert.Equal(t, "Actions", context["secret_source"])
+		assert.Equal(t, setting.AppURL, context["server_url"])
+		assert.Equal(t, setting.Actions.DefaultActionsURL.URL(), context["gitea_default_actions_url"])
+		assert.Equal(t, setting.Actions.DefaultActionsURL.URL(), context["forgejo_default_actions_url"])
+		assert.Equal(t, setting.AppVer, context["forgejo_server_version"])
+
+		event, ok := context["event"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "test_workflows", event["repository"].(map[string]any)["name"])
+
+		emptyField(t, context, "action_path")
+		emptyField(t, context, "action_ref")
+		emptyField(t, context, "action_repository")
+		emptyField(t, context, "action_status")
+		emptyField(t, context, "action")
+		emptyField(t, context, "base_ref")
+		emptyField(t, context, "env")
+		emptyField(t, context, "event_path")
+		emptyField(t, context, "graphql_url")
+		emptyField(t, context, "head_ref")
+		emptyField(t, context, "job")
+		emptyField(t, context, "path")
+		emptyField(t, context, "retention_days")
+		emptyField(t, context, "run_attempt")
+		emptyField(t, context, "run_id")
+		emptyField(t, context, "triggering_actor")
+		emptyField(t, context, "workspace")
 	})
 }
 
@@ -287,13 +363,15 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 			EventPayload:      `{"repository": {"name": "testrepo"}}`,
 		}
 
-		gitContextObj := generateGiteaContextForRun(run)
+		gitContextObj, err := generateGiteaContextForRun(t.Context(), run)
+		require.NoError(t, err)
 
 		assert.Equal(t, "testuser", gitContextObj.Actor)
 		assert.Equal(t, setting.AppURL+"api/v1", gitContextObj.APIURL)
 		assert.Equal(t, "push", gitContextObj.EventName)
 		assert.Equal(t, "refs/heads/main", gitContextObj.Ref)
 		assert.Equal(t, "main", gitContextObj.RefName)
+		assert.False(t, gitContextObj.RefProtected)
 		assert.Equal(t, "branch", gitContextObj.RefType)
 		assert.Equal(t, "testowner/testrepo", gitContextObj.Repository)
 		assert.Equal(t, "testowner", gitContextObj.RepositoryOwner)
@@ -351,7 +429,8 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		gitContextObj := generateGiteaContextForRun(run)
+		gitContextObj, err := generateGiteaContextForRun(t.Context(), run)
+		require.NoError(t, err)
 
 		assert.Equal(t, "main", gitContextObj.BaseRef)
 		assert.Equal(t, "feature-branch", gitContextObj.HeadRef)
@@ -392,7 +471,8 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 			EventPayload:      string(payloadBytes),
 		}
 
-		gitContextObj := generateGiteaContextForRun(run)
+		gitContextObj, err := generateGiteaContextForRun(t.Context(), run)
+		require.NoError(t, err)
 
 		assert.Equal(t, "main", gitContextObj.BaseRef)
 		assert.Equal(t, "feature-branch", gitContextObj.HeadRef)
@@ -400,7 +480,64 @@ func TestGenerateGiteaContextForRun(t *testing.T) {
 		assert.Equal(t, "refs/heads/main", gitContextObj.Ref)
 		assert.Equal(t, "base123sha", gitContextObj.Sha)
 		assert.Equal(t, "main", gitContextObj.RefName)
+		assert.False(t, gitContextObj.RefProtected)
 		assert.Equal(t, "branch", gitContextObj.RefType)
 		assert.Equal(t, "testowner/testrepo/.github/workflows/test-workflow.yml@refs/heads/main", gitContextObj.WorkflowRef)
+	})
+
+	t.Run("Workflow run with protected_ref", func(t *testing.T) {
+		require.NoError(t, unittest.PrepareTestDatabase())
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 2})
+		repo62 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 62, OwnerID: user2.ID})
+
+		protectedBranch := git.ProtectedBranch{ID: 839, RepoID: repo62.ID, RuleName: "main"}
+		unittest.AssertSuccessfulInsert(t, &protectedBranch)
+
+		run := &actions_model.ActionRun{
+			ID:                30562,
+			Index:             1,
+			TriggerUser:       user2,
+			Repo:              repo62,
+			TriggerEvent:      "push",
+			Ref:               "refs/heads/main",
+			CommitSHA:         "abc123def456",
+			WorkflowID:        "test-workflow.yaml",
+			WorkflowDirectory: ".forgejo/workflows",
+			EventPayload:      fmt.Sprintf(`{"repository": {"name": "%s"}}`, repo62.Name),
+		}
+
+		gitContextObj, err := generateGiteaContextForRun(t.Context(), run)
+		require.NoError(t, err)
+
+		assert.Equal(t, "user2", gitContextObj.Actor)
+		assert.Equal(t, setting.AppURL+"api/v1", gitContextObj.APIURL)
+		assert.Equal(t, "push", gitContextObj.EventName)
+		assert.Equal(t, "refs/heads/main", gitContextObj.Ref)
+		assert.Equal(t, "main", gitContextObj.RefName)
+		assert.True(t, gitContextObj.RefProtected)
+		assert.Equal(t, "branch", gitContextObj.RefType)
+		assert.Equal(t, "user2/test_workflows", gitContextObj.Repository)
+		assert.Equal(t, user2.Name, gitContextObj.RepositoryOwner)
+		assert.Equal(t, "abc123def456", gitContextObj.Sha)
+		assert.Equal(t, "1", gitContextObj.RunNumber)
+		assert.Equal(t, "test-workflow.yaml", gitContextObj.Workflow)
+		assert.Equal(t, "user2/test_workflows/.forgejo/workflows/test-workflow.yaml@refs/heads/main", gitContextObj.WorkflowRef)
+
+		assert.Equal(t, "test_workflows", gitContextObj.Event["repository"].(map[string]any)["name"])
+
+		assert.Empty(t, gitContextObj.ActionPath)
+		assert.Empty(t, gitContextObj.ActionRef)
+		assert.Empty(t, gitContextObj.ActionRepository)
+		assert.Empty(t, gitContextObj.Action)
+		assert.Empty(t, gitContextObj.BaseRef)
+		assert.Empty(t, gitContextObj.EventPath)
+		assert.Empty(t, gitContextObj.GraphQLURL)
+		assert.Empty(t, gitContextObj.HeadRef)
+		assert.Empty(t, gitContextObj.Job)
+		assert.Empty(t, gitContextObj.RetentionDays)
+		assert.Empty(t, gitContextObj.RunAttempt)
+		assert.Empty(t, gitContextObj.RunID)
+		assert.Empty(t, gitContextObj.Workspace)
 	})
 }

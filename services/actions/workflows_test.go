@@ -163,7 +163,7 @@ func TestConfigureActionRunConcurrency(t *testing.T) {
 				Repo:         &repo.Repository{},
 			}
 
-			err := ConfigureActionRunConcurrency(workflow, run, tc.vars, tc.inputs)
+			err := ConfigureActionRunConcurrency(t.Context(), workflow, run, tc.vars, tc.inputs)
 			require.NoError(t, err)
 
 			if tc.expectedConcurrencyGroup == "" {

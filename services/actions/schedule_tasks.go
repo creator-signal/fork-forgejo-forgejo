@@ -154,7 +154,7 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	}
 	run.NotifyEmail = notifications
 
-	err = ConfigureActionRunConcurrency(workflow, run, vars, map[string]any{})
+	err = ConfigureActionRunConcurrency(ctx, workflow, run, vars, map[string]any{})
 	if err != nil {
 		return err
 	}
@@ -175,6 +175,11 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 	defer expandCleanup()
 
 	// Parse the workflow specification from the cron schedule
+	giteaContext, err := generateGiteaContextForRun(ctx, run)
+	if err != nil {
+		return fmt.Errorf("could not generate Gitea context for run %d: %w", run.ID, err)
+	}
+
 	workflows, err := actions_module.JobParser(cron.Content,
 		jobparser.WithVars(vars),
 		// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
@@ -183,7 +188,7 @@ func CreateScheduleTask(ctx context.Context, cron *actions_model.ActionSchedule)
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflow),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
-		jobparser.WithGitContext(generateGiteaContextForRun(run)),
+		jobparser.WithGitContext(giteaContext),
 	)
 	if err != nil {
 		return err

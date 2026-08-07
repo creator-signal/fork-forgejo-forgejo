@@ -94,7 +94,10 @@ func getSecretsOfInnerWorkflowCall(ctx context.Context, job *actions_model.Actio
 	if err != nil {
 		return nil, fmt.Errorf("failure to load run's repo: %w", err)
 	}
-	githubContext := generateGiteaContextForRun(outerWorkflowCall.Run)
+	githubContext, err := generateGiteaContextForRun(ctx, outerWorkflowCall.Run)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate Gitea context for run %d: %w", outerWorkflowCall.Run.ID, err)
+	}
 	taskNeeds, err := FindTaskNeeds(ctx, outerWorkflowCall)
 	if err != nil {
 		return nil, fmt.Errorf("failure evaluating 'needs' for job: %w", err)

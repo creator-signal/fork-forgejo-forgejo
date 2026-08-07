@@ -411,7 +411,7 @@ func handleWorkflows(
 			continue
 		}
 
-		err = ConfigureActionRunConcurrency(workflow, run, vars, map[string]any{})
+		err = ConfigureActionRunConcurrency(ctx, workflow, run, vars, map[string]any{})
 		if err != nil {
 			log.Error("ConfigureActionRunConcurrency: %v", err)
 		}
@@ -427,6 +427,10 @@ func handleWorkflows(
 				Name: dwf.EntryName,
 			}}
 		} else {
+			giteaContext, err := generateGiteaContextForRun(ctx, run)
+			if err != nil {
+				return fmt.Errorf("could not generate Gitea context for run %d: %w", run.ID, err)
+			}
 			jobs, err = actions_module.JobParser(dwf.Content,
 				jobparser.WithVars(vars),
 				// We don't have any job outputs yet, but `WithJobOutputs(...)` triggers JobParser to supporting its
@@ -435,7 +439,7 @@ func handleWorkflows(
 				jobparser.SupportIncompleteRunsOn(),
 				jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(commit)),
 				jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
-				jobparser.WithGitContext(generateGiteaContextForRun(run)),
+				jobparser.WithGitContext(giteaContext),
 			)
 			if err != nil {
 				log.Info("jobparser.Parse: invalid workflow, setting job status to failed: %v", err)

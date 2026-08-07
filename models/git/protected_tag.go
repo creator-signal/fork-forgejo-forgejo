@@ -11,6 +11,7 @@ import (
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/organization"
+	"forgejo.org/modules/git"
 	"forgejo.org/modules/timeutil"
 
 	"github.com/gobwas/glob"
@@ -54,6 +55,17 @@ func (pt *ProtectedTag) matchString(name string) bool {
 		return pt.RegexPattern.MatchString(name)
 	}
 	return pt.GlobPattern.Match(name)
+}
+
+func (pt *ProtectedTag) Affects(ref git.RefName) (bool, error) {
+	if !ref.IsTag() {
+		return false, nil
+	}
+
+	if err := pt.EnsureCompiledPattern(); err != nil {
+		return false, err
+	}
+	return pt.matchString(ref.TagName()), nil
 }
 
 // InsertProtectedTag inserts a protected tag to database
