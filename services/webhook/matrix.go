@@ -6,7 +6,7 @@ package webhook
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"html"
@@ -294,7 +294,7 @@ func getMessageBody(htmlText string) string {
 func getMatrixStateKey(t *webhook_model.HookTask) string {
 	// we hash the original payload (and not the sent text), because we want multiple matrix messages,
 	// even if the resulting text is identical (like "New comment on pull request #1234 <name> by <sender>")
-	hash := sha1.Sum([]byte(t.PayloadContent))
+	hash := sha256.Sum256([]byte(t.PayloadContent))
 	return base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
