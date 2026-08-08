@@ -139,7 +139,7 @@ func NewIndexer(indexDir string) *Indexer {
 	}
 }
 
-func (b *Indexer) addUpdate(ctx context.Context, batchWriter git.WriteCloserError, batchReader *bufio.Reader, commitSha string,
+func (b *Indexer) addUpdate(ctx context.Context, batchWriter io.Writer, batchReader *bufio.Reader, commitSha string,
 	update internal.FileUpdate, repo *repo_model.Repository, batch *inner_bleve.FlushingBatch,
 ) error {
 	// Ignore vendored files in code search

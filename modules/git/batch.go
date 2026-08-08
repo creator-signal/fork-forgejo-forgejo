@@ -6,12 +6,13 @@ package git
 import (
 	"bufio"
 	"context"
+	"io"
 )
 
 type Batch struct {
 	cancel context.CancelFunc
 	Reader *bufio.Reader
-	Writer WriteCloserError
+	Writer io.Writer
 }
 
 func (repo *Repository) NewBatch(ctx context.Context) (*Batch, error) {

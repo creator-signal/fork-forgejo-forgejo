@@ -94,7 +94,7 @@ func (b *Indexer) addDelete(builder *index.Builder, filename string) {
 	builder.MarkFileAsChangedOrRemoved(filename)
 }
 
-func (b *Indexer) addUpdate(ctx context.Context, builder *index.Builder, batchWriter git.WriteCloserError, batchReader *bufio.Reader, update internal.FileUpdate, repo *repo_model.Repository) error {
+func (b *Indexer) addUpdate(ctx context.Context, builder *index.Builder, batchWriter io.Writer, batchReader *bufio.Reader, update internal.FileUpdate, repo *repo_model.Repository) error {
 	// Ignore vendored files in code search
 	if setting.Indexer.ExcludeVendored && analyze.IsVendor(update.Filename) {
 		return nil
