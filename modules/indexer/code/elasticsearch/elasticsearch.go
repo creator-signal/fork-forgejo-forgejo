@@ -185,22 +185,21 @@ func (b *Indexer) Index(ctx context.Context, repo *repo_model.Repository, sha st
 			return err
 		}
 		defer r.Close()
-		batch, err := r.NewBatch(ctx)
-		if err != nil {
+
+		if err := r.WithCatFileBatch(ctx, func(w io.Writer, r *bufio.Reader) error {
+			for _, update := range changes.Updates {
+				updateReqs, err := b.addUpdate(ctx, w, r, sha, update, repo)
+				if err != nil {
+					return err
+				}
+				if len(updateReqs) > 0 {
+					reqs = append(reqs, updateReqs...)
+				}
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
-		defer batch.Close()
-
-		for _, update := range changes.Updates {
-			updateReqs, err := b.addUpdate(ctx, batch.Writer, batch.Reader, sha, update, repo)
-			if err != nil {
-				return err
-			}
-			if len(updateReqs) > 0 {
-				reqs = append(reqs, updateReqs...)
-			}
-		}
-		batch.Close()
 	}
 
 	for _, filename := range changes.RemovedFilenames {

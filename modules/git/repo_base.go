@@ -121,7 +121,7 @@ func (repo *Repository) internalCatFile(lock *sync.Mutex, lockStack *string, bat
 // subprocess may be in an unexpected state and cannot be reused anymore
 func (repo *Repository) CatFileBatch(ctx context.Context) (io.Writer, *bufio.Reader, func(error), error) {
 	return repo.internalCatFile(&repo.batchLock, &repo.batchLockStack, &repo.batch,
-		func() (*Batch, error) { return repo.NewBatch(ctx) })
+		func() (*Batch, error) { return repo.newBatch(ctx) })
 }
 
 // WithCatFileBatch performs the same work as CatFileBatch, but with a closure-based API which makes error handling a
@@ -150,7 +150,7 @@ func (repo *Repository) WithCatFileBatch(ctx context.Context, closure func(io.Wr
 // subprocess may be in an unexpected state and cannot be reused anymore
 func (repo *Repository) CatFileBatchCheck(ctx context.Context) (io.Writer, *bufio.Reader, func(error), error) {
 	return repo.internalCatFile(&repo.checkLock, &repo.checkLockStack, &repo.check,
-		func() (*Batch, error) { return repo.NewBatchCheck(ctx) })
+		func() (*Batch, error) { return repo.newBatchCheck(ctx) })
 }
 
 // WithCatFileBatch performs the same work as CatFileBatchCheck, but with a closure-based API which makes error handling

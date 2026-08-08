@@ -211,18 +211,17 @@ func (b *Indexer) Index(ctx context.Context, repo *repo_model.Repository, sha st
 			return err
 		}
 		defer r.Close()
-		gitBatch, err := r.NewBatch(ctx)
-		if err != nil {
+
+		if err := r.WithCatFileBatch(ctx, func(w io.Writer, r *bufio.Reader) error {
+			for _, update := range changes.Updates {
+				if err := b.addUpdate(ctx, w, r, sha, update, repo, batch); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
-		defer gitBatch.Close()
-
-		for _, update := range changes.Updates {
-			if err := b.addUpdate(ctx, gitBatch.Writer, gitBatch.Reader, sha, update, repo, batch); err != nil {
-				return err
-			}
-		}
-		gitBatch.Close()
 	}
 	for _, filename := range changes.RemovedFilenames {
 		if err := b.addDelete(filename, repo, batch); err != nil {
