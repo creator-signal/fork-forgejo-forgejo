@@ -232,8 +232,10 @@ func (ctx *APIContext) SetRepo(repo *Repository) {
 
 func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
 	id := ctx.ParamsInt64(indexParam)
-	if _, ok := ctx.issues[id]; !ok {
-		issue, err := issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, id)
+	issue, ok := ctx.issues[id]
+	if !ok {
+		var err error
+		issue, err = issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, id)
 		if err != nil {
 			if issues_model.IsErrIssueNotExist(err) {
 				ctx.NotFound("IsErrIssueNotExist", err)
@@ -247,8 +249,7 @@ func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
 
 		ctx.issues[id] = issue
 	}
-
-	return ctx.issues[id]
+	return issue
 }
 
 func (ctx *APIContext) Repository() *repo_model.Repository {
@@ -292,8 +293,10 @@ func (ctx *APIContext) PackageOwner() *user_model.User {
 
 func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
 	id := ctx.ParamsInt64(idParam)
-	if _, ok := ctx.comments[id]; !ok {
-		comment, err := issues_model.GetCommentByID(ctx, id)
+	comment, ok := ctx.comments[id]
+	if !ok {
+		var err error
+		comment, err = issues_model.GetCommentByID(ctx, id)
 		if err != nil {
 			if issues_model.IsErrCommentNotExist(err) {
 				ctx.NotFound(err)
@@ -312,7 +315,7 @@ func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
 
 		ctx.comments[id] = comment
 	}
-	return ctx.comments[id]
+	return comment
 }
 
 func (ctx *APIContext) PackageAccessMode() perm.AccessMode {
