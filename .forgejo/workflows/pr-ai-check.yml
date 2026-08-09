@@ -2,6 +2,8 @@ on:
   pull_request_target:
     types: [opened]
 
+name: pr-checklist
+
 jobs:
   warn-user:
     runs-on: docker
