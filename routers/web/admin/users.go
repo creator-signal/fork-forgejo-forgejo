@@ -48,7 +48,7 @@ func Users(ctx *context.Context) {
 	ctx.Data["PageIsAdminUsers"] = true
 
 	extraParamStrings := map[string]string{}
-	statusFilterKeys := []string{"is_active", "is_admin", "is_restricted", "is_2fa_enabled", "is_prohibit_login", "account_type"}
+	statusFilterKeys := []string{"is_active", "is_admin", "is_restricted", "is_bot", "is_2fa_enabled", "is_prohibit_login", "account_type"}
 	statusFilterMap := map[string]string{}
 	for _, filterKey := range statusFilterKeys {
 		paramKey := "status_filter[" + filterKey + "]"
@@ -92,6 +92,7 @@ func Users(ctx *context.Context) {
 		IsActive:           optional.ParseBool(statusFilterMap["is_active"]),
 		IsAdmin:            optional.ParseBool(statusFilterMap["is_admin"]),
 		IsRestricted:       optional.ParseBool(statusFilterMap["is_restricted"]),
+		IsBot:              optional.ParseBool(statusFilterMap["is_bot"]),
 		IsTwoFactorEnabled: optional.ParseBool(statusFilterMap["is_2fa_enabled"]),
 		IsProhibitLogin:    optional.ParseBool(statusFilterMap["is_prohibit_login"]),
 		AccountType:        accountTypeFilter,

@@ -307,6 +307,8 @@
 	"admin.users.list_status_filter.not_prohibit_login": "Allow login",
 	"admin.users.list_status_filter.is_2fa_enabled": "2FA enabled",
 	"admin.users.list_status_filter.not_2fa_enabled": "2FA disabled",
+	"admin.users.list_status_filter.is_bot": "Bot",
+	"admin.users.list_status_filter.not_bot": "Not bot",
 	"admin.users.is_bot": "Bot account",
 	"admin.users.bot.description": "Mark the account as a bot.",
 	"admin.users.name": "Username",

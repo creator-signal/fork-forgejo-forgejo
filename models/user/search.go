@@ -36,6 +36,7 @@ type SearchUserOptions struct {
 	IsActive           optional.Option[bool]
 	IsAdmin            optional.Option[bool]
 	IsRestricted       optional.Option[bool]
+	IsBot              optional.Option[bool]
 	IsTwoFactorEnabled optional.Option[bool]
 	IsProhibitLogin    optional.Option[bool]
 	AccountType        optional.Option[UserType]
@@ -118,6 +119,10 @@ func (opts *SearchUserOptions) toSearchQueryBase(ctx context.Context) *xorm.Sess
 
 	if has, value := opts.IsRestricted.Get(); has {
 		cond = cond.And(builder.Eq{"is_restricted": value})
+	}
+
+	if has, value := opts.IsBot.Get(); has {
+		cond = cond.And(builder.Eq{"is_bot": value})
 	}
 
 	if has, value := opts.IsProhibitLogin.Get(); has {

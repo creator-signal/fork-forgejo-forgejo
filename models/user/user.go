@@ -127,6 +127,8 @@ type User struct {
 	// true: the user is only allowed to see organizations/repositories that they has explicit rights to.
 	// (ex: in private Gitea instances user won't be allowed to see even organizations/repositories that are set as public)
 	IsRestricted bool `xorm:"NOT NULL DEFAULT false"`
+	// IsBot indicates that the user is a bot. When IsBot is true, the badge “Bot” is displayed next to the user.
+	IsBot bool `xorm:"NOT NULL DEFAULT false"`
 
 	AllowGitHook            bool
 	AllowImportLocal        bool // Allow migrate repository by local path
@@ -466,12 +468,7 @@ func (u *User) IsIndividual() bool {
 }
 
 func (u *User) IsUser() bool {
-	return u.Type == UserTypeIndividual || u.Type == UserTypeBot
-}
-
-// IsBot returns whether or not the user is of type bot
-func (u *User) IsBot() bool {
-	return u.Type == UserTypeBot
+	return u.IsIndividual()
 }
 
 func (u *User) IsRemote() bool {

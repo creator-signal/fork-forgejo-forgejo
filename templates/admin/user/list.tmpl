@@ -27,6 +27,9 @@
 							<label class="item"><input type="radio" name="status_filter[is_restricted]" value="0"> {{ctx.Locale.Tr "admin.users.list_status_filter.not_restricted"}}</label>
 							<label class="item"><input type="radio" name="status_filter[is_restricted]" value="1"> {{ctx.Locale.Tr "admin.users.list_status_filter.is_restricted"}}</label>
 							<div class="divider"></div>
+							<label class="item"><input type="radio" name="status_filter[is_bot]" value="0"> {{ctx.Locale.Tr "admin.users.list_status_filter.not_bot"}}</label>
+							<label class="item"><input type="radio" name="status_filter[is_bot]" value="1"> {{ctx.Locale.Tr "admin.users.list_status_filter.is_bot"}}</label>
+							<div class="divider"></div>
 							<label class="item"><input type="radio" name="status_filter[is_prohibit_login]" value="0"> {{ctx.Locale.Tr "admin.users.list_status_filter.not_prohibit_login"}}</label>
 							<label class="item"><input type="radio" name="status_filter[is_prohibit_login]" value="1"> {{ctx.Locale.Tr "admin.users.list_status_filter.is_prohibit_login"}}</label>
 							<div class="divider"></div>
@@ -35,7 +38,6 @@
 							<div class="divider"></div>
 							<label class="item"><input type="radio" name="status_filter[account_type]" value="0"> {{ctx.Locale.Tr "admin.users.local"}}</label>
 							<label class="item"><input type="radio" name="status_filter[account_type]" value="2"> {{ctx.Locale.Tr "admin.users.reserved"}}</label>
-							<label class="item"><input type="radio" name="status_filter[account_type]" value="4"> {{ctx.Locale.Tr "admin.users.bot"}}</label>
 							<label class="item"><input type="radio" name="status_filter[account_type]" value="5"> {{ctx.Locale.Tr "admin.users.remote"}}</label>
 						</div>
 					</div>
@@ -91,10 +93,11 @@
 									<span class="ui mini label">{{ctx.Locale.Tr "admin.users.admin"}}</span>
 								{{else if eq 2 .Type}}{{/* Reserved user */}}
 									<span class="ui mini label">{{ctx.Locale.Tr "admin.users.reserved"}}</span>
-								{{else if eq 4 .Type}}{{/* Bot "user" */}}
-									<span class="ui mini label">{{ctx.Locale.Tr "admin.users.bot"}}</span>
 								{{else if eq 5 .Type}}{{/* Remote user */}}
 									<span class="ui mini label">{{ctx.Locale.Tr "admin.users.remote"}}</span>
+								{{end}}
+								{{if .IsBot}}
+									<span class="ui mini label">{{ctx.Locale.Tr "admin.users.bot"}}</span>
 								{{end}}
 							</td>
 							<td class="gt-ellipsis tw-max-w-48">{{.Email}}</td>

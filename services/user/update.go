@@ -5,7 +5,6 @@ package user
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"forgejo.org/models"
@@ -147,15 +146,8 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 		cols = append(cols, "last_login_unix")
 	}
 	if has, value := opts.IsBot.Get(); has {
-		if !u.IsUser() {
-			return errors.New("changing to bot account for non user account is not allowed")
-		}
-		if value {
-			u.Type = user_model.UserTypeBot
-		} else {
-			u.Type = user_model.UserTypeIndividual
-		}
-		cols = append(cols, "type")
+		u.IsBot = value
+		cols = append(cols, "is_bot")
 	}
 
 	return user_model.UpdateUserCols(ctx, u, cols...)
