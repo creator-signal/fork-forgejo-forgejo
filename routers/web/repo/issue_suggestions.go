@@ -20,6 +20,7 @@ func IssueSuggestions(ctx *context.Context) {
 	if has, value := isPull.Get(); has {
 		if !ctx.Repo.CanReadIssuesOrPulls(value) {
 			ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
+			return
 		}
 	} else {
 		canReadIssues := ctx.Repo.CanRead(unit.TypeIssues)
@@ -27,6 +28,7 @@ func IssueSuggestions(ctx *context.Context) {
 
 		if !canReadPulls && !canReadIssues {
 			ctx.NotFound(ctx.Req.URL.RequestURI(), nil)
+			return
 		} else if canReadPulls && !canReadIssues {
 			isPull = optional.Some(true)
 		} else if canReadIssues && !canReadPulls {
