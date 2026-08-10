@@ -5,21 +5,53 @@ package integration
 
 import (
 	"net/url"
-	"strings"
+	"sync"
 	"testing"
+	"testing/fstest"
 
 	actions_model "forgejo.org/models/actions"
+	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
-	files_service "forgejo.org/services/repository/files"
-	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
+	runnerv1 "code.forgejo.org/forgejo/actions-proto/runner/v1"
+	"code.forgejo.org/xorm/xorm/convert"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func createFetchTaskTestRepository(
+	t *testing.T,
+	owner *user_model.User,
+	workflowFileName,
+	workflowFileContent string,
+) *repo_model.Repository {
+	t.Helper()
+
+	fileSystem := forgery.MapFS{
+		".forgejo/workflows/" + workflowFileName: &fstest.MapFile{
+			Data: []byte(workflowFileContent),
+		},
+	}
+
+	opts := &forgery.CreateRepositoryOptions{
+		LatestSha: new(string),
+		Name:      "repo-many-tasks",
+		Files:     fileSystem,
+	}
+
+	repo := forgery.CreateRepository(t, owner, opts)
+
+	var unitConfig convert.Conversion
+	forgery.EnableRepoUnit(t, repo, unit_model.TypeActions, unitConfig)
+
+	return repo
+}
 
 func TestActionFetchTask_TaskCapacity(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
@@ -31,13 +63,7 @@ func TestActionFetchTask_TaskCapacity(t *testing.T) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "repo-many-tasks",
-			[]unit_model.Type{unit_model.TypeActions}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/workflows/matrix.yml",
-					ContentReader: strings.NewReader(`
+		repo := createFetchTaskTestRepository(t, user2, "matrix.yml", `
 on:
   push:
 jobs:
@@ -52,11 +78,7 @@ jobs:
     steps:
       - run: echo ${{ matrix.d1 }} ${{ matrix.d2 }} ${{ matrix.d3 }}
       - run: sleep 2
-`),
-				},
-			},
-		)
-		defer f()
+`)
 
 		runner := newMockRunner()
 		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
@@ -100,13 +122,7 @@ func TestActionFetchTask_Idempotent(t *testing.T) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "repo-many-tasks",
-			[]unit_model.Type{unit_model.TypeActions}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/workflows/matrix.yml",
-					ContentReader: strings.NewReader(`
+		repo := createFetchTaskTestRepository(t, user2, "matrix.yml", `
 on:
   push:
 jobs:
@@ -117,11 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sleep 2
-`),
-				},
-			},
-		)
-		defer f()
+`)
 
 		runner := newMockRunner()
 		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
@@ -156,7 +168,7 @@ jobs:
 			// expected to be present, so we test for equal length.  "gitea_runtime_token" is a signed JWT which can
 			// change between invocations based upon precise timestamps used, and so similarly should be validated to be
 			// present not necessarily identical.
-			if k == "token" || k == "gitea_runtime_token" {
+			if k == "token" || k == "gitea_runtime_token" || k == "forgejo_runtime_token" {
 				assert.Len(t, v1.(string), len(v2.(string)))
 			} else {
 				assert.EqualValues(t, v1, v2, "context[%q]", k)
@@ -192,6 +204,91 @@ jobs:
 	})
 }
 
+func TestActionFetchTask_IdempotentConcurrent(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mock repo runner only supported on SQLite testing
+		t.Skip()
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo := createFetchTaskTestRepository(t, user2, "matrix.yml", `
+on:
+  push:
+jobs:
+  job1:
+    strategy:
+      matrix:
+        d1: [a, b, c, d, e]
+        d2: [a, b, c, d, e]
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 2
+`)
+
+		runner := newMockRunner()
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+
+		runner.setRequestKey("c6dacc80-dace-4cea-9aad-f0e266355d8e")
+
+		// If we make two simultaneous requests with the same runner request key, we should get either the error
+		// "request key is currently locked; retry soon", or, the same tasks from both requests.
+		concurrentCount := 15
+		type fetchResult struct {
+			index     int
+			task      *runnerv1.Task
+			addtTasks []*runnerv1.Task
+			err       error
+		}
+		fetchResults := make(chan fetchResult, concurrentCount)
+
+		var wg sync.WaitGroup
+		for i := range concurrentCount {
+			wg.Go(func() {
+				// Larger task capacity is used to make the successful call take longer, cause higher chance of problems if
+				// concurrency isn't handled correctly
+				task, addtTasks, err := runner.fetchTaskOrError(t, 10)
+				fetchResults <- fetchResult{index: i, task: task, addtTasks: addtTasks, err: err}
+			})
+		}
+
+		wg.Wait()
+		close(fetchResults)
+
+		var firstResponseTaskIDs container.Set[int64]
+		for res := range fetchResults {
+			t.Logf("res = %#v", res)
+			if res.task != nil {
+				// This response had tasks, so let's ensure they're always the same for every response.
+				taskIDs := container.Set[int64]{}
+				taskIDs.Add(res.task.GetId())
+				for _, extraTask := range res.addtTasks {
+					assert.True(t, taskIDs.Add(extraTask.GetId()))
+				}
+				if firstResponseTaskIDs == nil {
+					// first response with tasks -- record the IDs
+					firstResponseTaskIDs = taskIDs
+					assert.Len(t, taskIDs, 10)
+				} else {
+					// we've already found one response with tasks, so assert that they're all the same
+					d1 := firstResponseTaskIDs.Difference(taskIDs)
+					assert.Empty(t, d1, "first response taskIDs minus current response taskIDs should be empty")
+					d2 := taskIDs.Difference(firstResponseTaskIDs)
+					assert.Empty(t, d2, "current response taskIDs minus first response taskIDs should be empty")
+				}
+			} else if res.err != nil {
+				require.ErrorContains(t, res.err, "request key is currently locked")
+			} else {
+				assert.Fail(t, "unexpected condition - res.task = nil, res.err = nil")
+			}
+		}
+
+		assert.NotNil(t, firstResponseTaskIDs, "at least one response should return tasks")
+	})
+}
+
 func TestActionFetchTask_RequestedJob(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		// mock repo runner only supported on SQLite testing
@@ -202,13 +299,7 @@ func TestActionFetchTask_RequestedJob(t *testing.T) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
-		repo, _, f := tests.CreateDeclarativeRepo(t, user2, "repo-many-tasks",
-			[]unit_model.Type{unit_model.TypeActions}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/workflows/simple.yml",
-					ContentReader: strings.NewReader(`
+		repo := createFetchTaskTestRepository(t, user2, "simple.yml", `
 on:
   push:
 jobs:
@@ -224,11 +315,7 @@ jobs:
     runs-on: debian
     steps:
       - run: echo OK
-`),
-				},
-			},
-		)
-		defer f()
+`)
 
 		debianRunner := newMockRunner()
 		debianRunner.registerAsRepoRunner(t, user2.Name, repo.Name, "debian-runner", []string{"debian"})
@@ -275,5 +362,61 @@ jobs:
 		task = ubuntuRunner.maybeFetchSingleTask(t, &emptyHandle)
 		require.NotNil(t, task)
 		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job1")
+	})
+}
+
+func TestActionFetchTask_EphemeralRunnerAssignedAlready(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mock repo runner only supported on SQLite testing
+		t.Skip()
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		repo := createFetchTaskTestRepository(t, user2, "simple.yml", `
+on:
+  push:
+jobs:
+  job1:
+    runs-on: debian
+    steps:
+      - run: echo OK
+  job2:
+    runs-on: debian
+    steps:
+      - run: echo OK
+  job3:
+    runs-on: debian
+    steps:
+      - run: echo OK
+`)
+
+		ephemeralDebianRunner := newMockRunner()
+		ephemeralDebianRunner.registerAsEphemeralRepoRunner(t, user2.Name, repo.Name, "debian-runner-ephemeral", []string{"debian"})
+
+		normalDebianRunner := newMockRunner()
+		normalDebianRunner.registerAsRepoRunner(t, user2.Name, repo.Name, "debian-runner-normal", []string{"debian"})
+
+		job1 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job1"})
+		job2 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job2"})
+		job3 := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RepoID: repo.ID, Name: "job3"})
+
+		assert.NotEmpty(t, job1.Handle)
+		assert.NotEmpty(t, job2.Handle)
+		assert.NotEmpty(t, job3.Handle)
+
+		// Fetch a task for the ephemeral runner. This will only create one task even tho we have three waiting jobs
+		task, additionalTasks := ephemeralDebianRunner.maybeFetchTaskWithTaskCapacity(t, 3)
+		require.NotNil(t, task)
+		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job1")
+		require.Empty(t, additionalTasks)
+
+		// Fetch a task for the normal runner. This will only create two tasks even tho we set the capacity to three
+		task, additionalTasks = normalDebianRunner.maybeFetchTaskWithTaskCapacity(t, 3)
+		require.NotNil(t, task)
+		assert.Contains(t, string(task.GetWorkflowPayload()), "name: job2")
+		require.Len(t, additionalTasks, 1)
 	})
 }

@@ -15,6 +15,9 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/json"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +25,8 @@ import (
 )
 
 func TestGitlabDownloadRepo(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -44,6 +49,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		CloneURL:      server.URL + "/forgejo/test_repo.git",
 		OriginalURL:   server.URL + "/forgejo/test_repo",
 		DefaultBranch: "master",
+		AvatarURL:     "",
 	}, repo)
 
 	topics, err := downloader.GetTopics()
@@ -400,7 +406,6 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Created:    time.Date(2025, time.November, 25, 9, 48, 20, 259000000, time.UTC),
 			Labels:     []*base.Label{},
 			Reactions:  []*base.Reaction{},
-			PatchURL:   server.URL + "/forgejo/test_repo/-/merge_requests/2.patch",
 			Head: base.PullRequestBranch{
 				Ref:       "test/parsing",
 				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/2",
@@ -447,7 +452,6 @@ func TestGitlabDownloadRepo(t *testing.T) {
 				UserName: "mkobel",
 				Content:  "tada",
 			}},
-			PatchURL: server.URL + "/forgejo/test_repo/-/merge_requests/1.patch",
 			Head: base.PullRequestBranch{
 				Ref:       "feat/test",
 				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/1",
@@ -484,6 +488,8 @@ func TestGitlabDownloadRepo(t *testing.T) {
 }
 
 func TestGitlabSkippedIssueNumber(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -841,6 +847,8 @@ func TestCommentBodyParser(t *testing.T) {
 }
 
 func TestGitlabConfidential(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -908,4 +916,33 @@ func TestGitlabConfidential(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Empty(t, comments)
+}
+
+func TestGitlabDownloaderAvatarURL(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITLAB_READ_TOKEN")
+	liveMode := token != ""
+
+	fixturePath := "./testdata/gitlab/avatar"
+	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, liveMode)
+	defer server.Close()
+
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/forgejo-12921", "", "", token)
+	require.NoError(t, err)
+	require.NotNil(t, downloader)
+
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "forgejo-12921",
+		Description:   "An example repo for testing Forgejo migrations.",
+		CloneURL:      server.URL + "/forgejo/forgejo-12921.git",
+		OriginalURL:   server.URL + "/forgejo/forgejo-12921",
+		DefaultBranch: "master",
+		AvatarURL:     server.URL + "/uploads/-/system/project/avatar/82996997/birb.jpg",
+		IsPrivate:     true,
+	}, repo)
 }

@@ -56,7 +56,7 @@ import (
 	repo_service "forgejo.org/services/repository"
 	files_service "forgejo.org/services/repository/files"
 
-	"code.forgejo.org/forgejo/runner/v12/act/model"
+	"code.forgejo.org/forgejo/runner/v13/act/model"
 
 	_ "golang.org/x/image/bmp"  // for processing bmp images
 	_ "golang.org/x/image/webp" // for processing webp images
@@ -954,7 +954,12 @@ func renderRepoTopics(ctx *context.Context) {
 		ctx.ServerError("models.FindTopics", err)
 		return
 	}
-	ctx.Data["Topics"] = topics
+
+	topicNames := make([]string, 0, len(topics))
+	for _, t := range topics {
+		topicNames = append(topicNames, t.Name)
+	}
+	ctx.Data["Topics"] = topicNames
 }
 
 func prepareOpenWithEditorApps(ctx *context.Context) {
@@ -1065,6 +1070,7 @@ func renderHomeCode(ctx *context.Context) {
 			return
 		}
 		ctx.Redirect(submodule.ResolveUpstreamURL(ctx.Repo.Repository.HTMLURL()))
+		return // technically ctx.Written() check below is fine, but this passes lint-single-response
 	} else if entry.IsDir() {
 		renderDirectory(ctx)
 	} else {

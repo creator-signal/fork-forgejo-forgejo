@@ -26,7 +26,7 @@ import (
 
 // repoWorkingPool represents a working pool to order the parallel changes to the same repository
 // TODO: use clustered lock (unique queue? or *abuse* cache)
-var repoWorkingPool = sync.NewExclusivePool()
+var repoWorkingPool = sync.MutexMap{}
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
 func TransferOwnership(ctx context.Context, doer, newOwner *user_model.User, repo *repo_model.Repository, teams []*organization.Team) error {
@@ -41,12 +41,12 @@ func TransferOwnership(ctx context.Context, doer, newOwner *user_model.User, rep
 
 	oldOwner := repo.Owner
 
-	repoWorkingPool.CheckIn(fmt.Sprint(repo.ID))
+	unlock := repoWorkingPool.Lock(fmt.Sprint(repo.ID))
 	if err := transferOwnership(ctx, doer, newOwner.Name, repo); err != nil {
-		repoWorkingPool.CheckOut(fmt.Sprint(repo.ID))
+		unlock()
 		return err
 	}
-	repoWorkingPool.CheckOut(fmt.Sprint(repo.ID))
+	unlock()
 
 	newRepo, err := repo_model.GetRepositoryByID(ctx, repo.ID)
 	if err != nil {
@@ -201,13 +201,13 @@ func transferOwnership(ctx context.Context, doer *user_model.User, newOwnerName 
 		return fmt.Errorf("decrease old owner repository count: %w", err)
 	}
 
-	if err := repo_model.WatchRepo(ctx, doer.ID, repo.ID, true); err != nil {
+	if err := repo_model.WatchRepoExplicitly(ctx, doer.ID, repo.ID, repo_model.WatchAllSelection); err != nil {
 		return fmt.Errorf("watchRepo: %w", err)
 	}
 
 	// Remove watch for organization.
 	if oldOwner.IsOrganization() {
-		if err := repo_model.WatchRepo(ctx, oldOwner.ID, repo.ID, false); err != nil {
+		if err := repo_model.WatchRepoExplicitly(ctx, oldOwner.ID, repo.ID, repo_model.WatchNoneSelection); err != nil {
 			return fmt.Errorf("watchRepo [false]: %w", err)
 		}
 	}
@@ -346,12 +346,12 @@ func ChangeRepositoryName(ctx context.Context, doer *user_model.User, repo *repo
 	// repo so that we can atomically rename the repo path and updates the
 	// local copy's origin accordingly.
 
-	repoWorkingPool.CheckIn(fmt.Sprint(repo.ID))
+	unlock := repoWorkingPool.Lock(fmt.Sprint(repo.ID))
 	if err := changeRepositoryName(ctx, repo, newRepoName); err != nil {
-		repoWorkingPool.CheckOut(fmt.Sprint(repo.ID))
+		unlock()
 		return err
 	}
-	repoWorkingPool.CheckOut(fmt.Sprint(repo.ID))
+	unlock()
 
 	repo.Name = newRepoName
 	notify_service.RenameRepository(ctx, doer, repo, oldRepoName)

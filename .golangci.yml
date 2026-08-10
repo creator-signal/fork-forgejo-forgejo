@@ -161,10 +161,21 @@ linters:
           - errcheck
           - gocyclo
           - gosec
+          - staticcheck
+          - unparam
+        path: routers/api/v1/permissions/tests
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
         path: models/gitea_migrations/v
       - linters:
           - forbidigo
         path: cmd
+      - linters:
+          - forbidigo
+        path: build/lint-single-response
       - linters:
           - dupl
         text: (?i)webhook
@@ -189,9 +200,6 @@ linters:
         text: "(ST1005|ST1003|QF1001):"
 
       # TODO: eventually remove this section entirely
-      - path: models/activities/action_list.go
-        linters:
-          - nilnil
       - path: models/asymkey/gpg_key_object_verification.go
         linters:
           - nilnil
@@ -231,9 +239,6 @@ linters:
       - path: models/issues/review.go
         linters:
           - nilnil
-      - path: models/organization/org_user.go
-        linters:
-          - nilnil
       - path: models/quota/rule.go
         linters:
           - nilnil
@@ -249,9 +254,6 @@ linters:
       - path: models/user/email_address.go
         linters:
           - nilnil
-      - path: models/user/list.go
-        linters:
-          - nilnil
       - path: models/user/user.go
         linters:
           - nilnil
@@ -259,9 +261,6 @@ linters:
         linters:
           - nilnil
       - path: modules/git/commit.go
-        linters:
-          - nilnil
-      - path: modules/git/foreachref/parser.go
         linters:
           - nilnil
       - path: modules/git/last_commit_cache.go
@@ -288,12 +287,6 @@ linters:
       - path: routers/api/packages/chef/auth.go
         linters:
           - nilnil
-      - path: routers/api/packages/container/auth.go
-        linters:
-          - nilnil
-      - path: routers/api/packages/nuget/auth.go
-        linters:
-          - nilnil
       - path: routers/api/packages/swift/swift.go
         linters:
           - nilnil
@@ -306,22 +299,10 @@ linters:
       - path: routers/web/repo/release.go
         linters:
           - nilnil
-      - path: routers/web/repo/setting/runners.go
-        linters:
-          - nilnil
       - path: routers/web/repo/setting/secrets.go
         linters:
           - nilnil
       - path: routers/web/repo/setting/variables.go
-        linters:
-          - nilnil
-      - path: services/actions/context.go
-        linters:
-          - nilnil
-      - path: services/actions/task.go
-        linters:
-          - nilnil
-      - path: services/actions/trust.go
         linters:
           - nilnil
       - path: services/contexttest/context_tests.go
@@ -333,16 +314,10 @@ linters:
       - path: services/issue/assignee.go
         linters:
           - nilnil
-      - path: routers/api/packages/conan/auth.go
-        linters:
-          - nilnil
       - path: services/issue/commit.go
         linters:
           - nilnil
       - path: services/issue/issue.go
-        linters:
-          - nilnil
-      - path: services/migrations/onedev.go
         linters:
           - nilnil
       - path: services/packages/cargo/index.go

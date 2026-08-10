@@ -32,13 +32,12 @@ const ProviderHeaderKey = "gitea-oauth2-provider"
 // DefaultSigningKey is the default signing key for JWTs.
 var DefaultSigningKey jwtx.SigningKey
 
+// DefaultVerifier is the default Verifier
+var DefaultVerifier *jwtx.Verifier
+
 // Init initializes the oauth source
 func Init(ctx context.Context) error {
 	var err error
-	DefaultSigningKey, err = jwtx.InitSigningKey(&setting.OAuth2.KeyCfg.Signing)
-	if err != nil {
-		return err
-	}
 
 	// Lock our mutex
 	gothRWMutex.Lock()
@@ -59,6 +58,14 @@ func Init(ctx context.Context) error {
 
 	// Unlock our mutex
 	gothRWMutex.Unlock()
+
+	if !setting.OAuth2.Enabled {
+		return nil
+	}
+	DefaultSigningKey, DefaultVerifier, err = jwtx.Init(&setting.OAuth2.KeyCfg)
+	if err != nil {
+		return err
+	}
 
 	return initOAuth2Sources(ctx)
 }

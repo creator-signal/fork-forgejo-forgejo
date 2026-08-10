@@ -15,6 +15,7 @@ import (
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/proxy"
 	"forgejo.org/modules/structs"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/gogs/go-gogs-client"
 )
@@ -112,7 +113,7 @@ func NewGogsDownloader(ctx context.Context, baseURL, userName, password, token, 
 		client = gogs.NewClient(baseURL, token)
 		downloader.userName = token
 	} else {
-		transport := NewMigrationHTTPTransport()
+		transport := allowlist.NewMigrationHTTPTransport()
 		transport.Proxy = func(req *http.Request) (*url.URL, error) {
 			req.SetBasicAuth(userName, password)
 			return proxy.Proxy()(req)
@@ -142,10 +143,13 @@ func (g *GogsDownloader) GetRepoInfo() (*base.Repository, error) {
 		return nil, err
 	}
 
+	avatarURL := fmt.Sprintf("%s/repo-avatars/%d", strings.TrimRight(g.baseURL, "/"), gr.ID)
+
 	// convert gogs repo to stand Repo
 	return &base.Repository{
 		Owner:         g.repoOwner,
 		Name:          g.repoName,
+		AvatarURL:     avatarURL,
 		IsPrivate:     gr.Private,
 		Description:   gr.Description,
 		CloneURL:      gr.CloneURL,

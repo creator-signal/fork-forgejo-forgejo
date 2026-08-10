@@ -90,6 +90,7 @@ export default {
         canDelete: false,
         done: false,
         preExecutionError: '',
+        preExecutioWarnings: [], // array of strings
         jobs: [
           // {
           //   id: 0,
@@ -193,14 +194,18 @@ export default {
 
     statusDiagnostics() {
       if (!this.currentJob.allAttempts) {
-        return this.currentJob.details;
+        return [];
       }
 
       const useAttempt = this.currentJob.allAttempts.some((attempt) => attempt.number === this.viewingAttemptNumber);
       if (useAttempt) {
         return this.viewingAttempt.status_diagnostics;
       }
-      return this.currentJob.details;
+      return [];
+    },
+
+    hasWarnings() {
+      return this.run.preExecutionWarnings && this.run.preExecutionWarnings.length > 0;
     },
   },
 
@@ -265,8 +270,8 @@ export default {
       window.location.href = url;
     },
 
-    appendLogs(stepIndex, logLines, startTime) {
-      this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
+    async appendLogs(stepIndex, logLines, startTime) {
+      await this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
     },
 
     async fetchArtifacts() {
@@ -366,7 +371,7 @@ export default {
           // save the cursor, it will be passed to backend next time
           this.lineNumberOffset[logs.step] = 0;
           this.currentJobStepsStates[logs.step].cursor = logs.cursor;
-          this.appendLogs(logs.step, logs.lines, logs.started);
+          await this.appendLogs(logs.step, logs.lines, logs.started);
         }
 
         if (this.run.done) {
@@ -520,6 +525,13 @@ export default {
         </div>
         {{ run.preExecutionError }}
       </div>
+      <div class="ui warning message pre-execution-error" v-if="hasWarnings">
+        <div class="header">
+          {{ locale.preExecutionWarning }}
+        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-for="warning in run.preExecutionWarnings" :key="warning" v-html="warning"/>
+      </div>
     </div>
     <div class="action-view-body">
       <div class="action-view-left" v-if="displayOtherJobs">
@@ -566,9 +578,8 @@ export default {
               {{ currentJob.title }}
             </h3>
             <ul class="job-info-header-detail">
-              <li v-for="detail in statusDiagnostics" :key="detail">
-                {{ detail }}
-              </li>
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <li v-for="detail in statusDiagnostics" :key="detail" v-html="detail"/>
             </ul>
           </div>
           <div class="job-info-header-right job-attempt-dropdown tw-mr-8" v-if="shouldShowAttemptDropdown" v-cloak>
@@ -866,10 +877,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px;
+  padding: 12px;
   position: sticky;
   top: 0;
-  height: 60px;
   z-index: 1; /* above .job-step-container */
   background: var(--color-console-bg);
   border-radius: 3px;

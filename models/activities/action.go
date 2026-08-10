@@ -131,6 +131,68 @@ func (at ActionType) String() string {
 	}
 }
 
+func (at ActionType) WatchSelection() repo_model.WatchSelection {
+	// WatchAllSelection generally means that there is no granular enough setting for this.
+	switch at {
+	case ActionCreateRepo:
+		return repo_model.WatchAllSelection
+	case ActionRenameRepo:
+		return repo_model.WatchAllSelection
+	case ActionStarRepo:
+		return repo_model.WatchAllSelection
+	case ActionWatchRepo:
+		return repo_model.WatchAllSelection
+	case ActionCommitRepo:
+		return repo_model.WatchAllSelection
+	case ActionCreateIssue:
+		return repo_model.WatchSelection{Issues: true, PullRequests: false, Releases: false}
+	case ActionCreatePullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionTransferRepo:
+		return repo_model.WatchAllSelection
+	case ActionPushTag:
+		return repo_model.WatchAllSelection
+	case ActionCommentIssue:
+		return repo_model.WatchSelection{Issues: true, PullRequests: false, Releases: false}
+	case ActionMergePullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionCloseIssue:
+		return repo_model.WatchSelection{Issues: true, PullRequests: false, Releases: false}
+	case ActionReopenIssue:
+		return repo_model.WatchSelection{Issues: true, PullRequests: false, Releases: false}
+	case ActionClosePullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionReopenPullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionDeleteTag:
+		return repo_model.WatchAllSelection
+	case ActionDeleteBranch:
+		return repo_model.WatchAllSelection
+	case ActionMirrorSyncPush:
+		return repo_model.WatchAllSelection
+	case ActionMirrorSyncCreate:
+		return repo_model.WatchAllSelection
+	case ActionMirrorSyncDelete:
+		return repo_model.WatchAllSelection
+	case ActionApprovePullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionRejectPullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionCommentPull:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionPublishRelease:
+		return repo_model.WatchSelection{Issues: false, PullRequests: false, Releases: true}
+	case ActionPullReviewDismissed:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionPullRequestReadyForReview:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	case ActionAutoMergePullRequest:
+		return repo_model.WatchSelection{Issues: false, PullRequests: true, Releases: false}
+	default:
+		return repo_model.WatchAllSelection
+	}
+}
+
 func (at ActionType) InActions(actions ...string) bool {
 	return slices.Contains(actions, at.String())
 }
@@ -208,7 +270,7 @@ func (a *Action) LoadActUser(ctx context.Context) {
 	}
 }
 
-func (a *Action) loadRepo(ctx context.Context) {
+func (a *Action) LoadRepo(ctx context.Context) {
 	if a.Repo != nil {
 		return
 	}
@@ -258,13 +320,13 @@ func (a *Action) GetActDisplayNameTitle(ctx context.Context) string {
 
 // GetRepo returns the repository of the action.
 func (a *Action) GetRepo(ctx context.Context) *repo_model.Repository {
-	a.loadRepo(ctx)
+	a.LoadRepo(ctx)
 	return a.Repo
 }
 
 // GetRepoUserName returns the name of the action repository owner.
 func (a *Action) GetRepoUserName(ctx context.Context) string {
-	a.loadRepo(ctx)
+	a.LoadRepo(ctx)
 	if a.Repo == nil {
 		return "(non-existing-repo)"
 	}
@@ -279,7 +341,7 @@ func (a *Action) ShortRepoUserName(ctx context.Context) string {
 
 // GetRepoName returns the name of the action repository.
 func (a *Action) GetRepoName(ctx context.Context) string {
-	a.loadRepo(ctx)
+	a.LoadRepo(ctx)
 	if a.Repo == nil {
 		return "(non-existing-repo)"
 	}
@@ -314,7 +376,7 @@ func (a *Action) GetRepoAbsoluteLink(ctx context.Context) string {
 	return setting.AppURL + url.PathEscape(a.GetRepoUserName(ctx)) + "/" + url.PathEscape(a.GetRepoName(ctx))
 }
 
-func (a *Action) loadComment(ctx context.Context) (err error) {
+func (a *Action) LoadComment(ctx context.Context) (err error) {
 	if a.CommentID == 0 || a.Comment != nil {
 		return nil
 	}
@@ -327,7 +389,7 @@ func (a *Action) GetCommentHTMLURL(ctx context.Context) string {
 	if a == nil {
 		return "#"
 	}
-	_ = a.loadComment(ctx)
+	_ = a.LoadComment(ctx)
 	if a.Comment != nil {
 		return a.Comment.HTMLURL(ctx)
 	}
@@ -347,7 +409,7 @@ func (a *Action) GetCommentLink(ctx context.Context) string {
 	if a == nil {
 		return "#"
 	}
-	_ = a.loadComment(ctx)
+	_ = a.LoadComment(ctx)
 	if a.Comment != nil {
 		return a.Comment.Link(ctx)
 	}
@@ -636,7 +698,7 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) ([]Action, error) {
 
 		if repoChanged {
 			// Add feeds for user self and all watchers.
-			watchers, err = repo_model.GetWatchers(ctx, act.RepoID)
+			watchers, err = repo_model.GetSelectWatchers(ctx, act.RepoID, act.GetOpType().WatchSelection())
 			if err != nil {
 				return nil, fmt.Errorf("get watchers: %w", err)
 			}
@@ -665,7 +727,11 @@ func NotifyWatchers(ctx context.Context, actions ...*Action) ([]Action, error) {
 		out = append(out, *act)
 
 		if repoChanged {
-			act.loadRepo(ctx)
+			act.LoadRepo(ctx)
+			if act.Repo == nil {
+				return nil, repo_model.ErrRepoNotExist{}
+			}
+
 			repo = act.Repo
 
 			// check repo owner exist.
@@ -818,7 +884,7 @@ func (a *Action) IsActionPrivate(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
-	a.loadRepo(ctx)
+	a.LoadRepo(ctx)
 	if a.Repo == nil {
 		return true, repo_model.ErrRepoNotExist{}
 	}

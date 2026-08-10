@@ -82,6 +82,8 @@ var Service = struct {
 	NoReplyAddress                          string
 	UserLocationMapURL                      string
 	EnableUserHeatmap                       bool
+	AddMembersByInvitations                 bool
+	TeamInvitationExpiryDays                int64
 	AutoWatchNewRepos                       bool
 	AutoWatchOnChanges                      bool
 	DefaultOrgMemberVisible                 bool
@@ -245,6 +247,8 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 	Service.NoReplyAddress = sec.Key("NO_REPLY_ADDRESS").MustString("noreply." + Domain)
 	Service.UserLocationMapURL = sec.Key("USER_LOCATION_MAP_URL").MustString("https://www.openstreetmap.org/search?query=")
 	Service.EnableUserHeatmap = sec.Key("ENABLE_USER_HEATMAP").MustBool(true)
+	Service.AddMembersByInvitations = sec.Key("ADD_MEMBERS_BY_INVITATIONS").MustBool(false)
+	Service.TeamInvitationExpiryDays = sec.Key("TEAM_INVITATION_EXPIRY_DAYS").MustInt64(14)
 	Service.AutoWatchNewRepos = sec.Key("AUTO_WATCH_NEW_REPOS").MustBool(true)
 	Service.AutoWatchOnChanges = sec.Key("AUTO_WATCH_ON_CHANGES").MustBool(false)
 	modes := sec.Key("ALLOWED_USER_VISIBILITY_MODES").Strings(",")

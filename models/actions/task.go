@@ -18,7 +18,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
+	"code.forgejo.org/xorm/xorm"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"xorm.io/builder"
 )
@@ -312,10 +313,10 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	if runner.RepoID != 0 {
 		jobCond = builder.Eq{"repo_id": runner.RepoID}
 	} else if runner.OwnerID != 0 {
-		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
-			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
-			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
+		jobCond = builder.Exists(builder.Select("`repository`.id").From("repository").
+			Where(builder.Expr("`repository`.owner_id = ? AND repo_id = `repository`.id", runner.OwnerID)))
 	}
+
 	// Concurrency group checks for queuing one run behind the last run in the concurrency group are more
 	// computationally expensive on the database. To manage the risk that this might have on large-scale deployments
 	// When this feature is initially released, it can be disabled in the ini file by setting
@@ -340,7 +341,14 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	}
 
 	var jobs []*ActionRunJob
-	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+	if err := e.
+		Join("INNER", "action_run", "action_run_job.run_id = action_run.id").
+		Join("INNER", "repo_unit", "action_run_job.repo_id = repo_unit.repo_id").
+		Where("task_id=? AND action_run_job.status=? AND `repo_unit`.type=?", 0, StatusWaiting, unit.TypeActions).
+		And(jobCond).
+		Desc("action_run.priority").
+		Asc("action_run_job.updated", "action_run_job.id").
+		Find(&jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
@@ -439,7 +447,14 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 
 	job.TaskID = task.ID
 	// We never have to send a notification here because the job is started with a not done status.
-	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil {
+	//
+	// ErrDeadlock can occur on MariaDB w/ `innodb_snapshot_isolation`, rather than returning 0 records -- we can treat
+	// that just the same and return the `ErrNoJobUpdated` error code. An alternative would be to use READ COMMITTED
+	// transaction isolation level, but models/db doesn't currently expose that, and it would cause transaction nesting
+	// difficulties.
+	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil && errors.Is(err, xorm.ErrDeadlock) {
+		return nil, ErrNoJobUpdated
+	} else if err != nil {
 		return nil, err
 	} else if n != 1 {
 		return nil, ErrNoJobUpdated

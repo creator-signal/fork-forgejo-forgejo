@@ -16,6 +16,7 @@ import (
 	"forgejo.org/modules/log"
 	base "forgejo.org/modules/migration"
 	"forgejo.org/modules/structs"
+	"forgejo.org/services/migrations/allowlist"
 
 	gitea_sdk "code.gitea.io/sdk/gitea"
 )
@@ -61,7 +62,7 @@ func (f *GiteaDownloaderFactory) New(ctx context.Context, opts base.MigrateOptio
 		gitea_sdk.SetToken(opts.AuthToken),
 		gitea_sdk.SetBasicAuth(opts.AuthUsername, opts.AuthPassword),
 		gitea_sdk.SetContext(ctx),
-		gitea_sdk.SetHTTPClient(NewMigrationHTTPClient()),
+		gitea_sdk.SetHTTPClient(allowlist.NewMigrationHTTPClient()),
 	)
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to create NewGiteaDownloader for: %s. Error: %v", baseURL, err))
@@ -161,6 +162,7 @@ func (g *GiteaDownloader) GetRepoInfo() (*base.Repository, error) {
 		OriginalURL:   repo.HTMLURL,
 		DefaultBranch: repo.DefaultBranch,
 		Website:       repo.Website,
+		AvatarURL:     repo.AvatarURL,
 	}, nil
 }
 
@@ -280,7 +282,7 @@ func (g *GiteaDownloader) convertGiteaRelease(rel *gitea_sdk.Release) *base.Rele
 		Created:         rel.CreatedAt,
 	}
 
-	httpClient := NewMigrationHTTPClient()
+	httpClient := allowlist.NewMigrationHTTPClient()
 
 	for _, asset := range rel.Attachments {
 		assetID := asset.ID // Don't optimize this, for closure we need a local variable
@@ -501,7 +503,8 @@ func (g *GiteaDownloader) getIssueComments(foreignIndex int64, page int) ([]*git
 				PageSize: g.maxPerPage,
 				Page:     page,
 			},
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error while listing comments for issue #%d. Error: %w", foreignIndex, err)
 	}
@@ -557,7 +560,7 @@ func (g *GiteaDownloader) isSinglePage(forgejoComments []*base.Comment) bool {
 func (g *GiteaDownloader) isLastPage(forgejoComments []*base.Comment, giteaComments []*gitea_sdk.Comment) bool {
 	if len(giteaComments) < g.maxPerPage {
 		return true
-	} else if g.identicalComment((forgejoComments)[0], (giteaComments)[0]) && g.identicalComment((forgejoComments)[len(forgejoComments)-1], (giteaComments)[len(giteaComments)-1]) {
+	} else if g.identicalComment(forgejoComments[0], giteaComments[0]) && g.identicalComment(forgejoComments[len(forgejoComments)-1], giteaComments[len(giteaComments)-1]) {
 		return true
 	}
 	return false
@@ -692,7 +695,6 @@ func (g *GiteaDownloader) GetPullRequests(page, perPage int) ([]*base.PullReques
 			MergedTime:     pr.Merged,
 			MergeCommitSHA: mergeCommitSHA,
 			IsLocked:       pr.IsLocked,
-			PatchURL:       pr.PatchURL,
 			Flow:           pr.Flow,
 			Head: base.PullRequestBranch{
 				Ref:       headRef,
