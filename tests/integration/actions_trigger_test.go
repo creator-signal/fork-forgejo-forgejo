@@ -4,12 +4,15 @@
 package integration
 
 import (
+	"cmp"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,7 +28,6 @@ import (
 	actions_module "forgejo.org/modules/actions"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
-	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
@@ -1197,121 +1199,6 @@ func TestActionsWorkflowDispatchConcurrencyGroup(t *testing.T) {
 	})
 }
 
-func TestActionsScheduledWorkflow(t *testing.T) {
-	type expectedSpec struct {
-		cron     string
-		timeZone optional.Option[string]
-	}
-
-	testCases := []struct {
-		name                  string
-		workflowID            string
-		workflowDirectory     string
-		workflowContent       string
-		expectedWorkflowTitle string
-		expectedCronSpecs     []expectedSpec
-	}{
-		{
-			name:              "GitHub",
-			workflowID:        "scheduled.yml",
-			workflowDirectory: ".github/workflows",
-			workflowContent: `
-on:
-  schedule:
-    - cron: "30 5,17 * * *"
-jobs:
-  test:
-    steps:
-      - run: echo OK
-`,
-			expectedWorkflowTitle: ".github/workflows/scheduled.yml",
-			expectedCronSpecs:     []expectedSpec{{cron: "30 5,17 * * *", timeZone: optional.None[string]()}},
-		},
-		{
-			name:              "Gitea",
-			workflowID:        "test.yml",
-			workflowDirectory: ".gitea/workflows",
-			workflowContent: `
-name: My scheduled workflow
-on:
-  schedule:
-    - cron: "* * * * *"
-jobs:
-  test:
-    steps:
-      - run: echo OK
-`,
-			expectedWorkflowTitle: "My scheduled workflow",
-			expectedCronSpecs:     []expectedSpec{{cron: "* * * * *", timeZone: optional.None[string]()}},
-		},
-		{
-			name:              "Forgejo with time zone",
-			workflowID:        "tz.yml",
-			workflowDirectory: ".forgejo/workflows",
-			workflowContent: `
-on:
-  schedule:
-    - cron: "44 10 * * *"
-    - cron: "25 19 * * *"
-      timezone: Europe/Madrid
-jobs:
-  test:
-    steps:
-      - run: echo OK
-`,
-			expectedWorkflowTitle: ".forgejo/workflows/tz.yml",
-			expectedCronSpecs: []expectedSpec{
-				{cron: "44 10 * * *", timeZone: optional.None[string]()},
-				{cron: "25 19 * * *", timeZone: optional.Some("Europe/Madrid")},
-			},
-		},
-	}
-	onApplicationRun(t, func(t *testing.T, u *url.URL) {
-		for _, testCase := range testCases {
-			t.Run(testCase.name, func(t *testing.T) {
-				user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-
-				// create the repo
-				var sha string
-				repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
-					Files: forgery.MapFS{
-						fmt.Sprintf("%s/%s", testCase.workflowDirectory, testCase.workflowID): forgery.MapFile(testCase.workflowContent),
-					},
-					LatestSha: &sha,
-				})
-
-				schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
-				require.NoError(t, err)
-				require.Len(t, schedules, 1)
-
-				assert.Equal(t, testCase.expectedWorkflowTitle, schedules[0].Title)
-				assert.Equal(t, repo.ID, schedules[0].RepoID)
-				assert.Equal(t, repo.OwnerID, schedules[0].OwnerID)
-				assert.Equal(t, testCase.workflowID, schedules[0].WorkflowID)
-				assert.Equal(t, testCase.workflowDirectory, schedules[0].WorkflowDirectory)
-				assert.Equal(t, int64(-2), schedules[0].TriggerUserID)
-				assert.Equal(t, sha, schedules[0].CommitSHA)
-				assert.Equal(t, webhook_module.HookEventPush, schedules[0].Event)
-				assert.Equal(t, []byte(testCase.workflowContent), schedules[0].Content)
-
-				specs, total, err := actions_model.FindSpecs(t.Context(), actions_model.FindSpecOptions{RepoID: repo.ID})
-				require.NoError(t, err)
-
-				assert.Equal(t, int64(len(testCase.expectedCronSpecs)), total)
-
-				// The query to return cron specs orders by `id DESC`.
-				slices.Reverse(testCase.expectedCronSpecs)
-
-				for i, expected := range testCase.expectedCronSpecs {
-					assert.Equal(t, schedules[0].ID, specs[i].ScheduleID)
-					assert.Equal(t, expected.cron, specs[i].Spec)
-					assert.Equal(t, expected.timeZone, specs[i].TimeZone)
-				}
-			})
-		}
-	})
-}
-
 func TestActionsPullRequestWithPathsFilter(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -1413,5 +1300,247 @@ jobs:
 				assert.Contains(t, run.Title, testCase.runTitle)
 			})
 		}
+	})
+}
+
+func TestActionWorkflowTitle(t *testing.T) {
+	runName := "awesome title"
+	workflow := fmt.Sprintf(`
+run-name: "%s"
+on:
+  push:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps: []
+`, runName)
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		for _, tc := range []struct {
+			name string
+			fn   func(t testing.TB, owner *user_model.User, repo *repo_model.Repository) *actions_model.ActionRun
+		}{
+			{
+				name: "push",
+				fn: func(t testing.TB, owner *user_model.User, repo *repo_model.Repository) *actions_model.ActionRun {
+					return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{
+						RepoID: repo.ID,
+						Event:  webhook_module.HookEventPush,
+					})
+				},
+			},
+			{
+				name: "schedule",
+				fn: func(t testing.TB, _ *user_model.User, repo *repo_model.Repository) *actions_model.ActionRun {
+					schedules, err := db.Find[actions_model.ActionSchedule](t.Context(), actions_model.FindScheduleOptions{RepoID: repo.ID})
+					require.NoError(t, err)
+
+					require.NoError(t, actions_service.CreateScheduleTask(t.Context(), schedules[0]))
+
+					return unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{
+						RepoID:     repo.ID,
+						ScheduleID: schedules[0].ID,
+					})
+				},
+			},
+
+			{
+				name: "workflow_dispatch",
+				fn: func(t testing.TB, owner *user_model.User, repo *repo_model.Repository) *actions_model.ActionRun {
+					gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
+					require.NoError(t, err)
+					defer gitRepo.Close()
+
+					workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, repo.DefaultBranch, "workflow.yml")
+					require.NoError(t, err)
+
+					run, _, err := workflow.Dispatch(t.Context(), nil, repo, owner)
+					require.NoError(t, err)
+
+					return run
+				},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+				repo := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{
+					Files: forgery.MapFS{
+						".forgejo/workflows/workflow.yml": forgery.MapFile(workflow),
+					},
+				})
+
+				assert.Equal(t, runName, tc.fn(t, owner, repo).Title)
+			})
+		}
+	})
+}
+
+func TestActionsWorkflowsAreTriggeredForOriginalCommit(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		t.Run("push", func(t *testing.T) {
+			workflow := `
+on:
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo OK
+`
+
+			oldNotify := actions_service.Notify
+			defer func() {
+				actions_service.Notify = oldNotify
+			}()
+
+			// Test that workflow runs are triggered for the original commit. That means that if commit A is pushed,
+			// immediately followed by commit B while triggers for A are still running, that one run is triggered for A
+			// and one for B, not two for either A or B. That is simulated by collecting all notifications and
+			// dispatching them all at once after A and B have been pushed.
+			receivedInput := make([]*actions_service.NotifyInput, 0)
+			actions_service.Notify = func(ctx context.Context, input *actions_service.NotifyInput) error {
+				receivedInput = append(receivedInput, input)
+				return nil
+			}
+
+			user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+			repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					".forgejo/workflows/workflow.yaml": forgery.MapFile(workflow),
+				},
+			})
+
+			opts := files_service.ChangeRepoFilesOptions{
+				Files: []*files_service.ChangeRepoFile{
+					{
+						Operation:     "create",
+						TreePath:      "README.md",
+						ContentReader: strings.NewReader("Hello world!"),
+					},
+				},
+				Message: "add workflow",
+			}
+			_, err := files_service.ChangeRepoFiles(t.Context(), repo, user2, &opts)
+			require.NoError(t, err)
+
+			// Verify that the expected notifications have been generated and queued.
+			assert.Len(t, receivedInput, 3)
+			assert.Equal(t, webhook_module.HookEventCreate, receivedInput[0].Event)
+			assert.Equal(t, git.RefName("refs/heads/main"), receivedInput[0].Ref)
+			assert.Empty(t, receivedInput[0].Commit)
+			assert.Equal(t, webhook_module.HookEventPush, receivedInput[1].Event)
+			assert.Equal(t, git.RefName("refs/heads/main"), receivedInput[1].Ref)
+			assert.NotEmpty(t, receivedInput[1].Commit)
+			assert.Equal(t, webhook_module.HookEventPush, receivedInput[2].Event)
+			assert.Equal(t, git.RefName("refs/heads/main"), receivedInput[2].Ref)
+			assert.NotEmpty(t, receivedInput[2].Commit)
+
+			// Dispatch the buffered inputs.
+			for _, input := range receivedInput {
+				require.NoError(t, oldNotify(t.Context(), input))
+			}
+
+			runs, err := db.Find[actions_model.ActionRun](t.Context(), actions_model.FindRunOptions{RepoID: repo.ID})
+			require.NoError(t, err)
+
+			slices.SortFunc(runs, func(a, b *actions_model.ActionRun) int {
+				return cmp.Compare(a.ID, b.ID)
+			})
+
+			assert.Len(t, runs, 2)
+			assert.Equal(t, receivedInput[1].Commit, runs[0].CommitSHA)
+			assert.Equal(t, webhook_module.HookEventPush, runs[0].Event)
+			assert.Equal(t, receivedInput[2].Commit, runs[1].CommitSHA)
+			assert.Equal(t, webhook_module.HookEventPush, runs[1].Event)
+		})
+
+		t.Run("pull_request", func(t *testing.T) {
+			workflow := `
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo OK
+`
+
+			user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+			session := loginUser(t, "user2")
+
+			repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					".forgejo/workflows/workflow.yaml": forgery.MapFile(workflow),
+					"README.md":                        forgery.MapFile(""),
+				},
+			})
+
+			// Capture all future notifications.
+			oldNotify := actions_service.Notify
+			defer func() {
+				actions_service.Notify = oldNotify
+			}()
+
+			inputMutex := sync.Mutex{}
+
+			receivedInput := make([]*actions_service.NotifyInput, 0)
+			actions_service.Notify = func(ctx context.Context, input *actions_service.NotifyInput) error {
+				inputMutex.Lock()
+				defer inputMutex.Unlock()
+				receivedInput = append(receivedInput, input)
+				return nil
+			}
+
+			// Create a pull request for README.md.
+			testEditFileToNewBranch(t, session, repo.OwnerName, repo.Name, repo.DefaultBranch, "change-readme", "README.md", "Hello!")
+			testPullCreate(t, session, repo.OwnerName, repo.Name, true, repo.DefaultBranch, "change-readme", "Update README.md")
+
+			// Two distinct commits should result in two action runs.
+			testEditFile(t, session, repo.OwnerName, repo.Name, "change-readme", "README.md", "One!")
+			testEditFile(t, session, repo.OwnerName, repo.Name, "change-readme", "README.md", "Two!")
+
+			// Wait until all expected notifications have been generated and queued.
+			allInputsReceived := func() bool {
+				inputMutex.Lock()
+				defer inputMutex.Unlock()
+
+				return len(receivedInput) == 7
+			}
+			require.Eventually(t, allInputsReceived, 5*time.Second, 50*time.Millisecond)
+
+			assert.Equal(t, webhook_module.HookEventPullRequest, receivedInput[2].Event)
+			assert.Equal(t, git.RefName("refs/pull/1/head"), receivedInput[2].Ref)
+			assert.NotEmpty(t, receivedInput[2].Commit)
+			assert.Equal(t, webhook_module.HookEventPullRequestSync, receivedInput[4].Event)
+			assert.Equal(t, git.RefName("refs/pull/1/head"), receivedInput[4].Ref)
+			assert.NotEmpty(t, receivedInput[4].Commit)
+			assert.Equal(t, webhook_module.HookEventPullRequestSync, receivedInput[6].Event)
+			assert.Equal(t, git.RefName("refs/pull/1/head"), receivedInput[6].Ref)
+			assert.NotEmpty(t, receivedInput[6].Commit)
+
+			// Dispatch the buffered inputs.
+			for _, input := range receivedInput {
+				require.NoError(t, oldNotify(t.Context(), input))
+			}
+
+			runs, err := db.Find[actions_model.ActionRun](t.Context(), actions_model.FindRunOptions{RepoID: repo.ID})
+			require.NoError(t, err)
+
+			slices.SortFunc(runs, func(a, b *actions_model.ActionRun) int {
+				return cmp.Compare(a.ID, b.ID)
+			})
+
+			assert.Len(t, runs, 3)
+			assert.Equal(t, receivedInput[2].Commit, runs[0].CommitSHA)
+			assert.Equal(t, webhook_module.HookEventPullRequest, runs[0].Event)
+			assert.Equal(t, receivedInput[4].Commit, runs[1].CommitSHA)
+			assert.Equal(t, webhook_module.HookEventPullRequestSync, runs[1].Event)
+			assert.Equal(t, receivedInput[6].Commit, runs[2].CommitSHA)
+			assert.Equal(t, webhook_module.HookEventPullRequestSync, runs[2].Event)
+		})
 	})
 }

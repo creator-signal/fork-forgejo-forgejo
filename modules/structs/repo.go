@@ -151,7 +151,7 @@ type CreateRepoOption struct {
 	AutoInit bool `json:"auto_init"`
 	// Whether the repository is template
 	Template bool `json:"template"`
-	// Gitignores to use
+	// Gitignores to use, separated by commas
 	Gitignores string `json:"gitignores"`
 	// License to use
 	License string `json:"license"`
@@ -380,7 +380,7 @@ type MigrateRepoOptions struct {
 	// required: true
 	RepoName string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 
-	// enum: ["git", "github", "gitea", "gitlab", "gogs", "onedev", "gitbucket", "codebase"]
+	// enum: ["git", "github", "gitea", "gitlab", "gogs", "onedev", "gitbucket", "codebase", "forgejo", "pagure"]
 	Service      string `json:"service"`
 	AuthUsername string `json:"auth_username"`
 	AuthPassword string `json:"auth_password"`

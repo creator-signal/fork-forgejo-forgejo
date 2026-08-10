@@ -14,7 +14,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
 	gouuid "github.com/google/uuid"
 	"go.yaml.in/yaml/v3"
 	"xorm.io/builder"
@@ -151,6 +151,22 @@ func (job *ActionRunJob) CanBeRerun(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	return job.Status.IsDone(), nil
+}
+
+// GetAllAttempts retrieve all the attempts of this job. Limited fields are queried to avoid loading the LogIndexes blob
+// when not needed.
+func (job *ActionRunJob) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
+	var attempts []*ActionTask
+	err := db.GetEngine(ctx).
+		Cols("id", "job_id", "attempt", "runner_id", "status", "started", "stopped", "repo_id", "owner_id",
+			"commit_sha", "is_fork_pull_request", "created", "updated").
+		Where("job_id=?", job.ID).
+		Desc("attempt").
+		Find(&attempts)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
 }
 
 func GetRunJobByID(ctx context.Context, id int64) (*ActionRunJob, error) {

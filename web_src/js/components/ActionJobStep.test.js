@@ -150,6 +150,23 @@ describe('ActionJobStep', () => {
       expect(container.children.length).toBe(3);
     });
 
+    test('renders OSC 8 hyperlinks in appended log messages as clickable links', () => {
+      const wrapper = createWrapper();
+      const logLines = [
+        // OSC 8 hyperlink: ESC ] 8 ; ; <url> ESC \ <text> ESC ] 8 ; ; ESC \
+        {index: 1, timestamp: 1765163618, message: 'See \x1b]8;;https://example.com/build\x1b\\the build\x1b]8;;\x1b\\'},
+      ];
+
+      wrapper.vm.appendLogs(logLines, 1765163618);
+
+      const logMessage = wrapper.get('.log-msg');
+      const link = logMessage.get('a');
+      expect(link.attributes('href')).toEqual('https://example.com/build');
+      expect(link.attributes('target')).toEqual('_blank');
+      expect(link.attributes('rel')).toEqual('noopener noreferrer nofollow');
+      expect(logMessage.text()).toEqual('See the build');
+    });
+
     test('if ANSI renders empty line, skip line & line number', async () => {
       const wrapper = createWrapper({
         expanded: true,
@@ -250,20 +267,16 @@ describe('ActionJobStep', () => {
     // Check if 3 lines where rendered
     expect(wrapper.findAll('.job-log-line').length).toEqual(3);
 
-    // Check if line 1 contains the group header
-    expect(wrapper.get('.job-log-line:nth-of-type(1) > details.log-msg').text()).toEqual('Test group');
+    // One log line in the <summary> ("Test group")...
+    expect(wrapper.findAll('details.log-msg summary span.log-msg').length).toEqual(1);
+    expect(wrapper.get('details.log-msg summary span.log-msg').text()).toEqual('Test group');
 
-    // Check if right after the header line exists a log list
-    expect(wrapper.find('.job-log-line:nth-of-type(1) + .job-log-list.hidden').exists()).toBe(true);
-
-    // Check if inside the loglist exist exactly one log line
-    expect(wrapper.findAll('.job-log-list > .job-log-line').length).toEqual(1);
-
-    // Check if inside the loglist is an logline with our second logline
-    expect(wrapper.get('.job-log-list > .job-log-line > .log-msg').text()).toEqual('A test line');
+    // Another in the contents of the <details>, not under <summary> ("A test line"):
+    expect(wrapper.findAll('details.log-msg > div.job-log-line > span.log-msg').length).toEqual(1);
+    expect(wrapper.get('details.log-msg > div.job-log-line > span.log-msg').text()).toEqual('A test line');
 
     // Check if after the log list exists another log line
-    expect(wrapper.get('.job-log-list + .job-log-line > .log-msg').text()).toEqual('A line outside the group');
+    expect(wrapper.get('.job-step-logs > .job-log-line > .log-msg').text()).toEqual('A line outside the group');
   });
 
   test('scrollIntoView focuses on a line from the log', () => {

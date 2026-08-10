@@ -11,10 +11,8 @@ import (
 	actions_model "forgejo.org/models/actions"
 	secret_model "forgejo.org/models/secret"
 	actions_module "forgejo.org/modules/actions"
-	"forgejo.org/modules/json"
-	"forgejo.org/modules/structs"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
 )
 
 func getSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[string]string, error) {
@@ -116,17 +114,7 @@ func getSecretsOfInnerWorkflowCall(ctx context.Context, job *actions_model.Actio
 
 	var inputs map[string]any
 	if outerWorkflowCall.Run.TriggerEvent == actions_module.GithubEventWorkflowDispatch {
-		// workflow_dispatch inputs are stored in the event payload
-		var dispatchPayload *structs.WorkflowDispatchPayload
-		err := json.Unmarshal([]byte(outerWorkflowCall.Run.EventPayload), &dispatchPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failure reading workflow dispatch payload: %w", err)
-		}
-		// transition from map[string]string to map[string]any...
-		inputs = make(map[string]any, len(dispatchPayload.Inputs))
-		for k, v := range dispatchPayload.Inputs {
-			inputs[k] = v
-		}
+		inputs = getRunInputs(outerWorkflowCall.Run)
 	}
 
 	jobSecrets := jobparser.EvaluateWorkflowCallSecrets(&jobparser.EvaluateWorkflowCallSecretsArgs{

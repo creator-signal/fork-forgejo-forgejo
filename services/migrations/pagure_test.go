@@ -12,12 +12,27 @@ import (
 
 	"forgejo.org/models/unittest"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func TestPagureDownloaderBlocksLocalhost(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, false, func() { require.NoError(t, allowlist.Init()) })()
+
+	u, _ := url.Parse("http://localhost")
+	downloader := NewPagureDownloader(t.Context(), u, "", "test_repo")
+	_, err := downloader.GetRepoInfo()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "can only call allowed HTTP servers")
+}
+
 func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// Skip tests if Pagure token is not found
 	cloneUser := os.Getenv("PAGURE_CLONE_USER")
 	clonePassword := os.Getenv("PAGURE_CLONE_PASSWORD")
@@ -222,7 +237,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
 			MergedTime: new(time.Date(2025, time.May, 19, 6, 17, 11, 0, time.UTC)),
 			Merged:     true,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/10.patch",
 			Labels: []*base.Label{
 				{
 					Name: "ffff",
@@ -252,7 +266,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
 			MergedTime: new(time.Date(2025, time.May, 19, 6, 14, 3, 0, time.UTC)),
 			Merged:     true,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/9.patch",
 			Labels: []*base.Label{
 				{
 					Name: "eeee",
@@ -282,7 +295,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)),
 			MergedTime: new(time.Date(2025, time.May, 5, 6, 54, 13, 0, time.UTC)), // THIS IS WRONG
 			Merged:     false,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/8.patch",
 			Labels: []*base.Label{
 				{
 					Name: "dddd",
@@ -312,7 +324,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // IT is CLOSED, Not MERGED so SHOULD NOT BE NIL
 			MergedTime: new(time.Date(2025, time.May, 5, 6, 54, 3, 0, time.UTC)), // THIS IS WRONG
 			Merged:     false,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/7.patch",
 			Labels: []*base.Label{
 				{
 					Name: "cccc",
@@ -342,7 +353,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			MergedTime: new(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			Merged:     false,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/6.patch",
 			Labels: []*base.Label{
 				{
 					Name: "bbbb",
@@ -372,7 +382,6 @@ func TestPagureDownloadRepoWithPublicIssues(t *testing.T) {
 			Closed:     new(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			MergedTime: new(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)),
 			Merged:     false,
-			PatchURL:   server.URL + "/protop2g-test-srce/pull-request/5.patch",
 			Labels: []*base.Label{
 				{
 					Name: "aaaa",

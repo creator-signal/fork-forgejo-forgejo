@@ -17,7 +17,7 @@ runs:
         apt-get -q install -qq -y zstd
 
     - name: "Set up Go using setup-go"
-      uses: https://data.forgejo.org/actions/setup-go@v6
+      uses: https://data.forgejo.org/actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       id: go-version
       with:
         go-version-file: "go.mod"
@@ -50,7 +50,7 @@ runs:
 
     - name: "Restore Go dependencies from cache or mark for later caching"
       id: cache-deps
-      uses: https://data.forgejo.org/actions/cache@v5
+      uses: https://data.forgejo.org/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         key: setup-cache-go-deps-${{ runner.os }}-${{ inputs.username }}-${{ steps.go-version.outputs.go_version }}-${{ hashFiles('go.sum', 'go.mod', 'Makefile') }}
         restore-keys: |

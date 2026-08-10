@@ -6,6 +6,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -14,13 +15,14 @@ import (
 	unit_model "forgejo.org/models/unit"
 	unit_tests "forgejo.org/models/unit/tests"
 	"forgejo.org/models/unittest"
-	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	app_context "forgejo.org/services/context"
 	repo_service "forgejo.org/services/repository"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -29,21 +31,73 @@ import (
 
 func TestRepoSettingsUnits(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: "repo1"})
-	session := loginUser(t, user.Name)
+	repo := forgery.CreateRepository(t, nil, nil)
+	session := loginUser(t, repo.Owner.Name)
 
 	req := NewRequest(t, "GET", fmt.Sprintf("%s/settings/units", repo.Link()))
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func TestRepoSettingsUpdateWebsite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	repo := forgery.CreateRepository(t, nil, nil)
+	session := loginUser(t, repo.Owner.Name)
+	urlStr := fmt.Sprintf("%s/settings", repo.Link())
+
+	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"action":    "update",
+			"repo_name": repo.Name,
+			"website":   "https://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assertHasFlashMessages(t, resp, "success")
+	})
+
+	t.Run("an H3 website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should not work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"action":    "update",
+			"repo_name": repo.Name,
+			"website":   "h3://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		doc := NewHTMLParser(t, resp.Body)
+		flash := doc.Find("#flash-message").Text()
+		assert.Equal(t, `Website"Url" is not a valid URL.`, strings.TrimSpace(flash))
+	})
+
+	t.Run("an H3 website under custom schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		// changing website should work
+		req := NewRequestWithValues(t, "POST", urlStr, map[string]string{
+			"action":    "update",
+			"repo_name": repo.Name,
+			"website":   "h3://codeberg.org",
+		})
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assertHasFlashMessages(t, resp, "success")
+	})
+}
+
 func TestRepoSettingsAdminOptions(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
-	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerID: user.ID, Name: "repo1"})
+	user := forgery.CreateUser(t, nil)
+	repo := forgery.CreateRepository(t, user, nil)
 	link := repo.Link()
+
+	admin := forgery.CreateUser(t, &forgery.CreateUserOptions{
+		IsAdmin: true,
+	})
 
 	hasAdminOpts := func(t *testing.T, doer string, admin bool) {
 		session := loginUser(t, doer)
@@ -80,7 +134,7 @@ func TestRepoSettingsAdminOptions(t *testing.T) {
 
 func TestRepoAddMoreUnitsHighlighting(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	user := forgery.CreateUser(t, nil)
 	session := loginUser(t, user.Name)
 
 	// Make sure there are no disabled repos in the settings!
@@ -88,15 +142,16 @@ func TestRepoAddMoreUnitsHighlighting(t *testing.T) {
 	unit_model.LoadUnitConfig()
 
 	// Create a known-good repo, with some units disabled.
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
+	repo := forgery.CreateRepository(t, user, nil)
+	forgery.EnableRepoUnits(t, repo,
 		unit_model.TypeCode,
 		unit_model.TypePullRequests,
 		unit_model.TypeProjects,
 		unit_model.TypeActions,
 		unit_model.TypeIssues,
 		unit_model.TypeWiki,
-	}, []unit_model.Type{unit_model.TypePackages}, nil)
-	defer f()
+	)
+	forgery.DisableRepoUnits(t, repo, unit_model.TypePackages)
 
 	setUserHints := func(t *testing.T, hints bool) func() {
 		saved := user.EnableRepoUnitHints
@@ -171,7 +226,7 @@ func TestRepoAddMoreUnitsHighlighting(t *testing.T) {
 
 func TestRepoAddMoreUnits(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
+	user := forgery.CreateUser(t, nil)
 	session := loginUser(t, user.Name)
 
 	// Make sure there are no disabled repos in the settings!
@@ -179,7 +234,8 @@ func TestRepoAddMoreUnits(t *testing.T) {
 	unit_model.LoadUnitConfig()
 
 	// Create a known-good repo, with all units enabled.
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
+	repo := forgery.CreateRepository(t, user, nil)
+	forgery.EnableRepoUnits(t, repo,
 		unit_model.TypeCode,
 		unit_model.TypePullRequests,
 		unit_model.TypeProjects,
@@ -187,8 +243,7 @@ func TestRepoAddMoreUnits(t *testing.T) {
 		unit_model.TypeActions,
 		unit_model.TypeIssues,
 		unit_model.TypeWiki,
-	}, nil, nil)
-	defer f()
+	)
 
 	assertAddMore := func(t *testing.T, present bool) {
 		t.Helper()
@@ -268,8 +323,10 @@ func TestRepoAddMoreUnits(t *testing.T) {
 
 func TestProtectedBranch(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, OwnerID: user.ID})
+	user := forgery.CreateUser(t, nil)
+	repo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+		Files: forgery.FilesInit{},
+	})
 	session := loginUser(t, user.Name)
 
 	t.Run("Add", func(t *testing.T) {

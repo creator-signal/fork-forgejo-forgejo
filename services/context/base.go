@@ -42,6 +42,11 @@ type Base struct {
 
 	// Locale is mainly for Web context, although the API context also uses it in some cases: message response, form validation
 	Locale translation.Locale
+
+	// If true, it indicates that this request was not authenticated, but that an authentication method was applied to
+	// it which may allow the user to reauthenticate if they're redirected to "/user/login" rather than receiving a "401
+	// Unauthorized" response.
+	InteractiveReauthenticationPossible bool
 }
 
 func (b *Base) Deadline() (deadline time.Time, ok bool) {
@@ -130,7 +135,12 @@ func (b *Base) Error(status int, contents ...string) {
 
 // JSON render content as JSON
 func (b *Base) JSON(status int, content any) {
-	b.Resp.Header().Set("Content-Type", "application/json;charset=utf-8")
+	b.JSONWithContentType(status, "application/json;charset=utf-8", content)
+}
+
+// JSON render content as JSON with a customizable Content-Type header
+func (b *Base) JSONWithContentType(status int, contentType string, content any) {
+	b.Resp.Header().Set("Content-Type", contentType)
 	b.Resp.WriteHeader(status)
 	if err := json.NewEncoder(b.Resp).Encode(content); err != nil {
 		log.Error("Render JSON failed: %v", err)

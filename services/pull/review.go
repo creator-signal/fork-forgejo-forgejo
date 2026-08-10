@@ -46,11 +46,36 @@ func checkInvalidation(ctx context.Context, c *issues_model.Comment, repo *repo_
 	reverseBlame, err := c.ResolveCurrentLine(ctx, repo, newCommitID)
 	if err != nil {
 		log.Warn("ResolveCurrentLine failed: %s", err.Error())
-	} else if reverseBlame.CommitID != newCommitID {
+		return nil
+	}
+	if reverseBlame.CommitID != newCommitID {
 		c.Invalidated = true
 		return issues_model.UpdateCommentInvalidate(ctx, c)
 	}
+
+	// For multi-line comments, check additional lines in the range
+	if c.ExtraLinesCount > 0 {
+		invalidated, err := checkMultiLineInvalidation(ctx, c, repo, newCommitID)
+		if err != nil {
+			log.Warn("checkMultiLineInvalidation failed: %s", err.Error())
+		} else if invalidated {
+			c.Invalidated = true
+			return issues_model.UpdateCommentInvalidate(ctx, c)
+		}
+	}
+
 	return nil
+}
+
+// checkMultiLineInvalidation checks if any additional line in a multi-line comment range
+// has been changed. Returns true if the comment should be invalidated.
+// Uses cached results via Comment.CheckLineRangeValid.
+func checkMultiLineInvalidation(ctx context.Context, c *issues_model.Comment, repo *repo_model.Repository, newCommitID string) (bool, error) {
+	valid, err := c.CheckLineRangeValid(ctx, repo, newCommitID)
+	if err != nil {
+		return false, err
+	}
+	return !valid, nil
 }
 
 // InvalidateCodeComments will lookup the prs for code comments which got invalidated by change
@@ -77,9 +102,22 @@ func InvalidateCodeComments(ctx context.Context, prs issues_model.PullRequestLis
 	return nil
 }
 
+// ValidateCodeCommentLineRange validates the extra_lines_count of a (multi-line) code comment: it must
+// not be negative and the resulting range must not span more than setting.UI.MaxCodeCommentLines lines
+// (0 = no limit). It is the single source of truth shared by the web and API creation handlers.
+func ValidateCodeCommentLineRange(extraLinesCount int64) error {
+	if extraLinesCount < 0 {
+		return fmt.Errorf("extra_lines_count must be >= 0")
+	}
+	if setting.UI.MaxCodeCommentLines > 0 && extraLinesCount+1 > int64(setting.UI.MaxCodeCommentLines) {
+		return fmt.Errorf("a code comment may span at most %d lines", setting.UI.MaxCodeCommentLines)
+	}
+	return nil
+}
+
 // CreateCodeComment creates a comment on the code line
 func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.Repository,
-	issue *issues_model.Issue, line int64, content, treePath string, pendingReview bool,
+	issue *issues_model.Issue, line, extraLinesCount int64, content, treePath string, pendingReview bool,
 	replyReviewID int64, beforeCommitID, latestCommitID string, attachments []string,
 ) (*issues_model.Comment, error) {
 	var (
@@ -115,6 +153,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 			beforeCommitID,
 			latestCommitID,
 			line,
+			extraLinesCount,
 			replyReviewID,
 			attachments,
 		)
@@ -158,6 +197,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 		beforeCommitID,
 		latestCommitID,
 		line,
+		extraLinesCount,
 		review.ID,
 		attachments,
 	)
@@ -180,7 +220,7 @@ func CreateCodeComment(ctx context.Context, doer *user_model.User, gitRepo *git.
 // CreateCodeCommentKnownReviewID creates a plain code comment at the specified line / path
 func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, repo *repo_model.Repository,
 	issue *issues_model.Issue, content, treePath, beforeCommitID, afterCommitID string,
-	line, reviewID int64, attachments []string,
+	line, extraLinesCount, reviewID int64, attachments []string,
 ) (*issues_model.Comment, error) {
 	var commitID, blamedCommitID, patch string
 	blamedLine := line
@@ -199,35 +239,39 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 
 	invalidated := false
 	head := pr.GetGitRefName()
-	if line > 0 {
-		if reviewID != 0 {
-			first, err := issues_model.FindComments(ctx, &issues_model.FindCommentsOptions{
-				ReviewID: reviewID,
-				Line:     line,
-				TreePath: treePath,
-				Type:     issues_model.CommentTypeCode,
-				ListOptions: db.ListOptions{
-					PageSize: 1,
-					Page:     1,
-				},
-			})
-			if err == nil && len(first) > 0 {
-				commitID = first[0].CommitSHA
-				invalidated = first[0].Invalidated
-				patch = first[0].Patch
-			} else if err != nil && !issues_model.IsErrCommentNotExist(err) {
-				return nil, fmt.Errorf("Find first comment for %d line %d path %s. Error: %w", reviewID, line, treePath, err)
-			} else {
-				review, err := issues_model.GetReviewByID(ctx, reviewID)
-				if err == nil && len(review.CommitID) > 0 {
-					head = review.CommitID
-				} else if err != nil && !issues_model.IsErrReviewNotExist(err) {
-					return nil, fmt.Errorf("GetReviewByID %d. Error: %w", reviewID, err)
-				}
+
+	if reviewID != 0 {
+		// If the comment is a reply to an existing comment, populate properties based upon the comment we're replying
+		// to (commit, patch, etc.) rather than recalculating those unnecessarily.  The UI also doesn't provide enough
+		// context (eg. before_commit_id, after_commit_id) to calculate this.
+		first, err := issues_model.FindComments(ctx, &issues_model.FindCommentsOptions{
+			ReviewID: reviewID,
+			Line:     line,
+			TreePath: treePath,
+			Type:     issues_model.CommentTypeCode,
+			ListOptions: db.ListOptions{
+				PageSize: 1,
+				Page:     1,
+			},
+		})
+		if err == nil && len(first) > 0 {
+			commitID = first[0].CommitSHA
+			invalidated = first[0].Invalidated
+			patch = first[0].Patch
+		} else if err != nil && !issues_model.IsErrCommentNotExist(err) {
+			return nil, fmt.Errorf("Find first comment for %d line %d path %s. Error: %w", reviewID, line, treePath, err)
+		} else {
+			review, err := issues_model.GetReviewByID(ctx, reviewID)
+			if err == nil && len(review.CommitID) > 0 {
+				head = review.CommitID
+			} else if err != nil && !issues_model.IsErrReviewNotExist(err) {
+				return nil, fmt.Errorf("GetReviewByID %d. Error: %w", reviewID, err)
 			}
 		}
+	}
 
-		if len(commitID) == 0 {
+	if len(commitID) == 0 {
+		if line > 0 {
 			// FIXME validate treePath
 			// Get latest commit referencing the commented line
 			// No need for get commit for base branch changes
@@ -239,33 +283,49 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 				return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
 			}
 		} else {
-			blamedCommitID = commitID
+			// Commenting on a line that was removed. In this case, what we want to track in the comment is which line of
+			// code was this, in the last commit that the line of code actually existed in. We'll use a reverse git blame to
+			// identify this, from the PR base -> commit being viewed.
+			blame, err := gitRepo.ReverseLineBlame(beforeCommitID, treePath, uint64(-1*line), afterCommitID)
+			if err != nil {
+				return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", beforeCommitID, treePath, -1*line, afterCommitID, err)
+			}
+
+			// Convert to a right-hand (proposed) comment only when EVERY line of the range still exists at head
+			// (whole selection unchanged); if any line was removed or modified, keep it on the previous side.
+			rangeStillExists := blame.CommitID == afterCommitID
+			for i := int64(1); rangeStillExists && i <= extraLinesCount; i++ {
+				lineBlame, err := gitRepo.ReverseLineBlame(beforeCommitID, treePath, uint64(-1*line)+uint64(i), afterCommitID)
+				if err != nil {
+					return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", beforeCommitID, treePath, -1*line+i, afterCommitID, err)
+				}
+				if lineBlame.CommitID != afterCommitID {
+					rangeStillExists = false
+				}
+			}
+
+			switch {
+			case rangeStillExists:
+				commit, lineres, err := gitRepo.LineBlame(afterCommitID, treePath, blame.LineNumber)
+				if err == nil {
+					blamedCommitID = commit.ID.String()
+					blamedLine = int64(lineres)
+				} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
+					return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
+				}
+			case blame.CommitID == afterCommitID:
+				// First line still exists but a later one changed
+				blamedCommitID = beforeCommitID
+				// retain negative line numbering to identify we're commenting on the "previous" side of the diff
+				blamedLine = line
+			default:
+				blamedCommitID = blame.CommitID
+				// retain negative line numbering to identify we're commenting on the "previous" side of the diff
+				blamedLine = -1 * int64(blame.LineNumber)
+			}
 		}
 	} else {
-		// Commenting on a line that was removed. In this case, what we want to track in the comment is which line of
-		// code was this, in the last commit that the line of code actually existed in. We'll use a reverse git blame to
-		// identify this, from the PR base -> commit being viewed.
-		blame, err := gitRepo.ReverseLineBlame(beforeCommitID, treePath, uint64(-1*line), afterCommitID)
-		if err != nil {
-			return nil, fmt.Errorf("ReverseLineBlame[%s, %s, %d, %s]: %w", beforeCommitID, treePath, -1*line, afterCommitID, err)
-		} else if blame.CommitID == afterCommitID {
-			// Although this is a comment on the "previous" side of the diff, the reverse blame indicates that the line
-			// of code still exists in the commit being viewed (eg. it was a comment on a white line in the left-side of
-			// the diff, not a red removed line). In order to record the right information for where to place this
-			// commit, we'll convert this into a right-hand comment -- using the present line number that the reverse
-			// blame gave us:
-			commit, lineres, err := gitRepo.LineBlame(afterCommitID, treePath, blame.LineNumber)
-			if err == nil {
-				blamedCommitID = commit.ID.String()
-				blamedLine = int64(lineres)
-			} else if !errors.Is(err, git.ErrBlameFileDoesNotExist) && !errors.Is(err, git.ErrBlameFileNotEnoughLines) {
-				return nil, fmt.Errorf("LineBlame[%s, %s, %s, %d]: %w", pr.GetGitRefName(), gitRepo.Path, treePath, line, err)
-			}
-		} else {
-			blamedCommitID = blame.CommitID
-			// retain negative line numbering to identify we're commenting on the "previous" side of the diff
-			blamedLine = -1 * int64(blame.LineNumber)
-		}
+		blamedCommitID = commitID
 	}
 
 	// Only fetch diff if comment is review comment
@@ -292,25 +352,31 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 			_ = writer.Close()
 		}()
 
-		patch, err = git.CutDiffAroundLine(reader, int64((&issues_model.Comment{Line: line}).UnsignedLine()), line < 0, setting.UI.CodeCommentLines)
+		// For multi-line comments, center the patch on the last line and expand context to include the full range
+		displayLine := int64((&issues_model.Comment{Line: line, ExtraLinesCount: extraLinesCount}).UnsignedDisplayLine())
+		contextLines := setting.UI.CodeCommentLines + int(extraLinesCount)
+		patch, err = git.CutDiffAroundLine(reader, displayLine, line < 0, contextLines)
 		if err != nil {
-			log.Error("Error whilst generating patch: %v", err)
-			return nil, err
+			// The anchored commit may be gone (e.g. force-push before a migration), so the hunk
+			// can't be produced. Store the comment without context, like the importer.
+			log.Warn("CreateCodeComment: storing comment without diff context: %v", err)
+			patch = ""
 		}
 	}
 	return issues_model.CreateComment(ctx, &issues_model.CreateCommentOptions{
-		Type:        issues_model.CommentTypeCode,
-		Doer:        doer,
-		Repo:        repo,
-		Issue:       issue,
-		Content:     content,
-		LineNum:     blamedLine,
-		TreePath:    treePath,
-		CommitSHA:   blamedCommitID,
-		ReviewID:    reviewID,
-		Patch:       patch,
-		Invalidated: invalidated,
-		Attachments: attachments,
+		Type:            issues_model.CommentTypeCode,
+		Doer:            doer,
+		Repo:            repo,
+		Issue:           issue,
+		Content:         content,
+		LineNum:         blamedLine,
+		ExtraLinesCount: extraLinesCount,
+		TreePath:        treePath,
+		CommitSHA:       blamedCommitID,
+		ReviewID:        reviewID,
+		Patch:           patch,
+		Invalidated:     invalidated,
+		Attachments:     attachments,
 	})
 }
 

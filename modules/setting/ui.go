@@ -11,6 +11,7 @@ import (
 
 // UI settings
 var UI = struct {
+	DiffPagingNum         int
 	ExplorePagingNum      int
 	SitemapPagingNum      int
 	IssuePagingNum        int
@@ -21,6 +22,7 @@ var UI = struct {
 	PackagesPagingNum     int
 	GraphMaxCommitNum     int
 	CodeCommentLines      int
+	MaxCodeCommentLines   int
 	ReactionMaxUserNum    int
 	MaxDisplayFileSize    int64
 	ShowUserEmail         bool
@@ -74,6 +76,7 @@ var UI = struct {
 	ExplorePagingNum:    20,
 	SitemapPagingNum:    20,
 	IssuePagingNum:      20,
+	DiffPagingNum:       20,
 	RepoSearchPagingNum: 20,
 	MembersPagingNum:    20,
 	FeedMaxCommitNum:    5,
@@ -81,6 +84,7 @@ var UI = struct {
 	PackagesPagingNum:   20,
 	GraphMaxCommitNum:   100,
 	CodeCommentLines:    4,
+	MaxCodeCommentLines: 50,
 	ReactionMaxUserNum:  10,
 	MaxDisplayFileSize:  8388608,
 	DefaultTheme:        `forgejo-auto`,

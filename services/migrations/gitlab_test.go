@@ -15,6 +15,9 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/json"
 	base "forgejo.org/modules/migration"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/services/migrations/allowlist"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +25,8 @@ import (
 )
 
 func TestGitlabDownloadRepo(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -44,6 +49,7 @@ func TestGitlabDownloadRepo(t *testing.T) {
 		CloneURL:      server.URL + "/forgejo/test_repo.git",
 		OriginalURL:   server.URL + "/forgejo/test_repo",
 		DefaultBranch: "master",
+		AvatarURL:     "",
 	}, repo)
 
 	topics, err := downloader.GetTopics()
@@ -400,7 +406,6 @@ func TestGitlabDownloadRepo(t *testing.T) {
 			Created:    time.Date(2025, time.November, 25, 9, 48, 20, 259000000, time.UTC),
 			Labels:     []*base.Label{},
 			Reactions:  []*base.Reaction{},
-			PatchURL:   server.URL + "/forgejo/test_repo/-/merge_requests/2.patch",
 			Head: base.PullRequestBranch{
 				Ref:       "test/parsing",
 				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/2",
@@ -447,7 +452,6 @@ func TestGitlabDownloadRepo(t *testing.T) {
 				UserName: "mkobel",
 				Content:  "tada",
 			}},
-			PatchURL: server.URL + "/forgejo/test_repo/-/merge_requests/1.patch",
 			Head: base.PullRequestBranch{
 				Ref:       "feat/test",
 				CloneURL:  server.URL + "/forgejo/test_repo/-/merge_requests/1",
@@ -484,6 +488,8 @@ func TestGitlabDownloadRepo(t *testing.T) {
 }
 
 func TestGitlabSkippedIssueNumber(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
 	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
 	// When doing so, the responses from gitlab.com will be saved as test data files.
 	// If no access token is available, those cached responses will be used instead.
@@ -838,4 +844,105 @@ func TestCommentBodyParser(t *testing.T) {
 	assert.Equal(t, "Actually !11 and !11 are the same but !110 and !224 are not", parsedBody5)
 	assert.Equal(t, "!21 and !11 are simillar but !211 and !110 are not!", parsedBody6)
 	assert.Equal(t, "Simillar to #9, may be solved in !14", parsedBody7)
+}
+
+func TestGitlabConfidential(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+
+	// If a GitLab access token is provided, this test will make HTTP requests to the live gitlab.com instance.
+	// When doing so, the responses from gitlab.com will be saved as test data files.
+	// If no access token is available, those cached responses will be used instead.
+	gitlabPersonalAccessToken := os.Getenv("GITLAB_READ_TOKEN")
+	fixturePath := "./testdata/gitlab/confidential"
+	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, gitlabPersonalAccessToken != "")
+	defer server.Close()
+
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/test_repo-confidential", "", "", gitlabPersonalAccessToken)
+	if err != nil {
+		t.Fatalf("NewGitlabDownloader is nil: %v", err)
+	}
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+	// Repo Owner is blank in Gitlab Group repos
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "test_repo-confidential",
+		Owner:         "",
+		Description:   "",
+		CloneURL:      server.URL + "/forgejo/test_repo-confidential.git",
+		OriginalURL:   server.URL + "/forgejo/test_repo-confidential",
+		DefaultBranch: "main",
+	}, repo)
+
+	issues, isEnd, err := downloader.GetIssues(1, 10)
+	require.NoError(t, err)
+	assert.True(t, isEnd)
+
+	// the only issue in this repository has number 1, confidential issue with number 2 is skipped
+	assert.Len(t, issues, 1)
+	assert.EqualValues(t, 1, issues[0].Number)
+	assert.Equal(t, "Normal issue", issues[0].Title)
+
+	prs, _, err := downloader.GetPullRequests(1, 10)
+	require.NoError(t, err)
+	// the only merge request in this repository has number 1,
+	// but we offset it by the maximum issue number so it becomes
+	// pull request 2 in Forgejo
+	assert.Len(t, prs, 1)
+	assert.EqualValues(t, 3, prs[0].Number)
+
+	// Issue with number 1 has two comments, but one of them is an internal note and is skipped
+	comments, _, err := downloader.GetComments(&base.Issue{
+		Number:       1,
+		ForeignIndex: 1,
+		Context:      gitlabIssueContext{IsMergeRequest: false},
+	})
+	require.NoError(t, err)
+	assertCommentsEqual(t, []*base.Comment{
+		{
+			IssueIndex: 1,
+			PosterID:   3974632,
+			PosterName: "mahlzahn",
+			Created:    time.Date(2026, 5, 26, 9, 32, 49, 748000000, time.UTC),
+			Content:    "Normal comment",
+			Reactions:  nil,
+		},
+	}, comments)
+
+	// Pull request with number 1 has only one comment, but it is an internal note and is skipped
+	comments, _, err = downloader.GetComments(&base.Issue{
+		Number:       3,
+		ForeignIndex: 1,
+		Context:      gitlabIssueContext{IsMergeRequest: true},
+	})
+	require.NoError(t, err)
+	assert.Empty(t, comments)
+}
+
+func TestGitlabDownloaderAvatarURL(t *testing.T) {
+	defer test.MockVariableValueWithReset(&setting.Migrations.AllowLocalNetworks, true, func() { require.NoError(t, allowlist.Init()) })()
+	GithubLimitRateRemaining = 3 // Wait at 3 remaining since we could have 3 CI in //
+
+	token := os.Getenv("GITLAB_READ_TOKEN")
+	liveMode := token != ""
+
+	fixturePath := "./testdata/gitlab/avatar"
+	server := unittest.NewMockWebServer(t, "https://gitlab.com", fixturePath, liveMode)
+	defer server.Close()
+
+	downloader, err := NewGitlabDownloader(t.Context(), server.URL, "forgejo/forgejo-12921", "", "", token)
+	require.NoError(t, err)
+	require.NotNil(t, downloader)
+
+	repo, err := downloader.GetRepoInfo()
+	require.NoError(t, err)
+
+	assertRepositoryEqual(t, &base.Repository{
+		Name:          "forgejo-12921",
+		Description:   "An example repo for testing Forgejo migrations.",
+		CloneURL:      server.URL + "/forgejo/forgejo-12921.git",
+		OriginalURL:   server.URL + "/forgejo/forgejo-12921",
+		DefaultBranch: "master",
+		AvatarURL:     server.URL + "/uploads/-/system/project/avatar/82996997/birb.jpg",
+		IsPrivate:     true,
+	}, repo)
 }

@@ -17,7 +17,6 @@ import (
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/web/middleware"
 	"forgejo.org/services/auth"
 	"forgejo.org/services/auth/source/oauth2"
 )
@@ -74,11 +73,6 @@ func (o *OAuth2) Verify(req *http.Request, w http.ResponseWriter, _ auth.Session
 	if !setting.OAuth2.Enabled {
 		return &auth.AuthenticationNotAttempted{}
 	}
-	// These paths are not API paths, but we still want to check for tokens because they maybe in the API returned URLs
-	if !middleware.IsAPIPath(req) && !isAttachmentDownload(req) && !isAuthenticatedTokenRequest(req) &&
-		!isGitRawOrAttachPath(req) && !isArchivePath(req) {
-		return &auth.AuthenticationNotAttempted{}
-	}
 
 	maybeAuthToken := o.getTokenFromRequest(req)
 	if !maybeAuthToken.Has() {
@@ -86,9 +80,10 @@ func (o *OAuth2) Verify(req *http.Request, w http.ResponseWriter, _ auth.Session
 	}
 	_, authToken := maybeAuthToken.Get()
 
-	token, err := oauth2.ParseToken(authToken, oauth2.DefaultSigningKey)
+	var token oauth2.Token
+	_, err := oauth2.DefaultVerifier.ParseWithClaims(authToken, &token)
 	if err != nil {
-		log.Trace("oauth2.ParseToken: %v", err)
+		log.Trace("oauth2.DefaultVerifier.ParseWithClaims: %v", err)
 		return &auth.AuthenticationAttemptedIncorrectCredential{Error: err}
 	}
 
@@ -144,8 +139,4 @@ func (*OAuth2) getTokenFromRequest(req *http.Request) optional.Option[string] {
 		return optional.Some(token)
 	}
 	return optional.None[string]()
-}
-
-func isAuthenticatedTokenRequest(req *http.Request) bool {
-	return req.URL.Path == "/login/oauth/userinfo"
 }

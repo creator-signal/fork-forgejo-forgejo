@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/sync"
 	"forgejo.org/modules/util"
 	actions_service "forgejo.org/services/actions"
 
@@ -36,10 +37,11 @@ var _ runnerv1connect.RunnerServiceClient = (*Service)(nil)
 
 type Service struct {
 	runnerv1connect.UnimplementedRunnerServiceHandler
+	runnerRequestKeyMutexMap sync.MutexMap
 }
 
 // Register for new runner.
-func (s *Service) Register(
+func (*Service) Register(
 	ctx context.Context,
 	req *connect.Request[runnerv1.RegisterRequest],
 ) (*connect.Response[runnerv1.RegisterResponse], error) {
@@ -109,7 +111,7 @@ func (s *Service) Register(
 	return res, nil
 }
 
-func (s *Service) Declare(
+func (*Service) Declare(
 	ctx context.Context,
 	req *connect.Request[runnerv1.DeclareRequest],
 ) (*connect.Response[runnerv1.DeclareResponse], error) {
@@ -142,6 +144,23 @@ func (s *Service) FetchTask(
 
 	requestKey := getRequestKey(ctx)
 	if requestKey != nil {
+		// It's possible for Forgejo to receive multiple concurrent requests for a given request key if the client made
+		// a request (A), request (A) took longer than the client's HTTP timeout, request (A) continues to run on
+		// Forgejo, and the client sends request (B).  In that case, we need to protect against reading from the
+		// database and sending only *some* of the tasks for the request key back to the runner, as they get assigned
+		// and committed to the database from request (A), but while request (A) is still running and request (B) is
+		// received.  To do this, we lock on the request key with a MutexMap.
+		//
+		// The lock must be held for the entirety of `FetchTask`, so even if the request key isn't used to recover
+		// tasks, the lock is held while new tasks are picked.
+		locked, cleanup := s.runnerRequestKeyMutexMap.TryLock(*requestKey)
+		defer cleanup()
+		if !locked {
+			// Another goroutine is currently processing some work for this request key.  Provide an error to the
+			// client.  This will allow the client to retry with the same request key at its typical fetch interval.
+			return nil, connect.NewError(connect.CodeInternal, errors.New("request key is currently locked; retry soon"))
+		}
+
 		recoveredTasks, err := recoverTasks(ctx, runner, *requestKey)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
@@ -166,27 +185,30 @@ func (s *Service) FetchTask(
 		// if the task version in request is not equal to the version in db,
 		// it means there may still be some tasks not be assigned.
 		// try to pick a task for the runner that send the request.
-		if t, ok, err := actions_service.PickTask(ctx, runner, requestKey, nil); err != nil {
-			log.Error("pick task failed: %v", err)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
-		} else if ok {
+		if t, err := actions_service.PickTask(ctx, runner, requestKey, nil); err != nil {
+			if !(actions_service.IsNoTaskAvailable(err)) {
+				log.Error("pick task failed: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
+			}
+		} else {
 			task = t
 
 			taskCapacity := req.Msg.GetTaskCapacity()
 			taskCapacity-- // remove 1 for the task already fetched as `task`
 			for taskCapacity > 0 {
-				if t, ok, err := actions_service.PickTask(ctx, runner, requestKey, nil); err != nil {
-					// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
-					// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
-					// Log the error and return the tasks we've assigned so far.
-					log.Error("pick task failed: %v", err)
-					break
-				} else if ok {
-					additionalTasks = append(additionalTasks, t)
-					taskCapacity--
-				} else {
+				t, err := actions_service.PickTask(ctx, runner, requestKey, nil)
+				if err != nil {
+					if !(actions_service.IsNoTaskAvailable(err)) {
+						// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
+						// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
+						// Log the error and return the tasks we've assigned so far.
+						log.Error("pick task failed: %v", err)
+					}
 					break
 				}
+
+				additionalTasks = append(additionalTasks, t)
+				taskCapacity--
 			}
 		}
 	}
@@ -198,7 +220,7 @@ func (s *Service) FetchTask(
 	return res, nil
 }
 
-func (s *Service) FetchSingleTask(
+func (*Service) FetchSingleTask(
 	ctx context.Context,
 	req *connect.Request[runnerv1.FetchSingleTaskRequest],
 ) (*connect.Response[runnerv1.FetchSingleTaskResponse], error) {
@@ -233,10 +255,12 @@ func (s *Service) FetchSingleTask(
 			handle = req.Msg.Handle
 		}
 
-		if t, ok, err := actions_service.PickTask(ctx, runner, requestKey, handle); err != nil {
-			log.Error("pick task failed: %v", err)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
-		} else if ok {
+		if t, err := actions_service.PickTask(ctx, runner, requestKey, handle); err != nil {
+			if !(actions_service.IsNoTaskAvailable(err)) {
+				log.Error("pick task failed: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
+			}
+		} else {
 			task = t
 		}
 	}
@@ -248,7 +272,7 @@ func (s *Service) FetchSingleTask(
 }
 
 // UpdateTask updates the task status.
-func (s *Service) UpdateTask(
+func (*Service) UpdateTask(
 	ctx context.Context,
 	req *connect.Request[runnerv1.UpdateTaskRequest],
 ) (*connect.Response[runnerv1.UpdateTaskResponse], error) {
@@ -329,7 +353,7 @@ func (s *Service) UpdateTask(
 }
 
 // UpdateLog uploads log of the task.
-func (s *Service) UpdateLog(
+func (*Service) UpdateLog(
 	ctx context.Context,
 	req *connect.Request[runnerv1.UpdateLogRequest],
 ) (*connect.Response[runnerv1.UpdateLogResponse], error) {

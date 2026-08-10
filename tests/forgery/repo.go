@@ -8,10 +8,13 @@ import (
 	"io/fs"
 	"testing"
 
+	"forgejo.org/models/db"
+	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	repo_module "forgejo.org/modules/repository"
 	repo_service "forgejo.org/services/repository"
 	wiki_service "forgejo.org/services/wiki"
 
@@ -26,12 +29,15 @@ type CreateRepositoryOptions struct {
 	// Use [MapFS] or [FilesInit] to setup the initial files.
 	Files fs.FS
 
-	ObjectFormat git.ObjectFormat // If nil, SHA1
-	IsTemplate   bool
-	IsPrivate    bool
+	ObjectFormat  git.ObjectFormat // If nil, SHA1
+	IsTemplate    bool
+	IsPrivate     bool
+	DefaultBranch string
 
 	LatestSha   *string // if not nil, the commit sha after initializing the repo with the Files will be written to this ref
 	SkipCleanup bool    // if true the repo will not be deleted at the end of the test (can be useful to debug locally)
+
+	Collaborators map[*user_model.User]perm.AccessMode
 }
 
 // FilesInit specifies the templates to use upon repository initialization.
@@ -63,11 +69,16 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 
 	gitFormat := cmp.Or(opts.ObjectFormat, git.Sha1ObjectFormat)
 
+	defaultBranch := "main"
+	if opts.DefaultBranch != "" {
+		defaultBranch = opts.DefaultBranch
+	}
+
 	// Create the repository
 	createOptions := repo_service.CreateRepoOptions{
 		Name:             repoName,
 		Description:      "Test Repo",
-		DefaultBranch:    "main",
+		DefaultBranch:    defaultBranch,
 		IsTemplate:       opts.IsTemplate,
 		ObjectFormatName: gitFormat.Name(),
 		IsPrivate:        opts.IsPrivate,
@@ -82,14 +93,14 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 	require.NoError(t, err)
 	if !opts.SkipCleanup {
 		t.Cleanup(func() {
-			_ = repo_service.DeleteRepository(t.Context(), owner, repo, false)
+			_ = repo_service.DeleteRepository(db.DefaultContext, owner, repo, false)
 		})
 	}
 	require.NotEmpty(t, repo)
 
 	if !createOptions.AutoInit && opts.Files != nil {
 		sha, err := initRepo(owner, repo, gitFormat, opts.Files, "init")
-		require.NoError(t, err)
+		require.NoError(t, err, "Make sure the Forgejo HTTP server is running (or use %T instead of %T for the Files field)", FilesInit{}, opts.Files)
 		if opts.LatestSha != nil {
 			*opts.LatestSha = sha
 		}
@@ -99,6 +110,11 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 		require.NoError(t, err)
 	}
 	repo.Owner = owner
+
+	for user, mode := range opts.Collaborators {
+		require.NoError(t, repo_module.AddCollaborator(t.Context(), repo, user))
+		require.NoError(t, repo_model.ChangeCollaborationAccessMode(t.Context(), repo, user.ID, mode))
+	}
 
 	return repo
 }
@@ -118,7 +134,6 @@ func InitWiki(t testing.TB, repo *repo_model.Repository, branch string) {
 	require.NoError(t, err)
 }
 
-// config may be nil
 func EnableRepoUnit(t testing.TB, repo *repo_model.Repository, unit unit_model.Type, config convert.Conversion) {
 	t.Helper()
 
@@ -127,6 +142,36 @@ func EnableRepoUnit(t testing.TB, repo *repo_model.Repository, unit unit_model.T
 		Type:   unit,
 		Config: config,
 	}}, nil)
+	require.NoError(t, err)
+}
+
+// to specify a non-default config, call [EnableRepoUnit] instead
+func EnableRepoUnits(t testing.TB, repo *repo_model.Repository, units ...unit_model.Type) {
+	t.Helper()
+
+	ru := make([]repo_model.RepoUnit, 0, len(units))
+	for _, u := range units {
+		var config convert.Conversion
+		if u == unit_model.TypePullRequests { // pull request config is needed (otherwise no merge allowed by default)
+			config = &repo_model.PullRequestsConfig{
+				AllowMerge:           true,
+				AllowRebase:          true,
+				AllowRebaseMerge:     true,
+				AllowSquash:          true,
+				AllowFastForwardOnly: true,
+				AllowManualMerge:     true,
+				AllowRebaseUpdate:    true,
+				DefaultMergeStyle:    repo_model.MergeStyleMerge,
+				DefaultUpdateStyle:   repo_model.UpdateStyleMerge,
+			}
+		}
+		ru = append(ru, repo_model.RepoUnit{
+			RepoID: repo.ID,
+			Type:   u,
+			Config: config,
+		})
+	}
+	err := repo_service.UpdateRepositoryUnits(t.Context(), repo, ru, nil)
 	require.NoError(t, err)
 }
 

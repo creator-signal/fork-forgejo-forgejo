@@ -298,12 +298,13 @@ func (t *TemporaryUploadRepository) CommitTreeWithDate(parent string, author, co
 }
 
 // Push the provided commitHash to the repository branch by the provided user
-func (t *TemporaryUploadRepository) Push(doer *user_model.User, commitHash, branch string) error {
+func (t *TemporaryUploadRepository) Push(doer *user_model.User, commitHash, branch string, force bool) error {
 	// Because calls hooks we need to pass in the environment
 	env := repo_module.PushingEnvironment(doer, t.repo)
 	if err := git.Push(t.ctx, t.basePath, git.PushOptions{
 		Remote: t.repo.RepoPath(),
 		Branch: strings.TrimSpace(commitHash) + ":" + git.BranchPrefix + strings.TrimSpace(branch),
+		Force:  force,
 		Env:    env,
 	}); err != nil {
 		if git.IsErrPushOutOfDate(err) {
@@ -344,7 +345,7 @@ func (t *TemporaryUploadRepository) DiffIndex() (*gitdiff.Diff, error) {
 				_ = stdoutWriter.Close()
 				defer cancel()
 				var diffErr error
-				diff, diffErr = gitdiff.ParsePatch(t.ctx, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles, stdoutReader, "")
+				diff, diffErr = gitdiff.ParsePatch(t.ctx, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, stdoutReader)
 				_ = stdoutReader.Close()
 				if diffErr != nil {
 					// if the diffErr is not nil, it will be returned as the error of "Run()"
@@ -358,7 +359,7 @@ func (t *TemporaryUploadRepository) DiffIndex() (*gitdiff.Diff, error) {
 		return nil, fmt.Errorf("unable to run diff-index pipeline in temporary repo: %w", err)
 	}
 
-	diff.NumFiles, diff.TotalAddition, diff.TotalDeletion, err = git.GetIndexShortStat(t.ctx, t.basePath, "HEAD")
+	_, diff.TotalAddition, diff.TotalDeletion, err = git.GetIndexShortStat(t.ctx, t.basePath, "HEAD")
 	if err != nil {
 		return nil, err
 	}

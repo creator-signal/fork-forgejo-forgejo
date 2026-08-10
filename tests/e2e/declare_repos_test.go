@@ -108,6 +108,25 @@ body:
     label: two
 `},
 	}}, nil)
+	newRepo(t, 2, "markup-attention", nil, []FileChanges{{
+		Filename: "github-modern.md",
+		Versions: []string{`
+> [!note]
+> This text is a note
+
+> [!tip]
+> This text is a tip
+
+> [!important]
+> This text is important
+
+> [!warning]
+> This text is a warning
+
+> [!caution]
+> This text is to make someone cautious
+`},
+	}}, nil)
 	newRepo(t, 11, "dependency-test", map[unit_model.Type]convert.Conversion{
 		unit_model.TypeIssues: &repo_model.IssuesConfig{
 			EnableDependencies: true,
@@ -187,8 +206,10 @@ func newRepo(t *testing.T, userID int64, repoName string, enabledUnits map[unit_
 		Files: forgery.FilesInit{},
 	})
 	if len(enabledUnits) == 0 {
-		forgery.EnableRepoUnit(t, somerepo, unit_model.TypeCode, nil)
-		forgery.EnableRepoUnit(t, somerepo, unit_model.TypeIssues, nil)
+		forgery.EnableRepoUnits(t, somerepo,
+			unit_model.TypeCode,
+			unit_model.TypeIssues,
+		)
 	}
 	for unit, config := range enabledUnits {
 		forgery.EnableRepoUnit(t, somerepo, unit, config)

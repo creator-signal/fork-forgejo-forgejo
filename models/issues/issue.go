@@ -80,7 +80,10 @@ func (err ErrIssueWasClosed) Error() string {
 	return fmt.Sprintf("Issue [%d] %d was already closed", err.ID, err.Index)
 }
 
-var ErrIssueAlreadyChanged = util.NewInvalidArgumentErrorf("the issue is already changed")
+var (
+	ErrIssueAlreadyChanged = util.NewInvalidArgumentErrorf("the issue is already changed")
+	ErrNoPosterSetOnIssue  = errors.New("the issue has no poster")
+)
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
@@ -896,11 +899,6 @@ func IsNewPinAllowed(ctx context.Context, repoID int64, isPull bool) (bool, erro
 	}
 
 	return maxPin < setting.Repository.Issue.MaxPinned, nil
-}
-
-// IsErrIssueMaxPinReached returns if the error is, that the User can't pin more Issues
-func IsErrIssueMaxPinReached(err error) bool {
-	return err == ErrIssueMaxPinReached
 }
 
 // InsertIssues insert issues to database

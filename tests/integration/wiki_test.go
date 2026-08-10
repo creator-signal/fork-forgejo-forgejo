@@ -98,7 +98,7 @@ func doRepoWikiGitOperation(t *testing.T, serverURL *url.URL, method RepoWikiMet
 		privateRepo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
 			IsPrivate: true,
 		})
-		forgery.EnableRepoUnit(t, privateRepo, unit_model.TypeWiki, nil)
+		forgery.EnableRepoUnits(t, privateRepo, unit_model.TypeWiki)
 
 		session := loginUser(t, user2.LoginName)
 		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
@@ -216,7 +216,7 @@ func Test_RepoWikiPages(t *testing.T) {
 
 	doc := NewHTMLParser(t, resp.Body)
 	expectedPagePaths := []string{
-		"Home", "Long-Page", "Page-With-Image", "Page-With-Spaced-Name", "Unescaped-File", "XSS",
+		"Home", "Long-Page", "Page-With-Image", "Page-With-Spaced-Name", "Page-With-Unescaped-Special-Chars%3A-%281%29", "Unescaped-File", "XSS",
 	}
 	doc.Find("tr").Each(func(i int, s *goquery.Selection) {
 		firstAnchor := s.Find("a").First()

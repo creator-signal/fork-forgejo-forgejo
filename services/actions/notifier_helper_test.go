@@ -21,8 +21,8 @@ import (
 	"forgejo.org/modules/test"
 	webhook_module "forgejo.org/modules/webhook"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
-	"code.forgejo.org/forgejo/runner/v12/act/model"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -83,7 +83,7 @@ func TestActionsNotifier_IssueCommentOnForkPullRequestEvent(t *testing.T) {
 			},
 		},
 	}
-	input := &notifyInput{
+	input := &NotifyInput{
 		Repo:        repo,
 		Doer:        doer,
 		Event:       webhook_module.HookEventIssueComment,
@@ -128,7 +128,7 @@ func testActionsNotifierPullRequestWithDoer(t *testing.T, repo *repo_model.Repos
 		Name: "pull_request",
 	}
 	detectedWorkflows := []*actions_module.DetectedWorkflow{dw}
-	input := &notifyInput{
+	input := &NotifyInput{
 		Repo:        repo,
 		Doer:        doer,
 		Event:       event,
@@ -410,4 +410,27 @@ func TestActionsNotifier_ExpandReusableWorkflow(t *testing.T) {
 		Ref:         "main",
 		GitPlatform: "forgejo",
 	}, remoteReusableCalled[0])
+}
+
+func TestActionsNotifier_PermissionsWarning(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
+	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 3})
+
+	dw := &actions_module.DetectedWorkflow{
+		Content: []byte("{ on: pull_request, permissions: { contents: read }, jobs: { j1: { steps: [] } } }"),
+	}
+	testActionsNotifierPullRequest(t, repo, pr, dw, webhook_module.HookEventPullRequestSync)
+
+	runs, err := db.Find[actions_model.ActionRun](db.DefaultContext, actions_model.FindRunOptions{
+		RepoID: repo.ID,
+	})
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	run := runs[0]
+	assert.EqualValues(t, 0, run.PreExecutionErrorCode, "pre execution error details: %#v", run.PreExecutionErrorDetails)
+
+	assert.Equal(t, []actions_model.PreExecutionWarning{1}, run.PreExecutionWarningCodes)
+	assert.Equal(t, [][]any{{"j1", "https://forgejo.org/docs/latest/user/api/authorized-integrations/"}}, run.PreExecutionWarningDetails)
 }

@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +17,7 @@ import (
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/avatar"
 	base_module "forgejo.org/modules/base"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
@@ -32,6 +31,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/uri"
 	"forgejo.org/modules/util"
+	"forgejo.org/services/migrations/allowlist"
 	"forgejo.org/services/pull"
 	repo_service "forgejo.org/services/repository"
 
@@ -131,7 +131,7 @@ func (g *GiteaLocalUploader) CreateRepo(repo *base.Repository, opts base.Migrate
 		Releases:       opts.Releases, // if didn't get releases, then sync them from tags
 		RepoName:       g.repoName,
 		Wiki:           opts.Wiki,
-	}, NewMigrationHTTPTransport())
+	}, allowlist.NewMigrationHTTPTransport())
 
 	g.sameApp = strings.HasPrefix(repo.OriginalURL, setting.AppURL)
 	g.repo = r
@@ -141,6 +141,13 @@ func (g *GiteaLocalUploader) CreateRepo(repo *base.Repository, opts base.Migrate
 	g.gitRepo, err = gitrepo.OpenRepository(g.ctx, g.repo)
 	if err != nil {
 		return err
+	}
+
+	// attempt to migrate the repository avatar in a best-effort manner
+	if repo.AvatarURL != "" {
+		if err = g.migrateRepositoryAvatar(repo.AvatarURL); err != nil {
+			log.Warn("Migrating repo avatar failed: %v", err)
+		}
 	}
 
 	// detect object format from git repository and update to database
@@ -567,41 +574,6 @@ func (g *GiteaLocalUploader) updateGitForPullRequest(pr *base.PullRequest) (head
 	if !pr.EnsuredSafe {
 		log.Error("PR #%d in %s/%s has not been checked for safety.", pr.Number, g.repoOwner, g.repoName)
 		return "", fmt.Errorf("pull request[index=%d] was not checked for safety", pr.Number)
-	}
-
-	// Anonymous function to download the patch file (allows us to use defer)
-	err = func() error {
-		// if the patchURL is empty there is nothing to download
-		if pr.PatchURL == "" {
-			return nil
-		}
-
-		// SECURITY: We will assume that the pr.PatchURL has been checked
-		// pr.PatchURL maybe a local file - but note EnsureSafe should be asserting that this safe
-		ret, err := uri.Open(pr.PatchURL) // TODO: This probably needs to use the downloader as there may be rate limiting issues here
-		if err != nil {
-			return err
-		}
-		defer ret.Close()
-
-		pullDir := filepath.Join(g.repo.RepoPath(), "pulls")
-		if err = os.MkdirAll(pullDir, os.ModePerm); err != nil {
-			return err
-		}
-
-		f, err := os.Create(filepath.Join(pullDir, fmt.Sprintf("%d.patch", pr.Number)))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		// TODO: Should there be limits on the size of this file?
-		_, err = io.Copy(f, ret)
-
-		return err
-	}()
-	if err != nil {
-		return "", err
 	}
 
 	head = "unknown repository"
@@ -1032,4 +1004,20 @@ func (g *GiteaLocalUploader) remapExternalUser(source user_model.ExternalUserMig
 		g.userMap[source.GetExternalID()] = userid
 	}
 	return userid, nil
+}
+
+func (g *GiteaLocalUploader) migrateRepositoryAvatar(avatarURL string) error {
+	client := allowlist.NewMigrationHTTPClient()
+	client.Timeout = setting.Migrations.AvatarFetchTimeout
+	byteBuffer, err := avatar.FetchExternalImageData(avatarURL, client)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := io.ReadAll(byteBuffer)
+	if err != nil {
+		return err
+	}
+
+	return repo_service.UploadAvatar(g.ctx, g.repo, bytes)
 }

@@ -36,12 +36,14 @@ func TestRepoStatsIndex(t *testing.T) {
 	err = UpdateRepoIndexer(repo)
 	require.NoError(t, err)
 
-	require.NoError(t, queue.GetManager().FlushAll(t.Context(), 5*time.Second))
+	require.NoError(t, queue.GetManager().FlushAll(t.Context(), 60*time.Second))
 
 	status, err := repo_model.GetIndexerStatus(db.DefaultContext, repo, repo_model.RepoIndexerTypeStats)
 	require.NoError(t, err)
 	assert.Equal(t, "65f1bf27bc3bf70f64657658635e66094edbcb4d", status.CommitSha)
 	langs, err := repo_model.GetTopLanguageStats(db.DefaultContext, repo, 5)
 	require.NoError(t, err)
-	assert.Empty(t, langs)
+	if assert.Len(t, langs, 1) {
+		assert.Equal(t, &repo_model.LanguageStat{ID: 1, RepoID: 1, CommitID: "65f1bf27bc3bf70f64657658635e66094edbcb4d", IsPrimary: true, Language: "Go", Percentage: 99.9, Size: 1023, Color: "#00ADD8", CreatedUnix: 1779733547}, langs[0])
+	}
 }

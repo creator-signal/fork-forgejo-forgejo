@@ -146,6 +146,8 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.Data["Context"] = ctx // TODO: use "ctx" in template and remove this
 			ctx.Data["CurrentURL"] = setting.AppSubURL + req.URL.RequestURI()
 			ctx.Data["Link"] = ctx.Link
+			ctx.Data["ValidSiteURLSchemes"] = setting.Service.ValidSiteURLSchemes
+			ctx.Data["ValidSiteURLPattern"] = setting.ValidSiteURLPattern()
 
 			// PageData is passed by reference, and it will be rendered to `window.config.pageData` in `head.tmpl` for JavaScript modules
 			ctx.PageData = map[string]any{}
@@ -177,7 +179,7 @@ func Contexter() func(next http.Handler) http.Handler {
 				}
 			})
 
-			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0, "no-transform")
+			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0)
 			ctx.Resp.Header().Set(`X-Frame-Options`, setting.CORSConfig.XFrameOptions)
 
 			ctx.Data["SystemConfig"] = setting.Config()
@@ -203,6 +205,7 @@ func Contexter() func(next http.Handler) http.Handler {
 			ctx.PageData["PLURALSTRINGS_FALLBACK"] = map[string][]string{}
 
 			ctx.AddPluralStringsToPageData([]string{"relativetime.mins", "relativetime.hours", "relativetime.days", "relativetime.weeks", "relativetime.months", "relativetime.years"})
+			ctx.AddPluralStringsToPageData([]string{"relativetime.duration.secs", "relativetime.duration.mins", "relativetime.duration.hours", "relativetime.duration.days", "relativetime.duration.weeks", "relativetime.duration.months", "relativetime.duration.years"})
 
 			ctx.PageData["DATETIMESTRINGS"] = map[string]string{
 				"FUTURE": ctx.Locale.TrString("relativetime.future"),

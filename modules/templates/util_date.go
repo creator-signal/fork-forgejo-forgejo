@@ -26,6 +26,11 @@ func (du *DateUtils) AbsoluteShort(time any) template.HTML {
 	return dateTimeFormat("short", time)
 }
 
+// AbsoluteShort renders in "Sun, 01 Jan, 2006" format
+func (du *DateUtils) AbsoluteShortWithDay(time any) template.HTML {
+	return dateTimeFormat("short-with-day", time)
+}
+
 // AbsoluteLong renders in "January 01, 2006" format
 func (du *DateUtils) AbsoluteLong(time any) template.HTML {
 	return dateTimeFormat("long", time)
@@ -114,6 +119,10 @@ func dateTimeFormat(format string, datetime any) template.HTML {
 	case "short", "long": // date only
 		attrs = append(attrs, `month="`+format+`"`, `day="numeric"`)
 		return template.HTML(fmt.Sprintf(`<absolute-date %s date="%s">%s</absolute-date>`, strings.Join(attrs, " "), datetimeEscaped, textEscaped))
+	case "short-with-day":
+		attrs = append(attrs, `month="short"`, `day="numeric"`)
+		attrs[0] = `weekday="short"`
+		return template.HTML(fmt.Sprintf(`<absolute-date %s date="%s">%s</absolute-date>`, strings.Join(attrs, " "), datetimeEscaped, textEscaped))
 	case "full": // full date including time
 		attrs = append(attrs, `format="datetime"`, `month="short"`, `day="numeric"`, `hour="numeric"`, `minute="numeric"`, `second="numeric"`, `data-tooltip-content`, `data-tooltip-interactive="true"`)
 		return template.HTML(fmt.Sprintf(`<relative-time %s datetime="%s">%s</relative-time>`, strings.Join(attrs, " "), datetimeEscaped, textEscaped))
@@ -146,4 +155,17 @@ func timeSinceTo(then any, now time.Time) template.HTML {
 // TimeSince renders relative time HTML given a time
 func TimeSince(then any) template.HTML {
 	return timeSinceTo(then, time.Now())
+}
+
+// TimeDuration renders the duration between the argument start and now as `<relative-time>` element. It renders only
+// the duration, for example, `5 minutes, 2 seconds`, whereas TimeSince would output `5 minutes, 2 seconds ago`.
+func TimeDuration(start any) template.HTML {
+	startTime, isZero := anyToTime(start)
+	if isZero {
+		return "-"
+	}
+
+	markup := fmt.Sprintf(`<relative-time datetime="%[1]s" format="duration" prefix="" data-tooltip-content data-tooltip-interactive="true">%[2]s</relative-time>`,
+		startTime.Format(time.RFC3339), timeutil.TimeStampNow().AsTime().Sub(startTime).Truncate(time.Second))
+	return template.HTML(markup)
 }

@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"net/url"
 	"testing"
-	"time"
 
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
+	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
-	"forgejo.org/modules/log"
 	repo_module "forgejo.org/modules/repository"
-	"forgejo.org/modules/test"
+	pull_service "forgejo.org/services/pull"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -267,22 +267,19 @@ func testOptionsGitPush(t *testing.T, u *url.URL) {
 		doGitAddRemote(gitPath, "collaborator", u)(t)
 
 		t.Run("User without write access is not allowed to push", func(t *testing.T) {
-			pushLogChecker, cleanup := test.NewLogChecker("ssh", log.ERROR)
-			pushLogChecker.Filter("User 'user5' is not allowed to push to branch 'branch3' in 'user2/repo-to-push'.")
-			pushLogChecker.Filter("If you instead wanted to create a pull request to the branch 'branch3', please use:")
-			pushLogChecker.Filter("git push origin HEAD:refs/for/branch3/choose-a-descriptor")
-			pushLogChecker.Filter("You might want to replace 'origin' with the name of your Git remote if it is different from origin. You can freely choose the descriptor to set it to a topic.")
-			pushLogChecker.Filter("You can learn about creating pull requests with AGit in the docs: https://forgejo.org/docs/latest/user/agit-support/")
-			defer cleanup()
 			branchName := "branch3"
 			doGitCreateBranch(gitPath, branchName)(t)
-			doGitPushTestRepositoryFail(gitPath, "collaborator", branchName)(t)
-			pushLogFiltered, _ := pushLogChecker.Check(5 * time.Second)
-			assert.True(t, pushLogFiltered[0])
+			stderr := doGitPushTestRepositoryFail(t, gitPath, "collaborator", branchName)
+
+			assert.Contains(t, stderr, `remote: Forgejo: User 'user5' is not allowed to push to branch 'branch3' in 'user2/repo-to-push'.`)
+			assert.Contains(t, stderr, `remote: If you instead wanted to create a pull request to the branch 'branch3', please use:`)
+			assert.Contains(t, stderr, `remote: git push origin HEAD:refs/for/branch3/choose-a-descriptor`)
+			assert.Contains(t, stderr, `remote: You might want to replace 'origin' with the name of your Git remote if it is different from origin. You can freely choose the descriptor to set it to a topic.`)
+			assert.Contains(t, stderr, `remote: You can learn about creating pull requests with AGit in the docs: https://forgejo.org/docs/latest/user/git-cli/agit-support/`)
 		})
 
 		// give write access to the collaborator
-		repo_module.AddCollaborator(db.DefaultContext, repo, collaborator)
+		require.NoError(t, repo_module.AddCollaborator(db.DefaultContext, repo, collaborator))
 
 		t.Run("Collaborator with write access is allowed to push", func(t *testing.T) {
 			branchName := "branch4"
@@ -291,25 +288,95 @@ func testOptionsGitPush(t *testing.T, u *url.URL) {
 		})
 
 		t.Run("Collaborator with write access fails to change private & template via push options", func(t *testing.T) {
-			logChecker, cleanup := test.NewLogChecker(log.DEFAULT, log.TRACE)
-			logChecker.StopMark("Git push options validation")
-			defer cleanup()
-			sshLogChecker, cleanup := test.NewLogChecker("ssh", log.ERROR)
-			sshLogChecker.Filter("permission denied for changing repo settings")
-			defer cleanup()
 			branchName := "branch5"
 			doGitCreateBranch(gitPath, branchName)(t)
-			doGitPushTestRepositoryFail(gitPath, "collaborator", branchName, "-o", "repo.private=true", "-o", "repo.template=true")(t)
+			stderr := doGitPushTestRepositoryFail(t, gitPath, "collaborator", branchName, "-o", "repo.private=true", "-o", "repo.template=true")
+			assert.Contains(t, stderr, "Forgejo: options validation failed: permission denied for changing repo settings")
+
 			repo, err = repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, user.Name, "repo-to-push")
 			require.NoError(t, err)
 			require.False(t, repo.IsPrivate)
 			require.False(t, repo.IsTemplate)
-			_, logStopped := logChecker.Check(5 * time.Second)
-			logFiltered, _ := sshLogChecker.Check(5 * time.Second)
-			assert.True(t, logStopped)
-			assert.True(t, logFiltered[0])
 		})
 
 		require.NoError(t, repo_service.DeleteRepositoryDirectly(db.DefaultContext, repo.ID, repo_service.DeleteRepositoryOpts{}))
+	})
+}
+
+func TestGitPushAllowMaintainerEditRestrictedHead(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		baseRepoOwner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
+
+		// Create a base repository as a target for the pull request
+		baseRepo := forgery.CreateRepository(t, baseRepoOwner, &forgery.CreateRepositoryOptions{DefaultBranch: "master"})
+		baseRepoPath := t.TempDir()
+		doGitInitTestRepository(baseRepoPath, git.Sha1ObjectFormat)(t)
+		u.Path = baseRepo.FullName() + ".git"
+		u.User = url.UserPassword(baseRepoOwner.LowerName, userPassword)
+		doGitAddRemote(baseRepoPath, "origin", u)(t)
+		doGitPushTestRepository(baseRepoPath, "origin", baseRepo.DefaultBranch)(t)
+
+		// Fork the base repo
+		forkUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		forkRepo, err := repo_service.ForkRepositoryAndUpdates(t.Context(), forkUser, forkUser, repo_service.ForkRepoOptions{
+			BaseRepo:    baseRepo,
+			Name:        "repo-pr-update",
+			Description: "desc",
+		})
+		require.NoError(t, err)
+		forkRepoPath := t.TempDir()
+		u.Path = forkRepo.FullName() + ".git"
+		u.User = url.UserPassword(forkUser.LowerName, userPassword)
+		doGitClone(forkRepoPath, u)(t)
+
+		// Make a modification in the fork repo
+		branchName := "my-branch-for-pr"
+		doGitCreateBranch(forkRepoPath, branchName)(t)
+		doGitAddSomeCommits(forkRepoPath, branchName)(t)
+		doGitPushTestRepository(forkRepoPath, "origin", branchName)(t)
+
+		// Create a pull request in the base repo to incorporate the fork's modification
+		pullIssue := &issues_model.Issue{
+			RepoID:   baseRepo.ID,
+			Title:    "Test Pull Request from Fork",
+			PosterID: forkUser.ID,
+			Poster:   forkUser,
+			IsPull:   true,
+		}
+		pullRequest := &issues_model.PullRequest{
+			HeadRepo:            forkRepo,
+			HeadRepoID:          forkRepo.ID,
+			HeadBranch:          branchName,
+			BaseRepo:            baseRepo,
+			BaseRepoID:          baseRepo.ID,
+			BaseBranch:          baseRepo.DefaultBranch,
+			Type:                issues_model.PullRequestGitea,
+			AllowMaintainerEdit: true,
+		}
+		err = pull_service.NewPullRequest(git.DefaultContext, baseRepo, pullIssue, nil, nil, pullRequest, nil)
+		require.NoError(t, err)
+
+		// The existence of the pull request allows maintainers of the base repo (baseRepoOwner) to write to the fork
+		// repo, but *only* to the branch for the pull request.  Set up for editing as the baseRepoOwner...
+		u.Path = forkRepo.FullName() + ".git"
+		u.User = url.UserPassword(baseRepoOwner.LowerName, userPassword)
+		doGitAddRemote(baseRepoPath, "fork", u)(t)
+		doGitFetch(baseRepoPath, "fork")(t)
+		doGitCheckoutBranch(baseRepoPath, branchName)(t)
+
+		// Test writing to the PR branch, should succeed:
+		doGitAddSomeCommits(baseRepoPath, branchName)(t)
+		doGitPushTestRepository(baseRepoPath, "fork", branchName)(t)
+
+		// We're allowed to write to the PR branch, but not to another branch:
+		doGitCreateBranch(baseRepoPath, "another-branch")(t)
+		doGitAddSomeCommits(baseRepoPath, "another-branch")(t)
+		doGitPushTestRepositoryFail(t, baseRepoPath, "fork", "another-branch")
+
+		// Verify that each branch being pushed is checked independently -- pushing to a branch we're permitted to, and
+		// then a branch that we're not, does not allow the push:
+		doGitAddSomeCommits(baseRepoPath, branchName)(t)       // Ensure we have new commits ready to push
+		doGitAddSomeCommits(baseRepoPath, "another-branch")(t) // Ensure we have new commits ready to push
+		doGitPushTestRepositoryFail(t, baseRepoPath, "fork", branchName, "another-branch")
 	})
 }

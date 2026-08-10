@@ -10,11 +10,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 
+	auth_model "forgejo.org/models/auth"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	access_model "forgejo.org/models/perm/access"
 	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	mc "forgejo.org/modules/cache"
@@ -23,8 +27,10 @@ import (
 	"forgejo.org/modules/httpcache"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
 	web_types "forgejo.org/modules/web/types"
+	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/services/auth"
 	"forgejo.org/services/authz"
 
@@ -35,22 +41,25 @@ import (
 type APIContext struct {
 	*Base
 
-	Cache cache.Cache
+	cache cache.Cache
 
-	Doer           *user_model.User // current signed-in user
-	IsSigned       bool
-	Authentication auth.AuthenticationResult
+	doer           *user_model.User // current signed-in user
+	isSigned       bool
+	authentication auth.AuthenticationResult
 
-	ContextUser *user_model.User // the user which is being visited, in most cases it differs from Doer
+	user *user_model.User // the user which is being visited, in most cases it differs from Doer
 
-	Repo       *Repository
-	Comment    *issues_model.Comment
-	Org        *APIOrganization
-	Package    *Package
-	QuotaGroup *quota_model.Group
-	QuotaRule  *quota_model.Rule
-	PublicOnly bool // Whether the request is for a public endpoint
-	Reducer    authz.AuthorizationReducer
+	repo       *Repository
+	issues     map[int64]*issues_model.Issue
+	comments   map[int64]*issues_model.Comment
+	org        *APIOrganization
+	pkg        *Package
+	quotaGroup *quota_model.Group
+	quotaRule  *quota_model.Rule
+	publicOnly bool // Whether the request is for a public endpoint
+	reducer    authz.AuthorizationReducer
+
+	requiredScopeCategories []auth_model.AccessTokenScopeCategory
 }
 
 func init() {
@@ -64,16 +73,11 @@ func init() {
 //            if we need to indicate some errors, we should introduce some new fields like ErrorCode or ErrorType
 // * url:     the swagger document URL
 
-type APIError struct {
-	Message string `json:"message"`
-	URL     string `json:"url"`
-}
-
 // APIError is error format response
 // swagger:response error
 type swaggerAPIError struct {
 	// in:body
-	Body APIError `json:"body"`
+	Body api.APIError `json:"body"`
 }
 
 type APIValidationError struct {
@@ -105,7 +109,7 @@ type swaggerAPIInvalidTopicsError struct {
 type APIEmpty struct{}
 
 type APIUnauthorizedError struct {
-	APIError
+	api.APIError
 }
 
 // APIUnauthorizedError is a unauthorized error response
@@ -116,7 +120,7 @@ type swaggerAPUnauthorizedError struct {
 }
 
 type APIForbiddenError struct {
-	APIError
+	api.APIError
 }
 
 // APIForbiddenError is a forbidden error response
@@ -152,7 +156,7 @@ type APIRedirect struct{}
 type APIString string
 
 type APIRepoArchivedError struct {
-	APIError
+	api.APIError
 }
 
 // APIRepoArchivedError is an error that is raised when an archived repo should be modified
@@ -163,7 +167,7 @@ type swaggerAPIRepoArchivedError struct {
 }
 
 type APIInternalServerError struct {
-	APIError
+	api.APIError
 }
 
 // APIInternalServerError is an error that is raised when an internal server error occurs
@@ -176,6 +180,181 @@ type swaggerAPIInternalServerError struct {
 // ServerError responds with error message, status is 500
 func (ctx *APIContext) ServerError(title string, err error) {
 	ctx.Error(http.StatusInternalServerError, title, err)
+}
+
+func (ctx *APIContext) Context() context.Context {
+	return ctx.originCtx
+}
+
+func (ctx *APIContext) Cache() cache.Cache {
+	return ctx.cache
+}
+
+func (ctx *APIContext) Doer() *user_model.User {
+	return ctx.doer
+}
+
+func (ctx *APIContext) SetDoer(doer *user_model.User) {
+	ctx.doer = doer
+}
+
+func (ctx *APIContext) IsSigned() bool {
+	return ctx.isSigned
+}
+
+func (ctx *APIContext) SetIsSigned(isSigned bool) {
+	ctx.isSigned = isSigned
+}
+
+func (ctx *APIContext) Authentication() auth.AuthenticationResult {
+	return ctx.authentication
+}
+
+func (ctx *APIContext) SetAuthentication(authentication auth.AuthenticationResult) {
+	ctx.authentication = authentication
+}
+
+func (ctx *APIContext) User() *user_model.User {
+	return ctx.user
+}
+
+func (ctx *APIContext) SetUser(user *user_model.User) {
+	ctx.user = user
+}
+
+func (ctx *APIContext) Repo() *Repository {
+	return ctx.repo
+}
+
+func (ctx *APIContext) SetRepo(repo *Repository) {
+	ctx.repo = repo
+}
+
+func (ctx *APIContext) LoadIssue(indexParam string) *issues_model.Issue {
+	id := ctx.ParamsInt64(indexParam)
+	issue, ok := ctx.issues[id]
+	if !ok {
+		var err error
+		issue, err = issues_model.GetIssueByIndex(ctx.Context(), ctx.Repository().ID, id)
+		if err != nil {
+			if issues_model.IsErrIssueNotExist(err) {
+				ctx.NotFound("IsErrIssueNotExist", err)
+				return nil
+			}
+			ctx.Error(http.StatusInternalServerError, "GetIssueByIndex", err)
+			return nil
+		}
+
+		issue.Repo = ctx.Repo().Repository
+
+		ctx.issues[id] = issue
+	}
+	return issue
+}
+
+func (ctx *APIContext) Repository() *repo_model.Repository {
+	return ctx.Repo().Repository
+}
+
+func (ctx *APIContext) Permission() *access_model.Permission {
+	return &ctx.Repo().Permission
+}
+
+func (ctx *APIContext) SetPermission(permission *access_model.Permission) {
+	ctx.Repo().Permission = *permission
+}
+
+func (ctx *APIContext) Organization() *org_model.Organization {
+	return ctx.Org().Organization
+}
+
+func (ctx *APIContext) Org() *APIOrganization {
+	return ctx.org
+}
+
+func (ctx *APIContext) SetOrg(org *APIOrganization) {
+	ctx.org = org
+}
+
+func (ctx *APIContext) Team() *org_model.Team {
+	return ctx.Org().Team
+}
+
+func (ctx *APIContext) Package() *Package {
+	return ctx.pkg
+}
+
+func (ctx *APIContext) PackageOwner() *user_model.User {
+	if ctx.Package() == nil {
+		return nil
+	}
+	return ctx.Package().Owner
+}
+
+func (ctx *APIContext) LoadComment(idParam string) *issues_model.Comment {
+	id := ctx.ParamsInt64(idParam)
+	comment, ok := ctx.comments[id]
+	if !ok {
+		var err error
+		comment, err = issues_model.GetCommentByID(ctx, id)
+		if err != nil {
+			if issues_model.IsErrCommentNotExist(err) {
+				ctx.NotFound(err)
+			} else {
+				ctx.InternalServerError(err)
+			}
+			return nil
+		}
+
+		if err = comment.LoadIssue(ctx); err != nil {
+			ctx.InternalServerError(err)
+			return nil
+		}
+
+		comment.Issue.Repo = ctx.Repo().Repository
+
+		ctx.comments[id] = comment
+	}
+	return comment
+}
+
+func (ctx *APIContext) PackageAccessMode() perm.AccessMode {
+	if ctx.Package() == nil {
+		return perm.AccessModeNone
+	}
+	return ctx.Package().AccessMode
+}
+
+func (ctx *APIContext) QuotaGroup() *quota_model.Group {
+	return ctx.quotaGroup
+}
+
+func (ctx *APIContext) QuotaRule() *quota_model.Rule {
+	return ctx.quotaRule
+}
+
+func (ctx *APIContext) PublicOnly() bool {
+	return ctx.publicOnly
+}
+
+func (ctx *APIContext) SetPublicOnly(publicOnly bool) {
+	ctx.publicOnly = publicOnly
+}
+
+func (ctx *APIContext) Reducer() authz.AuthorizationReducer {
+	return ctx.reducer
+}
+
+func (ctx *APIContext) SetReducer(reducer authz.AuthorizationReducer) {
+	ctx.reducer = reducer
+}
+
+func (ctx *APIContext) RequiredScopeCategories() []auth_model.AccessTokenScopeCategory {
+	return ctx.requiredScopeCategories
+}
+
+func (ctx *APIContext) SetRequiredScopeCategories(requiredScopeCategories []auth_model.AccessTokenScopeCategory) {
+	ctx.requiredScopeCategories = requiredScopeCategories
 }
 
 // Error responds with an error message to client with given obj as the message.
@@ -191,12 +370,12 @@ func (ctx *APIContext) Error(status int, title string, obj any) {
 	if status == http.StatusInternalServerError {
 		log.ErrorWithSkip(1, "%s: %s", title, message)
 
-		if setting.IsProd && (ctx.Doer == nil || !ctx.Doer.IsAdmin) {
+		if setting.IsProd && (ctx.Doer() == nil || !ctx.Doer().IsAdmin) {
 			message = ""
 		}
 	}
 
-	ctx.JSON(status, APIError{
+	ctx.JSON(status, api.APIError{
 		Message: message,
 		URL:     setting.API.SwaggerURL,
 	})
@@ -208,14 +387,18 @@ func (ctx *APIContext) InternalServerError(err error) {
 	log.ErrorWithSkip(1, "InternalServerError: %v", err)
 
 	var message string
-	if !setting.IsProd || (ctx.Doer != nil && ctx.Doer.IsAdmin) {
+	if !setting.IsProd || (ctx.Doer() != nil && ctx.Doer().IsAdmin) {
 		message = err.Error()
 	}
 
-	ctx.JSON(http.StatusInternalServerError, APIError{
+	ctx.JSON(http.StatusInternalServerError, api.APIError{
 		Message: message,
 		URL:     setting.API.SwaggerURL,
 	})
+}
+
+func (ctx *APIContext) GetError() error {
+	return errors.New("unexpected call to APIContext.GetError")
 }
 
 type apiContextKeyType struct{}
@@ -283,17 +466,19 @@ func APIContexter() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			base, baseCleanUp := NewBaseContext(w, req)
 			ctx := &APIContext{
-				Base:  base,
-				Cache: mc.GetCache(),
-				Repo:  &Repository{PullRequest: &PullRequest{}},
-				Org:   &APIOrganization{},
+				Base:     base,
+				issues:   make(map[int64]*issues_model.Issue),
+				comments: make(map[int64]*issues_model.Comment),
+				cache:    mc.GetCache(),
+				repo:     &Repository{PullRequest: &PullRequest{}},
+				org:      &APIOrganization{},
 			}
 			defer baseCleanUp()
 
 			ctx.AppendContextValue(apiContextKey, ctx)
-			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo.GitRepo })
+			ctx.AppendContextValueFunc(gitrepo.RepositoryContextKey, func() any { return ctx.Repo().GitRepo })
 
-			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0, "no-transform")
+			httpcache.SetCacheControlInHeader(ctx.Resp.Header(), 0)
 			ctx.Resp.Header().Set(`X-Frame-Options`, setting.CORSConfig.XFrameOptions)
 
 			next.ServeHTTP(ctx.Resp, ctx.Req)
@@ -331,23 +516,23 @@ func (ctx *APIContext) NotFound(objs ...any) {
 func ReferencesGitRepo(allowEmpty ...bool) func(ctx *APIContext) (cancel context.CancelFunc) {
 	return func(ctx *APIContext) (cancel context.CancelFunc) {
 		// Empty repository does not have reference information.
-		if ctx.Repo.Repository.IsEmpty && (len(allowEmpty) == 0 || !allowEmpty[0]) {
+		if ctx.Repo().Repository.IsEmpty && (len(allowEmpty) == 0 || !allowEmpty[0]) {
 			return nil
 		}
 
 		// For API calls.
-		if ctx.Repo.GitRepo == nil {
-			gitRepo, err := gitrepo.OpenRepository(ctx, ctx.Repo.Repository)
+		if ctx.Repo().GitRepo == nil {
+			gitRepo, err := gitrepo.OpenRepository(ctx, ctx.Repo().Repository)
 			if err != nil {
-				ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Open Repository %v failed", ctx.Repo.Repository.FullName()), err)
+				ctx.Error(http.StatusInternalServerError, fmt.Sprintf("Open Repository %v failed", ctx.Repo().Repository.FullName()), err)
 				return cancel
 			}
-			ctx.Repo.GitRepo = gitRepo
+			ctx.Repo().GitRepo = gitRepo
 			// We opened it, we should close it
 			return func() {
 				// If it's been set to nil then assume someone else has closed it.
-				if ctx.Repo.GitRepo != nil {
-					_ = ctx.Repo.GitRepo.Close()
+				if ctx.Repo().GitRepo != nil {
+					_ = ctx.Repo().GitRepo.Close()
 				}
 			}
 		}
@@ -361,18 +546,18 @@ func RepoRefForAPI(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := GetAPIContext(req)
 
-		if ctx.Repo.Repository.IsEmpty {
+		if ctx.Repo().Repository.IsEmpty {
 			ctx.NotFound(errors.New("repository is empty"))
 			return
 		}
 
-		if ctx.Repo.GitRepo == nil {
+		if ctx.Repo().GitRepo == nil {
 			ctx.InternalServerError(errors.New("no open git repo"))
 			return
 		}
 
 		if ref := ctx.FormTrim("ref"); len(ref) > 0 {
-			commit, err := ctx.Repo.GitRepo.GetCommit(ref)
+			commit, err := ctx.Repo().GitRepo.GetCommit(ref)
 			if err != nil {
 				if git.IsErrNotExist(err) {
 					ctx.NotFound()
@@ -381,33 +566,33 @@ func RepoRefForAPI(next http.Handler) http.Handler {
 				}
 				return
 			}
-			ctx.Repo.Commit = commit
-			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-			ctx.Repo.TreePath = ctx.Params("*")
+			ctx.Repo().Commit = commit
+			ctx.Repo().CommitID = ctx.Repo().Commit.ID.String()
+			ctx.Repo().TreePath = ctx.Params("*")
 			next.ServeHTTP(w, req)
 			return
 		}
 
-		refName := getRefName(ctx.Base, ctx.Repo, RepoRefAny)
+		refName := getRefName(ctx.Base, ctx.Repo(), RepoRefAny)
 		var err error
 
-		if ctx.Repo.GitRepo.IsBranchExist(refName) {
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
+		if ctx.Repo().GitRepo.IsBranchExist(refName) {
+			ctx.Repo().Commit, err = ctx.Repo().GitRepo.GetBranchCommit(refName)
 			if err != nil {
 				ctx.InternalServerError(err)
 				return
 			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-		} else if ctx.Repo.GitRepo.IsTagExist(refName) {
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetTagCommit(refName)
+			ctx.Repo().CommitID = ctx.Repo().Commit.ID.String()
+		} else if ctx.Repo().GitRepo.IsTagExist(refName) {
+			ctx.Repo().Commit, err = ctx.Repo().GitRepo.GetTagCommit(refName)
 			if err != nil {
 				ctx.InternalServerError(err)
 				return
 			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-		} else if len(refName) == ctx.Repo.GetObjectFormat().FullLength() {
-			ctx.Repo.CommitID = refName
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
+			ctx.Repo().CommitID = ctx.Repo().Commit.ID.String()
+		} else if len(refName) == ctx.Repo().GetObjectFormat().FullLength() {
+			ctx.Repo().CommitID = refName
+			ctx.Repo().Commit, err = ctx.Repo().GitRepo.GetCommit(refName)
 			if err != nil {
 				ctx.NotFound("GetCommit", err)
 				return
@@ -452,23 +637,17 @@ func (ctx *APIContext) NotFoundOrServerError(logMsg string, errCheck func(error)
 
 // IsUserSiteAdmin returns true if current user is a site admin
 func (ctx *APIContext) IsUserSiteAdmin() bool {
-	if !ctx.Reducer.AllowAdminOverride() {
-		return false
-	}
-	return ctx.IsSigned && ctx.Doer.IsAdmin
+	return apiv1_permissions.IsUserSiteAdmin(ctx)
 }
 
 // IsUserRepoAdmin returns true if current user is admin in current repo
 func (ctx *APIContext) IsUserRepoAdmin() bool {
-	if !ctx.Reducer.AllowAdminOverride() {
-		return false
-	}
-	return ctx.Repo.IsAdmin()
+	return apiv1_permissions.IsUserRepoAdmin(ctx)
 }
 
 // IsUserRepoWriter returns true if current user has write privilege in current repo
 func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
-	return slices.ContainsFunc(unitTypes, ctx.Repo.CanWrite)
+	return apiv1_permissions.IsUserRepoWriter(ctx, unitTypes)
 }
 
 // Returns true when the requests indicates that it accepts a Github response.

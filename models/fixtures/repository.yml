@@ -22,7 +22,8 @@
   fork_id: 0
   is_template: false
   template_id: 0
-  size: 7597
+  size: 6422
+  git_size: 6422
   is_fsck_enabled: true
   close_issues_via_commit_in_any_branch: false
   created_unix: 1731254961
@@ -63,7 +64,7 @@
   lower_name: repo3
   name: repo3
   default_branch: master
-  num_watches: 0
+  num_watches: 1
   num_stars: 0
   num_forks: 0
   num_milestones: 0
@@ -93,7 +94,7 @@
   lower_name: repo4
   name: repo4
   default_branch: master
-  num_watches: 0
+  num_watches: 1
   num_stars: 1
   num_forks: 0
   num_milestones: 0
@@ -121,7 +122,7 @@
   lower_name: repo5
   name: repo5
   default_branch: master
-  num_watches: 0
+  num_watches: 2
   num_stars: 0
   num_forks: 0
   num_milestones: 0
@@ -1478,8 +1479,11 @@
   default_branch: master
   is_empty: false
   is_archived: false
-  is_private: true
+  is_private: false
   status: 0
+  size: 11
+  git_size: 10
+  lfs_size: 1 # discreet way of not having to touch the e2e storage quota tests
   topics: '[]'
 
 -

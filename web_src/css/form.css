@@ -45,10 +45,9 @@ fieldset label + .ui.dropdown {
   margin-top: 0.28rem !important;
 }
 
-fieldset label > input[type="checkbox"],
 fieldset label > input[type="radio"] {
-  margin-inline-end: 0.75em;
   margin-top: 0 !important;
+  margin-inline-end: 0.75em;
   vertical-align: initial !important; /* overrides a semantic.css rule, remove when obsolete */
 }
 
@@ -268,7 +267,7 @@ input:-webkit-autofill:active,
 .ui.form .required.fields > .field > label::after,
 .ui.form .required.field > label::after,
 .ui.form label.required::after {
-  color: var(--color-thin-red, var(--color-red));
+  color: var(--color-thin-red);
 }
 
 .ui.input {

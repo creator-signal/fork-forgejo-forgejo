@@ -23,13 +23,13 @@ import (
 	"forgejo.org/models/perm"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/pprof"
 	"forgejo.org/modules/private"
 	"forgejo.org/modules/process"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
-	"forgejo.org/services/lfs"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/kballard/go-shellquote"
@@ -328,7 +328,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		gitcmd = exec.CommandContext(ctx, gitBinVerb, repoPath)
 	}
 
-	process.SetSysProcAttribute(gitcmd)
+	process.SetupCancellableCommand(gitcmd)
 	gitcmd.Dir = setting.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin

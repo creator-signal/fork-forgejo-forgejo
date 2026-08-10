@@ -12,6 +12,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -21,6 +22,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"forgejo.org/cmd"
 	"forgejo.org/models/db"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
@@ -56,7 +58,41 @@ func exitf(format string, args ...any) {
 
 var preparedDir string
 
-func InitTest(requireGitea bool) {
+// DelegateToMainApp must be the first call in TestMain.
+// If the call must be delegated to the main, it will exit upon completion.
+func DelegateToMainApp() {
+	// inspired by https://abhinavg.net/2022/05/15/hijack-testmain/
+
+	_, isGitHook := os.LookupEnv("GIT_DIR")      // set when called from a hook or as subprocess
+	_, isSSHServ := os.LookupEnv("GIT_PROTOCOL") // set when called from ssh (for key lookup)
+
+	if isGitHook || isSSHServ {
+		app := cmd.NewMainApp("test-version", "integration-test")
+		if err := cmd.RunMainApp(app, os.Args...); err != nil {
+			panic(err) // should never happen since RunMainApp exits on error
+		}
+		os.Exit(0)
+	}
+}
+
+// RunMainAppWithStdin runs the subcommand and returns its standard output. Any returned error will usually be of type *ExitError. If c.Stderr was nil, Output populates ExitError.Stderr.
+func RunMainAppWithStdin(stdin io.Reader, subcommand string, args ...string) (string, error) {
+	// running the main app directly will very likely mess with the testing setup (logger & co.)
+	// hence we run it as a subprocess and capture its output
+	args = append([]string{"--config", setting.CustomConf, subcommand}, args...)
+	cmd := exec.Command(os.Args[0], args...)
+	cmd.Env = append(os.Environ(),
+		"GIT_DIR=", // signal DelegateToMainApp that we want to run main
+	)
+	cmd.Stdin = stdin
+	out, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); ok {
+		log.Error("%s %v exit on error %s", os.Args[0], args, ee.Stderr)
+	}
+	return string(out), err
+}
+
+func InitTest() {
 	log.RegisterEventWriter("test", testlogger.NewTestLoggerWriter)
 
 	giteaRoot := base.SetupGiteaRoot()
@@ -70,13 +106,6 @@ func InitTest(requireGitea bool) {
 	setting.IsInTesting = true
 	setting.AppWorkPath = giteaRoot
 	setting.CustomPath = filepath.Join(setting.AppWorkPath, "custom")
-	if requireGitea {
-		giteaBinary := "gitea"
-		setting.AppPath = path.Join(giteaRoot, giteaBinary)
-		if _, err := os.Stat(setting.AppPath); err != nil {
-			exitf("Could not find gitea binary at %s", setting.AppPath)
-		}
-	}
 	giteaConf := os.Getenv("GITEA_CONF")
 	if giteaConf == "" {
 		// By default, use sqlite.ini for testing, then IDE like GoLand can start the test process with debugger.
@@ -94,6 +123,12 @@ func InitTest(requireGitea bool) {
 	} else {
 		setting.CustomConf = giteaConf
 	}
+
+	executablePath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		exitf("could not determine absolute path: %w", err)
+	}
+	setting.AppPath = executablePath
 
 	unittest.InitSettings()
 	setting.Repository.DefaultBranch = "master" // many test code still assume that default branch is called "master"
@@ -197,8 +232,8 @@ func InitTest(requireGitea bool) {
 		log.Fatal("os.MkdirTemp: %v", err)
 	}
 
-	if err := unittest.CopyDir(path.Join(filepath.Dir(setting.AppPath), "tests/gitea-repositories-meta"), dir); err != nil {
-		log.Fatal("os.RemoveAll: %v", err)
+	if err := unittest.CopyDir(path.Join(setting.AppWorkPath, "tests/gitea-repositories-meta"), dir); err != nil {
+		log.Fatal("os.CopyDir: %v", err)
 	}
 	ownerDirs, err := os.ReadDir(dir)
 	if err != nil {
@@ -230,7 +265,7 @@ func PrepareAttachmentsStorage(t testing.TB) {
 	require.NoError(t, storage.Clean(storage.Attachments))
 
 	s, err := storage.NewStorage(setting.LocalStorageType, &setting.Storage{
-		Path: filepath.Join(filepath.Dir(setting.AppPath), "tests", "testdata", "data", "attachments"),
+		Path: filepath.Join(setting.AppWorkPath, "tests", "testdata", "data", "attachments"),
 	})
 	require.NoError(t, err)
 	require.NoError(t, s.IterateObjects("", func(p string, obj storage.Object) error {
@@ -257,12 +292,14 @@ func cancelProcesses(t testing.TB, delay time.Duration) {
 	processes, _ = processManager.Processes(true, true)
 	for len(processes) > 0 {
 		if time.Since(start) > delay {
-			t.Errorf("ERROR PrepareTestEnv: could not cancel all processes within %s", delay)
+			// `println` is used for output here -- exitf doesn't return control to the testing process and so test logs
+			// are not output to the console
+			fmt.Printf("ERROR PrepareTestEnv: could not cancel all processes within %s", delay)
 			for _, p := range processes {
 				t.Logf("PrepareTestEnv:Remaining Process: %q", p.Description)
 			}
 			stacks := allGoroutineStacks()
-			t.Errorf("All goroutine stacks during process cancellation failure:\n%s", string(stacks))
+			fmt.Printf("All goroutine stacks during process cancellation failure:\n%s", string(stacks))
 			// exit so that we don't spin in a loop executing `delay` wait over and over again when we won't be able to
 			// complete tests correctly due to the environmental issue present.
 			exitf("terminating test run due to unrecoverable failure")
@@ -296,7 +333,7 @@ func PrepareArtifactsStorage(t testing.TB) {
 	require.NoError(t, storage.Clean(storage.ActionsArtifacts))
 
 	s, err := storage.NewStorage(setting.LocalStorageType, &setting.Storage{
-		Path: filepath.Join(filepath.Dir(setting.AppPath), "tests", "testdata", "data", "artifacts"),
+		Path: filepath.Join(setting.AppWorkPath, "tests", "testdata", "data", "artifacts"),
 	})
 	require.NoError(t, err)
 	require.NoError(t, s.IterateObjects("", func(p string, obj storage.Object) error {
@@ -309,7 +346,7 @@ func PrepareLFSStorage(t testing.TB) {
 	// load LFS object fixtures
 	// (LFS storage can be on any of several backends, including remote servers, so init it with the storage API)
 	lfsFixtures, err := storage.NewStorage(setting.LocalStorageType, &setting.Storage{
-		Path: filepath.Join(filepath.Dir(setting.AppPath), "tests/gitea-lfs-meta"),
+		Path: filepath.Join(setting.AppWorkPath, "tests/gitea-lfs-meta"),
 	})
 	require.NoError(t, err)
 	require.NoError(t, storage.Clean(storage.LFS))
@@ -341,6 +378,10 @@ var inTestEnv atomic.Bool
 func PrepareTestEnv(t testing.TB, skip ...int) func() {
 	deferFn := PrepareTestEnvWithPackageData(t, skip...)
 	PrepareCleanPackageData(t)
+
+	giteaRoot := base.SetupGiteaRoot()
+	setting.AppWorkPath = giteaRoot
+
 	return deferFn
 }
 

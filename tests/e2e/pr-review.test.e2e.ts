@@ -100,12 +100,12 @@ test('PR: Create review from commit', async ({page}) => {
   // in-between, and subsequent runs of this test would fail, because when there already is
   // a comment, the on-hover button to start a conversation doesn't appear anymore.
   await page.goto('/user2/repo1/pulls/3/commits/4a357436d925b5c974181ff12a994538ddc5a269');
-  await page.locator('.comment-header-right.actions a.context-menu').click();
+  await page.locator('.comment-header-right.actions details.dropdown summary').click();
 
-  await expect(page.locator('.comment-header-right.actions div.menu').getByText(/Copy link.*/)).toBeVisible();
+  await expect(page.locator('.comment-header-right.actions details.dropdown .content').getByText(/Copy link.*/)).toBeVisible();
   // The button to delete a comment will prompt for confirmation using a browser alert.
   page.on('dialog', (dialog) => dialog.accept());
-  await page.locator('.comment-header-right.actions div.menu .delete-comment').click();
+  await page.locator('.comment-header-right.actions details.dropdown .content .delete-comment').click();
 
   await expect(page.locator('.comment-list .comment-container')).toBeHidden();
   await screenshot(page);
@@ -115,7 +115,7 @@ test('PR: Navigate by single commit', async ({page}) => {
   const response = await page.goto('/user2/repo1/pulls/3/commits');
   expect(response?.status()).toBe(200);
 
-  await page.locator('tbody.commit-list td.message a').nth(1).click();
+  await page.locator('.commit .message-wrapper a').nth(1).click();
   await page.waitForURL(/.*\/user2\/repo1\/pulls\/3\/commits\/4a357436d925b5c974181ff12a994538ddc5a269/);
   await screenshot(page);
 

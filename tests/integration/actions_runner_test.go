@@ -141,6 +141,18 @@ func (r *mockRunner) registerAsEphemeralRepoRunner(t *testing.T, ownerName, repo
 	r.doRegisterEphemeral(t, runnerName, registrationToken.Token, labels)
 }
 
+func (r *mockRunner) fetchTaskOrError(t *testing.T, taskCapacity int64) (*runnerv1.Task, []*runnerv1.Task, error) {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		TaskCapacity: &taskCapacity,
+	}))
+	if err != nil {
+		return nil, nil, err
+	}
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task, resp.Msg.AdditionalTasks, nil
+}
+
 func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
 	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
 		TasksVersion: r.lastTasksVersion,
@@ -148,6 +160,16 @@ func (r *mockRunner) maybeFetchTask(t *testing.T) *runnerv1.Task {
 	require.NoError(t, err)
 	r.lastTasksVersion = resp.Msg.TasksVersion
 	return resp.Msg.Task
+}
+
+func (r *mockRunner) maybeFetchTaskWithTaskCapacity(t *testing.T, taskCapacity int64) (*runnerv1.Task, []*runnerv1.Task) {
+	resp, err := r.client.runnerServiceClient.FetchTask(t.Context(), connect.NewRequest(&runnerv1.FetchTaskRequest{
+		TasksVersion: r.lastTasksVersion,
+		TaskCapacity: &taskCapacity,
+	}))
+	require.NoError(t, err)
+	r.lastTasksVersion = resp.Msg.TasksVersion
+	return resp.Msg.Task, resp.Msg.AdditionalTasks
 }
 
 func (r *mockRunner) maybeFetchSingleTask(t *testing.T, handle *string) *runnerv1.Task {
@@ -211,6 +233,10 @@ type mockTaskOutcome struct {
 	result  runnerv1.Result
 	outputs map[string]string
 	logRows []*runnerv1.LogRow
+	// stepStates, when non-nil, is included in the final UpdateTask's
+	// TaskState.Steps. Lets tests exercise per-step LogIndex/LogLength
+	// (and other StepState fields) without reaching into the DB directly.
+	stepStates []*runnerv1.StepState
 }
 
 func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTaskOutcome) {
@@ -242,6 +268,7 @@ func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTa
 			Id:        task.Id,
 			Result:    outcome.result,
 			StoppedAt: timestamppb.Now(),
+			Steps:     outcome.stepStates,
 		},
 	}))
 	require.NoError(t, err)

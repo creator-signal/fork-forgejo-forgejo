@@ -2,7 +2,7 @@ name: Integration tests for the release process
 enable-email-notifications: true
 
 env:
-  FORGEJO_VERSION: 11.0.14 # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
+  FORGEJO_VERSION: 11.0.16 # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
 
 on:
   push:
@@ -29,10 +29,10 @@ jobs:
     if: vars.ROLE == 'forgejo-coding'
     runs-on: lxc-bookworm
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v6
+      - uses: https://data.forgejo.org/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - id: forgejo
-        uses: https://data.forgejo.org/actions/setup-forgejo@v3.1.12
+        uses: https://data.forgejo.org/actions/setup-forgejo@1b17d882d8ab124055bc5c2f0e32e0a58a11836b # v3.2.4
         with:
           user: root
           password: admin1234

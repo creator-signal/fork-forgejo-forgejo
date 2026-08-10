@@ -6,6 +6,7 @@ package actions
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,7 +18,8 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
+	"code.forgejo.org/xorm/xorm"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"xorm.io/builder"
 )
@@ -161,19 +163,8 @@ func (task *ActionTask) UpdateToken(ctx context.Context) error {
 	return UpdateTask(ctx, task, "token_hash", "token_salt", "token_last_eight")
 }
 
-// Retrieve all the attempts from the same job as the target `ActionTask`.  Limited fields are queried to avoid loading
-// the LogIndexes blob when not needed.
-func (task *ActionTask) GetAllAttempts(ctx context.Context) ([]*ActionTask, error) {
-	var attempts []*ActionTask
-	err := db.GetEngine(ctx).
-		Cols("id", "attempt", "status", "started").
-		Where("job_id=?", task.JobID).
-		Desc("attempt").
-		Find(&attempts)
-	if err != nil {
-		return nil, err
-	}
-	return attempts, nil
+func (task *ActionTask) HasLogs() bool {
+	return task.LogFilename != ""
 }
 
 func GetTaskByID(ctx context.Context, id int64) (*ActionTask, error) {
@@ -322,10 +313,10 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	if runner.RepoID != 0 {
 		jobCond = builder.Eq{"repo_id": runner.RepoID}
 	} else if runner.OwnerID != 0 {
-		jobCond = builder.In("repo_id", builder.Select("`repository`.id").From("repository").
-			Join("INNER", "repo_unit", "`repository`.id = `repo_unit`.repo_id").
-			Where(builder.Eq{"`repository`.owner_id": runner.OwnerID, "`repo_unit`.type": unit.TypeActions}))
+		jobCond = builder.Exists(builder.Select("`repository`.id").From("repository").
+			Where(builder.Expr("`repository`.owner_id = ? AND repo_id = `repository`.id", runner.OwnerID)))
 	}
+
 	// Concurrency group checks for queuing one run behind the last run in the concurrency group are more
 	// computationally expensive on the database. To manage the risk that this might have on large-scale deployments
 	// When this feature is initially released, it can be disabled in the ini file by setting
@@ -350,16 +341,28 @@ func GetAvailableJobsForRunner(e db.Engine, runner *ActionRunner) ([]*ActionRunJ
 	}
 
 	var jobs []*ActionRunJob
-	if err := e.Where("task_id=? AND status=?", 0, StatusWaiting).And(jobCond).Asc("updated", "id").Find(&jobs); err != nil {
+	if err := e.
+		Join("INNER", "action_run", "action_run_job.run_id = action_run.id").
+		Join("INNER", "repo_unit", "action_run_job.repo_id = repo_unit.repo_id").
+		Where("task_id=? AND action_run_job.status=? AND `repo_unit`.type=?", 0, StatusWaiting, unit.TypeActions).
+		And(jobCond).
+		Desc("action_run.priority").
+		Asc("action_run_job.updated", "action_run_job.id").
+		Find(&jobs); err != nil {
 		return nil, err
 	}
 	return jobs, nil
 }
 
-func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, bool, error) {
+var (
+	ErrNoMatchingJobFound = errors.New("no matching job found")
+	ErrNoJobUpdated       = errors.New("no job updated")
+)
+
+func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, handle *string) (*ActionTask, error) {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer committer.Close()
 
@@ -367,7 +370,7 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 
 	jobs, err := GetAvailableJobsForRunner(e, runner)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	// TODO: a more efficient way to filter labels
@@ -380,10 +383,10 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 		}
 	}
 	if job == nil {
-		return nil, false, nil
+		return nil, ErrNoMatchingJobFound
 	}
 	if err := job.LoadAttributes(ctx); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	now := timeutil.TimeStampNow()
@@ -408,20 +411,20 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 
 	var workflowJob *jobparser.Job
 	if gots, err := jobparser.Parse(job.WorkflowPayload, false); err != nil {
-		return nil, false, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
+		return nil, fmt.Errorf("parse workflow of job %d: %w", job.ID, err)
 	} else if len(gots) != 1 {
-		return nil, false, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
+		return nil, fmt.Errorf("workflow of job %d: not single workflow", job.ID)
 	} else { //nolint:revive
 		_, workflowJob = gots[0].Job()
 	}
 
 	if _, err := e.Insert(task); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	task.LogFilename = logFileName(job.Run.Repo.FullName(), task.ID)
 	if err := UpdateTask(ctx, task, "log_filename"); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if len(workflowJob.Steps) > 0 {
@@ -437,26 +440,33 @@ func CreateTaskForRunner(ctx context.Context, runner *ActionRunner, requestKey, 
 			}
 		}
 		if _, err := e.Insert(steps); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		task.Steps = steps
 	}
 
 	job.TaskID = task.ID
 	// We never have to send a notification here because the job is started with a not done status.
-	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil {
-		return nil, false, err
+	//
+	// ErrDeadlock can occur on MariaDB w/ `innodb_snapshot_isolation`, rather than returning 0 records -- we can treat
+	// that just the same and return the `ErrNoJobUpdated` error code. An alternative would be to use READ COMMITTED
+	// transaction isolation level, but models/db doesn't currently expose that, and it would cause transaction nesting
+	// difficulties.
+	if n, err := UpdateRunJobWithoutNotification(ctx, job, builder.Eq{"task_id": 0}); err != nil && errors.Is(err, xorm.ErrDeadlock) {
+		return nil, ErrNoJobUpdated
+	} else if err != nil {
+		return nil, err
 	} else if n != 1 {
-		return nil, false, nil
+		return nil, ErrNoJobUpdated
 	}
 
 	task.Job = job
 
 	if err := committer.Commit(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return task, true, nil
+	return task, nil
 }
 
 // Placeholder tasks are created when the status/content of an [ActionRunJob] is resolved by Forgejo without dispatch to

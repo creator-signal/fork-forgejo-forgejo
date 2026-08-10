@@ -20,6 +20,7 @@ const testLocale = {
   viewingOutOfDateRun: 'oh no, out of date since %[1]s give or take or so',
   viewMostRecentRun: '',
   preExecutionError: 'pre-execution error',
+  preExecutionWarning: 'pre-execution warning',
   status: {
     unknown: '',
     waiting: '',
@@ -564,9 +565,8 @@ test('view non-picked action run job', async () => {
           },
           currentJob: {
             title: 'check-1',
-            details: ['waiting (locale)'], // locale-specific, not exact match to backend test
             steps: [],
-            allAttempts: null,
+            allAttempts: [{number: 1, time_since_started_html: '', status: 'Waiting', status_diagnostics: ['Waiting']}],
           },
         },
       },
@@ -574,7 +574,7 @@ test('view non-picked action run job', async () => {
   });
   await flushPromises();
 
-  expect(wrapper.get('.job-info-header-detail li:first-child').text()).toEqual('waiting (locale)');
+  expect(wrapper.get('.job-info-header-detail li:first-child').text()).toEqual('Waiting');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(1) .job-brief-name').text()).toEqual('check-1');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(2) .job-brief-name').text()).toEqual('check-2');
   expect(wrapper.get('.job-brief-list .job-brief-item:nth-of-type(3) .job-brief-name').text()).toEqual('check-3');
@@ -582,7 +582,7 @@ test('view non-picked action run job', async () => {
   // Attempt status
   expect(wrapper.get('.job-info-header h3').text()).toEqual('check-1');
   expect(wrapper.findAll('ul.job-info-header-detail li').length).toEqual(1);
-  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('waiting (locale)');
+  expect(wrapper.get('ul.job-info-header-detail li:nth-child(1)').text()).toEqual('Waiting');
 });
 
 test('view without pre-execution error', async () => {
@@ -612,7 +612,33 @@ test('view with pre-execution error', async () => {
     },
   });
   await flushPromises();
-  const block = wrapper.find('.pre-execution-error');
+  const block = wrapper.find('.error.pre-execution-error');
   expect(block.exists()).toBe(true);
   expect(block.text()).toBe('pre-execution error Oops, I dropped it.');
+});
+
+test('view with pre-execution warning error', async () => {
+  Object.defineProperty(document.documentElement, 'lang', {value: 'en'});
+  const wrapper = mount(RepoActionView, {
+    props: {
+      ...defaultTestProps,
+      initialJobData: {
+        ...minimalInitialJobData,
+        state: {
+          ...minimalInitialJobData.state,
+          run: {
+            ...minimalInitialJobData.state.run,
+            preExecutionWarnings: [
+              'Warning 1: Action looks unstable.',
+              'Warning 1: Action looks floppy.',
+            ],
+          },
+        },
+      },
+    },
+  });
+  await flushPromises();
+  const block = wrapper.find('.warning.pre-execution-error');
+  expect(block.exists()).toBe(true);
+  expect(block.text()).toBe('pre-execution warningWarning 1: Action looks unstable.Warning 1: Action looks floppy.');
 });
