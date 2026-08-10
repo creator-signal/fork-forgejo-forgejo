@@ -1036,9 +1036,9 @@ func registerRoutes(m *web.Route) {
 		}
 	}
 
-	userPermsChecker := func(ctx *context.Context) {
-		// org permissions have been checked in context.OrgAssignment(), but user permissions haven't been checked.
-		if ctx.ContextUser.IsUser() {
+	individualPermsChecker := func(ctx *context.Context) {
+		// org permissions have been checked in context.OrgAssignment(), but individual permissions haven't been checked.
+		if ctx.ContextUser.IsIndividual() {
 			switch ctx.ContextUser.Visibility {
 			case structs.VisibleTypePrivate:
 				if ctx.Doer == nil || (ctx.ContextUser.ID != ctx.Doer.ID && !ctx.Doer.IsAdmin) {
@@ -1243,11 +1243,11 @@ func registerRoutes(m *web.Route) {
 					return
 				}
 			})
-		}, reqUnitAccess(unit.TypeProjects, perm.AccessModeRead, true), userPermsChecker)
+		}, reqUnitAccess(unit.TypeProjects, perm.AccessModeRead, true), individualPermsChecker)
 
 		m.Group("", func() {
 			m.Get("/code", user.CodeSearch)
-		}, reqUnitAccess(unit.TypeCode, perm.AccessModeRead, false), userPermsChecker)
+		}, reqUnitAccess(unit.TypeCode, perm.AccessModeRead, false), individualPermsChecker)
 	}, ignSignIn, context.UserAssignmentWeb(), context.OrgAssignment()) // for "/{username}/-" (packages, projects, code)
 
 	m.Group("/{username}/{reponame}", func() {

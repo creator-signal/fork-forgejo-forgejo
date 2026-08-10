@@ -76,7 +76,7 @@ func Authenticate(ctx context.Context, user *user_model.User, login, password st
 	}
 
 	// attempting to login as a non-user account
-	if !user.IsUser() {
+	if user.Type != user_model.UserTypeIndividual {
 		return nil, user_model.ErrUserProhibitLogin{
 			UID:  user.ID,
 			Name: user.Name,
