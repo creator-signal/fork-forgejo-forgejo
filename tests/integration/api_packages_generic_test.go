@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/packages"
@@ -114,10 +115,28 @@ func TestPackageGeneric(t *testing.T) {
 			assert.Equal(t, count, pvs[0].DownloadCount)
 		}
 
+		var nilTime time.Time
+		checkLastDownloadAfter := func(referenceTime time.Time) {
+			pvs, err := packages.GetVersionsByPackageType(db.DefaultContext, user.ID, packages.TypeGeneric)
+			require.NoError(t, err)
+			assert.Len(t, pvs, 1)
+			if referenceTime == nilTime {
+				assert.Nil(t, pvs[0].LastDownloadUnix)
+			} else {
+				assert.True(t, pvs[0].LastDownloadUnix.AsLocalTime().After(referenceTime))
+			}
+		}
+
 		checkDownloadCount(0)
+		checkLastDownloadAfter(nilTime)
 
 		req := NewRequest(t, "HEAD", url+"/"+filename)
 		MakeRequest(t, req, http.StatusOK)
+
+		checkDownloadCount(0)
+		checkLastDownloadAfter(nilTime)
+
+		preRequestTime := time.Now()
 
 		req = NewRequest(t, "GET", url+"/"+filename)
 		resp := MakeRequest(t, req, http.StatusOK)
@@ -125,11 +144,15 @@ func TestPackageGeneric(t *testing.T) {
 		assert.Equal(t, content, resp.Body.Bytes())
 
 		checkDownloadCount(1)
+		checkLastDownloadAfter(preRequestTime)
+
+		preRequestTime = time.Now()
 
 		req = NewRequest(t, "GET", url+"/dummy.bin")
 		MakeRequest(t, req, http.StatusOK)
 
 		checkDownloadCount(2)
+		checkLastDownloadAfter(preRequestTime)
 
 		t.Run("NotExists", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
@@ -176,10 +199,15 @@ func TestPackageGeneric(t *testing.T) {
 			req := NewRequest(t, "HEAD", url+"/"+filename)
 			MakeRequest(t, req, http.StatusOK)
 
+			checkDownloadCount(2)
+
+			preRequestTime = time.Now()
+
 			req = NewRequest(t, "GET", url+"/"+filename)
 			resp := MakeRequest(t, req, http.StatusSeeOther)
 
 			checkDownloadCount(3)
+			checkLastDownloadAfter(preRequestTime)
 
 			location := resp.Header().Get("Location")
 			assert.NotEmpty(t, location)
