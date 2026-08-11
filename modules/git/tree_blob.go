@@ -54,12 +54,12 @@ func (t *Tree) getTreeEntryByMaybeFoldedPath(relpath string, fold bool) (*TreeEn
 	return nil, ErrNotExist{"", relpath}
 }
 
-// GetTreeEntryByPath get the tree entries according the sub dir
+// GetTreeEntryByPath get the tree entries according to the sub dir
 func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 	return t.getTreeEntryByMaybeFoldedPath(relpath, false)
 }
 
-// GetTreeEntryByFoldedPath get the tree entries according the sub dir,
+// GetTreeEntryByFoldedPath get the tree entries according to the sub dir,
 // regardless of the case of relpath. If there are multiple files with the same
 // (case-insensitive) name, the first one found is returned.
 func (t *Tree) GetTreeEntryByFoldedPath(relpath string) (*TreeEntry, error) {
