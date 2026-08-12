@@ -38,33 +38,33 @@ var fundingCandidates = []string{
 	"FUNDING.yml",
 }
 
-// Transforms unicode in the given URL's domain name into its punycode
-// representation. Modifies the input URL.
-//
-// Returns an error and aborts conversion if something went wrong.
-func convertToASCII(url *url.URL) error {
+// Returns a copy of the given URL, with its hostname converted into its
+// punycode representation if needed.
+func withASCIIHostname(url *url.URL) (*url.URL, error) {
 	port := url.Port()
 
 	// Punycode!
 	hostname, err := idna.ToASCII(url.Hostname())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// domain names are always lowercase
 	hostname = strings.ToLower(hostname)
 
+	newURL := *url
+
 	// url.Hostname() removes brackets, so we replace them if the host had them before
-	if strings.HasPrefix(url.Host, "[") {
-		url.Host = "[" + hostname + "]"
+	if strings.HasPrefix(newURL.Host, "[") {
+		newURL.Host = "[" + hostname + "]"
 	} else {
-		url.Host = hostname
+		newURL.Host = hostname
 	}
 	if port != "" {
-		url.Host += ":" + port
+		newURL.Host += ":" + port
 	}
 
-	return nil
+	return &newURL, nil
 }
 
 // Constructs a funding entry from the known funding providers config and the
@@ -99,7 +99,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 		}}
 	}
 
-	err = convertToASCII(urlValue)
+	urlValue, err = withASCIIHostname(urlValue)
 	if err != nil {
 		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
