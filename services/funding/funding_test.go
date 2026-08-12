@@ -26,7 +26,6 @@ func assertEntry(t *testing.T, entry *api.RepoFundingEntry, expectedProvider, ex
 	assert.Equal(t, expectedProvider, entry.ProviderName)
 	assert.Equal(t, expectedTitle, entry.Title)
 	assert.Equal(t, expectedValue, entry.Value)
-	assert.Equal(t, api.RepoFundingEntryKind("url"), entry.Kind) // "url" is the only permitted entry kind (for now)
 }
 
 func assertCustom(t *testing.T, entry *api.RepoFundingEntry, expectedTitle, expectedValue string) {

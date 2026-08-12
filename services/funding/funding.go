@@ -108,7 +108,6 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 	entry.ProviderName = provider.Name
 	entry.Title = fmt.Sprintf(provider.Title, input)
 	entry.Value = urlValue.String()
-	entry.Kind = api.URLFundingEntryKind
 
 	return entry, nil
 }
