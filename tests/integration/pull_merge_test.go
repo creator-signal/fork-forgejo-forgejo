@@ -46,6 +46,7 @@ import (
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/pull"
+	repo_service "forgejo.org/services/repository"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
 	webhook_service "forgejo.org/services/webhook"
 	"forgejo.org/tests"
@@ -167,6 +168,49 @@ func TestPullRebase(t *testing.T) {
 
 		hookTasks = retrieveHookTasks(t, 1, false)
 		assert.Len(t, hookTasks, hookTasksLenBefore+1)
+	})
+}
+
+func TestSequentialRebaseMergesKeepBranchInSync(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, giteaURL *url.URL) {
+		session := loginUser(t, "user2")
+		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+		createBranch := func(branch, file, content string) {
+			resp := session.MakeRequest(t, NewRequest(t, "GET", path.Join(repo.OwnerName, repo.Name, "_new", repo.DefaultBranch)), http.StatusOK)
+			lastCommit := NewHTMLParser(t, resp.Body).GetInputValueByName("last_commit")
+			require.NotEmpty(t, lastCommit)
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", path.Join(repo.OwnerName, repo.Name, "_new", repo.DefaultBranch), map[string]string{
+				"last_commit":     lastCommit,
+				"tree_path":       file,
+				"content":         content,
+				"commit_choice":   "commit-to-new-branch",
+				"new_branch_name": branch,
+				"commit_mail_id":  "-1",
+			}), http.StatusSeeOther)
+		}
+
+		createBranch("first", "first.txt", "first rebase merge\n")
+		createBranch("second", "second.txt", "second rebase merge\n")
+
+		first := testPullCreate(t, session, repo.OwnerName, repo.Name, true, repo.DefaultBranch, "first", "first")
+		firstIndex := strings.Split(test.RedirectURL(first), "/")[4]
+		testPullMerge(t, session, repo.OwnerName, repo.Name, firstIndex, repo_model.MergeStyleRebase, false)
+
+		second := testPullCreate(t, session, repo.OwnerName, repo.Name, true, repo.DefaultBranch, "second", "second")
+		secondIndex := strings.Split(test.RedirectURL(second), "/")[4]
+		testPullMerge(t, session, repo.OwnerName, repo.Name, secondIndex, repo_model.MergeStyleRebase, false)
+
+		gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+		latestCommitID, err := gitRepo.GetBranchCommitID(repo.DefaultBranch)
+		require.NoError(t, err)
+
+		require.NoError(t, repo_service.SyncBranchesToDB(t.Context(), repo.ID, 0,
+			[]string{repo.DefaultBranch}, gitRepo.GetBranchCommitID, gitRepo.GetCommit))
+
+		branch := unittest.AssertExistsAndLoadBean(t, &git_model.Branch{RepoID: repo.ID, Name: repo.DefaultBranch})
+		assert.Equal(t, latestCommitID, branch.CommitID)
 	})
 }
 

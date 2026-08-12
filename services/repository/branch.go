@@ -238,7 +238,7 @@ func checkBranchName(ctx context.Context, repo *repo_model.Repository, name stri
 // It will check whether the branches of the repository have never been synced before.
 // If so, it will sync all branches of the repository.
 // Otherwise, it will sync the branches that need to be updated.
-func SyncBranchesToDB(ctx context.Context, repoID, pusherID int64, branchNames, commitIDs []string, getCommit func(commitID string) (*git.Commit, error)) error {
+func SyncBranchesToDB(ctx context.Context, repoID, pusherID int64, branchNames []string, getBranchCommitID func(branchName string) (string, error), getCommit func(commitID string) (*git.Commit, error)) error {
 	// Some designs that make the code look strange but are made for performance optimization purposes:
 	// 1. Sync branches in a batch to reduce the number of DB queries.
 	// 2. Lazy load commit information since it may be not necessary.
@@ -249,10 +249,6 @@ func SyncBranchesToDB(ctx context.Context, repoID, pusherID int64, branchNames, 
 	// See https://github.com/go-gitea/gitea/blob/cb52b17f92e2d2293f7c003649743464492bca48/cmd/hook.go#L27
 	// For the first batch, it will hit optimization 3.
 	// For other batches, it will hit optimization 4.
-
-	if len(branchNames) != len(commitIDs) {
-		return errors.New("branchNames and commitIDs length not match")
-	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
 		branches, err := git_model.GetBranches(ctx, repoID, branchNames, true)
@@ -285,8 +281,12 @@ func SyncBranchesToDB(ctx context.Context, repoID, pusherID int64, branchNames, 
 
 		newBranches := make([]*git_model.Branch, 0, len(branchNames))
 
-		for i, branchName := range branchNames {
-			commitID := commitIDs[i]
+		for _, branchName := range branchNames {
+			commitID, err := getBranchCommitID(branchName)
+			if err != nil {
+				return fmt.Errorf("get branch commit of %s failed: %v", branchName, err)
+			}
+
 			branch, exist := branchMap[branchName]
 			if exist && branch.CommitID == commitID && !branch.IsDeleted {
 				continue

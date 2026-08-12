@@ -131,16 +131,12 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 				return
 			}
 
-			var (
-				branchNames = make([]string, 0, len(branchesToSync))
-				commitIDs   = make([]string, 0, len(branchesToSync))
-			)
+			branchNames := make([]string, 0, len(branchesToSync))
 			for _, update := range branchesToSync {
 				branchNames = append(branchNames, update.RefFullName.BranchName())
-				commitIDs = append(commitIDs, update.NewCommitID)
 			}
 
-			if err := repo_service.SyncBranchesToDB(ctx, repo.ID, opts.UserID, branchNames, commitIDs, gitRepo.GetCommit); err != nil {
+			if err := repo_service.SyncBranchesToDB(ctx, repo.ID, opts.UserID, branchNames, gitRepo.GetBranchCommitID, gitRepo.GetCommit); err != nil {
 				ctx.JSON(http.StatusInternalServerError, private.HookPostReceiveResult{
 					Err: fmt.Sprintf("Failed to sync branch to DB in repository: %s/%s Error: %v", ownerName, repoName, err),
 				})
