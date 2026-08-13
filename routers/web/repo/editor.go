@@ -975,3 +975,45 @@ func getGitIdentity(ctx *context.Context, commitMailID int64, tpl base.TplName, 
 
 	return gitIdentity
 }
+
+// Returns Git identity based on the "From: [...]" line in a file generate with `git format-patch`.
+// Since such patches are maintainer-controlled, we don't handle erroneous input and only return
+// the identity if the file follows the expected format.
+func getGitIdentityFromPatch(content string) *files_service.IdentityOptions {
+	lines := strings.Split(content, "\n")
+	if len(lines) < 2 {
+		return nil
+	}
+
+	withoutPrefix, found := strings.CutPrefix(lines[1], "From: ")
+	if !found {
+		return nil
+	}
+
+	// Usernames can contain `<` characters, so we find the last one (rather than the first one)
+	// to determine the email address. Technically, that could also have one (or more) provided they
+	// were quoted (e.g. `"<>"strange@example.com`), but such a rare case is not worth adding
+	// complexity over and can be fixed up manually by a maintainer when necessary.
+	lastLt := strings.LastIndex(withoutPrefix, "<")
+	// -1 meaning not found or 0 meaning the username is somehow missing ("somehow" because Git
+	// won't let you commit if you set `git config user.name ""`).
+	if lastLt <= 0 {
+		return nil
+	}
+
+	// `-1` to get rid of the last space between the name and the email.
+	name := withoutPrefix[:lastLt-1]
+	if len(name) == 0 {
+		return nil
+	}
+
+	email := withoutPrefix[lastLt+1 : len(withoutPrefix)-1]
+	if len(email) == 0 {
+		return nil
+	}
+
+	return &files_service.IdentityOptions{
+		Name:  name,
+		Email: email,
+	}
+}

@@ -92,13 +92,19 @@ func NewDiffPatchPost(ctx *context.Context) {
 		return
 	}
 
+	normalizedContent := strings.ReplaceAll(form.Content, "\r", "")
+	author := getGitIdentityFromPatch(normalizedContent)
+	if author == nil {
+		author = gitIdentity
+	}
+
 	fileResponse, err := files.ApplyDiffPatch(ctx, ctx.Repo.Repository, ctx.Doer, &files.ApplyDiffPatchOptions{
 		LastCommitID: form.LastCommit,
 		OldBranch:    ctx.Repo.BranchName,
 		NewBranch:    branchName,
 		Message:      message,
-		Content:      strings.ReplaceAll(form.Content, "\r", ""),
-		Author:       gitIdentity,
+		Content:      normalizedContent,
+		Author:       author,
 		Committer:    gitIdentity,
 	})
 	if err != nil {

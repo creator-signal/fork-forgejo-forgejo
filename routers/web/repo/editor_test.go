@@ -11,6 +11,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/services/contexttest"
+	files_service "forgejo.org/services/repository/files"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -70,4 +71,49 @@ func TestGetClosestParentWithFiles(t *testing.T) {
 		treePath := GetClosestParentWithFiles(deletedFile, commit)
 		assert.Equal(t, expectedTreePath, treePath)
 	}
+}
+
+func TestGetGitIdentityFromPatch(t *testing.T) {
+	unittest.PrepareTestEnv(t)
+
+	happyPathPatch := `From c862ec13473625a37edb761c7bc5c62f0917f067 Mon Sep 17 00:00:00 2001
+From: test <test@test.com>
+Date: Thu, 13 Aug 2026 15:56:28 +0200
+Subject: [PATCH] fix a typo
+
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 0a63820..204b7f9 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-# This is my awesom project!
++# This is my awesome project!
+--
+2.47.3
+`
+	gitIdentityHappyPath := getGitIdentityFromPatch(happyPathPatch)
+	assert.Equal(t, &files_service.IdentityOptions{Name: "test", Email: "test@test.com"}, gitIdentityHappyPath)
+
+	invalidPatchOneLine := "From c862ec13473625a37edb761c7bc5c62f0917f067 Mon Sep 17 00:00:00 2001"
+	gitIdentityInvalidPatchOneLine := getGitIdentityFromPatch(invalidPatchOneLine)
+	assert.Nil(t, gitIdentityInvalidPatchOneLine)
+
+	invalidPatchSecondLineDoesntStartWithFrom := `From c862ec13473625a37edb761c7bc5c62f0917f067 Mon Sep 17 00:00:00 2001
+test <test@test.com>`
+	gitIdentityInvalidPatchSecondLineDoesntStartWithFrom := getGitIdentityFromPatch(invalidPatchSecondLineDoesntStartWithFrom)
+	assert.Nil(t, gitIdentityInvalidPatchSecondLineDoesntStartWithFrom)
+
+	invalidPatchNoName := `From c862ec13473625a37edb761c7bc5c62f0917f067 Mon Sep 17 00:00:00 2001
+From: <test@test.com>`
+	gitIdentityInvalidPatchNoName := getGitIdentityFromPatch(invalidPatchNoName)
+	assert.Nil(t, gitIdentityInvalidPatchNoName)
+
+	invalidPatchNoEmail := `From c862ec13473625a37edb761c7bc5c62f0917f067 Mon Sep 17 00:00:00 2001
+From: test <>`
+	gitIdentityInvalidPatchNoEmail := getGitIdentityFromPatch(invalidPatchNoEmail)
+	assert.Nil(t, gitIdentityInvalidPatchNoEmail)
 }
