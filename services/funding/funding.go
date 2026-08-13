@@ -113,7 +113,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 }
 
 type RepoFunding struct {
-	// The navigable path to the repository's funding config file
+	// The path to the web view of the repository's funding config file
 	ConfigPath string
 
 	// Funding options for the repository
@@ -150,7 +150,7 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 		return nil, err
 	}
 
-	configPath = fmt.Sprintf("/%s/src/branch/%s/%s", util.PathEscapeSegments(r.FullName()), util.PathEscapeSegments(r.DefaultBranch), configPath)
+	configPath = fmt.Sprintf("%s/src/branch/%s/%s", r.Link(), util.PathEscapeSegments(r.DefaultBranch), configPath)
 
 	data, lineErrors, err := getFundingFromBlob(configContent)
 	if err != nil {
