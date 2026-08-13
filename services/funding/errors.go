@@ -83,7 +83,7 @@ func (err ErrBadInput) Error() string {
 }
 
 func (ErrBadInput) Is(err error) bool {
-	_, ok := err.(ErrBadInput)
+	_, ok := err.(*ErrBadInput) // TODO: why is * needed here and not in the others?
 	return ok
 }
 
@@ -98,7 +98,7 @@ func (err ErrCannotParseURL) Error() string {
 }
 
 func (ErrCannotParseURL) Is(err error) bool {
-	_, ok := err.(ErrCannotParseURL)
+	_, ok := err.(*ErrCannotParseURL) // TODO: why is * needed here and not in the others?
 	return ok
 }
 

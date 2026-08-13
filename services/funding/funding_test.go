@@ -66,18 +66,18 @@ func TestFundingErrorIdentityPrimitives(t *testing.T) {
 		{ErrUnknownFundingProvider{Name: "SomeName"}, ErrUnknownFundingProvider{}},
 		{ErrTooManyFundingProviders{TotalLimit: 50}, ErrTooManyFundingProviders{}},
 		{ErrDuplicateFundingEntry{Name: "SomeName", Value: "SomeValue"}, ErrDuplicateFundingEntry{}},
-		{ErrBadInput{Name: "SomeName"}, ErrBadInput{}},
-		{ErrCannotParseURL{Name: "SomeName", Err: fmt.Errorf("test")}, ErrCannotParseURL{}},
+		{ErrBadInput{Name: "SomeName"}, &ErrBadInput{}},                                      // TODO: Due to linter complaints, this type must be error.Is'd by reference, not by value, or else sharks come to eat you I guess.
+		{ErrCannotParseURL{Name: "SomeName", Err: fmt.Errorf("test")}, &ErrCannotParseURL{}}, // TODO: same.
 		{ErrBadURLScheme{GivenScheme: "gemini", ValidSchemes: []string{"http", "https"}}, ErrBadURLScheme{}},
 		{ErrInvalidYamlType{Name: "SomeName"}, ErrInvalidYamlType{}},
 	}
 	for _, c := range cases {
 		err := c[0]
 		kind := c[1]
-		assert.ErrorIs(t, err, kind) // e.g. errors.Is(err, ErrFundingNotExist{})
+		require.ErrorIs(t, err, kind) // e.g. errors.Is(err, ErrFundingNotExist{}) or errors.Is(err, &ErrBadInput{}) (the '&' is sometimes required!!)
 
 		wrappedErr := fmt.Errorf("wrapped: %w", err)
-		assert.ErrorIs(t, wrappedErr, kind)
+		require.ErrorIs(t, wrappedErr, kind)
 	}
 }
 
