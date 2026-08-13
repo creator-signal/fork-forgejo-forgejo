@@ -22,8 +22,9 @@ func (repo *Repository) newBatch(ctx context.Context) (*Batch, error) {
 	}
 
 	var batch Batch
-	batch.Writer, batch.Reader, batch.cancel = catFileBatch(ctx, repo.Path)
-	return &batch, nil
+	var err error
+	batch.Writer, batch.Reader, batch.cancel, err = catFileBatch(ctx, repo.Path)
+	return &batch, err
 }
 
 func (repo *Repository) newBatchCheck(ctx context.Context) (*Batch, error) {
@@ -33,8 +34,9 @@ func (repo *Repository) newBatchCheck(ctx context.Context) (*Batch, error) {
 	}
 
 	var check Batch
-	check.Writer, check.Reader, check.cancel = catFileBatchCheck(ctx, repo.Path)
-	return &check, nil
+	var err error
+	check.Writer, check.Reader, check.cancel, err = catFileBatchCheck(ctx, repo.Path)
+	return &check, err
 }
 
 func (b *Batch) Close() {

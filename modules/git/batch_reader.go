@@ -10,14 +10,12 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
 
 	"forgejo.org/modules/log"
-
-	"github.com/djherbis/buffer"
-	"github.com/djherbis/nio/v3"
 )
 
 // ensureValidGitRepository runs git rev-parse in the repository path - thus ensuring that the repository is a valid repository.
@@ -38,9 +36,18 @@ func ensureValidGitRepository(ctx context.Context, repoPath string) error {
 }
 
 // catFileBatchCheck opens git cat-file --batch-check in the provided repo and returns a stdin pipe, a stdout reader and cancel function
-func catFileBatchCheck(ctx context.Context, repoPath string) (io.Writer, *bufio.Reader, func()) {
-	batchStdinReader, batchStdinWriter := io.Pipe()
-	batchStdoutReader, batchStdoutWriter := io.Pipe()
+func catFileBatchCheck(ctx context.Context, repoPath string) (io.Writer, *bufio.Reader, func(), error) {
+	// os.Pipe should be used to avoid the problem described in https://github.com/golang/go/issues/77227.
+	batchStdinReader, batchStdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	batchStdoutReader, batchStdoutWriter, err := os.Pipe()
+	if err != nil {
+		batchStdinWriter.Close()
+		batchStdinReader.Close()
+		return nil, nil, nil, err
+	}
 	ctx, ctxCancel := context.WithCancel(ctx)
 	closed := make(chan struct{})
 	cancel := func() {
@@ -71,28 +78,33 @@ func catFileBatchCheck(ctx context.Context, repoPath string) (io.Writer, *bufio.
 
 				UseContextTimeout: true,
 			})
-		if err != nil {
-			_ = batchStdoutWriter.CloseWithError(ConcatenateError(err, (&stderr).String()))
-			_ = batchStdinReader.CloseWithError(ConcatenateError(err, (&stderr).String()))
-		} else {
-			_ = batchStdoutWriter.Close()
-			_ = batchStdinReader.Close()
+		if err != nil && ctx.Err() != context.Canceled {
+			log.Error("cat-file --batch-check failed: %v", ConcatenateError(err, (&stderr).String()))
 		}
+		_ = batchStdoutWriter.Close()
+		_ = batchStdinReader.Close()
 		close(closed)
 	}()
 
 	// For simplicities sake we'll use a buffered reader to read from the cat-file --batch-check
 	batchReader := bufio.NewReader(batchStdoutReader)
 
-	return batchStdinWriter, batchReader, cancel
+	return batchStdinWriter, batchReader, cancel, nil
 }
 
 // catFileBatch opens git cat-file --batch in the provided repo and returns a stdin pipe, a stdout reader and cancel function
-func catFileBatch(ctx context.Context, repoPath string) (io.Writer, *bufio.Reader, func()) {
-	// We often want to feed the commits in order into cat-file --batch, followed by their trees and sub trees as necessary.
-	// so let's create a batch stdin and stdout
-	batchStdinReader, batchStdinWriter := io.Pipe()
-	batchStdoutReader, batchStdoutWriter := nio.Pipe(buffer.New(32 * 1024))
+func catFileBatch(ctx context.Context, repoPath string) (io.Writer, *bufio.Reader, func(), error) {
+	// os.Pipe should be used to avoid the problem described in https://github.com/golang/go/issues/77227.
+	batchStdinReader, batchStdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	batchStdoutReader, batchStdoutWriter, err := os.Pipe()
+	if err != nil {
+		batchStdinWriter.Close()
+		batchStdinReader.Close()
+		return nil, nil, nil, err
+	}
 	ctx, ctxCancel := context.WithCancel(ctx)
 	closed := make(chan struct{})
 	cancel := func() {
@@ -123,20 +135,18 @@ func catFileBatch(ctx context.Context, repoPath string) (io.Writer, *bufio.Reade
 
 				UseContextTimeout: true,
 			})
-		if err != nil {
-			_ = batchStdoutWriter.CloseWithError(ConcatenateError(err, (&stderr).String()))
-			_ = batchStdinReader.CloseWithError(ConcatenateError(err, (&stderr).String()))
-		} else {
-			_ = batchStdoutWriter.Close()
-			_ = batchStdinReader.Close()
+		if err != nil && ctx.Err() != context.Canceled {
+			log.Error("cat-file --batch failed: %v", ConcatenateError(err, (&stderr).String()))
 		}
+		_ = batchStdoutWriter.Close()
+		_ = batchStdinReader.Close()
 		close(closed)
 	}()
 
 	// For simplicities sake we'll us a buffered reader to read from the cat-file --batch
 	batchReader := bufio.NewReaderSize(batchStdoutReader, 32*1024)
 
-	return batchStdinWriter, batchReader, cancel
+	return batchStdinWriter, batchReader, cancel, nil
 }
 
 // ReadBatchLine reads the header line from cat-file --batch
