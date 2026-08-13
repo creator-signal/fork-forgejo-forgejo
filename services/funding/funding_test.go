@@ -33,6 +33,11 @@ func assertCustom(t *testing.T, entry *api.RepoFundingEntry, expectedTitle, expe
 	assertEntry(t, entry, "custom", expectedTitle, expectedValue)
 }
 
+func assertGithub(t *testing.T, entry *api.RepoFundingEntry, expectedTitle, expectedValue string) {
+	t.Helper()
+	assertEntry(t, entry, "github", expectedTitle, expectedValue)
+}
+
 func assertKoFi(t *testing.T, entry *api.RepoFundingEntry, expectedTitle, expectedValue string) {
 	t.Helper()
 	assertEntry(t, entry, "ko_fi", expectedTitle, expectedValue)
@@ -329,5 +334,71 @@ func TestFundingEntriesWithErrorsFromConfig(t *testing.T) {
 		assertCustom(t, funding[12], "test11", "http://test11")
 		assertCustom(t, funding[13], "test12", "http://test12")
 		assertCustom(t, funding[14], "test13", "http://test13")
+	})
+
+	t.Run("Partially invalid (too many of two providers with more following)", func(t *testing.T) {
+		config := "ko_fi: [test]\n" +
+			"tidelift: npm/example\n" +
+			"custom:\n" +
+			"- test1\n" +
+			`- "https://example.com"` + "\n" +
+			"- test3\n" +
+			"- test4\n" +
+			"- test5\n" +
+			"- test6\n" +
+			"- test7\n" +
+			"- test8\n" +
+			"- test9\n" +
+			"- test10\n" +
+			"- test11\n" +
+			"- test12\n" +
+			"- test13\n" +
+			"- too_many\n" +
+			"liberapay: still_too_many"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Len(t, errs, 1)
+		assert.Equal(t, "Expected up to 15 funding providers", errs[0].Error())
+
+		assert.Len(t, funding, 15)
+		assertKoFi(t, funding[0], "ko-fi.com/test", "https://ko-fi.com/test")
+		assertTidelift(t, funding[1], "tidelift.com/funding/github/npm/example", "https://tidelift.com/funding/github/npm/example")
+		assertCustom(t, funding[2], "test1", "http://test1")
+		assertCustom(t, funding[3], "https://example.com", "https://example.com")
+		assertCustom(t, funding[4], "test3", "http://test3")
+		assertCustom(t, funding[5], "test4", "http://test4")
+		assertCustom(t, funding[6], "test5", "http://test5")
+		assertCustom(t, funding[7], "test6", "http://test6")
+		assertCustom(t, funding[8], "test7", "http://test7")
+		assertCustom(t, funding[9], "test8", "http://test8")
+		assertCustom(t, funding[10], "test9", "http://test9")
+		assertCustom(t, funding[11], "test10", "http://test10")
+		assertCustom(t, funding[12], "test11", "http://test11")
+		assertCustom(t, funding[13], "test12", "http://test12")
+		assertCustom(t, funding[14], "test13", "http://test13")
+	})
+
+	t.Run("Partially invalid (too many of all providers)", func(t *testing.T) {
+		defer test.MockProtect(&setting.MaxFundingEntriesPerConfig)()
+		setting.MaxFundingEntriesPerConfig = 5 // lower min so we can test that fail case
+
+		config := "ko_fi: [test]\n" +
+			"tidelift: npm/example\n" +
+			"patreon: example\n" +
+			"liberapay: example\n" +
+			"github: example\n" +
+			"issuehunt: too_many\n" +
+			"open_collective: still_too_many\n"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Len(t, errs, 1)
+		assert.Equal(t, "Expected up to 5 funding providers", errs[0].Error()) // error message reflects config
+
+		assert.Len(t, funding, 5)
+		assertKoFi(t, funding[0], "ko-fi.com/test", "https://ko-fi.com/test")
+		assertTidelift(t, funding[1], "tidelift.com/funding/github/npm/example", "https://tidelift.com/funding/github/npm/example")
+		assertPatreon(t, funding[2], "patreon.com/example", "https://patreon.com/example")
+		assertLiberapay(t, funding[3], "liberapay.com/example", "https://liberapay.com/example")
+		assertGithub(t, funding[4], "github.com/sponsors/example", "https://github.com/sponsors/example")
 	})
 }
