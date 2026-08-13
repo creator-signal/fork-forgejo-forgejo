@@ -13,6 +13,13 @@ forgejo.org/models
 	IsErrSHANotFound
 	IsErrMergeDivergingFastForwardOnly
 
+forgejo.org/models/actions
+	NewWorkflowRunAttempt.GetRun
+	WorkflowRunStatusChanged.GetRun
+	WorkflowRunStatusChanged.GetPriorStatus
+	WorkflowRunCompleted.GetRun
+	WorkflowRunCompleted.GetPriorStatus
+
 forgejo.org/models/auth
 	WebAuthnCredentials
 
@@ -286,6 +293,7 @@ forgejo.org/services/funding
 
 forgejo.org/services/notify
 	UnregisterNotifier
+	WorkflowRunEvent
 
 forgejo.org/services/repository
 	IsErrForkAlreadyExist
@@ -302,4 +310,5 @@ forgejo.org/services/stats
 
 forgejo.org/services/webhook
 	NewNotifier
+	WorkflowRunEvent
 

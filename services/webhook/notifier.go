@@ -921,6 +921,10 @@ func (m *webhookNotifier) ActionRunNowDone(ctx context.Context, run *actions_mod
 	}
 }
 
+func (m *webhookNotifier) WorkflowRunEvent(_ context.Context, event actions_model.ActionRunEvent) {
+	log.Info("Workflow run event: %#v", event)
+}
+
 func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_model.PackageDescriptor, action api.HookPackageAction) {
 	source := EventSource{
 		Repository: pd.Repository,
