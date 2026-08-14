@@ -47,9 +47,9 @@ func SignInOpenID(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplSignInOpenID)
 }
 
-// Check if the given OpenID URI is allowed by blacklist/whitelist
+// Check if the given OpenID URI is allowed by allowlist/denylist
 func allowedOpenIDURI(uri string) (err error) {
-	// In case a Whitelist is present, URI must be in it
+	// In case a allowlist is present, URI must be in it
 	// in order to be accepted
 	if len(setting.Service.OpenIDWhitelist) != 0 {
 		for _, pat := range setting.Service.OpenIDWhitelist {
@@ -58,13 +58,13 @@ func allowedOpenIDURI(uri string) (err error) {
 			}
 		}
 		// must match one of this or be refused
-		return errors.New("URI not allowed by whitelist")
+		return errors.New("URI not allowed by allowlist")
 	}
 
-	// A blacklist match expliclty forbids
+	// A denylist match expliclty forbids
 	for _, pat := range setting.Service.OpenIDBlacklist {
 		if pat.MatchString(uri) {
-			return errors.New("URI forbidden by blacklist")
+			return errors.New("URI forbidden by denylist")
 		}
 	}
 
