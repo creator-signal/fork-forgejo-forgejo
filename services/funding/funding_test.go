@@ -66,15 +66,15 @@ func TestFundingErrorIdentityPrimitives(t *testing.T) {
 		{ErrUnknownFundingProvider{Name: "SomeName"}, ErrUnknownFundingProvider{}},
 		{ErrTooManyFundingProviders{TotalLimit: 50}, ErrTooManyFundingProviders{}},
 		{ErrDuplicateFundingEntry{Name: "SomeName", Value: "SomeValue"}, ErrDuplicateFundingEntry{}},
-		{ErrBadInput{Name: "SomeName"}, &ErrBadInput{}},                                      // TODO: Due to linter complaints, this type must be error.Is'd by reference, not by value, or else sharks come to eat you I guess.
-		{ErrCannotParseURL{Name: "SomeName", Err: fmt.Errorf("test")}, &ErrCannotParseURL{}}, // TODO: same.
+		{ErrBadInput{Name: "SomeName"}, ErrBadInput{}},
+		{ErrCannotParseURL{Name: "SomeName", Err: fmt.Errorf("test")}, ErrCannotParseURL{}},
 		{ErrBadURLScheme{GivenScheme: "gemini", ValidSchemes: []string{"http", "https"}}, ErrBadURLScheme{}},
 		{ErrInvalidYamlType{Name: "SomeName"}, ErrInvalidYamlType{}},
 	}
 	for _, c := range cases {
 		err := c[0]
 		kind := c[1]
-		require.ErrorIs(t, err, kind) // e.g. errors.Is(err, ErrFundingNotExist{}) or errors.Is(err, &ErrBadInput{}) (the '&' is sometimes required!!)
+		require.ErrorIs(t, err, kind) // e.g. errors.Is(err, ErrFundingNotExist{})
 
 		wrappedErr := fmt.Errorf("wrapped: %w", err)
 		require.ErrorIs(t, wrappedErr, kind)

@@ -73,7 +73,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 	input = strings.TrimSpace(input)
 
 	if !provider.InputPattern.Match([]byte(input)) {
-		return nil, &ErrBadInput{Name: provider.Name, Pattern: provider.InputPattern}
+		return nil, ErrBadInput{Name: provider.Name, Pattern: provider.InputPattern}
 	}
 
 	// user input + provider.Template = funding entry value!
@@ -87,13 +87,13 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 
 	urlValue, err := url.Parse(rawValue) // value should parse as a URL; interpolation should never result in something invalid
 	if err != nil {
-		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
+		return nil, ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
 
 	// TODO: Look into whether this should also respect setting.Service.ValidSiteURLSchemes
 	validSchemes := []string{"http", "https"}
 	if !slices.Contains(validSchemes, urlValue.Scheme) {
-		return nil, &ErrCannotParseURL{Name: provider.Name, Err: &ErrBadURLScheme{
+		return nil, ErrCannotParseURL{Name: provider.Name, Err: &ErrBadURLScheme{
 			ValidSchemes: validSchemes,
 			GivenScheme:  urlValue.Scheme,
 		}}
@@ -101,7 +101,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 
 	urlValue, err = withASCIIHostname(urlValue)
 	if err != nil {
-		return nil, &ErrCannotParseURL{Name: provider.Name, Err: err}
+		return nil, ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
 
 	entry := new(api.RepoFundingEntry)
