@@ -178,15 +178,21 @@ func runServ(ctx context.Context, c *cli.Command) error {
 		if err != nil {
 			return fail(ctx, "Key check failed", "Failed to check provided key: %v", err)
 		}
+		msgTmpl := "Hi there%s! You've successfully authenticated with the %s, but %s " +
+			"does not provide shell access.\nIf this is unexpected, " +
+			"please log in with password and setup %s under another user.\n"
+		username := ""
+		var authenticatedWith string
 		switch key.Type {
 		case asymkey_model.KeyTypeDeploy:
-			fmt.Println("Hi there! You've successfully authenticated with the deploy key named " + key.Name + ", but Forgejo does not provide shell access.")
+			authenticatedWith = "deploy key named " + key.Name
 		case asymkey_model.KeyTypePrincipal:
-			fmt.Println("Hi there! You've successfully authenticated with the principal " + key.Content + ", but Forgejo does not provide shell access.")
+			authenticatedWith = "principal " + key.Content
 		default:
-			fmt.Println("Hi there, " + user.Name + "! You've successfully authenticated with the key named " + key.Name + ", but Forgejo does not provide shell access.")
+			username = ", " + user.Name
+			authenticatedWith = "key named " + key.Name
 		}
-		fmt.Println("If this is unexpected, please log in with password and setup Forgejo under another user.")
+		fmt.Printf(msgTmpl, username, authenticatedWith, setting.AppName, setting.AppName)
 		return nil
 	} else if c.Bool("debug") {
 		log.Debug("SSH_ORIGINAL_COMMAND: %s", os.Getenv("SSH_ORIGINAL_COMMAND"))
