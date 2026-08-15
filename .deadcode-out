@@ -280,6 +280,7 @@ forgejo.org/services/context
 
 forgejo.org/services/funding
 	ErrFundingNotExist.Error
+	ErrFundingNotExist.Is
 	GetFundingFromCommit
 	GetFundingFromDefaultBranch
 
