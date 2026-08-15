@@ -22,6 +22,7 @@ test('Sponsor config: error readout on file view', async ({browser}) => {
   await expect(errors).toBeVisible();
   await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
+  await expect(errors).not.toContainText('Unknown error');
 });
 
 const widthCases = [208, 310, 400, 600] as const;
