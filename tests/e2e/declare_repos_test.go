@@ -204,7 +204,6 @@ liberapay: example
 patreon: example
 open_collective: example
 buy_me_a_coffee: example
-polar: example
 thanks_dev: u/gh/example
 tidelift: npm/example
 custom: ["https://example.com", 😀.com]
