@@ -81,6 +81,22 @@ func GetReleaseAttachment(ctx *context.APIContext) {
 		return
 	}
 
+	// Draft releases and their attachments must not be visible to users
+	// without write permission on the releases unit, mirroring GetRelease.
+	release, err := repo_model.GetReleaseByID(ctx, releaseID)
+	if err != nil {
+		if repo_model.IsErrReleaseNotExist(err) {
+			ctx.NotFound()
+			return
+		}
+		ctx.Error(http.StatusInternalServerError, "GetReleaseByID", err)
+		return
+	}
+	if release.IsDraft && !ctx.Repo().CanWrite(unit_model.TypeReleases) {
+		ctx.NotFound()
+		return
+	}
+
 	attachID := ctx.ParamsInt64(":attachment_id")
 	attach, err := repo_model.GetAttachmentByID(ctx, attachID)
 	if err != nil {
