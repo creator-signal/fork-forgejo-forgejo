@@ -217,6 +217,14 @@ custom: ["https://example.com"]
 ko-fi: example
 `},
 	}}, nil)
+	newRepo(t, 2, "funding_one_invalid", nil, []FileChanges{{
+		Filename: ".forgejo/FUNDING.yml",
+		Versions: []string{`
+custom:
+- localhost
+- [localhost]
+`},
+	}}, nil)
 	newRepo(t, 2, "funding_with_a_really_ridiculously_long_title_that_doesnt_really_happen_all_that_often_normally_but_could_really_mess_with_things_if_not_handled_properly", nil, []FileChanges{{
 		Filename: ".forgejo/FUNDING.yml",
 		Versions: []string{`

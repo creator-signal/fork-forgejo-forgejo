@@ -10,7 +10,20 @@ import {expect} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 import {accessibilityCheck} from './shared/accessibility.ts';
 
-test('Sponsor config: error readout on file view', async ({browser}) => {
+test('Sponsor config: single-error readout on file view', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
+  const response = await page.goto('/user2/funding_one_invalid/src/branch/main/.forgejo/FUNDING.yml', {waitUntil: 'domcontentloaded'});
+  expect(response?.status()).toBe(200);
+
+  const error = page.locator('.ui.error.message').filter({hasText: "Error parsing funding config: Invalid type for key 'custom', expected a string or string array"});
+  await expect(error).toBeVisible();
+  await expect(error).not.toContainText('Unknown error');
+});
+
+test('Sponsor config: multi-error readout on file view', async ({browser}) => {
   // this test doesn't need JS
   const context = await browser.newContext({javaScriptEnabled: false});
   const page = await context.newPage();

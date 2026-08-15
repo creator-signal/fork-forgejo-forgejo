@@ -1006,10 +1006,8 @@
 	"form.website.valid_url_schemes": "Allowed URL schemes include: %s",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
-	"funding.yaml_error.n_errors": {
-		"one": "Error parsing funding config:",
-		"other": "Errors parsing funding config:"
-	},
+	"funding.yaml_error.heading_one": "Error parsing funding config: %s",
+	"funding.yaml_error.heading_few": "Errors parsing funding config:",
 	"funding.yaml_error.unknown_provider": "Unknown funding provider: %s",
 	"funding.yaml_error.duplicate_entry": "Duplicate entry for key '%s': %s",
 	"funding.yaml_error.n_too_many_providers": "Expected up to %d funding providers",
