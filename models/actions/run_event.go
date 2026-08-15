@@ -17,6 +17,10 @@ func (e *NewWorkflowRunAttempt) GetRun() *ActionRun {
 	return e.run
 }
 
+func NewNewWorkflowRunAttempt(run *ActionRun) *NewWorkflowRunAttempt {
+	return &NewWorkflowRunAttempt{run: run}
+}
+
 var _ ActionRunEvent = &WorkflowRunStatusChanged{}
 
 type WorkflowRunStatusChanged struct {
@@ -32,6 +36,10 @@ func (e *WorkflowRunStatusChanged) GetPriorStatus() Status {
 	return e.priorStatus
 }
 
+func NewWorkflowRunStatusChanged(run *ActionRun, priorStatus Status) *WorkflowRunStatusChanged {
+	return &WorkflowRunStatusChanged{run: run, priorStatus: priorStatus}
+}
+
 var _ ActionRunEvent = &WorkflowRunCompleted{}
 
 type WorkflowRunCompleted struct {
@@ -45,4 +53,8 @@ func (e *WorkflowRunCompleted) GetRun() *ActionRun {
 
 func (e *WorkflowRunCompleted) GetPriorStatus() Status {
 	return e.priorStatus
+}
+
+func NewWorkflowRunCompleted(run *ActionRun, priorStatus Status) *WorkflowRunCompleted {
+	return &WorkflowRunCompleted{run: run, priorStatus: priorStatus}
 }
