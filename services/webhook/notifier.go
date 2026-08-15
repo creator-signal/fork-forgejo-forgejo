@@ -921,8 +921,19 @@ func (m *webhookNotifier) ActionRunNowDone(ctx context.Context, run *actions_mod
 	}
 }
 
-func (m *webhookNotifier) WorkflowRunEvent(_ context.Context, event actions_model.ActionRunEvent) {
-	log.Info("Workflow run event: %#v", event)
+func (m *webhookNotifier) WorkflowRunEvent(ctx context.Context, event actions_model.ActionRunEvent) {
+	log.Debug("Workflow run event: %#v", event)
+
+	switch e := event.(type) {
+	case *actions_model.NewWorkflowRunAttempt:
+		// Do nothing
+		break
+	case *actions_model.WorkflowRunStatusChanged:
+		// Do nothing
+		break
+	case *actions_model.WorkflowRunCompleted:
+		m.ActionRunNowDone(ctx, e.GetRun(), e.GetPriorStatus())
+	}
 }
 
 func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_model.PackageDescriptor, action api.HookPackageAction) {
