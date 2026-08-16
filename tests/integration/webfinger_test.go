@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -18,6 +19,7 @@ import (
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWebfinger(t *testing.T) {
@@ -112,6 +114,9 @@ func TestWebfinger(t *testing.T) {
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/.well-known/webfinger?resource=http://%s/%s/foo", "example.com", user.Name))
 	MakeRequest(t, req, http.StatusBadRequest)
+
+	_, err := db.GetEngine(t.Context()).Cols("is_private").Update(&repo_model.Repository{ID: repo2.ID, IsPrivate: false})
+	require.NoError(t, err)
 
 	req = NewRequest(t, "GET", fmt.Sprintf("/.well-known/webfinger?resource=acct:%s@%s@%s", repo2.Name, repo2.OwnerName, appURL.Host))
 	session.MakeRequest(t, req, http.StatusOK)

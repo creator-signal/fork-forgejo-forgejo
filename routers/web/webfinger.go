@@ -20,7 +20,7 @@ import (
 // https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-webfinger-14#section-4.4
 
 // WebfingerUserActor returns a user entry from the database.
-func WebfingerUserActor(ctx *context.Context, appURL *url.URL, userActor *webfinger.UserActor) (*user_model.User, error) {
+func WebfingerUserActor(ctx *context.Context, appURL *url.URL, userActor *webfinger.UserActor) (retUser *user_model.User, err error) {
 	if userActor == nil {
 		return nil, fmt.Errorf("nil WebfingerUserActor")
 	}
@@ -34,11 +34,11 @@ func WebfingerUserActor(ctx *context.Context, appURL *url.URL, userActor *webfin
 	if userActor.IsGhost() {
 		jrd := userActor.JRD()
 		ctx.JSONWithContentType(http.StatusOK, "application/jrd+json", &jrd)
-
-		return nil, nil
+	} else {
+		retUser, err = user_model.GetUserByName(ctx, user)
 	}
 
-	return user_model.GetUserByName(ctx, user)
+	return retUser, err
 }
 
 // WebfingerRenderUserActor creates a JRD response for an user entry.
@@ -69,7 +69,7 @@ func WebfingerRepoActor(ctx *context.Context, appURL *url.URL, repoActor *webfin
 
 // WebfingerRenderRepoActor creates a JRD response for a repository entry.
 func WebfingerRenderRepoActor(ctx *context.Context, r *repo_model.Repository) {
-	if r == nil || !user_model.IsUserVisibleToViewer(ctx, r.Owner, ctx.Doer) {
+	if r == nil || !user_model.IsUserVisibleToViewer(ctx, r.Owner, ctx.Doer) || r.IsPrivate {
 		ctx.Error(http.StatusNotFound)
 		return
 	}
