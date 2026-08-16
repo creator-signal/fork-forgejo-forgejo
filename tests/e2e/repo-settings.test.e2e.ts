@@ -71,7 +71,7 @@ test.describe('repo branch protection settings', () => {
 });
 
 test.describe('repo actions secrets settings', () => {
-  let secretName = dynamic_id().replaceAll('-', '_').toUpperCase();
+  const secretName = dynamic_id().replaceAll('-', '_').toUpperCase();
 
   test('create secret', async ({page}) => {
     const response = await page.goto('/user2/repo1/settings/actions/secrets');
@@ -94,11 +94,42 @@ test.describe('repo actions secrets settings', () => {
 
     const deleteButton = page.locator('.flex-item').filter({hasText: secretName}).getByLabel('Remove secret');
     await deleteButton.click();
-    await page.pause();
     const modal = page.locator('#delete-secret');
     await expect(modal).toBeVisible();
 
     await modal.getByText('Confirm').click();
     await expect(page.getByText('There are no secrets yet.')).toBeVisible();
+  });
+});
+
+test.describe('repo actions variables settings', () => {
+  const variableName = dynamic_id().replaceAll('-', '_').toUpperCase();
+
+  test('create variable', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/actions/variables');
+    expect(response?.status()).toBe(200);
+
+    await page.getByText('Add variable').click();
+    const modal = page.locator('#edit-variable-modal');
+    await expect(modal).toBeVisible();
+
+    await modal.getByLabel('Name').fill(variableName);
+    await modal.getByLabel('Value').fill("Will Frogejo cease to exist if there's a Forgejo trademark?");
+    await modal.getByText('Confirm').click();
+
+    await expect(page.getByText(variableName, {exact: true})).toBeVisible();
+  });
+
+  test('delete variable', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/actions/variables');
+    expect(response?.status()).toBe(200);
+
+    const deleteButton = page.locator('.flex-item').filter({hasText: variableName}).getByLabel('Remove variable');
+    await deleteButton.click();
+    const modal = page.locator('#delete-variable');
+    await expect(modal).toBeVisible();
+
+    await modal.getByText('Confirm').click();
+    await expect(page.getByText('There are no variables yet.')).toBeVisible();
   });
 });
