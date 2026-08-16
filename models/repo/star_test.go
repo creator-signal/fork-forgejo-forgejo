@@ -33,7 +33,6 @@ func TestIsStaring(t *testing.T) {
 	assert.False(t, repo_model.IsStaring(db.DefaultContext, 3, 4))
 }
 
-
 func TestRepository_GetStargazers(t *testing.T) {
 	// repo with stargazers
 	require.NoError(t, unittest.PrepareTestDatabase())

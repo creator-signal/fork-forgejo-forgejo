@@ -239,7 +239,7 @@
   lower_name: repo9
   name: repo9
   num_watches: 0
-  num_stars: 0
+  num_stars: 1
   num_forks: 0
   num_milestones: 0
   num_closed_milestones: 0
@@ -595,7 +595,7 @@
   lower_name: big_test_private_3
   name: big_test_private_3
   num_watches: 0
-  num_stars: 0
+  num_stars: 1
   num_forks: 0
   num_milestones: 0
   num_closed_milestones: 0
@@ -757,7 +757,7 @@
   lower_name: big_test_private_mirror_6
   name: big_test_private_mirror_6
   num_watches: 0
-  num_stars: 0
+  num_stars: 1
   num_forks: 1
   num_milestones: 0
   num_closed_milestones: 0

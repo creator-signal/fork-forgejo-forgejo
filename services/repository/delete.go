@@ -144,10 +144,6 @@ func DeleteRepositoryDirectly(ctx context.Context, repoID int64, opts DeleteRepo
 			releaseAttachments = append(releaseAttachments, attachments[i].RelativePath())
 		}
 
-		if _, err := db.Exec(ctx, "UPDATE `user` SET num_stars=num_stars-1 WHERE id IN (SELECT `uid` FROM `star` WHERE repo_id = ?)", repo.ID); err != nil {
-			return err
-		}
-
 		if setting.Database.Type.IsMySQL() {
 			// mariadb:10 does not use the hook_task KEY when using IN.
 			// https://codeberg.org/forgejo/forgejo/issues/3678
