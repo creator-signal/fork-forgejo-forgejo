@@ -48,6 +48,6 @@ export async function matchIssue(owner, repo, issueIndexStr, query, isPull) {
   const issues = await res.json();
   const issueIndex = parseInt(issueIndexStr);
 
-  // filter out issue with same id
-  return issues.filter((i) => i.id !== issueIndex);
+  // filter out issue with same number
+  return issues.filter((i) => i.number !== issueIndex);
 }
