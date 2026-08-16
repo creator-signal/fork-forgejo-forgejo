@@ -23,7 +23,7 @@ import (
 	"forgejo.org/services/convert"
 )
 
-func checkReleaseMatchRepo(ctx *context.APIContext, releaseID int64) bool {
+func checkReleaseAccess(ctx *context.APIContext, releaseID int64) bool {
 	release, err := repo_model.GetReleaseByID(ctx, releaseID)
 	if err != nil {
 		if repo_model.IsErrReleaseNotExist(err) {
@@ -34,6 +34,12 @@ func checkReleaseMatchRepo(ctx *context.APIContext, releaseID int64) bool {
 		return false
 	}
 	if release.RepoID != ctx.Repo().Repository.ID {
+		ctx.NotFound()
+		return false
+	}
+	// Draft releases and their attachments must not be visible to users
+	// without write permission on the releases unit, mirroring GetRelease.
+	if release.IsDraft && !ctx.Repo().CanWrite(unit_model.TypeReleases) {
 		ctx.NotFound()
 		return false
 	}
@@ -77,23 +83,7 @@ func GetReleaseAttachment(ctx *context.APIContext) {
 	//     "$ref": "#/responses/notFound"
 
 	releaseID := ctx.ParamsInt64(":id")
-	if !checkReleaseMatchRepo(ctx, releaseID) {
-		return
-	}
-
-	// Draft releases and their attachments must not be visible to users
-	// without write permission on the releases unit, mirroring GetRelease.
-	release, err := repo_model.GetReleaseByID(ctx, releaseID)
-	if err != nil {
-		if repo_model.IsErrReleaseNotExist(err) {
-			ctx.NotFound()
-			return
-		}
-		ctx.Error(http.StatusInternalServerError, "GetReleaseByID", err)
-		return
-	}
-	if release.IsDraft && !ctx.Repo().CanWrite(unit_model.TypeReleases) {
-		ctx.NotFound()
+	if !checkReleaseAccess(ctx, releaseID) {
 		return
 	}
 
@@ -233,7 +223,7 @@ func CreateReleaseAttachment(ctx *context.APIContext) {
 
 	// Check if release exists an load release
 	releaseID := ctx.ParamsInt64(":id")
-	if !checkReleaseMatchRepo(ctx, releaseID) {
+	if !checkReleaseAccess(ctx, releaseID) {
 		return
 	}
 
@@ -378,7 +368,7 @@ func EditReleaseAttachment(ctx *context.APIContext) {
 
 	// Check if release exists an load release
 	releaseID := ctx.ParamsInt64(":id")
-	if !checkReleaseMatchRepo(ctx, releaseID) {
+	if !checkReleaseAccess(ctx, releaseID) {
 		return
 	}
 
@@ -459,7 +449,7 @@ func DeleteReleaseAttachment(ctx *context.APIContext) {
 
 	// Check if release exists an load release
 	releaseID := ctx.ParamsInt64(":id")
-	if !checkReleaseMatchRepo(ctx, releaseID) {
+	if !checkReleaseAccess(ctx, releaseID) {
 		return
 	}
 
