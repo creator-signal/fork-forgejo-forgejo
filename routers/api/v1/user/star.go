@@ -74,16 +74,13 @@ func GetStarredRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 		return
 	}
-	orgName := ""
-	if ctx.Org() != nil && ctx.Org().Organization != nil {
-		orgName = ctx.Org().Organization.Name
-	}
-	starCount, err := user_model.GetUserStarCount(ctx, ctx.User(), ctx.Doer(), orgName)
+
+	starCount, err := repo_model.GetUserStarCount(ctx, ctx.User(), ctx.Doer())
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserStarCount", err)
 		return
 	}
-	ctx.SetTotalCountHeader(int64(starCount))
+	ctx.SetTotalCountHeader(starCount)
 	ctx.JSON(http.StatusOK, &repos)
 }
 
@@ -116,18 +113,15 @@ func GetMyStarredRepos(ctx *context.APIContext) {
 		ctx.Error(http.StatusInternalServerError, "getStarredRepos", err)
 		return
 	}
-	orgName := ""
-	if ctx.Org() != nil && ctx.Org().Organization != nil {
-		orgName = ctx.Org().Organization.Name
-	}
-	starCount, err := user_model.GetUserStarCount(ctx, ctx.Doer(), ctx.Doer(), orgName)
+
+	starCount, err := repo_model.GetUserStarCount(ctx, ctx.Doer(), ctx.Doer())
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserStarCount", err)
 		return
 	}
 	// since user is trying to get star count, so we are sure visited user and requesting user are same  so Deor == profileUser
 
-	ctx.SetTotalCountHeader(int64(starCount))
+	ctx.SetTotalCountHeader(starCount)
 	ctx.JSON(http.StatusOK, &repos)
 }
 

@@ -16,6 +16,26 @@ import (
 	"xorm.io/builder"
 )
 
+func GetUserStarCount(ctx context.Context, profileUser, doer *user_model.User) (int64, error) {
+	e := db.GetEngine(ctx)
+
+	sess := e.
+		Table("star").
+		Join("INNER", "repository", "star.repo_id = repository.id").
+		Where("star.uid = ?", profileUser.ID)
+
+	// Owner of the profile, or a site admin, sees every starred repo.
+	if doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin) {
+		count, err := sess.Count()
+		return count, err
+	}
+
+	count, err := sess.
+		And(AccessibleRepositoryCondition(doer, unit.TypeInvalid)).
+		Count()
+	return count, err
+}
+
 // GetStarredRepos returns the repos starred by a particular user
 func GetStarredRepos(ctx context.Context, profileUser, doer *user_model.User, listOptions db.ListOptions, reducer RepositoryAuthorizationReducer) ([]*Repository, error) {
 	e := db.GetEngine(ctx)
@@ -24,44 +44,8 @@ func GetStarredRepos(ctx context.Context, profileUser, doer *user_model.User, li
 		Join("INNER", "star", "repository.id = star.repo_id").
 		Where("star.uid = ?", profileUser.ID)
 
-	// viewer is the profile owner, or a site admin — sees ALL starred repos
-	if doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin) {
-		// continue
-	} else if doer == nil {
-		// anonymous visitor — only public repos + public owners
-		sess = sess.
-			Join("LEFT", "`user`", "repository.owner_id = `user`.id").
-			And("repository.is_private = ?", false).
-			And("`user`.visibility = ?", api.VisibleTypePublic)
-	} else {
-		// public repos whose owners are public or limited
-		publicRepos := builder.Select("repository.id AS id").
-			From("repository").
-			Join("LEFT", "`user`", "repository.owner_id = `user`.id").
-			Where(builder.Eq{"repository.is_private": false}).
-			And(builder.Lte{"`user`.visibility": api.VisibleTypeLimited})
-
-		// private repos where doer is a direct collaborator
-		collabRepos := builder.Select("repo_id AS id").
-			From("collaboration").
-			Where(builder.Eq{"user_id": doer.ID})
-
-		// any repo (public or private) belonging to orgs the doer is a member of —
-		doerOrgs := builder.Select("org_id").
-			From("team_user").
-			Where(builder.Eq{"uid": doer.ID})
-
-		orgMemberRepos := builder.Select("id").
-			From("repository").
-			Where(builder.In("owner_id", doerOrgs))
-
-		accessibleRepos := builder.Select("id").
-			From(
-				publicRepos.Union("all", collabRepos).Union("all", orgMemberRepos),
-				"accessible",
-			)
-
-		sess = sess.And(builder.In("repository.id", accessibleRepos))
+	if !(doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin)) {
+		sess = sess.And(AccessibleRepositoryCondition(doer, unit.TypeInvalid))
 	}
 
 	sess = sess.And(reducer.RepoReadAccessFilter())
