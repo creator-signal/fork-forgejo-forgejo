@@ -7,7 +7,7 @@
 // @watch end
 
 import {expect} from '@playwright/test';
-import {test} from './utils_e2e.ts';
+import {test, dynamic_id} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
 import {validate_form} from './shared/forms.ts';
 
@@ -67,5 +67,38 @@ test.describe('repo branch protection settings', () => {
     await page.waitForLoadState();
     await expect(page.locator('.repo-setting-content .header')).toContainText('Protection rules for branch', {ignoreCase: true, useInnerText: true});
     await screenshot(page);
+  });
+});
+
+test.describe('repo actions secrets settings', () => {
+  let secretName = dynamic_id().replaceAll('-', '_').toUpperCase();
+
+  test('create secret', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/actions/secrets');
+    expect(response?.status()).toBe(200);
+
+    await page.getByText('Add secret').click();
+    const modal = page.locator('#add-secret-modal');
+    await expect(modal).toBeVisible();
+
+    await modal.getByLabel('Name').fill(secretName);
+    await modal.getByLabel('Value').fill('All Right Then, Keep Your Secrets');
+    await modal.getByText('Confirm').click();
+
+    await expect(page.getByText(secretName, {exact: true})).toBeVisible();
+  });
+
+  test('delete secret', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/actions/secrets');
+    expect(response?.status()).toBe(200);
+
+    const deleteButton = page.locator('.flex-item').filter({hasText: secretName}).getByLabel('Remove secret');
+    await deleteButton.click();
+    await page.pause();
+    const modal = page.locator('#delete-secret');
+    await expect(modal).toBeVisible();
+
+    await modal.getByText('Confirm').click();
+    await expect(page.getByText('There are no secrets yet.')).toBeVisible();
   });
 });
