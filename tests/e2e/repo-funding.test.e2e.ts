@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // @watch start
+// routers/web/repo/view.go
 // templates/repo/view_file.tmpl
 // web_src/css/modules/message.css
 // @watch end
