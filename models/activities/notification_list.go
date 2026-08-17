@@ -192,22 +192,18 @@ func CreateOrUpdateReleaseNotifications(ctx context.Context, releaseID int64) er
 		return err
 	}
 
-	ctx, committer, err := db.TxContext(ctx)
-	if err != nil {
-		return err
-	}
-	defer committer.Close()
-
-	for _, userID := range watcherIDList {
-		if userID != release.PublisherID {
-			err = createOrUpdateReleaseNotificationForUser(ctx, userID, release)
-			if err != nil {
-				return err
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		for _, userID := range watcherIDList {
+			if userID != release.PublisherID {
+				err := createOrUpdateReleaseNotificationForUser(ctx, userID, release)
+				if err != nil {
+					log.Error("Can't update notification for release %d for user %s: %v", release.ID, userID, err)
+				}
 			}
 		}
-	}
 
-	return committer.Commit()
+		return nil
+	})
 }
 
 // NotificationList contains a list of notifications

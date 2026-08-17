@@ -63,7 +63,7 @@ type Notification struct {
 	IssueID   int64 `xorm:"INDEX NOT NULL"`
 	CommentID int64
 
-	ReleaseID int64 `xorm:"INDEX"`
+	ReleaseID int64 `xorm:"INDEX REFERENCES(release, id)"`
 
 	Issue      *issues_model.Issue    `xorm:"-"`
 	Repository *repo_model.Repository `xorm:"-"`
@@ -180,7 +180,7 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 	if has {
 		notification.Status = NotificationStatusUnread
 		notification.UpdatedUnix = timeutil.TimeStampNow()
-		_, err = db.GetEngine(ctx).ID(notification.ID).Cols("updated_unix").NoAutoTime().Update(notification)
+		_, err = db.GetEngine(ctx).ID(notification.ID).Cols("status", "updated_unix").NoAutoTime().Update(notification)
 		return err
 	}
 
@@ -193,7 +193,7 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 	return err
 }
 
-// GetReleaseNotification return the notification about an release
+// GetReleaseNotification return the notification about a release
 func GetReleaseNotification(ctx context.Context, userID, releaseID int64) (*Notification, error) {
 	notification := new(Notification)
 	_, err := db.GetEngine(ctx).

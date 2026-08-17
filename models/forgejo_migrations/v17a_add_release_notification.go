@@ -16,7 +16,7 @@ func init() {
 
 func addReleaseNotification(x *xorm.Engine) error {
 	type Notification struct {
-		ReleaseID int64 `xorm:"INDEX"`
+		ReleaseID int64 `xorm:"INDEX REFERENCES(release, id)"`
 	}
 
 	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Notification))
