@@ -64,7 +64,7 @@
     "postcss-nesting": "14.0.1",
     "pretty-ms": "9.0.0",
     "sortablejs": "1.15.7",
-    "swagger-ui-dist": "5.32.12",
+    "swagger-ui-dist": "5.32.13",
     "tailwindcss": "3.4.19",
     "throttle-debounce": "5.0.0",
     "tinycolor2": "1.6.0",
@@ -108,7 +108,7 @@
     "eslint-plugin-vue": "10.10.0",
     "eslint-plugin-vue-scoped-css": "2.12.0",
     "eslint-plugin-wc": "3.1.0",
-    "globals": "17.9.0",
+    "globals": "17.11.0",
     "happy-dom": "20.11.2",
     "license-checker-rseidelsohn": "5.0.1",
     "markdownlint-cli": "0.48.0",
@@ -125,7 +125,9 @@
     "vite-string-plugin": "2.0.4",
     "vitest": "4.1.8"
   },
-  "browserslist": ["defaults"],
+  "browserslist": [
+    "defaults"
+  ],
   "scarfSettings": {
     "enabled": false
   }
