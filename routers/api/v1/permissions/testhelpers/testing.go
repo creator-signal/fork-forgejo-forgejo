@@ -325,3 +325,21 @@ func RequiredScopesToString(scopeCategories ...auth_model.AccessTokenScopeCatego
 	slices.Sort(categories)
 	return strings.Join(categories, "")
 }
+
+func MustMatch(f any, signatures [][]any, methodsAndPattern string) {
+	if !setting.IsInTesting {
+		panic("must only be called if setting.IsInTesting is true")
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	expectedSignatures, has := methodsAndPatternToSignatures[methodsAndPattern]
+	if !has {
+		panic(fmt.Errorf("%s not found", methodsAndPattern))
+	}
+	expectedSignaturesString := SignaturesToString(expectedSignatures)
+	signaturesString := SignaturesToString(signatures)
+	if signaturesString != expectedSignaturesString {
+		panic(fmt.Errorf("%s:%s: %s permissions functions were called instead of the expected %s", routing.GetFuncShortName(f), methodsAndPattern, signaturesString, expectedSignaturesString))
+	}
+}
