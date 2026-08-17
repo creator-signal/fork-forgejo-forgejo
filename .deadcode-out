@@ -29,6 +29,16 @@ forgejo.org/models/dbfs
 	Create
 	Rename
 
+forgejo.org/models/f3/resource
+	NewResource
+	Equal
+	Upsert
+	Update
+	Insert
+	FindOptions.ToConds
+	Find
+	Get
+
 forgejo.org/models/forgejo/semver
 	GetVersion
 	SetVersionString
@@ -134,10 +144,8 @@ forgejo.org/modules/jwtx
 	Verifier.Parse
 
 forgejo.org/modules/log
-	eventWriterBuffer.Close
-	eventWriterBuffer.Write
-	eventWriterBuffer.GetString
-	NewEventWriterBuffer
+	LoggerManager.GetSharedWriterBufferString
+	LoggerManager.DeleteSharedWriter
 
 forgejo.org/modules/markup
 	GetRendererByType
@@ -268,6 +276,7 @@ forgejo.org/routers/api/v1/permissions/testhelpers
 	GetSignatureStringToSignature
 	GetUniquePermissionsSequences
 	GetShortestPermissionSequenceForEachSignature
+	MustMatch
 
 forgejo.org/routers/web/org
 	MustEnableProjects
