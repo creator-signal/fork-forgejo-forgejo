@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 
+	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
@@ -152,14 +153,6 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 	//   description: if provided, only comments updated since the specified time are returned.
 	//   type: string
 	//   format: date-time
-	// - name: page
-	//   in: query
-	//   description: page number of results to return (1-based)
-	//   type: integer
-	// - name: limit
-	//   in: query
-	//   description: page size of results
-	//   type: integer
 	// - name: before
 	//   in: query
 	//   description: if provided, only comments updated before the provided time are returned.
@@ -186,7 +179,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 	}
 
 	opts := &issues_model.FindCommentsOptions{
-		ListOptions: utils.GetListOptions(ctx),
+		ListOptions: db.ListOptionsAll,
 		IssueID:     issue.ID,
 		Since:       since,
 		Before:      before,
