@@ -3,8 +3,8 @@
 		<h4 class="ui top attached header">
 			{{ctx.Locale.Tr "repo.settings.collaboration"}}
 		</h4>
-		{{if .Collaborators}}
 		<div class="ui attached segment">
+			{{if .Collaborators}}
 			<div class="flex-list">
 				{{range .Collaborators}}
 					<div class="flex-item tw-items-center">
@@ -40,8 +40,10 @@
 					</div>
 				{{end}}
 			</div>
+			{{else}}
+				{{ctx.Locale.Tr "repo.settings.collaboration.none"}}
+			{{end}}
 		</div>
-		{{end}}
 		<div class="ui bottom attached segment">
 			<form class="ui form" id="repo-collab-form" action="{{.Link}}" method="post">
 				<div id="search-user-box" class="ui search input tw-align-middle">
