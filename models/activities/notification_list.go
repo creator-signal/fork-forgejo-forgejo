@@ -414,7 +414,7 @@ func (nl NotificationList) getPendingReleaseIDs() []int64 {
 		if notification.Release != nil {
 			continue
 		}
-		ids.Add(notification.ReleaseID)
+		ids.Add(notification.ReleaseID.ValueOrZeroValue())
 	}
 	return ids.Values()
 }
@@ -435,9 +435,10 @@ func (nl NotificationList) LoadReleases(ctx context.Context) ([]int, error) {
 
 	for i, notification := range nl {
 		if notification.Release == nil {
-			notification.Release = releases[notification.ReleaseID]
+			releaseID := notification.ReleaseID.ValueOrZeroValue()
+			notification.Release = releases[releaseID]
 			if notification.Release == nil {
-				if notification.ReleaseID != 0 {
+				if releaseID != 0 {
 					log.Error("Notification[%d]: ReleaseID: %d Not Found", notification.ID, notification.ReleaseID)
 					failures = append(failures, i)
 				}

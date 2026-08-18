@@ -15,6 +15,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
@@ -63,7 +64,7 @@ type Notification struct {
 	IssueID   int64 `xorm:"INDEX NOT NULL"`
 	CommentID int64
 
-	ReleaseID int64 `xorm:"INDEX REFERENCES(release, id)"`
+	ReleaseID optional.Option[int64] `xorm:"INDEX REFERENCES(release, id)"`
 
 	Issue      *issues_model.Issue    `xorm:"-"`
 	Repository *repo_model.Repository `xorm:"-"`
@@ -186,7 +187,7 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 
 	notification.UserID = userID
 	notification.RepoID = release.RepoID
-	notification.ReleaseID = release.ID
+	notification.ReleaseID = optional.Some(release.ID)
 	notification.Status = NotificationStatusUnread
 	notification.Source = NotificationSourceRelease
 	_, err = db.GetEngine(ctx).Insert(notification)
@@ -271,10 +272,11 @@ func (n *Notification) loadUser(ctx context.Context) (err error) {
 }
 
 func (n *Notification) loadRelease(ctx context.Context) (err error) {
-	if n.Release == nil && n.ReleaseID != 0 {
-		n.Release, err = repo_model.GetReleaseByID(ctx, n.ReleaseID)
+	releaseID := n.ReleaseID.ValueOrZeroValue()
+	if n.Release == nil && releaseID != 0 {
+		n.Release, err = repo_model.GetReleaseByID(ctx, releaseID)
 		if err != nil {
-			return fmt.Errorf("GetReleaseByID [%d]: %w", n.ReleaseID, err)
+			return fmt.Errorf("GetReleaseByID [%d]: %w", releaseID, err)
 		}
 
 		err = n.loadRepo(ctx)
