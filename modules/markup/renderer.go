@@ -87,6 +87,7 @@ type Links struct {
 	Base           string
 	BranchPath     string
 	TreePath       string
+	WikiPath       string
 }
 
 func (l *Links) Prefix() string {
@@ -113,11 +114,17 @@ func (l *Links) RawLink() string {
 }
 
 func (l *Links) WikiLink() string {
+	if l.WikiPath != "" && l.WikiPath != "." {
+		return util.URLJoin(l.Base, "wiki", l.WikiPath)
+	}
 	return util.URLJoin(l.Base, "wiki")
 }
 
 func (l *Links) WikiRawLink() string {
-	return util.URLJoin(l.Base, "wiki/raw")
+	if l.WikiPath != "" && l.WikiPath != "." {
+		return util.URLJoin(l.Base, "wiki", "raw", l.WikiPath)
+	}
+	return util.URLJoin(l.Base, "wiki", "raw")
 }
 
 func (l *Links) ResolveMediaLink(isWiki bool) string {
