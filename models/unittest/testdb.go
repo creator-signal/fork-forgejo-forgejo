@@ -17,6 +17,8 @@ import (
 	"forgejo.org/modules/auth/password/hash"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/graceful"
+	"forgejo.org/modules/queue"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/setting/config"
 	"forgejo.org/modules/storage"
@@ -130,6 +132,7 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	} else {
 		InitCustomSettings(testOpts[0].IniFileOverride)
 	}
+	setting.IsInTesting = true
 
 	fixturesDir = filepath.Join(giteaRoot, "models", "fixtures")
 	var opts FixturesOptions
@@ -297,7 +300,14 @@ func CreateTestEngine(opts FixturesOptions) error {
 	return InitFixtures(opts)
 }
 
+func ResetManager() {
+	queue.ResetManager()
+	graceful.ShutdownAndResetManager()
+	initStats()
+}
+
 func PrepareUnitTest() error {
+	ResetManager()
 	return LoadFixtures()
 }
 
