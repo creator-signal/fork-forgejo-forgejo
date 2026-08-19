@@ -32,24 +32,40 @@ func TestIsValid(t *testing.T) {
 	assert.False(t, p.IsValid())
 
 	p = Pointer{Oid: "123"}
+	assert.False(t, p.IsOIDValid())
 	assert.False(t, p.IsValid())
 
 	p = Pointer{Oid: "z4cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc"}
+	assert.False(t, p.IsOIDValid())
 	assert.False(t, p.IsValid())
 
 	p = Pointer{Oid: "94cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc"}
+	assert.True(t, p.IsOIDValid())
 	assert.True(t, p.IsValid())
 
 	p = Pointer{Oid: "94cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc", Size: -1}
+	assert.True(t, p.IsOIDValid())
+	assert.False(t, p.IsValid())
+
+	p = Pointer{Oid: "94cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc", Size: 0}
+	assert.True(t, p.IsOIDValid())
+	assert.True(t, p.IsValid())
+
+	p = Pointer{Oid: "94cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc", Size: 1}
+	assert.True(t, p.IsOIDValid())
+	assert.True(t, p.IsValid())
+
+	p = Pointer{Oid: "αυτή η πρόταση παραβιάζει τους περιορισμούς του regex", Size: 1}
+	assert.False(t, p.IsOIDValid())
 	assert.False(t, p.IsValid())
 }
 
 func TestGeneratePointer(t *testing.T) {
-	p, err := GeneratePointer(strings.NewReader("Gitea"))
+	p, err := GeneratePointer(strings.NewReader("Forgejo"))
 	require.NoError(t, err)
 	assert.True(t, p.IsValid())
-	assert.Equal(t, "94cb57646c54a297c9807697e80a30946f79a4b82cb079d2606847825b1812cc", p.Oid)
-	assert.Equal(t, int64(5), p.Size)
+	assert.Equal(t, "f4e62146dfbeb0b41240f464a02a9d1ec232eeab631a998365ac04b99f1884e6", p.Oid)
+	assert.Equal(t, int64(7), p.Size)
 }
 
 func TestReadPointerFromBuffer(t *testing.T) {
@@ -71,6 +87,10 @@ func TestReadPointerFromBuffer(t *testing.T) {
 
 	p, err = ReadPointerFromBuffer([]byte("version https://git-lfs.github.com/spec/v1\noid sha256:4d7a2146z4ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 1234\n"))
 	require.ErrorIs(t, err, ErrInvalidOIDFormat)
+	assert.False(t, p.IsValid())
+
+	p, err = ReadPointerFromBuffer([]byte("version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize -1\n"))
+	require.ErrorIs(t, err, ErrInvalidSize)
 	assert.False(t, p.IsValid())
 
 	p, err = ReadPointerFromBuffer([]byte("version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\ntest 1234\n"))

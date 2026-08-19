@@ -948,9 +948,9 @@ func parseHunks(ctx context.Context, curFile *DiffFile, maxLines, maxLineCharact
 		if line[1:] == lfs.MetaFileIdentifier {
 			curFileLFSPrefix = true
 		} else if curFileLFSPrefix && strings.HasPrefix(line[1:], lfs.MetaFileOidPrefix) {
-			oid := strings.TrimPrefix(line[1:], lfs.MetaFileOidPrefix)
-			if len(oid) == 64 {
-				m := &git_model.LFSMetaObject{Pointer: lfs.Pointer{Oid: oid}}
+			p := lfs.Pointer{Oid: strings.TrimPrefix(line[1:], lfs.MetaFileOidPrefix)}
+			if p.IsValid() {
+				m := &git_model.LFSMetaObject{Pointer: p}
 				count, err := db.CountByBean(ctx, m)
 
 				if err == nil && count > 0 {

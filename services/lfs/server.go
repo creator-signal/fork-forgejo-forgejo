@@ -196,7 +196,7 @@ func BatchHandler(ctx *context.Context) {
 		if !p.IsValid() {
 			responseObjects = append(responseObjects, buildObjectResponse(rc, p, false, false, &lfs_module.ObjectError{
 				Code:    http.StatusUnprocessableEntity,
-				Message: "Oid or size are invalid",
+				Message: fmt.Sprintf("Oid or size are invalid (oid: %s, size: %d)", p.Oid, p.Size),
 			}))
 			continue
 		}
