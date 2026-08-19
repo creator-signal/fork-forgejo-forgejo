@@ -1,4 +1,4 @@
-import {showModal} from "../modules/modal.ts";
+import {showModal} from '../modules/modal.ts';
 
 export function initDonationButton() {
   const donationButton = document.querySelector('#donation-button');
