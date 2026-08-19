@@ -25,7 +25,7 @@ func (g *ASTTransformer) transformImage(ctx *markup.RenderContext, v *ast.Image)
 		dest = strings.TrimLeft(dest, "/")
 
 		v.Destination = []byte(giteautil.URLJoin(
-			ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative),
+			ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative && ctx.IsRepoFile()),
 			dest,
 		))
 	}

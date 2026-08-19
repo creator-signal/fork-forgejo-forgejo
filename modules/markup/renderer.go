@@ -128,16 +128,20 @@ func (l *Links) WikiRawLink() string {
 	return util.URLJoin(l.Base, "wiki/raw")
 }
 
-func (l *Links) ResolveMediaLink(isWiki, isRootRelative bool) string {
+func (l *Links) ResolveMediaLink(isWiki, isRepoRoot bool) string {
 	if isWiki {
 		return l.WikiRawLink()
 	} else if l.HasBranchInfo() {
-		if isRootRelative {
+		if isRepoRoot {
 			return l.MediaLinkBase()
 		}
 		return l.MediaLink()
 	}
 	return l.Base
+}
+
+func (ctx *RenderContext) IsRepoFile() bool {
+	return ctx.RelativePath != ""
 }
 
 // Cancel runs any cleanup functions that have been registered for this Ctx

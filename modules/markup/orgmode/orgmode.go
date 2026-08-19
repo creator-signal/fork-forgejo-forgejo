@@ -163,23 +163,22 @@ func (r *Writer) resolveLink(node org.Node) string {
 	if len(link) > 0 && !markup.IsLinkStr(link) &&
 		link[0] != '#' && !strings.HasPrefix(link, mailto) {
 		isRootRelative := strings.HasPrefix(link, "/")
-		if isRootRelative {
+		isRepoFile := r.Ctx.IsRepoFile()
+		if isRootRelative && (r.Ctx.IsWiki || isRepoFile) {
 			link = strings.TrimLeft(link, "/")
 		}
 
 		var base string
 		switch l.Kind() {
 		case "image", "video":
-			base = r.Ctx.Links.ResolveMediaLink(r.Ctx.IsWiki, isRootRelative)
+			base = r.Ctx.Links.ResolveMediaLink(r.Ctx.IsWiki, isRootRelative && isRepoFile)
 		case "regular":
 			if r.Ctx.IsWiki {
 				base = r.Ctx.Links.WikiLink()
+			} else if isRootRelative && isRepoFile {
+				base = r.Ctx.Links.SrcLinkBase()
 			} else if r.Ctx.Links.HasBranchInfo() {
-				if isRootRelative {
-					base = r.Ctx.Links.SrcLinkBase()
-				} else {
-					base = r.Ctx.Links.SrcLink()
-				}
+				base = r.Ctx.Links.SrcLink()
 			} else {
 				base = r.Ctx.Links.Base
 			}

@@ -403,10 +403,10 @@ func visitNode(ctx *RenderContext, procs []processor, node *html.Node) {
 					mediaBase := ctx.Links.ResolveMediaLink(ctx.IsWiki, true)
 					if !strings.HasPrefix(attr.Val, mediaBase+"/") {
 						isRootRelative := strings.HasPrefix(attr.Val, "/")
-						if isRootRelative {
+						if isRootRelative && ctx.IsRepoFile() {
 							attr.Val = strings.TrimLeft(attr.Val, "/")
 						}
-						attr.Val = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative), attr.Val)
+						attr.Val = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative && ctx.IsRepoFile()), attr.Val)
 					}
 				}
 				attr.Val = camoHandleLink(attr.Val)
@@ -774,10 +774,10 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		if image {
 			if !absoluteLink {
 				isRootRelative := strings.HasPrefix(link, "/")
-				if isRootRelative {
+				if isRootRelative && ctx.IsRepoFile() {
 					link = strings.TrimLeft(link, "/")
 				}
-				link = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative), link)
+				link = util.URLJoin(ctx.Links.ResolveMediaLink(ctx.IsWiki, isRootRelative && ctx.IsRepoFile()), link)
 			}
 			title := props["title"]
 			if title == "" {
@@ -800,12 +800,12 @@ func shortLinkProcessor(ctx *RenderContext, node *html.Node) {
 		} else {
 			if !absoluteLink {
 				isRootRelative := strings.HasPrefix(link, "/")
-				if isRootRelative {
+				if isRootRelative && ctx.IsRepoFile() {
 					link = strings.TrimLeft(link, "/")
 				}
 				if ctx.IsWiki {
 					link = util.URLJoin(ctx.Links.WikiLink(), link)
-				} else if isRootRelative && ctx.Links.HasBranchInfo() {
+				} else if isRootRelative && ctx.IsRepoFile() {
 					link = util.URLJoin(ctx.Links.SrcLinkBase(), link)
 				} else {
 					link = util.URLJoin(ctx.Links.SrcLink(), link)

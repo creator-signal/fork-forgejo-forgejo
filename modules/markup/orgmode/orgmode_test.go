@@ -148,7 +148,8 @@ func TestRender_Media(t *testing.T) {
 
 	testBranchTree := func(input, expected string) {
 		buffer, err := RenderString(&markup.RenderContext{
-			Ctx: git.DefaultContext,
+			Ctx:          git.DefaultContext,
+			RelativePath: "deep/nested/folder/image.org",
 			Links: markup.Links{
 				Base:       setting.AppSubURL,
 				BranchPath: "branch/main",

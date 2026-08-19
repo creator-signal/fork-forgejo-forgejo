@@ -35,17 +35,15 @@ func (g *ASTTransformer) transformLink(ctx *markup.RenderContext, v *ast.Link) {
 		var base string
 		if ctx.IsWiki {
 			base = ctx.Links.WikiLink()
+		} else if isRootRelative && ctx.IsRepoFile() {
+			base = ctx.Links.SrcLinkBase()
 		} else if ctx.Links.HasBranchInfo() {
-			if isRootRelative {
-				base = ctx.Links.SrcLinkBase()
-			} else {
-				base = ctx.Links.SrcLink()
-			}
+			base = ctx.Links.SrcLink()
 		} else {
 			base = ctx.Links.Base
 		}
 
-		if isRootRelative {
+		if isRootRelative && ctx.IsRepoFile() {
 			linkStr = strings.TrimLeft(linkStr, "/")
 		}
 

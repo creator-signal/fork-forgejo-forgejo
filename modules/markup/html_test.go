@@ -682,10 +682,11 @@ func TestRender_RelativeImages(t *testing.T) {
 func TestPostProcess_ResolvedImageURL(t *testing.T) {
 	defer test.MockVariableValue(&setting.AppURL, markup.TestAppURL)()
 
-	test := func(input, expected string) {
+	test := func(relativePath, input, expected string) {
 		var res strings.Builder
 		err := markup.PostProcess(&markup.RenderContext{
-			Ctx: git.DefaultContext,
+			Ctx:          git.DefaultContext,
+			RelativePath: relativePath,
 			Links: markup.Links{
 				Base:       "/user/repo",
 				BranchPath: "branch/main",
@@ -697,22 +698,14 @@ func TestPostProcess_ResolvedImageURL(t *testing.T) {
 
 	mediaBase := util.URLJoin("/user/repo", "media", "branch", "main")
 
-	test(
-		`<img src="`+mediaBase+`/image.jpg">`,
-		`<img src="`+mediaBase+`/image.jpg"/>`,
-	)
-	test(
-		`<img src="image.jpg">`,
-		`<img src="`+mediaBase+`/image.jpg"/>`,
-	)
-	test(
-		`<img src="./image.jpg">`,
-		`<img src="`+mediaBase+`/image.jpg"/>`,
-	)
-	test(
-		`<img src="/image.jpg">`,
-		`<img src="`+mediaBase+`/image.jpg"/>`,
-	)
+	test("", `<img src="`+mediaBase+`/image.jpg">`, `<img src="`+mediaBase+`/image.jpg"/>`)
+	test("sub/folder/README.md", `<img src="`+mediaBase+`/image.jpg">`, `<img src="`+mediaBase+`/image.jpg"/>`)
+
+	test("", `<img src="image.jpg">`, `<img src="`+mediaBase+`/image.jpg"/>`)
+	test("", `<img src="./image.jpg">`, `<img src="`+mediaBase+`/image.jpg"/>`)
+
+	test("", `<img src="/image.jpg">`, `<img src="/image.jpg"/>`)
+	test("sub/folder/README.md", `<img src="/image.jpg">`, `<img src="`+mediaBase+`/image.jpg"/>`)
 }
 
 func Test_ParseClusterFuzz(t *testing.T) {
