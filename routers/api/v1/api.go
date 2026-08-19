@@ -900,6 +900,7 @@ func Routes() *web.Route {
 					})
 					m.Group("/jobs/{job_id}", func() {
 						m.Get("", repo.GetActionJob)
+						m.Post("/rerun", reqToken(), reqRepoWriter(unit.TypeActions), repo.RerunActionJob)
 						m.Get("/logs", repo.GetActionJobLogs)
 					})
 					m.Group("/runs", func() {

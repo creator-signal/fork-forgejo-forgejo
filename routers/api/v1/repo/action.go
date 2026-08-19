@@ -1685,6 +1685,74 @@ func GetActionJob(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, convert.ToActionRunJob(job, full))
 }
 
+// RerunActionJob reruns a completed workflow job and its dependent jobs.
+func RerunActionJob(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun repository repoRerunActionJob
+	// ---
+	// summary: Rerun a completed workflow job and its dependent jobs
+	// description: >
+	//   Rerun a particular workflow job and all jobs that depend on it. The workflow job must have completed (succeeded,
+	//   failed, cancelled or skipped) for the operation to succeed. Otherwise, an error is returned.
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// - name: job_id
+	//   in: path
+	//   description: ID of the workflow job
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "204":
+	//     description: Workflow job rerun has been started
+	//   "400":
+	//     "$ref": "#/responses/error"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+
+	jobID := ctx.ParamsInt64(":job_id")
+
+	job, err := actions_model.GetRunJobByID(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			ctx.Error(http.StatusNotFound, "GetRunJobByID", err)
+		} else {
+			ctx.Error(http.StatusInternalServerError, "GetRunJobByID", err)
+		}
+		return
+	}
+	if job.RepoID != ctx.Repo().Repository.ID {
+		ctx.Error(http.StatusNotFound, "GetRunJobByID", util.ErrNotExist)
+		return
+	}
+
+	if _, err = actions_service.RerunJob(ctx, job); err != nil {
+		switch {
+		case errors.Is(err, actions_service.ErrRerunJobStillRunning),
+			errors.Is(err, actions_service.ErrRerunWorkflowInvalid),
+			errors.Is(err, actions_service.ErrRerunWorkflowDisabled):
+			ctx.Error(http.StatusBadRequest, "RerunJob", err)
+		default:
+			ctx.Error(http.StatusInternalServerError, "RerunJob", err)
+		}
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
 // GetActionJobLogs serves plaintext logs for a single action job.
 func GetActionJobLogs(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs repository repoGetActionJobLogs
