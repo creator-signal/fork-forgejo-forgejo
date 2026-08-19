@@ -333,9 +333,9 @@ func RepoNumOpenActions(ctx context.Context, repoID int64) int {
 	return num
 }
 
-func clearRepoRunCountCache(ctx context.Context, repo *repo_model.Repository) {
+func clearRepoRunCountCache(ctx context.Context, repoID int64) {
 	db.AfterTx(ctx, func() {
-		cache.Remove(actionsCountOpenCacheKey(repo.ID))
+		cache.Remove(actionsCountOpenCacheKey(repoID))
 	})
 }
 
@@ -410,7 +410,7 @@ func InsertRunWithoutNotification(ctx context.Context, run *ActionRun, jobs []*j
 			run.Repo = repo
 		}
 
-		clearRepoRunCountCache(ctx, run.Repo)
+		clearRepoRunCountCache(ctx, run.RepoID)
 
 		return InsertRunJobs(ctx, run, jobs)
 	})
@@ -597,7 +597,7 @@ func UpdateRunWithoutNotification(ctx context.Context, run *ActionRun, cols ...s
 			}
 			run.Repo = repo
 		}
-		clearRepoRunCountCache(ctx, run.Repo)
+		clearRepoRunCountCache(ctx, run.ID)
 	}
 
 	return nil

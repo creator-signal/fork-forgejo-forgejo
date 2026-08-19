@@ -181,19 +181,19 @@ func TestRepoNumOpenActions(t *testing.T) {
 
 	t.Run("Repo 1", func(t *testing.T) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
-		clearRepoRunCountCache(t.Context(), repo)
+		clearRepoRunCountCache(t.Context(), repo.ID)
 		assert.Equal(t, 0, RepoNumOpenActions(t.Context(), repo.ID))
 	})
 
 	t.Run("Repo 4", func(t *testing.T) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
-		clearRepoRunCountCache(t.Context(), repo)
+		clearRepoRunCountCache(t.Context(), repo.ID)
 		assert.Equal(t, 0, RepoNumOpenActions(t.Context(), repo.ID))
 	})
 
 	t.Run("Repo 63", func(t *testing.T) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 63})
-		clearRepoRunCountCache(t.Context(), repo)
+		clearRepoRunCountCache(t.Context(), repo.ID)
 		assert.Equal(t, 1, RepoNumOpenActions(t.Context(), repo.ID))
 	})
 
@@ -208,7 +208,7 @@ func TestRepoNumOpenActions(t *testing.T) {
 		assert.Equal(t, 1, RepoNumOpenActions(t.Context(), repo.ID))
 
 		// Now that we clear the cache, computation should be performed
-		clearRepoRunCountCache(t.Context(), repo)
+		clearRepoRunCountCache(t.Context(), repo.ID)
 		assert.Equal(t, 0, RepoNumOpenActions(t.Context(), repo.ID))
 	})
 }
