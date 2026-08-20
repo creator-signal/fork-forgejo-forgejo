@@ -155,14 +155,21 @@ func TestWriteJobLogStream_QuerySubstring(t *testing.T) {
 	assert.NotContains(t, got, "info: ok")
 }
 
-// TestWriteJobLogStream_QueryIgnoresTimestamp confirms a substring matching
-// the timestamp prefix doesn't falsely match every line.
+// TestWriteJobLogStream_QueryIgnoresTimestamp confirms the filter matches on
+// line content, not the timestamp prefix: "2026" is in every line's prefix but
+// only the third line's content, so only that line is emitted. This proves both
+// directions -- a prefix-only "2026" is ignored, a content "2026" is matched --
+// so a bug that matched the whole raw line (or dropped every line) would fail.
 func TestWriteJobLogStream_QueryIgnoresTimestamp(t *testing.T) {
-	input := "2026-01-01T00:00:00.0000000Z hello\n2026-01-01T00:00:01.0000000Z bye\n"
+	input := "2026-01-01T00:00:00.0000000Z hello\n" +
+		"2026-01-01T00:00:01.0000000Z bye\n" +
+		"2026-01-01T00:00:02.0000000Z shipped in 2026\n"
 	var out bytes.Buffer
 	require.NoError(t, WriteJobLogStream(&out, strings.NewReader(input), JobLogFilterOptions{Query: "2026"}))
-	// Year 2026 appears only in the timestamp prefix; content portion has none.
-	assert.Empty(t, out.String())
+	got := out.String()
+	assert.Contains(t, got, "shipped in 2026")
+	assert.NotContains(t, got, "hello")
+	assert.NotContains(t, got, "bye")
 }
 
 // TestWriteJobLogStream_IgnoreCase confirms case-insensitive substring match.
