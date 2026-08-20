@@ -21,6 +21,7 @@
 	<meta property="og:type" content="website">
 {{end}}
 {{if .OpenGraphImageURL}}
+	<meta property="twitter:card" content="summary_large_image">
 	<meta property="og:image" content="{{.OpenGraphImageURL}}">
 	{{if .OpenGraphImageWidth}}
 		<meta property="og:image:width" content="{{.OpenGraphImageWidth}}">
