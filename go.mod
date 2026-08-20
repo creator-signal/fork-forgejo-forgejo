@@ -89,7 +89,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/zoekt v0.0.0-20260114143800-c747a3bccc2a
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/ulikunitz/xz v0.5.16
 	github.com/urfave/cli/v3 v3.9.1
@@ -253,7 +253,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
@@ -263,3 +262,5 @@ replace github.com/mholt/archiver/v3 => code.forgejo.org/forgejo/archiver/v3 v3.
 replace github.com/gliderlabs/ssh => code.forgejo.org/forgejo/ssh v0.0.0-20241211213324-5fc306ca0616
 
 replace git.sr.ht/~mariusor/go-xsd-duration => code.forgejo.org/forgejo/go-xsd-duration v0.0.0-20220703122237-02e73435a078
+
+replace code.forgejo.org/xorm/xorm => code.forgejo.org/xorm/xorm v1.4.1-0.20260820000616-42c010453108
