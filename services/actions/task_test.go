@@ -109,7 +109,7 @@ jobs:
 func TestDeleteTask(t *testing.T) {
 	t.Run("Task removed with logs and ephemeral runner", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteTask")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 87601})
 		runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 41601})
@@ -142,7 +142,7 @@ func TestDeleteTask(t *testing.T) {
 
 	t.Run("Task removed and persistent runner kept", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteTask")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 87603})
 		runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 41602})
@@ -170,7 +170,7 @@ func TestDeleteTask(t *testing.T) {
 
 	t.Run("Task without logs removed", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteTask")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 87604})
 		assert.Empty(t, task.LogFilename)
@@ -181,7 +181,7 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("No error if task does not exist", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		unittest.AssertNotExistsBean(t, &actions_model.ActionTask{ID: 87601})
 		require.NoError(t, deleteTask(t.Context(), 87601))
@@ -189,7 +189,7 @@ func TestDeleteTask(t *testing.T) {
 
 	t.Run("Error if task is not done", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteTask")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 87602})
 		unittest.AssertCount(t, &actions_model.ActionTaskOutput{TaskID: task.ID}, 1)

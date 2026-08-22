@@ -14,7 +14,7 @@ import (
 )
 
 func TestActionStatusList(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	translation.InitLocales(t.Context())
 
 	statusInfoList := GetStatusInfoList(t.Context(), translation.NewLocale("en-US"))

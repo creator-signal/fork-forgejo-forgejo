@@ -21,7 +21,7 @@ import (
 )
 
 func TestTeamInvite(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.TeamInvitationExpiryDays, 14)()
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})

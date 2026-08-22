@@ -15,7 +15,7 @@ import (
 )
 
 func TestActions_RegisterRunner_Token(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ownerID := int64(0)
 	repoID := int64(0)
 	token := "0123456789012345678901234567890123456789"
@@ -39,7 +39,7 @@ func TestActions_RegisterRunner_TokenUpdate(t *testing.T) {
 	const recordID = 12345678
 	oldToken := "7e577e577e577e57feedfacefeedfacefeedface"
 	newToken := "7e577e577e577e57deadbeefdeadbeefdeadbeef"
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	before := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: recordID})
 	require.Equal(t,
 		before.TokenHash, auth_model.HashToken(oldToken, before.TokenSalt),
@@ -62,7 +62,7 @@ func TestActions_RegisterRunner_TokenUpdate(t *testing.T) {
 }
 
 func TestActions_RegisterRunner_CreateWithLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ownerID := int64(0)
 	repoID := int64(0)
 	token := "0123456789012345678901234567890123456789"
@@ -94,7 +94,7 @@ func TestActions_RegisterRunner_CreateWithLabels(t *testing.T) {
 }
 
 func TestActions_RegisterRunner_CreateWithoutLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ownerID := int64(0)
 	repoID := int64(0)
 	token := "0123456789012345678901234567890123456789"
@@ -126,7 +126,7 @@ func TestActions_RegisterRunner_CreateWithoutLabels(t *testing.T) {
 func TestActions_RegisterRunner_UpdateWithLabels(t *testing.T) {
 	const recordID = 12345678
 	token := "7e577e577e577e57feedfacefeedfacefeedface"
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: recordID})
 
 	newOwnerID := int64(0)
@@ -161,7 +161,7 @@ func TestActions_RegisterRunner_UpdateWithLabels(t *testing.T) {
 func TestActions_RegisterRunner_UpdateWithoutLabels(t *testing.T) {
 	const recordID = 12345678
 	token := "7e577e577e577e57feedfacefeedfacefeedface"
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	before := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: recordID})
 
 	newOwnerID := int64(0)

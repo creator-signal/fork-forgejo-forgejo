@@ -20,7 +20,7 @@ import (
 )
 
 func TestLabel_ToLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: label.RepoID})
 	assert.Equal(t, &api.Label{

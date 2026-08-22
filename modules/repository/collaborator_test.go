@@ -20,7 +20,7 @@ import (
 )
 
 func TestRepository_AddCollaborator(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(repoID, userID int64) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
@@ -35,7 +35,7 @@ func TestRepository_AddCollaborator(t *testing.T) {
 }
 
 func TestRepository_AddCollaborator_IsBlocked(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(repoID, userID int64) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
@@ -62,7 +62,7 @@ func TestRepository_AddCollaborator_IsBlocked(t *testing.T) {
 }
 
 func TestRepoPermissionPublicNonOrgRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// public non-organization repo
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
@@ -115,7 +115,7 @@ func TestRepoPermissionPublicNonOrgRepo(t *testing.T) {
 }
 
 func TestRepoPermissionPrivateNonOrgRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// private non-organization repo
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
@@ -167,7 +167,7 @@ func TestRepoPermissionPrivateNonOrgRepo(t *testing.T) {
 }
 
 func TestRepoPermissionPublicOrgRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// public organization repo
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 32})
@@ -229,7 +229,7 @@ func TestRepoPermissionPublicOrgRepo(t *testing.T) {
 }
 
 func TestRepoPermissionPrivateOrgRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// private organization repo
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 24})

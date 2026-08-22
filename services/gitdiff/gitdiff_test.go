@@ -405,7 +405,7 @@ func setupDefaultDiff() *Diff {
 }
 
 func TestDiff_LoadCommentsNoOutdated(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -415,7 +415,7 @@ func TestDiff_LoadCommentsNoOutdated(t *testing.T) {
 }
 
 func TestDiff_LoadCommentsWithOutdated(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})

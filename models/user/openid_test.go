@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetUserOpenIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	oids, err := user_model.GetUserOpenIDs(db.DefaultContext, int64(1))
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestGetUserOpenIDs(t *testing.T) {
 }
 
 func TestToggleUserOpenIDVisibility(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	oids, err := user_model.GetUserOpenIDs(db.DefaultContext, int64(2))
 	require.NoError(t, err)
 	require.Len(t, oids, 1)

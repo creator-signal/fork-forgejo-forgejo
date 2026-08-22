@@ -14,7 +14,7 @@ import (
 )
 
 func TestMigrate_InsertReleases(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	a := &Attachment{
 		UUID: "a0eebc91-9c0c-4ef7-bb6e-6bb9bd380a12",
@@ -31,7 +31,7 @@ func TestMigrate_InsertReleases(t *testing.T) {
 }
 
 func TestReleaseLoadRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	release := unittest.AssertExistsAndLoadBean(t, &Release{ID: 1})
 	assert.Nil(t, release.Repo)
@@ -54,7 +54,7 @@ func TestReleaseDisplayName(t *testing.T) {
 }
 
 func Test_FindTagsByCommitIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	sha1Rels, err := FindTagsByCommitIDs(db.DefaultContext, 1, "65f1bf27bc3bf70f64657658635e66094edbcb4d")
 	require.NoError(t, err)

@@ -18,7 +18,7 @@ import (
 )
 
 func TestToCommitMeta(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	headRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	sha1 := git.Sha1ObjectFormat
 	signature := &git.Signature{Name: "Test Signature", Email: "test@email.com", When: time.Unix(0, 0)}

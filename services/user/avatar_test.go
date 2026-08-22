@@ -41,7 +41,7 @@ func TestUserDeleteAvatar(t *testing.T) {
 	t.Run("AtomicStorageFailure", func(t *testing.T) {
 		defer test.MockProtect[storage.ObjectStorage](&storage.Avatars)()
 
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 		err := UploadAvatar(db.DefaultContext, user, buff.Bytes())
@@ -69,7 +69,7 @@ func TestUserDeleteAvatar(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		defer test.MockVariableValue(&setting.Avatar.MaxOriginSize, 3)()
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -115,7 +115,7 @@ func TestUserReplaceAvatar(t *testing.T) {
 	png.Encode(&secondBuff, secondImage)
 
 	t.Run("Success", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 		err := UploadAvatar(db.DefaultContext, user, firstBuff.Bytes())
@@ -138,7 +138,7 @@ func TestUserReplaceAvatar(t *testing.T) {
 	})
 
 	t.Run("ReplaceAvatarByItself", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
 		err := UploadAvatar(db.DefaultContext, user, firstBuff.Bytes())

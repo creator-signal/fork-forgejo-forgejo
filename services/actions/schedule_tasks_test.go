@@ -26,7 +26,7 @@ import (
 
 func TestServiceActions_startTask(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Load fixtures that are corrupted and create one valid scheduled workflow
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
@@ -82,7 +82,7 @@ jobs:
 }
 
 func TestCreateScheduleTask(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: 2})
 
 	assertConstant := func(t *testing.T, cron *actions_model.ActionSchedule, run *actions_model.ActionRun) {
@@ -195,7 +195,7 @@ jobs:
 
 func TestCancelPreviousJobs(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestCancelPreviousJobs")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 894})
 	assert.Equal(t, actions_model.StatusRunning, run.Status)
@@ -247,7 +247,7 @@ func TestCancelPreviousWithConcurrencyGroup(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/TestCancelPreviousWithConcurrencyGroup")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			e := db.GetEngine(t.Context())
 
@@ -294,7 +294,7 @@ func TestCancelPreviousWithConcurrencyGroup(t *testing.T) {
 
 func TestServiceActions_DynamicMatrix(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Load fixtures that are corrupted and create one valid scheduled workflow
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
@@ -361,7 +361,7 @@ jobs:
 
 func TestServiceActions_RunsOnNeeds(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Load fixtures that are corrupted and create one valid scheduled workflow
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
@@ -424,7 +424,7 @@ jobs:
 
 func TestServiceActions_ExpandReusableWorkflow(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestServiceActions_startTask")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type callArgs struct {
 		repoID    int64

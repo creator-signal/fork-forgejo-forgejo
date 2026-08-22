@@ -18,7 +18,7 @@ import (
 )
 
 func TestRepository_GetCollaborators(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(repoID int64) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		collaborators, err := repo_model.GetCollaborators(db.DefaultContext, repo.ID, db.ListOptions{})
@@ -51,7 +51,7 @@ func TestRepository_GetCollaborators(t *testing.T) {
 }
 
 func TestRepository_IsCollaborator(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(repoID, userID int64, expected bool) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
@@ -66,7 +66,7 @@ func TestRepository_IsCollaborator(t *testing.T) {
 }
 
 func TestRepository_ChangeCollaborationAccessMode(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 	require.NoError(t, repo_model.ChangeCollaborationAccessMode(db.DefaultContext, repo, 4, perm.AccessModeAdmin))
@@ -88,7 +88,7 @@ func TestRepository_ChangeCollaborationAccessMode(t *testing.T) {
 }
 
 func TestRepository_CountCollaborators(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 	count, err := db.Count[repo_model.Collaboration](db.DefaultContext, repo_model.FindCollaborationOptions{
@@ -113,7 +113,7 @@ func TestRepository_CountCollaborators(t *testing.T) {
 }
 
 func TestRepository_IsOwnerMemberCollaborator(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
 
@@ -148,7 +148,7 @@ func TestRepository_IsOwnerMemberCollaborator(t *testing.T) {
 }
 
 func TestRepo_GetCollaboration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 
@@ -166,7 +166,7 @@ func TestRepo_GetCollaboration(t *testing.T) {
 }
 
 func TestGetCollaboratorWithUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user16 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 16})
 	user15 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 15})

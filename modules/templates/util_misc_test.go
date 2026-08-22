@@ -92,7 +92,7 @@ fs9cMpZVM9BfIKNUSO8QY=
 
 func TestActionContent2Commits_VerificationState(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestParseCommitWithSSHSignature/")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: user2.ID})
 	commits, err := json.Marshal(pushCommits())

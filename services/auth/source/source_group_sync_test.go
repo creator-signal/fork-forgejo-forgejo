@@ -103,7 +103,7 @@ func TestResolveMappedMemberships(t *testing.T) {
 	// test user with id 2 with memberships:
 	// - "org3":  {"owners", "team1", "teamcreaterepo"},
 	// - "org17": {"test_team"},
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	ctx := db.DefaultContext

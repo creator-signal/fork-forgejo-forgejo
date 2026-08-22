@@ -196,7 +196,7 @@ Unknown GPG key with good email
 }
 
 func TestCheckGPGUserEmail(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_ = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -242,7 +242,7 @@ Q0KHb+QcycSgbDx0ZAvdIacuKvBBcbxrsmFUI4LR+oIup0G9gUc0roPvr014jYQL
 }
 
 func TestCheckGPGRevokedIdentity(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, db.Insert(db.DefaultContext, &user_model.EmailAddress{UID: 1, Email: "no-reply@golang.com", IsActivated: true}))
 	require.NoError(t, db.Insert(db.DefaultContext, &user_model.EmailAddress{UID: 1, Email: "revoked@golang.com", IsActivated: true}))

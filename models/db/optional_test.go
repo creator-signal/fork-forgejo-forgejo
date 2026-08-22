@@ -16,7 +16,7 @@ import (
 )
 
 func TestOptionFieldInt(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type OptionInt struct {
 		ID     int64 `xorm:"pk autoincr"`
@@ -84,7 +84,7 @@ func TestOptionFieldInt(t *testing.T) {
 }
 
 func TestOptionFieldString(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type OptionString struct {
 		ID     int64 `xorm:"pk autoincr"`
@@ -152,7 +152,7 @@ func TestOptionFieldString(t *testing.T) {
 }
 
 func TestOptionFieldIntrospection(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type OptionIntrospectInt struct {
 		ID           int64 `xorm:"pk autoincr"`

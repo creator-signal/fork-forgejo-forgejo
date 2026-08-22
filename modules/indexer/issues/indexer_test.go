@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDBSearchIssues(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	defer test.MockVariableValue(&setting.Indexer.IssueType, "db")()
 	<-InitIssueIndexer(true)
@@ -421,7 +421,7 @@ func searchIssueWithPaginator(t *testing.T) {
 }
 
 func TestBleveDeleteIssue(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	tmp := t.TempDir()
 	defer test.MockVariableValue(&setting.Indexer.IssuePath, filepath.Join(tmp, "indexers/issues.bleve"))()

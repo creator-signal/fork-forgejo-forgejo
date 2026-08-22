@@ -23,7 +23,7 @@ import (
 )
 
 func TestDumpDatabase(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	dir := t.TempDir()
 
@@ -39,7 +39,7 @@ func TestDumpDatabase(t *testing.T) {
 }
 
 func TestDeleteOrphanedObjects(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	countBefore, err := db.GetEngine(db.DefaultContext).Count(&issues_model.PullRequest{})
 	require.NoError(t, err)

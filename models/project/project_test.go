@@ -34,7 +34,7 @@ func TestIsProjectTypeValid(t *testing.T) {
 }
 
 func TestGetProjects(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	projects, err := db.Find[Project](db.DefaultContext, SearchOptions{RepoID: 1})
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestGetProjects(t *testing.T) {
 }
 
 func TestProjectsSort(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	tests := []struct {
 		sortType string
@@ -89,7 +89,7 @@ func TestProjectsSort(t *testing.T) {
 }
 
 func TestGetProjectForUserByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	found := func(t *testing.T, uid, id int64) {
 		t.Helper()
@@ -120,7 +120,7 @@ func TestGetProjectForUserByID(t *testing.T) {
 }
 
 func TestChangeProjectStatus(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Unchanged", func(t *testing.T) {
 		project := unittest.AssertExistsAndLoadBean(t, &Project{ID: 1})

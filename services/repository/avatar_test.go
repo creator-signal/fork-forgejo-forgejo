@@ -24,7 +24,7 @@ func TestUploadAvatar(t *testing.T) {
 	var buff bytes.Buffer
 	png.Encode(&buff, myImage)
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 
 	err := UploadAvatar(db.DefaultContext, repo, buff.Bytes())
@@ -38,7 +38,7 @@ func TestUploadBigAvatar(t *testing.T) {
 	var buff bytes.Buffer
 	png.Encode(&buff, myImage)
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 
 	err := UploadAvatar(db.DefaultContext, repo, buff.Bytes())
@@ -51,7 +51,7 @@ func TestDeleteAvatar(t *testing.T) {
 	var buff bytes.Buffer
 	png.Encode(&buff, myImage)
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 
 	err := UploadAvatar(db.DefaultContext, repo, buff.Bytes())
@@ -69,7 +69,7 @@ func TestTemplateGenerateAvatar(t *testing.T) {
 	var buff bytes.Buffer
 	png.Encode(&buff, myImage)
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 
 	// Upload Avatar

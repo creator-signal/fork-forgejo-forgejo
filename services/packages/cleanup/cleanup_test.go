@@ -16,7 +16,7 @@ import (
 )
 
 func TestGetCleanupTargets(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx := db.DefaultContext
 

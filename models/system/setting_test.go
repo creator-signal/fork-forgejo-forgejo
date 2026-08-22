@@ -16,7 +16,7 @@ import (
 
 func TestSettings(t *testing.T) {
 	keyName := "test.key"
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, db.TruncateBeans(db.DefaultContext, &system.Setting{}))
 

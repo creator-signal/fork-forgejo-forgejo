@@ -33,7 +33,7 @@ import (
 )
 
 func TestMigrateLocalPath(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user1"})
 
@@ -306,7 +306,7 @@ func TestMigrateWithReleases(t *testing.T) {
 }
 
 func Test_UpdateCommentsMigrationsByType(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	err := issues_model.UpdateCommentsMigrationsByType(db.DefaultContext, structs.GithubService, "1", 1)
 	require.NoError(t, err)

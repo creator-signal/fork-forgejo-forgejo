@@ -27,7 +27,7 @@ func TestMilestone_State(t *testing.T) {
 }
 
 func TestGetMilestoneByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	milestone, err := issues_model.GetMilestoneByRepoID(db.DefaultContext, 1, 1)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestGetMilestoneByRepoID(t *testing.T) {
 }
 
 func TestGetMilestonesByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(repoID int64, state api.StateType) {
 		var isClosed optional.Option[bool]
 		switch state {
@@ -93,7 +93,7 @@ func TestGetMilestonesByRepoID(t *testing.T) {
 }
 
 func TestGetMilestones(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	test := func(sortType string, sortCond func(*issues_model.Milestone) int) {
 		for _, page := range []int{0, 1} {
@@ -154,7 +154,7 @@ func TestGetMilestones(t *testing.T) {
 }
 
 func TestCountRepoMilestones(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(repoID int64) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		count, err := db.Count[issues_model.Milestone](db.DefaultContext, issues_model.FindMilestoneOptions{
@@ -175,7 +175,7 @@ func TestCountRepoMilestones(t *testing.T) {
 }
 
 func TestCountRepoClosedMilestones(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(repoID int64) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		count, err := db.Count[issues_model.Milestone](db.DefaultContext, issues_model.FindMilestoneOptions{
@@ -198,7 +198,7 @@ func TestCountRepoClosedMilestones(t *testing.T) {
 }
 
 func TestCountMilestonesByRepoIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	milestonesCount := func(repoID int64) (int, int) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: repoID})
 		return repo.NumOpenMilestones, repo.NumClosedMilestones
@@ -225,7 +225,7 @@ func TestCountMilestonesByRepoIDs(t *testing.T) {
 }
 
 func TestGetMilestonesByRepoIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	repo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	test := func(sortType string, sortCond func(*issues_model.Milestone) int) {
@@ -287,7 +287,7 @@ func TestGetMilestonesByRepoIDs(t *testing.T) {
 }
 
 func TestNewMilestone(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	milestone := &issues_model.Milestone{
 		RepoID:  1,
 		Name:    "milestoneName",
@@ -300,7 +300,7 @@ func TestNewMilestone(t *testing.T) {
 }
 
 func TestChangeMilestoneStatusByRepoIDAndID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, issues_model.ChangeMilestoneStatusByRepoIDAndID(db.DefaultContext, 1, 1, true))
 	unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: 1, IsClosed: true})
@@ -312,7 +312,7 @@ func TestChangeMilestoneStatusByRepoIDAndID(t *testing.T) {
 }
 
 func TestDeleteMilestoneByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	require.NoError(t, issues_model.DeleteMilestoneByRepoID(db.DefaultContext, 1, 1))
 	unittest.AssertNotExistsBean(t, &issues_model.Milestone{ID: 1})
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: 1})
@@ -321,7 +321,7 @@ func TestDeleteMilestoneByRepoID(t *testing.T) {
 }
 
 func TestUpdateMilestone(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	milestone := unittest.AssertExistsAndLoadBean(t, &issues_model.Milestone{ID: 1})
 	milestone.Name = " newMilestoneName  "
@@ -333,7 +333,7 @@ func TestUpdateMilestone(t *testing.T) {
 }
 
 func TestUpdateMilestoneCounters(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{MilestoneID: 1},
 		unittest.Cond("is_closed = ?", false))
 
@@ -353,7 +353,7 @@ func TestUpdateMilestoneCounters(t *testing.T) {
 }
 
 func TestMigrate_InsertMilestones(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	reponame := "repo1"
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{Name: reponame})
 	name := "milestonetest1"

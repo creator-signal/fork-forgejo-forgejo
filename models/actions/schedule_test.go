@@ -20,7 +20,7 @@ import (
 )
 
 func TestScheduleCreateScheduleTask(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 2})
 	repo62 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 62, Name: "test_workflows", OwnerID: user2.ID})

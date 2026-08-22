@@ -22,7 +22,7 @@ import (
 )
 
 func TestUserDashboardFeedWelcome(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	// User2 has some activity in feed
 	session := loginUser(t, "user2")

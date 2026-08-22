@@ -16,7 +16,7 @@ import (
 )
 
 func TestOAuth2Application_GenerateClientSecret(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})
 	secret, err := app.GenerateClientSecret(db.DefaultContext)
 	require.NoError(t, err)
@@ -25,7 +25,7 @@ func TestOAuth2Application_GenerateClientSecret(t *testing.T) {
 }
 
 func BenchmarkOAuth2Application_GenerateClientSecret(b *testing.B) {
-	require.NoError(b, unittest.PrepareTestDatabase())
+	require.NoError(b, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(b, &auth_model.OAuth2Application{ID: 1})
 	for i := 0; i < b.N; i++ {
 		_, _ = app.GenerateClientSecret(db.DefaultContext)
@@ -83,7 +83,7 @@ func TestOAuth2Application_ContainsRedirect_Normalization(t *testing.T) {
 }
 
 func TestOAuth2Application_ValidateClientSecret(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})
 	secret, err := app.GenerateClientSecret(db.DefaultContext)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestOAuth2Application_ValidateClientSecret(t *testing.T) {
 }
 
 func TestGetOAuth2ApplicationByClientID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app, err := auth_model.GetOAuth2ApplicationByClientID(db.DefaultContext, "da7da3ba-9a13-4167-856f-3899de0b0138")
 	require.NoError(t, err)
 	assert.Equal(t, "da7da3ba-9a13-4167-856f-3899de0b0138", app.ClientID)
@@ -103,7 +103,7 @@ func TestGetOAuth2ApplicationByClientID(t *testing.T) {
 }
 
 func TestCreateOAuth2Application(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app, err := auth_model.CreateOAuth2Application(db.DefaultContext, auth_model.CreateOAuth2ApplicationOptions{Name: "newapp", UserID: 1})
 	require.NoError(t, err)
 	assert.Equal(t, "newapp", app.Name)
@@ -116,7 +116,7 @@ func TestOAuth2Application_TableName(t *testing.T) {
 }
 
 func TestOAuth2Application_GetGrantByUserID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})
 	grant, err := app.GetGrantByUserID(db.DefaultContext, 1)
 	require.NoError(t, err)
@@ -128,7 +128,7 @@ func TestOAuth2Application_GetGrantByUserID(t *testing.T) {
 }
 
 func TestOAuth2Application_CreateGrant(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Application{ID: 1})
 	grant, err := app.CreateGrant(db.DefaultContext, 2, "")
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestOAuth2Application_CreateGrant(t *testing.T) {
 //////////////////// Grant
 
 func TestGetOAuth2GrantByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	grant, err := auth_model.GetOAuth2GrantByID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), grant.ID)
@@ -152,7 +152,7 @@ func TestGetOAuth2GrantByID(t *testing.T) {
 }
 
 func TestOAuth2Grant_IncreaseCounter(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	grant := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1, Counter: 1})
 
 	// First increment succeeds
@@ -169,7 +169,7 @@ func TestOAuth2Grant_IncreaseCounter(t *testing.T) {
 }
 
 func TestOAuth2Grant_ScopeContains(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	grant := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1, Scope: "openid profile"})
 	assert.True(t, grant.ScopeContains("openid"))
 	assert.True(t, grant.ScopeContains("profile"))
@@ -178,7 +178,7 @@ func TestOAuth2Grant_ScopeContains(t *testing.T) {
 }
 
 func TestOAuth2Grant_GenerateNewAuthorizationCode(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	grant := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2Grant{ID: 1})
 	code, err := grant.GenerateNewAuthorizationCode(db.DefaultContext, "https://example2.com/callback", "CjvyTLSdR47G5zYenDA-eDWW4lRrO8yvjcWwbD_deOg", "S256")
 	require.NoError(t, err)
@@ -191,7 +191,7 @@ func TestOAuth2Grant_TableName(t *testing.T) {
 }
 
 func TestGetOAuth2GrantsByUserID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	result, err := auth_model.GetOAuth2GrantsByUserID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -204,7 +204,7 @@ func TestGetOAuth2GrantsByUserID(t *testing.T) {
 }
 
 func TestRevokeOAuth2Grant(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	require.NoError(t, auth_model.RevokeOAuth2Grant(db.DefaultContext, 1, 1))
 	unittest.AssertNotExistsBean(t, &auth_model.OAuth2Grant{ID: 1, UserID: 1})
 }
@@ -212,7 +212,7 @@ func TestRevokeOAuth2Grant(t *testing.T) {
 //////////////////// Authorization Code
 
 func TestGetOAuth2AuthorizationByCode(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	code, err := auth_model.GetOAuth2AuthorizationByCode(db.DefaultContext, "authcode")
 	require.NoError(t, err)
 	assert.NotNil(t, code)
@@ -293,14 +293,14 @@ func TestOAuth2AuthorizationCode_GenerateRedirectURI(t *testing.T) {
 }
 
 func TestOAuth2AuthorizationCode_Invalidate(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	code := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
 	require.NoError(t, code.Invalidate(db.DefaultContext))
 	unittest.AssertNotExistsBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
 }
 
 func TestOAuth2AuthorizationCode_Invalidate_DoubleUse(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	code := unittest.AssertExistsAndLoadBean(t, &auth_model.OAuth2AuthorizationCode{Code: "authcode"})
 
 	// First invalidation should succeed
@@ -325,7 +325,7 @@ func TestBuiltinApplicationsClientIDs(t *testing.T) {
 
 func TestOrphanedOAuth2Applications(t *testing.T) {
 	defer unittest.OverrideFixtures("models/auth/TestOrphanedOAuth2Applications")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	count, err := auth_model.CountOrphanedOAuth2Applications(db.DefaultContext)
 	require.NoError(t, err)

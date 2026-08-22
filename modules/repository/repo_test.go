@@ -82,7 +82,7 @@ func Test_calcSync(t *testing.T) {
 }
 
 func TestSyncReleasesWithTags(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Can be any repository that doesn't have the git tag releases.
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})

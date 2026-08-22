@@ -31,7 +31,7 @@ import (
 )
 
 func TestOAuth2Application_LoadUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	app := unittest.AssertExistsAndLoadBean(t, &auth.OAuth2Application{ID: 1})
 	user, err := user_model.GetUserByID(db.DefaultContext, app.UID)
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestIsValidUserID(t *testing.T) {
 }
 
 func TestUserLinks(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	assert.Equal(t, "/", user1.DashboardLink())
@@ -95,7 +95,7 @@ func TestGetUserFromMap(t *testing.T) {
 
 func TestGetUserByName(t *testing.T) {
 	defer unittest.OverrideFixtures("models/user/fixtures")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	{
 		_, err := user_model.GetUserByName(db.DefaultContext, "")
@@ -123,7 +123,7 @@ func TestGetUserByName(t *testing.T) {
 }
 
 func TestCanCreateOrganization(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	assert.True(t, admin.CanCreateOrganization())
@@ -142,7 +142,7 @@ func TestCanCreateOrganization(t *testing.T) {
 
 func TestGetAllUsers(t *testing.T) {
 	defer unittest.OverrideFixtures("models/user/fixtures")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	users, err := user_model.GetAllUsers(db.DefaultContext)
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestKeyID(t *testing.T) {
 
 func TestSearchUsers(t *testing.T) {
 	defer unittest.OverrideFixtures("models/user/fixtures")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(opts *user_model.SearchUserOptions, expectedUserOrOrgIDs []int64) {
 		users, _, err := user_model.SearchUsers(db.DefaultContext, opts)
 		require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestSearchUsers(t *testing.T) {
 }
 
 func TestEmailNotificationPreferences(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	for _, test := range []struct {
 		expected string
@@ -350,7 +350,7 @@ func TestCreateUserInvalidEmail(t *testing.T) {
 }
 
 func TestCreateUserEmailAlreadyUsed(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -364,7 +364,7 @@ func TestCreateUserEmailAlreadyUsed(t *testing.T) {
 }
 
 func TestCreateUserCustomTimestamps(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -385,7 +385,7 @@ func TestCreateUserCustomTimestamps(t *testing.T) {
 }
 
 func TestCreateUserWithoutCustomTimestamps(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -416,7 +416,7 @@ func TestCreateUserWithoutCustomTimestamps(t *testing.T) {
 }
 
 func TestCreateUserClaimingUsername(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.UsernameCooldownPeriod, 1)()
 
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(&user_model.Redirect{RedirectUserID: 1, LowerName: "redirecting", CreatedUnix: timeutil.TimeStampNow()})
@@ -443,7 +443,7 @@ func TestCreateUserClaimingUsername(t *testing.T) {
 // Attempts to create a username with a fediverse-format handle, which should
 // fail (without the override IsActivityPub, which is set by CreateFederatedUser)
 func TestCreateUserPlainWithFediverseHandle(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(&user_model.Redirect{RedirectUserID: 1, LowerName: "redirecting", CreatedUnix: timeutil.TimeStampNow()})
 	require.NoError(t, err)
@@ -498,7 +498,7 @@ func TestCreateUserPlainWithFediverseHandle(t *testing.T) {
 }
 
 func TestGetUserIDsByNames(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// ignore non existing
 	IDs, err := user_model.GetUserIDsByNames(db.DefaultContext, []string{"user1", "user2", "none_existing_user"}, true)
@@ -512,7 +512,7 @@ func TestGetUserIDsByNames(t *testing.T) {
 }
 
 func TestGetMaileableUsersByIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	results, err := user_model.GetMaileableUsersByIDs(db.DefaultContext, []int64{1, 4}, false)
 	require.NoError(t, err)
@@ -532,7 +532,7 @@ func TestGetMaileableUsersByIDs(t *testing.T) {
 
 func TestNewUserRedirect(t *testing.T) {
 	// redirect to a completely new name
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	require.NoError(t, user_model.NewUserRedirect(db.DefaultContext, user.ID, user.Name, "newusername"))
@@ -549,7 +549,7 @@ func TestNewUserRedirect(t *testing.T) {
 
 func TestNewUserRedirect2(t *testing.T) {
 	// redirect to previously used name
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	require.NoError(t, user_model.NewUserRedirect(db.DefaultContext, user.ID, user.Name, "olduser1"))
@@ -566,7 +566,7 @@ func TestNewUserRedirect2(t *testing.T) {
 
 func TestNewUserRedirect3(t *testing.T) {
 	// redirect for a previously-unredirected user
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	require.NoError(t, user_model.NewUserRedirect(db.DefaultContext, user.ID, user.Name, "newusername"))
@@ -578,7 +578,7 @@ func TestNewUserRedirect3(t *testing.T) {
 }
 
 func TestGetUserByOpenID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_, err := user_model.GetUserByOpenID(db.DefaultContext, "https://unknown")
 	if assert.Error(t, err) {
@@ -597,7 +597,7 @@ func TestGetUserByOpenID(t *testing.T) {
 }
 
 func TestFollowUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(followerID, followedID int64) {
 		require.NoError(t, user_model.FollowUser(db.DefaultContext, followerID, followedID))
@@ -618,7 +618,7 @@ func TestFollowUser(t *testing.T) {
 }
 
 func TestUnfollowUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(followerID, followedID int64) {
 		require.NoError(t, user_model.UnfollowUser(db.DefaultContext, followerID, followedID))
@@ -632,7 +632,7 @@ func TestUnfollowUser(t *testing.T) {
 }
 
 func TestIsUserVisibleToViewer(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})   // admin, public
 	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})   // normal, public
@@ -685,7 +685,7 @@ func TestIsUserVisibleToViewer(t *testing.T) {
 }
 
 func TestGetAllAdmins(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	admins, err := user_model.GetAllAdmins(db.DefaultContext)
 	require.NoError(t, err)
@@ -695,7 +695,7 @@ func TestGetAllAdmins(t *testing.T) {
 }
 
 func TestMustHaveTwoFactor(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4})
@@ -738,7 +738,7 @@ func TestMustHaveTwoFactor(t *testing.T) {
 }
 
 func TestIsAccessAllowed(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	runTest := func(t *testing.T, user *user_model.User, useTOTP, accessAllowed bool) {
 		t.Helper()
@@ -917,7 +917,7 @@ func TestEmailTo(t *testing.T) {
 }
 
 func TestDisabledUserFeatures(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testValues := container.SetOf(setting.UserFeatureDeletion,
 		setting.UserFeatureManageSSHKeys,
@@ -947,7 +947,7 @@ func TestDisabledUserFeatures(t *testing.T) {
 
 func TestGenerateEmailAuthorizationCode(t *testing.T) {
 	defer test.MockVariableValue(&setting.Service.ActiveCodeLives, 2)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -971,7 +971,7 @@ func TestGenerateEmailAuthorizationCode(t *testing.T) {
 
 func TestVerifyUserAuthorizationToken(t *testing.T) {
 	defer test.MockVariableValue(&setting.Service.ActiveCodeLives, 2)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -1012,7 +1012,7 @@ func TestVerifyUserAuthorizationToken(t *testing.T) {
 }
 
 func TestGetInactiveUsers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// all inactive users
 	// user1's createdunix is 1672578000
@@ -1026,7 +1026,7 @@ func TestGetInactiveUsers(t *testing.T) {
 }
 
 func TestPronounsPrivacy(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	t.Run("EmptyPronounsIfNoneSet", func(t *testing.T) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 		user.Pronouns = ""
@@ -1065,7 +1065,7 @@ func TestPronounsPrivacy(t *testing.T) {
 }
 
 func TestGetUserByEmail(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
 
 	t.Run("Normal", func(t *testing.T) {
@@ -1094,7 +1094,7 @@ func TestGetUserByEmail(t *testing.T) {
 }
 
 func TestGetUserByEmailSimple(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "noreply.example.org")()
 
 	t.Run("Normal", func(t *testing.T) {

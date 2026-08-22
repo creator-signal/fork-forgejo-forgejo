@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetUserFork(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// User13 has repo 11 forked from repo10
 	repo, err := repo_model.GetRepositoryByID(db.DefaultContext, 10)
@@ -35,7 +35,7 @@ func TestGetUserFork(t *testing.T) {
 
 func TestGetUserForkLax(t *testing.T) {
 	defer unittest.OverrideFixtures("models/repo/TestGetUserForkLax")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// User13 has repo 11 forked from repo10
 	repo10, err := repo_model.GetRepositoryByID(db.DefaultContext, 10)
@@ -69,7 +69,7 @@ func TestGetUserForkLax(t *testing.T) {
 
 func TestGetUserForkLaxWithTwoChoices(t *testing.T) {
 	defer unittest.OverrideFixtures("models/repo/TestGetUserForkLaxWithTwoChoices")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Test scenario:
 	//

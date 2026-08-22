@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetLatestCommitStatusForPairs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	t.Run("Empty", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
@@ -125,7 +125,7 @@ func TestGetLatestCommitStatusForPairs(t *testing.T) {
 }
 
 func TestGetLatestCommitStatusForRepoCommitIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	t.Run("Empty", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()

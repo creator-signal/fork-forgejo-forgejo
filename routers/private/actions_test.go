@@ -68,7 +68,7 @@ func TestParseScope(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			owner, repo, err := ParseScope(t.Context(), testCase.scope)
 

@@ -16,7 +16,7 @@ import (
 )
 
 func TestCommentListLoadUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &Issue{})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})
@@ -86,7 +86,7 @@ func TestCommentListLoadUser(t *testing.T) {
 }
 
 func TestCommentListLoadResolveDoers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &Issue{})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})
@@ -133,7 +133,7 @@ func TestCommentListLoadResolveDoers(t *testing.T) {
 }
 
 func TestCommentListLoadReactions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &Issue{})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})

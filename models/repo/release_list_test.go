@@ -13,7 +13,7 @@ import (
 )
 
 func TestReleaseListLoadAttributes(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	releases := ReleaseList{&Release{
 		RepoID:      1,

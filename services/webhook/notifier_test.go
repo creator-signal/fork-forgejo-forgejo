@@ -58,7 +58,7 @@ func pushCommits() *repository.PushCommits {
 
 func TestSyncPushCommits(t *testing.T) {
 	defer unittest.OverrideFixtures("services/webhook/TestPushCommits")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: user.ID})
@@ -91,7 +91,7 @@ func TestSyncPushCommits(t *testing.T) {
 
 func TestPushCommits(t *testing.T) {
 	defer unittest.OverrideFixtures("services/webhook/TestPushCommits")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: user.ID})
@@ -138,7 +138,7 @@ func assertActionEqual(t *testing.T, expectedRun *actions_model.ActionRun, actua
 
 func TestAction(t *testing.T) {
 	defer unittest.OverrideFixtures("services/webhook/TestPushCommits")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	triggerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2, OwnerID: triggerUser.ID})

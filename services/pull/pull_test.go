@@ -40,7 +40,7 @@ func TestPullRequest_CommitMessageTrailersPattern(t *testing.T) {
 }
 
 func TestPullRequest_GetDefaultMergeMessage_InternalTracker(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2})
 
 	require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))
@@ -67,7 +67,7 @@ func TestPullRequest_GetDefaultMergeMessage_InternalTracker(t *testing.T) {
 }
 
 func TestPullRequest_GetDefaultMergeMessage_ExternalTracker(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	externalTracker := repo_model.RepoUnit{
 		Type: unit.TypeExternalTracker,
@@ -101,7 +101,7 @@ func TestPullRequest_GetDefaultMergeMessage_ExternalTracker(t *testing.T) {
 }
 
 func TestPullRequest_GetDefaultMergeMessage_GlobalTemplate(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2})
 
 	require.NoError(t, pr.LoadBaseRepo(t.Context()))

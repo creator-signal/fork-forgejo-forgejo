@@ -15,18 +15,18 @@ import (
 )
 
 func TestCheckRepoStats(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	require.NoError(t, CheckRepoStats(db.DefaultContext))
 }
 
 func TestDoctorUserStarNum(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, DoctorUserStarNum(db.DefaultContext))
 }
 
 func Test_repoStatsCorrectIssueNumComments(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue2 := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	assert.NotNil(t, issue2)

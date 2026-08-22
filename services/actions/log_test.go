@@ -23,7 +23,7 @@ func TestServicesActions_transferLingeringLogs(t *testing.T) {
 	// in the database for testing, but the dbfs API does not have what is needed to
 	// create them
 	defer unittest.OverrideFixtures("services/actions/TestServicesActions_TransferLingeringLogs")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&transferLingeringLogsMax, 2)()
 	defer test.MockVariableValue(&transferLingeringLogsOld, 2*24*time.Hour)()
 	defer test.MockVariableValue(&transferLingeringLogsSleep, time.Millisecond)()

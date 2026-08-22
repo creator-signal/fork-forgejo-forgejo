@@ -16,7 +16,7 @@ import (
 )
 
 func TestChangeMilestoneAssign(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{RepoID: 1})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	assert.NotNil(t, issue)

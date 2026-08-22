@@ -13,7 +13,7 @@ import (
 )
 
 func TestLoadTwoFactorStatus(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	for _, tt := range []struct {
 		name               string

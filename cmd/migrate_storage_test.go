@@ -41,7 +41,7 @@ func createLocalStorage(t *testing.T) (storage.ObjectStorage, string) {
 }
 
 func TestMigratePackages(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	creator := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -87,7 +87,7 @@ func TestMigratePackages(t *testing.T) {
 }
 
 func TestMigrateActionsArtifacts(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	srcStorage, _ := createLocalStorage(t)
 	defer test.MockVariableValue(&storage.ActionsArtifacts, srcStorage)()

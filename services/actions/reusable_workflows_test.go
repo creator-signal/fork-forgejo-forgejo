@@ -108,7 +108,7 @@ func replaceTestRepo(t *testing.T, owner, repo, replacement string) {
 }
 
 func TestLazyRepoExpandLocalReusableWorkflows(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Shouldn't need valid content if we never call the lazy evaluator
 	lazy1, cleanup := lazyRepoExpandLocalReusableWorkflow(t.Context(), -123456, "this is not a valid commit SHA")
@@ -128,7 +128,7 @@ func TestLazyRepoExpandLocalReusableWorkflows(t *testing.T) {
 }
 
 func TestExpandInstanceReusableWorkflows(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	tests := []struct {
 		name          string

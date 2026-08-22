@@ -16,7 +16,7 @@ import (
 )
 
 func TestIssueNewIssueLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
@@ -40,7 +40,7 @@ func TestIssueNewIssueLabels(t *testing.T) {
 }
 
 func TestIssueNewIssueLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -55,7 +55,7 @@ func TestIssueNewIssueLabel(t *testing.T) {
 }
 
 func TestIssueReplaceIssueLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
@@ -81,7 +81,7 @@ func TestIssueReplaceIssueLabels(t *testing.T) {
 }
 
 func TestIssueDeleteIssueLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
@@ -100,7 +100,7 @@ func TestIssueDeleteIssueLabel(t *testing.T) {
 }
 
 func TestIssueLoadLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
@@ -124,7 +124,7 @@ func TestIssueLoadLabels(t *testing.T) {
 }
 
 func TestNewIssueLabelsScope(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 18})
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 7})

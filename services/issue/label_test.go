@@ -26,7 +26,7 @@ func TestIssue_AddLabels(t *testing.T) {
 		{2, []int64{}, 1},     // pull-request, empty
 	}
 	for _, test := range tests {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: test.issueID})
 		labels := make([]*issues_model.Label, len(test.labelIDs))
 		for i, labelID := range test.labelIDs {
@@ -52,7 +52,7 @@ func TestIssue_AddLabel(t *testing.T) {
 		{2, 1, 2}, // pull-request, already-added label
 	}
 	for _, test := range tests {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: test.issueID})
 		label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: test.labelID})
 		doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: test.doerID})

@@ -17,7 +17,7 @@ import (
 )
 
 func TestActionUser_CreateDelete(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -58,7 +58,7 @@ func TestActionUser_CreateDelete(t *testing.T) {
 }
 
 func TestActionUser_RevokeInactiveActionUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

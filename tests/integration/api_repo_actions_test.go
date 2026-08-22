@@ -376,7 +376,7 @@ func TestActionsAPIGetActionRun(t *testing.T) {
 
 func TestAPIRepoActionsRunnerRegistrationTokenOperations(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIRepoActionsRunnerRegistrationTokenOperations")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	session := loginUser(t, user2.Name)
@@ -398,7 +398,7 @@ func TestAPIRepoActionsRunnerRegistrationTokenOperations(t *testing.T) {
 
 func TestAPIRepoActionsRunnerOperations(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIRepoActionsRunnerOperations")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})

@@ -58,7 +58,7 @@ func TestRerun_GetAllRerunJobs(t *testing.T) {
 func TestRerun_RerunAllJobs(t *testing.T) {
 	t.Run("Reruns completed workflow", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunAllJobs")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -114,7 +114,7 @@ func TestRerun_RerunAllJobs(t *testing.T) {
 
 	t.Run("Error if workflow running", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunAllJobs")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -149,7 +149,7 @@ func TestRerun_RerunAllJobs(t *testing.T) {
 
 	t.Run("Error if workflow invalid", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunAllJobs")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -174,7 +174,7 @@ func TestRerun_RerunAllJobs(t *testing.T) {
 
 	t.Run("Error if workflow disabled", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunAllJobs")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -206,7 +206,7 @@ func TestRerun_RerunAllJobs(t *testing.T) {
 func TestRerun_RerunJob(t *testing.T) {
 	t.Run("Rerun independent job", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -262,7 +262,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Rerun job needed by others", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -298,7 +298,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Rerun job needed by others with cancellation", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -357,7 +357,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Rerun job with needs", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)
@@ -386,7 +386,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Error if workflow invalid", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683900})
 
@@ -415,7 +415,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Error if workflow disabled", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683881})
 
@@ -439,7 +439,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Error if job still running", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 683592})
 
@@ -458,7 +458,7 @@ func TestRerun_RerunJob(t *testing.T) {
 
 	t.Run("Run not altered when run is already running", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestRerun_RerunJob")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		notifier := &mockNotifier{}
 		notify_service.RegisterNotifier(notifier)

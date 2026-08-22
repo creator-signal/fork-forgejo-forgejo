@@ -16,7 +16,7 @@ import (
 )
 
 func TestGetWebAuthnCredentialByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	res, err := auth_model.GetWebAuthnCredentialByID(db.DefaultContext, 1)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestGetWebAuthnCredentialByID(t *testing.T) {
 }
 
 func TestGetWebAuthnCredentialsByUID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	res, err := auth_model.GetWebAuthnCredentialsByUID(db.DefaultContext, 32)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestWebAuthnCredential_TableName(t *testing.T) {
 }
 
 func TestWebAuthnCredential_UpdateSignCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	cred := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{ID: 1})
 	cred.SignCount = 1
 	require.NoError(t, cred.UpdateSignCount(db.DefaultContext))
@@ -49,7 +49,7 @@ func TestWebAuthnCredential_UpdateSignCount(t *testing.T) {
 }
 
 func TestWebAuthnCredential_UpdateLargeCounter(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	cred := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{ID: 1})
 	cred.SignCount = 0xffffffff
 	require.NoError(t, cred.UpdateSignCount(db.DefaultContext))
@@ -57,7 +57,7 @@ func TestWebAuthnCredential_UpdateLargeCounter(t *testing.T) {
 }
 
 func TestWebAuthenCredential_UpdateFromLegacy(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	cred := unittest.AssertExistsAndLoadBean(t, &auth_model.WebAuthnCredential{ID: 1, Legacy: true})
 	cred.Legacy = false
 	cred.BackupEligible = true
@@ -67,7 +67,7 @@ func TestWebAuthenCredential_UpdateFromLegacy(t *testing.T) {
 }
 
 func TestCreateCredential(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	res, err := auth_model.CreateCredential(db.DefaultContext, 1, "WebAuthn Created Credential", &webauthn.Credential{ID: []byte("Test"), Flags: webauthn.CredentialFlags{BackupEligible: true, BackupState: true}})
 	require.NoError(t, err)

@@ -17,7 +17,7 @@ import (
 
 func TestCreateIssueDependency(t *testing.T) {
 	// Prepare
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user1, err := user_model.GetUserByID(db.DefaultContext, 1)
 	require.NoError(t, err)

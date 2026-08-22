@@ -12,7 +12,7 @@ import (
 )
 
 func TestUserHasAsymKey(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("No key", func(t *testing.T) {
 		ok, err := HasAsymKeyByUID(t.Context(), 1)

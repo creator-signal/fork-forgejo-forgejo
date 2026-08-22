@@ -19,7 +19,7 @@ import (
 
 func TestCleanup(t *testing.T) {
 	t.Run("Deletes no longer existing logs", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{ID: 1001, LogExpired: false, LogIndexes: []int64{1, 2, 3, 4}, LogFilename: "does-not-exist", Stopped: timeutil.TimeStamp(1)})
 
@@ -32,7 +32,7 @@ func TestCleanup(t *testing.T) {
 	})
 
 	t.Run("Expires tasks without logs", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		for i := int64(0); i <= deleteLogBatchSize; i++ {
 			task := &actions_model.ActionTask{
@@ -61,7 +61,7 @@ func TestCleanup(t *testing.T) {
 }
 
 func TestCleanupEphemeralRunners(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Deletes ephemeral runner with successful task", func(t *testing.T) {
 		unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunner{ID: 2001, UUID: "2001-uuid", TokenHash: "2001-hash", Ephemeral: true})

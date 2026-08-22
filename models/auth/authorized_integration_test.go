@@ -32,7 +32,7 @@ func makeAuthorizedIntegration(t *testing.T) *auth_model.AuthorizedIntegration {
 }
 
 func TestGetAuthorizedIntegration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ai := makeAuthorizedIntegration(t)
 
 	get, err := auth_model.GetAuthorizedIntegration(t.Context(), "abc", "123")
@@ -46,7 +46,7 @@ func TestGetAuthorizedIntegration(t *testing.T) {
 }
 
 func TestGetAuthorizedIntegrationByUI(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ai := makeAuthorizedIntegration(t)
 
 	get, err := auth_model.GetAuthorizedIntegrationByUI(t.Context(), 3, ai.UI, ai.ID)
@@ -68,7 +68,7 @@ func TestGetAuthorizedIntegrationByUI(t *testing.T) {
 }
 
 func TestAuthorizedIntegrationUpdateLastUsed(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ai := makeAuthorizedIntegration(t)
 	ai.UpdatedUnix = 0
@@ -155,7 +155,7 @@ func TestAuthorizedIntegrationCalculatedValues(t *testing.T) {
 }
 
 func TestListAuthorizedIntegrationOptions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	makeAuthorizedIntegration(t)
 	makeAuthorizedIntegration(t)
@@ -177,7 +177,7 @@ func TestListAuthorizedIntegrationOptions(t *testing.T) {
 }
 
 func TestUpdateAuthorizedIntegration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ai := makeAuthorizedIntegration(t)
 	ai.Name = "Hello, world!"
@@ -195,7 +195,7 @@ func TestUpdateAuthorizedIntegration(t *testing.T) {
 }
 
 func TestDeleteAuthorizedIntegrationByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	t.Run("simple delete", func(t *testing.T) {
 		ai := makeAuthorizedIntegration(t)
 		err := auth_model.DeleteAuthorizedIntegrationByID(t.Context(), ai.ID, ai.UserID)

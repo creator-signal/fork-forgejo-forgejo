@@ -14,7 +14,7 @@ import (
 )
 
 func TestRepository_DeleteCollaboration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 	require.NoError(t, repo.LoadOwner(db.DefaultContext))

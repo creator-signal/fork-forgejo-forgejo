@@ -669,7 +669,7 @@ func Test_prepareJobForEmitting(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/Test_prepareJobForEmitting")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			notifier := &mockNotifier{}
 			notify_service.RegisterNotifier(notifier)
@@ -854,7 +854,7 @@ func Test_tryHandleWorkflowCallOuterJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/Test_tryHandleWorkflowCallOuterJob")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			outerJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: tt.runJobID})
 			require.EqualValues(t, 0, outerJob.TaskID)
@@ -883,7 +883,7 @@ func Test_tryHandleWorkflowCallOuterJob(t *testing.T) {
 
 func Test_checkJobsOfRun(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/Test_checkJobsOfRun")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	reusableWorkflow := `
 on:
@@ -944,7 +944,7 @@ jobs:
 
 func Test_checkJobsOfRun_ExpandsMatrixWithCorrectOutputJobStatuses(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/Test_checkJobsOfRun")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	jobs, err := actions_model.GetRunJobsByRunID(t.Context(), 900)
 	require.NoError(t, err)

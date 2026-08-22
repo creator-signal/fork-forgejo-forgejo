@@ -16,7 +16,7 @@ import (
 )
 
 func TestRecalcLabelByLabelID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Verify no error on recalc of a deleted/non-existent object; important because async recalcs can be queued and
 	// then occur later after more state changes have happened.
@@ -39,7 +39,7 @@ func TestRecalcLabelByLabelID(t *testing.T) {
 }
 
 func TestRecalcLabelByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Verify no error on recalc of a deleted/non-existent object; important because async recalcs can be queued and
 	// then occur later after more state changes have happened.

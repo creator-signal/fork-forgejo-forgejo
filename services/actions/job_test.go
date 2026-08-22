@@ -15,7 +15,7 @@ import (
 func TestDeleteJobsOfRun(t *testing.T) {
 	t.Run("Deletes completed job", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteJobsOfRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 47301, RunID: run.ID})
@@ -30,7 +30,7 @@ func TestDeleteJobsOfRun(t *testing.T) {
 
 	t.Run("Error if job has not completed", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteJobsOfRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34902})
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 47302, RunID: run.ID})

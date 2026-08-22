@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetLatestRunnerToken(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token := unittest.AssertExistsAndLoadBean(t, &ActionRunnerToken{ID: 3})
 	expectedToken, err := GetLatestRunnerToken(db.DefaultContext, optional.Some[int64](1), optional.None[int64]())
 	require.NoError(t, err)
@@ -23,7 +23,7 @@ func TestGetLatestRunnerToken(t *testing.T) {
 }
 
 func TestNewRunnerToken(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token, err := NewRunnerToken(db.DefaultContext, optional.Some[int64](1), optional.None[int64]())
 	require.NoError(t, err)
 	expectedToken, err := GetLatestRunnerToken(db.DefaultContext, optional.Some[int64](1), optional.None[int64]())
@@ -32,7 +32,7 @@ func TestNewRunnerToken(t *testing.T) {
 }
 
 func TestUpdateRunnerToken(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token := unittest.AssertExistsAndLoadBean(t, &ActionRunnerToken{ID: 3})
 	token.IsActive = true
 	require.NoError(t, UpdateRunnerToken(db.DefaultContext, token, "is_active"))

@@ -25,7 +25,7 @@ func TestIterate(t *testing.T) {
 	defer test.MockVariableValue(&setting.Database.IterateBufferSize, 50)()
 
 	t.Run("No Modifications", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		xe, err := unittest.GetXORMEngine()
 		require.NoError(t, err)
 		require.NoError(t, xe.Sync(&repo_model.RepoUnit{}))
@@ -46,7 +46,7 @@ func TestIterate(t *testing.T) {
 	})
 
 	t.Run("Concurrent Delete", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		xe, err := unittest.GetXORMEngine()
 		require.NoError(t, err)
 		require.NoError(t, xe.Sync(&repo_model.RepoUnit{}))
@@ -82,7 +82,7 @@ func TestIterate(t *testing.T) {
 	})
 
 	t.Run("Verify cond applied", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		xe, err := unittest.GetXORMEngine()
 		require.NoError(t, err)
 		require.NoError(t, xe.Sync(&repo_model.RepoUnit{}))
@@ -119,7 +119,7 @@ func TestIterate(t *testing.T) {
 func TestIterateMultipleFields(t *testing.T) {
 	for _, bufferSize := range []int{1, 2, 3, 10} { // 8 records in fixture
 		t.Run(fmt.Sprintf("No Modifications bufferSize=%d", bufferSize), func(t *testing.T) {
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			// Fetch all the commit status IDs...
 			var remainingIDs []int64

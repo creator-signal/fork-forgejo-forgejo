@@ -18,7 +18,7 @@ import (
 )
 
 func TestGetEmailAddresses(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	emails, _ := user_model.GetEmailAddresses(db.DefaultContext, int64(1))
 	if assert.Len(t, emails, 3) {
@@ -35,7 +35,7 @@ func TestGetEmailAddresses(t *testing.T) {
 }
 
 func TestIsEmailUsed(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	isExist, _ := user_model.IsEmailUsed(db.DefaultContext, "")
 	assert.True(t, isExist)
@@ -46,7 +46,7 @@ func TestIsEmailUsed(t *testing.T) {
 }
 
 func TestActivate(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	email := &user_model.EmailAddress{
 		ID:    int64(1),
@@ -65,7 +65,7 @@ func TestActivate(t *testing.T) {
 }
 
 func TestListEmails(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Must find all users and their emails
 	opts := &user_model.SearchEmailOptions{
@@ -127,7 +127,7 @@ func TestListEmails(t *testing.T) {
 }
 
 func TestGetActivatedEmailAddresses(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testCases := []struct {
 		UID      int64
@@ -161,7 +161,7 @@ func TestGetActivatedEmailAddresses(t *testing.T) {
 }
 
 func TestDeletePrimaryEmailAddressOfUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user, err := user_model.GetUserByName(db.DefaultContext, "org3")
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestDeletePrimaryEmailAddressOfUser(t *testing.T) {
 
 func TestActivateUserEmail(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestActivateUserEmail")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Activate email", func(t *testing.T) {
 		require.NoError(t, user_model.ActivateUserEmail(t.Context(), 1001, "AnotherTestUserWithUpperCaseEmail@otto.splvs.net", true))

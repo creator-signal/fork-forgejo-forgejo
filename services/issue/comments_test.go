@@ -25,7 +25,7 @@ import (
 func TestDeleteComment(t *testing.T) {
 	// Use the webhook notification to check if a notification is fired for an action.
 	defer test.MockVariableValue(&setting.DisableWebhooks, false)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Normal comment", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
@@ -86,7 +86,7 @@ func TestDeleteComment(t *testing.T) {
 func TestUpdateComment(t *testing.T) {
 	// Use the webhook notification to check if a notification is fired for an action.
 	defer test.MockVariableValue(&setting.DisableWebhooks, false)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{IsAdmin: true})
 	t.Run("Normal comment", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestUpdateComment(t *testing.T) {
 
 func TestCreateShadowCopyOnCommentUpdate(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/ModerationFeatures")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	userAlexSmithID := int64(1002)
 	spamCommentID := int64(18) // posted by @alexsmith

@@ -18,7 +18,7 @@ import (
 )
 
 func TestUpdateUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -92,7 +92,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestUpdateAuth(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 28})
 	userCopy := *user

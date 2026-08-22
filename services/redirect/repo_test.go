@@ -14,7 +14,7 @@ import (
 )
 
 func TestLookupRepoRedirect(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
 	ownerUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 20})

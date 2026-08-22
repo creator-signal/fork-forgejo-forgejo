@@ -15,7 +15,7 @@ import (
 
 func TestGetRepositoriesAccessibleWithToken(t *testing.T) {
 	defer unittest.OverrideFixtures("models/auth/TestGetRepositoriesAccessibleWithToken")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("No Resources", func(t *testing.T) {
 		resources, err := auth_model.GetRepositoriesAccessibleWithToken(t.Context(), 999)
@@ -41,7 +41,7 @@ func TestGetRepositoriesAccessibleWithToken(t *testing.T) {
 
 func TestGetRepositoriesAccessibleWithTokens(t *testing.T) {
 	defer unittest.OverrideFixtures("models/auth/TestGetRepositoriesAccessibleWithTokens")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	token1 := unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: 1})
 	token2 := unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: 2})
@@ -72,7 +72,7 @@ func TestGetRepositoriesAccessibleWithTokens(t *testing.T) {
 }
 
 func TestInsertAccessTokenResourceRepos(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	token1 := unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: 1})
 	token2 := unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: 2})

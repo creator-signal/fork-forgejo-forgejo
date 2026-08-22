@@ -21,7 +21,7 @@ import (
 )
 
 func TestHandlePullRequestMerging(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pr, err := issues_model.GetUnmergedPullRequest(db.DefaultContext, 1, 1, "branch2", "master", issues_model.PullRequestFlowGithub)
 	require.NoError(t, err)
 	require.NoError(t, pr.LoadBaseRepo(db.DefaultContext))

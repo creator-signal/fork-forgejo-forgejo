@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRenameRepoAction(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	initQueue(t)
 	ctx := t.Context()
@@ -107,7 +107,7 @@ func pushCommits() *repository.PushCommits {
 }
 
 func TestSyncPushCommits(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	initQueue(t)
 	ctx := t.Context()
@@ -155,7 +155,7 @@ func TestSyncPushCommits(t *testing.T) {
 }
 
 func TestPushCommits(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx := t.Context()
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -263,7 +263,7 @@ func TestAbbreviatedComment(t *testing.T) {
 }
 
 func TestDeliverNotification(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

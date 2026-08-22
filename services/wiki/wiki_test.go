@@ -153,7 +153,7 @@ func TestRepository_InitWiki(t *testing.T) {
 }
 
 func TestRepository_AddWikiPage(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	const wikiContent = "This is the wiki content"
 	const commitMsg = "Commit message"
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -197,7 +197,7 @@ func TestRepository_AddWikiPage(t *testing.T) {
 }
 
 func TestRepository_EditWikiPage(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	const newWikiContent = "This is the new content"
 	const commitMsg = "Commit message"

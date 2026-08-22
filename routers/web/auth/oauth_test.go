@@ -51,7 +51,7 @@ func createAndParseToken(t *testing.T, grant *auth.OAuth2Grant) *oauth2.OIDCToke
 }
 
 func TestNewAccessTokenResponse_OIDCToken(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	grants, err := auth.GetOAuth2GrantsByUserID(db.DefaultContext, 3)
 	require.NoError(t, err)

@@ -32,7 +32,7 @@ func getCurrentResourceIndex(ctx context.Context, tableName string, groupID int6
 }
 
 func TestSyncMaxResourceIndex(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	xe, err := unittest.GetXORMEngine()
 	require.NoError(t, err)
 	require.NoError(t, xe.Sync(&TestIndex{}))
@@ -88,7 +88,7 @@ func TestSyncMaxResourceIndex(t *testing.T) {
 }
 
 func TestGetNextResourceIndex(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	xe, err := unittest.GetXORMEngine()
 	require.NoError(t, err)
 	require.NoError(t, xe.Sync(&TestIndex{}))

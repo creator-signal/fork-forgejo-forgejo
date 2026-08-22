@@ -17,7 +17,7 @@ import (
 )
 
 func TestAuthSession(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer timeutil.MockUnset()
 
 	key := "I-Like-Free-Software"

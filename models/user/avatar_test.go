@@ -41,7 +41,7 @@ func TestUserAvatarLinkWithSize(t *testing.T) {
 }
 
 func TestUserAvatarGenerate(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	var err error
 	tmpDir := t.TempDir()
 	storage.Avatars, err = storage.NewLocalStorage(t.Context(), &setting.Storage{Path: tmpDir})

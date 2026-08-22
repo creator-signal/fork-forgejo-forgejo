@@ -18,7 +18,7 @@ import (
 func Test_RegenerateSession(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	key := "new_key890123456"  // it must be 16 characters long
 	key2 := "new_key890123457" // it must be 16 characters

@@ -15,7 +15,7 @@ import (
 
 func TestNewRedirect(t *testing.T) {
 	// redirect to a completely new name
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	require.NoError(t, repo_model.NewRedirect(db.DefaultContext, repo.OwnerID, repo.ID, repo.Name, "newreponame"))
@@ -34,7 +34,7 @@ func TestNewRedirect(t *testing.T) {
 
 func TestNewRedirect2(t *testing.T) {
 	// redirect to previously used name
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	require.NoError(t, repo_model.NewRedirect(db.DefaultContext, repo.OwnerID, repo.ID, repo.Name, "oldrepo1"))
@@ -53,7 +53,7 @@ func TestNewRedirect2(t *testing.T) {
 
 func TestNewRedirect3(t *testing.T) {
 	// redirect for a previously-unredirected repo
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	require.NoError(t, repo_model.NewRedirect(db.DefaultContext, repo.OwnerID, repo.ID, repo.Name, "newreponame"))

@@ -52,7 +52,7 @@ const bodyTpl = `
 `
 
 func prepareMailerTest(t *testing.T) (doer *user_model.User, repo *repo_model.Repository, issue *issues_model.Issue, comment *issues_model.Comment) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	doer = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo = unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1, Owner: doer})
@@ -148,7 +148,7 @@ func TestComposeIssueMessage(t *testing.T) {
 
 func TestMailerIssueTemplate(t *testing.T) {
 	defer MockMailSettings(nil)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 

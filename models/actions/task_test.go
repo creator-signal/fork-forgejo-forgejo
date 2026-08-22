@@ -16,7 +16,7 @@ import (
 )
 
 func TestActionTask_GetTaskByJobAttempt(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	task, err := GetTaskByJobAttempt(t.Context(), 192, 2)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestActionTask_GetTaskByJobAttempt(t *testing.T) {
 }
 
 func TestActionTask_CreatePlaceholderTask(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	job := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 396})
 	assert.EqualValues(t, 0, job.TaskID)
@@ -59,7 +59,7 @@ func TestActionTask_CreatePlaceholderTask(t *testing.T) {
 
 func TestActionTask_GetTasksByRunnerRequestKey(t *testing.T) {
 	defer unittest.OverrideFixtures("models/actions/TestActionTask_GetTasksByRunnerRequestKey")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	runner := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 12345678})
 
@@ -83,7 +83,7 @@ func TestActionTask_GetTasksByRunnerRequestKey(t *testing.T) {
 func TestActionTask_GetAvailableJobsForRunner(t *testing.T) {
 	t.Run("Priority takes precedence", func(t *testing.T) {
 		defer unittest.OverrideFixtures("models/actions/TestActionTask_GetAvailableJobsForRunner")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runner := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 73711})
 
@@ -118,7 +118,7 @@ func TestActionTask_GetAvailableJobsForRunner(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				defer unittest.OverrideFixtures("models/actions/TestActionTask_GetAvailableJobsForRunner")()
-				require.NoError(t, unittest.PrepareTestDatabase())
+				require.NoError(t, unittest.PrepareUnitTest())
 
 				repo62 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 62})
 				runner := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 73711})

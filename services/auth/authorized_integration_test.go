@@ -116,7 +116,7 @@ func TestValidateAuthorizedIntegration(t *testing.T) {
 }
 
 func TestInsertAuthorizedIntegration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ii := NewMockInternalIssuer(t)
 	ii.On("IssuerPlaceholder").Return("urn:forgejo:authorized-issuer:internal:test3")
@@ -164,7 +164,7 @@ func TestInsertAuthorizedIntegration(t *testing.T) {
 }
 
 func TestUpdateAuthorizedIntegration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ii := NewMockInternalIssuer(t)
 	ii.On("IssuerPlaceholder").Return("urn:forgejo:authorized-issuer:internal:test4")

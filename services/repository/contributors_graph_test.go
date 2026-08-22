@@ -21,7 +21,7 @@ import (
 )
 
 func TestRepository_ContributorsGraph(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	require.NoError(t, repo.LoadOwner(db.DefaultContext))
 	mockCache, err := cache.NewCacher(cache.Options{

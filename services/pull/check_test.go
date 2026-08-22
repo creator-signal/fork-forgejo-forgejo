@@ -21,7 +21,7 @@ import (
 )
 
 func TestPullRequest_AddToTaskQueue(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	idChan := make(chan int64, 10)
 	testHandler := func(items ...string) []string {

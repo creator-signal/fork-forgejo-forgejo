@@ -18,7 +18,7 @@ import (
 func TestActions_CancelOrApproveRun(t *testing.T) {
 	t.Run("run, job and task Running changes to run, job and task Cancelled", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		taskID := int64(711900)
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: taskID})
@@ -42,7 +42,7 @@ func TestActions_CancelOrApproveRun(t *testing.T) {
 
 	t.Run("run Running, job and task Success changes to run Cancelled", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		taskID := int64(710900)
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: taskID})
@@ -64,7 +64,7 @@ func TestActions_CancelOrApproveRun(t *testing.T) {
 
 	t.Run("run Waiting and job Blocked for Approval changes to run and job Cancelled", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		jobID := int64(10800)
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID})
@@ -84,7 +84,7 @@ func TestActions_CancelOrApproveRun(t *testing.T) {
 
 	t.Run("run Waiting and job Blocked for Approval changes to job Waiting", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestActions_CancelOrApproveRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		jobID := int64(10800)
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: jobID})
@@ -149,7 +149,7 @@ func TestActions_consistencyCheckRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/TestActions_consistencyCheckRun")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: tt.runID})
 
@@ -166,7 +166,7 @@ func TestActions_consistencyCheckRun(t *testing.T) {
 func TestDeleteRun(t *testing.T) {
 	t.Run("Removes run and its dependencies", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34901})
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
@@ -184,7 +184,7 @@ func TestDeleteRun(t *testing.T) {
 
 	t.Run("Error if run not done", func(t *testing.T) {
 		defer unittest.OverrideFixtures("services/actions/TestDeleteRun")()
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: 34902})
 		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{RunID: run.ID})
@@ -204,7 +204,7 @@ func TestDeleteRun(t *testing.T) {
 
 func TestPrioritizeRun(t *testing.T) {
 	t.Run("Run prioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runOne := &actions_model.ActionRun{
 			ID: 408911, Index: 1, RepoID: 62, OwnerID: 2, Status: actions_model.StatusWaiting,
@@ -229,7 +229,7 @@ func TestPrioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Nothing happens if run already prioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runOne := &actions_model.ActionRun{
 			ID: 408911, Index: 1, RepoID: 62, OwnerID: 2, Status: actions_model.StatusWaiting,
@@ -254,7 +254,7 @@ func TestPrioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Completed run can be prioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		testRun := &actions_model.ActionRun{
 			ID:         808441,
@@ -276,7 +276,7 @@ func TestPrioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Error if run is nil", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		err := PrioritizeRun(t.Context(), nil)
 		require.ErrorContains(t, err, "run is nil")
@@ -285,7 +285,7 @@ func TestPrioritizeRun(t *testing.T) {
 
 func TestDeprioritizeRun(t *testing.T) {
 	t.Run("Run deprioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runOne := &actions_model.ActionRun{
 			ID: 408911, Index: 1, RepoID: 62, OwnerID: 2, Status: actions_model.StatusWaiting,
@@ -310,7 +310,7 @@ func TestDeprioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Nothing happens if run not prioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runOne := &actions_model.ActionRun{
 			ID: 408911, Index: 1, RepoID: 62, OwnerID: 2, Status: actions_model.StatusWaiting,
@@ -335,7 +335,7 @@ func TestDeprioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Completed run can be deprioritized", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		testRun := &actions_model.ActionRun{
 			ID:         535681,
@@ -357,7 +357,7 @@ func TestDeprioritizeRun(t *testing.T) {
 	})
 
 	t.Run("Error if run is nil", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		err := DeprioritizeRun(t.Context(), nil)
 		require.ErrorContains(t, err, "run is nil")
@@ -365,7 +365,7 @@ func TestDeprioritizeRun(t *testing.T) {
 }
 
 func TestRecalculateRunPriorities(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	fixtures := []*actions_model.ActionRun{
 		{ID: 535681, Index: 1, RepoID: 62, OwnerID: 2, Status: actions_model.StatusSuccess},
@@ -429,7 +429,7 @@ func TestInitiateNextRunAttempt(t *testing.T) {
 	}
 
 	t.Run("Prepared if completed", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		unittest.AssertSuccessfulInsert(t, fixtures)
 
 		notifier := &mockNotifier{}
@@ -457,7 +457,7 @@ func TestInitiateNextRunAttempt(t *testing.T) {
 	})
 
 	t.Run("Error if active", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		unittest.AssertSuccessfulInsert(t, fixtures)
 
 		notifier := &mockNotifier{}
@@ -479,7 +479,7 @@ func TestRefreshAndPropagateRunStatus(t *testing.T) {
 	}
 
 	t.Run("No notification without change", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		unittest.AssertSuccessfulInsert(t, fixtures)
 
 		job := &actions_model.ActionRunJob{
@@ -505,7 +505,7 @@ func TestRefreshAndPropagateRunStatus(t *testing.T) {
 	})
 
 	t.Run("Status change notification", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		unittest.AssertSuccessfulInsert(t, fixtures)
 
 		job := &actions_model.ActionRunJob{
@@ -533,7 +533,7 @@ func TestRefreshAndPropagateRunStatus(t *testing.T) {
 	})
 
 	t.Run("Completed notification upon completion", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		unittest.AssertSuccessfulInsert(t, fixtures)
 
 		job := &actions_model.ActionRunJob{

@@ -18,7 +18,7 @@ import (
 )
 
 func TestCountOrganizations(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	expected, err := db.GetEngine(db.DefaultContext).Where("type=?", user_model.UserTypeOrganization).Count(&organization.Organization{})
 	require.NoError(t, err)
 	cnt, err := db.Count[organization.Organization](db.DefaultContext, organization.FindOrgOptions{IncludePrivate: true})
@@ -28,7 +28,7 @@ func TestCountOrganizations(t *testing.T) {
 
 func TestFindOrgs(t *testing.T) {
 	defer unittest.OverrideFixtures("models/organization/TestFindOrgs")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	orgs, err := db.Find[organization.Organization](db.DefaultContext, organization.FindOrgOptions{
 		UserID:         4,
@@ -69,7 +69,7 @@ func TestFindOrgs(t *testing.T) {
 }
 
 func TestGetOrgsCanCreateRepoByUserID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	orgs, err := organization.GetOrgsCanCreateRepoByUserID(db.DefaultContext, 2)
 	require.NoError(t, err)
 	assert.Len(t, orgs, 1)
@@ -82,7 +82,7 @@ func TestGetOrgsCanCreateRepoByUserID(t *testing.T) {
 }
 
 func TestGetUserOrgsList(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	orgs, err := organization.GetUserOrgsList(db.DefaultContext, &user_model.User{ID: 4})
 	require.NoError(t, err)
 	assert.Len(t, orgs, 1)
@@ -93,7 +93,7 @@ func TestGetUserOrgsList(t *testing.T) {
 }
 
 func TestGetUserOrgsListSorting(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	orgs, err := organization.GetUserOrgsList(db.DefaultContext, &user_model.User{ID: 1})
 	require.NoError(t, err)
 

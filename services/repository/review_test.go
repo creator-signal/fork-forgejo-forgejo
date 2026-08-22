@@ -15,7 +15,7 @@ import (
 )
 
 func TestRepoGetReviewerTeams(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	teams, err := GetReviewerTeams(db.DefaultContext, repo2)

@@ -20,7 +20,7 @@ import (
 )
 
 func TestPasswordChangeMail(t *testing.T) {
-	defer require.NoError(t, unittest.PrepareTestDatabase())
+	defer require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	called := false
@@ -37,7 +37,7 @@ func TestPasswordChangeMail(t *testing.T) {
 }
 
 func TestPrimaryMailChange(t *testing.T) {
-	defer require.NoError(t, unittest.PrepareTestDatabase())
+	defer require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	firstEmail := unittest.AssertExistsAndLoadBean(t, &user_model.EmailAddress{ID: 3, UID: user.ID, IsPrimary: true})

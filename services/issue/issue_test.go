@@ -34,7 +34,7 @@ func TestGetRefEndNamesAndURLs(t *testing.T) {
 }
 
 func TestIssue_DeleteIssue(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issueIDs, err := issues_model.GetIssueIDsByRepoID(db.DefaultContext, 1)
 	require.NoError(t, err)

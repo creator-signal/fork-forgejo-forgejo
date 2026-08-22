@@ -19,7 +19,7 @@ import (
 
 func TestCloseIssue(t *testing.T) {
 	defer unittest.OverrideFixtures("services/mailer/fixtures/TestCloseIssue")()
-	defer require.NoError(t, unittest.PrepareTestDatabase())
+	defer require.NoError(t, unittest.PrepareUnitTest())
 
 	called := false
 	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {
@@ -39,7 +39,7 @@ func TestCloseIssue(t *testing.T) {
 }
 
 func TestCloseIssueByCommit(t *testing.T) {
-	defer require.NoError(t, unittest.PrepareTestDatabase())
+	defer require.NoError(t, unittest.PrepareUnitTest())
 
 	called := false
 	defer mailer.MockMailSettings(func(msgs ...*mailer.Message) {

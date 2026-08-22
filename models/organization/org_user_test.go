@@ -18,7 +18,7 @@ import (
 )
 
 func TestUserListIsPublicMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	tt := []struct {
 		orgid    int64
 		expected map[int64]bool
@@ -45,7 +45,7 @@ func testUserListIsPublicMember(t *testing.T, orgID int64, expected map[int64]bo
 }
 
 func TestUserListIsUserOrgOwner(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	tt := []struct {
 		orgid    int64
 		expected map[int64]bool
@@ -72,7 +72,7 @@ func testUserListIsUserOrgOwner(t *testing.T, orgID int64, expected map[int64]bo
 }
 
 func TestAddOrgUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(orgID, userID int64, isPublic bool) {
 		org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: orgID})
 		expectedNumMembers := org.NumMembers
@@ -109,7 +109,7 @@ func TestAddOrgUser(t *testing.T) {
 
 func TestIsAnEligibleTeamMemberByID(t *testing.T) {
 	defer unittest.OverrideFixtures("models/user/fixtures/")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	for _, testCase := range []struct {
 		name     string

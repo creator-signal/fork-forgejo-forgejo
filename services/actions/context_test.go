@@ -20,7 +20,7 @@ import (
 )
 
 func TestFindTaskNeeds(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 51})
 	job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: task.JobID})

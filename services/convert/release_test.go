@@ -15,7 +15,7 @@ import (
 )
 
 func TestRelease_ToRelease(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	release1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Release{ID: 1})

@@ -16,7 +16,7 @@ import (
 )
 
 func TestUpdateAssignee(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Fake issue with assignees
 	issue, err := issues_model.GetIssueByID(db.DefaultContext, 1)
@@ -69,7 +69,7 @@ func TestUpdateAssignee(t *testing.T) {
 }
 
 func TestMakeIDsFromAPIAssigneesToAdd(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_ = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	_ = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

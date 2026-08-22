@@ -27,7 +27,7 @@ func assertAccess(t *testing.T, expectedMode perm_model.AccessMode, perm *access
 }
 
 func TestActionTaskCanAccessOwnRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: actionTask.RepoID})
@@ -38,7 +38,7 @@ func TestActionTaskCanAccessOwnRepo(t *testing.T) {
 }
 
 func TestActionTaskCanAccessPublicRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -49,7 +49,7 @@ func TestActionTaskCanAccessPublicRepo(t *testing.T) {
 }
 
 func TestActionTaskCanAccessPublicRepoOfLimitedOrg(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 38})
@@ -60,7 +60,7 @@ func TestActionTaskCanAccessPublicRepoOfLimitedOrg(t *testing.T) {
 }
 
 func TestActionTaskNoAccessPublicRepoOfPrivateOrg(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 40})
@@ -71,7 +71,7 @@ func TestActionTaskNoAccessPublicRepoOfPrivateOrg(t *testing.T) {
 }
 
 func TestActionTaskNoAccessPrivateRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	actionTask := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
@@ -82,7 +82,7 @@ func TestActionTaskNoAccessPrivateRepo(t *testing.T) {
 }
 
 func TestGetUserRepoPermissionWithReducer(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("no unit-level overrides", func(t *testing.T) {
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

@@ -21,7 +21,7 @@ import (
 )
 
 func TestAction_GetRepoPath(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 	action := &activities_model.Action{RepoID: repo.ID}
@@ -29,7 +29,7 @@ func TestAction_GetRepoPath(t *testing.T) {
 }
 
 func TestAction_GetRepoLink(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
 	comment := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 2})
@@ -43,7 +43,7 @@ func TestAction_GetRepoLink(t *testing.T) {
 
 func TestGetFeeds(t *testing.T) {
 	// test with an individual user
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	actions, count, err := activities_model.GetFeeds(db.DefaultContext, activities_model.GetFeedsOptions{
@@ -71,7 +71,7 @@ func TestGetFeeds(t *testing.T) {
 }
 
 func TestGetFeedsForRepos(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	privRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	pubRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 8})
@@ -117,7 +117,7 @@ func TestGetFeedsForRepos(t *testing.T) {
 
 func TestGetFeeds2(t *testing.T) {
 	// test with an organization user
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -187,7 +187,7 @@ func TestActivityReadable(t *testing.T) {
 }
 
 func TestNotifyWatchers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	action := &activities_model.Action{
 		ActUserID: 8,
@@ -225,7 +225,7 @@ func TestNotifyWatchers(t *testing.T) {
 }
 
 func TestNotifySelectWatchers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	action := &activities_model.Action{
 		ActUserID: 8,
@@ -251,7 +251,7 @@ func TestNotifySelectWatchers(t *testing.T) {
 }
 
 func TestGetFeedsCorrupted(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
 		ID:     8,
@@ -272,7 +272,7 @@ func TestConsistencyUpdateAction(t *testing.T) {
 	if !setting.Database.Type.IsSQLite3() {
 		t.Skip("Test is only for SQLite database.")
 	}
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	id := 8
 	unittest.AssertExistsAndLoadBean(t, &activities_model.Action{
 		ID: int64(id),
@@ -311,7 +311,7 @@ func TestConsistencyUpdateAction(t *testing.T) {
 }
 
 func TestDeleteIssueActions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// load an issue
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 4})
@@ -400,7 +400,7 @@ func TestGetIssueInfos(t *testing.T) {
 
 func TestIsPrivate(t *testing.T) {
 	defer unittest.OverrideFixtures("models/activities/fixtures/TestIsPrivate")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	tt := []struct {
 		activityID int64

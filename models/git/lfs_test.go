@@ -18,7 +18,7 @@ import (
 
 func TestIterateRepositoryIDsWithLFSMetaObjects(t *testing.T) {
 	defer unittest.OverrideFixtures("models/git/TestIterateRepositoryIDsWithLFSMetaObjects")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type repocount struct {
 		repoid int64
@@ -52,7 +52,7 @@ func TestIterateRepositoryIDsWithLFSMetaObjects(t *testing.T) {
 }
 
 func TestIterateLFSMetaObjectsForRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	expectedIDs := []int64{1, 2, 3, 4}
 

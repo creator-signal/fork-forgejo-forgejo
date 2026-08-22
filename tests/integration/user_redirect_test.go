@@ -193,7 +193,7 @@ func TestLimitUserRedirects(t *testing.T) {
 
 // NOTE: This is a unit test but written in the integration test to ensure this runs on all databases.
 func TestCanClaimUsername(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(&user_model.Redirect{RedirectUserID: 1, LowerName: "legacy", CreatedUnix: 0},
 		&user_model.Redirect{RedirectUserID: 1, LowerName: "past", CreatedUnix: timeutil.TimeStampNow().AddDuration(-48 * time.Hour)},

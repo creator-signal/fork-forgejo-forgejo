@@ -297,15 +297,18 @@ func CreateTestEngine(opts FixturesOptions) error {
 	return InitFixtures(opts)
 }
 
-// PrepareTestDatabase load test fixtures into test database
-func PrepareTestDatabase() error {
+func PrepareUnitTest() error {
+	return LoadFixtures()
+}
+
+func PrepareIntegrationTest() error {
 	return LoadFixtures()
 }
 
 // PrepareTestEnv prepares the environment for unit tests. Can only be called
 // by tests that use the above MainTest(..) function.
 func PrepareTestEnv(t testing.TB) {
-	require.NoError(t, PrepareTestDatabase())
+	require.NoError(t, PrepareUnitTest())
 	require.NoError(t, util.RemoveAll(setting.RepoRootPath))
 	giteaRoot = base.SetupGiteaRoot() // Makes sure GITEA_ROOT is set
 	metaPath := filepath.Join(giteaRoot, "tests", "gitea-repositories-meta")

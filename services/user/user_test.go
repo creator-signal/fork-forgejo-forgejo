@@ -66,7 +66,7 @@ func TestDeleteUser(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("delete %d", tc.userID), func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/user/TestDeleteUser")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 			user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: tc.userID})
 
 			// Remove user from all organizations first
@@ -94,7 +94,7 @@ func TestDeleteUser(t *testing.T) {
 
 func TestDeleteUserRetainsTrackedTime(t *testing.T) {
 	defer unittest.OverrideFixtures("services/user/TestDeleteUser")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
 
 	err := DeleteUser(db.DefaultContext, user, false)
@@ -118,7 +118,7 @@ func TestDeleteUserRetainsTrackedTime(t *testing.T) {
 
 func TestDeleteUserCleansUpBranchProtectionRules(t *testing.T) {
 	defer unittest.OverrideFixtures("services/user/TestDeleteUserCleansUpBranchProtectionRules")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
 
 	err := DeleteUser(db.DefaultContext, user, false)
@@ -138,7 +138,7 @@ func TestDeleteUserCleansUpBranchProtectionRules(t *testing.T) {
 
 func TestPurgeUser(t *testing.T) {
 	defer unittest.OverrideFixtures("services/user/TestPurgeUser")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
 	defer test.MockVariableValue(&setting.SSH.CreateAuthorizedKeysFile, true)()
 	defer test.MockVariableValue(&setting.SSH.CreateAuthorizedPrincipalsFile, true)()
@@ -147,7 +147,7 @@ func TestPurgeUser(t *testing.T) {
 	require.NoError(t, asymkey_model.RewriteAllPrincipalKeys(db.DefaultContext))
 
 	test := func(userID int64, modifySSHKey bool) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
 
 		fAuthorizedKeys, err := os.Open(filepath.Join(setting.SSH.RootPath, "authorized_keys"))
@@ -208,7 +208,7 @@ func TestCreateUser(t *testing.T) {
 
 func TestRenameUser(t *testing.T) {
 	defer unittest.OverrideFixtures("models/user/fixtures/")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 21})
 
 	t.Run("Same username", func(t *testing.T) {
@@ -336,7 +336,7 @@ func TestCreateUser_Issue5882(t *testing.T) {
 }
 
 func TestDeleteInactiveUsers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	// Add an inactive user older than a minute, with an associated email_address record.
 	oldUser := &user_model.User{Name: "OldInactive", LowerName: "oldinactive", Email: "old@example.com", CreatedUnix: timeutil.TimeStampNow().Add(-120)}
 	_, err := db.GetEngine(db.DefaultContext).NoAutoTime().Insert(oldUser)
@@ -367,7 +367,7 @@ func TestDeleteInactiveUsers(t *testing.T) {
 
 func TestCreateShadowCopyOnUserUpdate(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/ModerationFeatures")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	userAlexSmithID := int64(1002)
 	abuseReportID := int64(2)     // submitted for @alexsmith

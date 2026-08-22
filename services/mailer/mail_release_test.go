@@ -20,7 +20,7 @@ import (
 
 func TestMailNewRelease(t *testing.T) {
 	defer unittest.OverrideFixtures("services/mailer/fixtures/TestMailNewRelease")()
-	defer require.NoError(t, unittest.PrepareTestDatabase())
+	defer require.NoError(t, unittest.PrepareUnitTest())
 
 	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

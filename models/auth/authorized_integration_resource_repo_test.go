@@ -15,7 +15,7 @@ import (
 
 func TestGetRepositoriesAccessibleWithIntegration(t *testing.T) {
 	defer unittest.OverrideFixtures("models/auth/TestGetRepositoriesAccessibleWithIntegration")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("No Resources", func(t *testing.T) {
 		resources, err := auth_model.GetRepositoriesAccessibleWithIntegration(t.Context(), 999)
@@ -40,7 +40,7 @@ func TestGetRepositoriesAccessibleWithIntegration(t *testing.T) {
 }
 
 func TestInsertAuthorizedIntegration(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ai1 := makeAuthorizedIntegration(t)
 	ai2 := makeAuthorizedIntegration(t)

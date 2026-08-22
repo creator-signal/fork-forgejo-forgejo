@@ -26,7 +26,7 @@ import (
 
 func TestActionConcurrencyRunnerFiltering(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionConcurrencyRunnerFiltering")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	for _, tc := range []struct {
 		name           string
@@ -169,7 +169,7 @@ func TestActionConcurrencyGroupQueue(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("tests/integration/fixtures/TestActionConcurrencyGroupQueue")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareIntegrationTest())
 			runner := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunner{ID: 1004}, "owner_id = 0 AND repo_id = 0")
 
 			defer test.MockVariableValue(&setting.Actions.ConcurrencyGroupQueueEnabled, !tc.queuingDisabled)()

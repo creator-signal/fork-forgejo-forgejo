@@ -18,7 +18,7 @@ import (
 )
 
 func TestAddTime(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	org3, err := user_model.GetUserByID(db.DefaultContext, 3)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestAddTime(t *testing.T) {
 }
 
 func TestGetTrackedTimes(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// by Issue
 	times, err := issues_model.GetTrackedTimes(db.DefaultContext, &issues_model.FindTrackedTimesOptions{IssueID: 1})
@@ -82,7 +82,7 @@ func TestGetTrackedTimes(t *testing.T) {
 }
 
 func TestTotalTimesForEachUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	total, err := issues_model.TotalTimesForEachUser(db.DefaultContext, &issues_model.FindTrackedTimesOptions{IssueID: 1})
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestTotalTimesForEachUser(t *testing.T) {
 }
 
 func TestGetIssueTotalTrackedTime(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ttt, err := issues_model.GetIssueTotalTrackedTime(db.DefaultContext, &issues_model.IssuesOptions{MilestoneIDs: []int64{1}}, optional.Some(false))
 	require.NoError(t, err)

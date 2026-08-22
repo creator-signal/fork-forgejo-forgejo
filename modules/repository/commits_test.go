@@ -18,7 +18,7 @@ import (
 )
 
 func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pushCommits := NewPushCommits()
 	pushCommits.Commits = []*PushCommit{
@@ -101,7 +101,7 @@ func TestPushCommits_ToAPIPayloadCommits(t *testing.T) {
 }
 
 func TestPushCommits_AvatarLink(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pushCommits := NewPushCommits()
 	pushCommits.Commits = []*PushCommit{

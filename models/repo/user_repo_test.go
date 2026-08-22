@@ -16,7 +16,7 @@ import (
 )
 
 func TestRepoAssignees(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	users, err := repo_model.GetRepoAssignees(db.DefaultContext, repo2)
@@ -41,7 +41,7 @@ func TestRepoAssignees(t *testing.T) {
 }
 
 func TestRepoGetReviewers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// test public repo
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -84,7 +84,7 @@ func TestRepoGetReviewers(t *testing.T) {
 }
 
 func GetWatchedRepoIDsOwnedBy(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 9})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})

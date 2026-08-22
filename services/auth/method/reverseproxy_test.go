@@ -20,7 +20,7 @@ func TestReverseProxyAuth(t *testing.T) {
 	defer test.MockVariableValue(&setting.Service.EnableReverseProxyEmail, true)()
 	defer test.MockVariableValue(&setting.Service.EnableReverseProxyFullName, true)()
 	defer test.MockVariableValue(&setting.Service.EnableReverseProxyFullName, true)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, db.TruncateBeansCascade(db.DefaultContext, &user_model.User{}))
 	require.EqualValues(t, 0, user_model.CountUsers(db.DefaultContext, nil))

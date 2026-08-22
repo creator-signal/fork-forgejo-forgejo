@@ -17,7 +17,7 @@ import (
 )
 
 func TestDismissReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{})
 	require.NoError(t, pull.LoadIssue(db.DefaultContext))

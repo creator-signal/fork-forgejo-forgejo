@@ -91,7 +91,7 @@ func TestGetSecretsOfJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer unittest.OverrideFixtures("services/actions/TestGetSecretsOfJob")()
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 
 			// Due to encryption, more maintainable to do this rather than create secrets in fixture data
 			_, err := secret_model.InsertEncryptedSecret(t.Context(), 2, 0, "secret_1", "the sky is blue")

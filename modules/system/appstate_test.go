@@ -37,7 +37,7 @@ func (*testItem2) Name() string {
 }
 
 func TestAppStateDB(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	as := &DBStore{}
 

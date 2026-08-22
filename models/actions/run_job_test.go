@@ -37,7 +37,7 @@ func TestActionRunJob_ItRunsOn(t *testing.T) {
 }
 
 func TestActionRunJob_HTMLURL(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	tests := []struct {
 		id       int64
@@ -285,7 +285,7 @@ func TestActionRunJob_HasIncompleteWith(t *testing.T) {
 }
 
 func TestRunHasOtherJobs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	jobs, err := GetRunJobsByRunID(t.Context(), 791)
 	require.NoError(t, err)
@@ -504,7 +504,7 @@ func TestActionRunJob_CanBeRerun(t *testing.T) {
 }
 
 func TestActionTask_GetAllAttempts(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	job2 := unittest.AssertExistsAndLoadBean(t, &ActionRunJob{ID: 192})
 

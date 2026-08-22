@@ -600,7 +600,7 @@ func TestActionsRerun(t *testing.T) {
 }
 
 func TestActionsViewStatusDiagnostics(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	timeutil.MockSet(time.Date(2024, 5, 19, 7, 40, 32, 0, time.UTC))
 	defer timeutil.MockUnset()

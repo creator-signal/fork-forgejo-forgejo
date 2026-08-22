@@ -21,7 +21,7 @@ import (
 
 func TestRemoveScheduledAutoMerge(t *testing.T) {
 	defer unittest.OverrideFixtures("services/automerge/fixtures/TestRemoveScheduledAutoMerge")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})

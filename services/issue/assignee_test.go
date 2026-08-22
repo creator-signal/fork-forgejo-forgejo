@@ -16,7 +16,7 @@ import (
 )
 
 func TestDeleteNotPassedAssignee(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Fake issue with assignees
 	issue, err := issues_model.GetIssueByID(db.DefaultContext, 1)

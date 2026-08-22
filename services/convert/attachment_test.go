@@ -18,7 +18,7 @@ import (
 )
 
 func TestToWebAttachment(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	headRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	attachment := &repo_model.Attachment{
 		ID:                10,

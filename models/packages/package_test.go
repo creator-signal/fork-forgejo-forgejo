@@ -22,7 +22,7 @@ import (
 )
 
 func prepareExamplePackage(t *testing.T) *packages_model.Package {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
@@ -47,7 +47,7 @@ func deletePackage(t *testing.T, p *packages_model.Package) {
 }
 
 func TestTryInsertPackage(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -173,7 +173,7 @@ func TestGetPackageByName(t *testing.T) {
 }
 
 func TestHasCountPackages(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
@@ -316,7 +316,7 @@ func TestHasCountPackages(t *testing.T) {
 }
 
 func TestPackageTotalSize(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx := t.Context()
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -433,7 +433,7 @@ func TestPackageTotalSize(t *testing.T) {
 
 func TestSortPackages(t *testing.T) {
 	defer unittest.OverrideFixtures("models/packages/fixtures/TestSortPackages")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx := t.Context()
 

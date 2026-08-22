@@ -211,7 +211,7 @@ func getTestCases() []struct {
 }
 
 func TestSearchRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// test search public repository on explore page
 	repos, count, err := repo_model.SearchRepositoryByName(db.DefaultContext, &repo_model.SearchRepoOptions{
@@ -385,7 +385,7 @@ func TestSearchRepository(t *testing.T) {
 }
 
 func TestCountRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testCases := getTestCases()
 
@@ -400,7 +400,7 @@ func TestCountRepository(t *testing.T) {
 }
 
 func TestSearchRepositoryByTopicName(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testCases := []struct {
 		name  string
@@ -435,7 +435,7 @@ func TestSearchRepositoryByTopicName(t *testing.T) {
 
 func TestSearchRepositoryIDsByCondition(t *testing.T) {
 	defer unittest.OverrideFixtures("models/repo/TestSearchRepositoryIDsByCondition")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	// Sanity check of the database
 	limitedUser := unittest.AssertExistsAndLoadBean(t, &user.User{ID: 33, Visibility: structs.VisibleTypeLimited})
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1001, OwnerID: limitedUser.ID})

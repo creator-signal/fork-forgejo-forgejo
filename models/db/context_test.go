@@ -19,7 +19,7 @@ import (
 )
 
 func TestInTransaction(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	assert.False(t, db.InTransaction(db.DefaultContext))
 	require.NoError(t, db.WithTx(db.DefaultContext, func(ctx context.Context) error {
 		assert.True(t, db.InTransaction(ctx))
@@ -37,7 +37,7 @@ func TestInTransaction(t *testing.T) {
 }
 
 func TestTxContext(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	{ // create new transaction
 		ctx, committer, err := db.TxContext(db.DefaultContext)
@@ -142,7 +142,7 @@ func TestAfterTx(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s/%v", tc.executionMode, tc.rollback), func(t *testing.T) {
-			require.NoError(t, unittest.PrepareTestDatabase())
+			require.NoError(t, unittest.PrepareUnitTest())
 			ctx := t.Context()
 
 			var err error

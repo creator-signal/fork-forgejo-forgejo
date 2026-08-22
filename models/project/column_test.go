@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetDefaultColumn(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	projectWithoutDefault, err := GetProjectByID(db.DefaultContext, 5)
 	require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestGetDefaultColumn(t *testing.T) {
 }
 
 func Test_moveIssuesToAnotherColumn(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	column1 := unittest.AssertExistsAndLoadBean(t, &Column{ID: 1, ProjectID: 1})
 
@@ -78,7 +78,7 @@ func Test_moveIssuesToAnotherColumn(t *testing.T) {
 }
 
 func Test_MoveColumnsOnProject(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	project1 := unittest.AssertExistsAndLoadBean(t, &Project{ID: 1})
 	columns, err := project1.GetColumns(db.DefaultContext)
@@ -104,7 +104,7 @@ func Test_MoveColumnsOnProject(t *testing.T) {
 }
 
 func TestMoveColumnsOnProjectSwap(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	project1 := unittest.AssertExistsAndLoadBean(t, &Project{ID: 1})
 	columns, err := project1.GetColumns(db.DefaultContext)
@@ -136,7 +136,7 @@ func TestMoveColumnsOnProjectSwap(t *testing.T) {
 }
 
 func TestUpdateColumnSortingZero(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	column := unittest.AssertExistsAndLoadBean(t, &Column{ID: 1})
 	column.Sorting = 5
@@ -157,7 +157,7 @@ func TestUpdateColumnSortingZero(t *testing.T) {
 }
 
 func Test_NewColumn(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	project1 := unittest.AssertExistsAndLoadBean(t, &Project{ID: 1})
 	columns, err := project1.GetColumns(db.DefaultContext)

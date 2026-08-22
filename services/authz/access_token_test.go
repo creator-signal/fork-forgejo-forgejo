@@ -16,7 +16,7 @@ import (
 
 func TestGetAuthorizationReducerForAccessToken(t *testing.T) {
 	defer unittest.OverrideFixtures("services/authz/TestGetAuthorizationReducerForAccessToken")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("all access", func(t *testing.T) {
 		token := unittest.AssertExistsAndLoadBean(t, &auth.AccessToken{ID: 5})

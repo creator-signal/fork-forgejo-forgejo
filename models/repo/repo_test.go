@@ -28,7 +28,7 @@ var (
 )
 
 func TestGetRepositoryCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx := db.DefaultContext
 	count, err1 := repo_model.CountRepositories(ctx, countRepospts)
@@ -42,7 +42,7 @@ func TestGetRepositoryCount(t *testing.T) {
 }
 
 func TestGetPublicRepositoryCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	count, err := repo_model.CountRepositories(db.DefaultContext, countReposptsPublic)
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestGetPublicRepositoryCount(t *testing.T) {
 }
 
 func TestGetPrivateRepositoryCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	count, err := repo_model.CountRepositories(db.DefaultContext, countReposptsPrivate)
 	require.NoError(t, err)
@@ -58,14 +58,14 @@ func TestGetPrivateRepositoryCount(t *testing.T) {
 }
 
 func TestRepoAPIURL(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 10})
 
 	assert.Equal(t, "https://try.gitea.io/api/v1/repos/user12/repo10", repo.APIURL())
 }
 
 func TestWatchRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	const repoID = 3
 	const userID = 2
 
@@ -79,7 +79,7 @@ func TestWatchRepo(t *testing.T) {
 }
 
 func TestMetas(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := &repo_model.Repository{Name: "testRepo"}
 	repo.Owner = &user_model.User{Name: "testOwner"}
@@ -130,7 +130,7 @@ func TestMetas(t *testing.T) {
 }
 
 func TestGetRepositoryByURL(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("InvalidPath", func(t *testing.T) {
 		repo, err := repo_model.GetRepositoryByURL(db.DefaultContext, "something")

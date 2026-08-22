@@ -17,7 +17,7 @@ import (
 )
 
 func TestCheckCreateRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Success", func(t *testing.T) {
 		user := &user_model.User{MaxRepoCreation: 1}

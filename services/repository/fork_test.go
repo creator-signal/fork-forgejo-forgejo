@@ -18,7 +18,7 @@ import (
 )
 
 func TestForkRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// user 13 has already forked repo10
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 13})

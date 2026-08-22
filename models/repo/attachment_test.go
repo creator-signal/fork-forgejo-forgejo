@@ -18,7 +18,7 @@ import (
 )
 
 func TestIncreaseDownloadCount(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	attachment, err := repo_model.GetAttachmentByUUID(db.DefaultContext, "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
 	require.NoError(t, err)
@@ -34,7 +34,7 @@ func TestIncreaseDownloadCount(t *testing.T) {
 }
 
 func TestGetByCommentOrIssueID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// count of attachments from issue ID
 	attachments, err := repo_model.GetAttachmentsByIssueID(db.DefaultContext, 1)
@@ -47,7 +47,7 @@ func TestGetByCommentOrIssueID(t *testing.T) {
 }
 
 func TestDeleteAttachments(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	count, err := repo_model.DeleteAttachmentsByComment(db.DefaultContext, 2, false)
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestDeleteAttachments(t *testing.T) {
 }
 
 func TestGetAttachmentByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	attach, err := repo_model.GetAttachmentByID(db.DefaultContext, 1)
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestAttachment_DownloadURL(t *testing.T) {
 }
 
 func TestUpdateAttachment(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	attach, err := repo_model.GetAttachmentByID(db.DefaultContext, 1)
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestUpdateAttachment(t *testing.T) {
 
 func TestFindRepoAttachmentsByUUID(t *testing.T) {
 	defer unittest.OverrideFixtures("models/repo/fixtures/TestFindRepoAttachmentsByUUID")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	sort := func(x []*repo_model.Attachment) {
 		slices.SortFunc(x, func(a, b *repo_model.Attachment) int {

@@ -17,7 +17,7 @@ import (
 )
 
 func TestSpecificReposAuthorizationReducer(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	reducer := &SpecificReposAuthorizationReducer{
 		ResourceRepos: []RepoGetter{

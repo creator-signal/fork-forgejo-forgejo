@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewAccessToken(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token := &auth_model.AccessToken{
 		UID:  3,
 		Name: "Token C",
@@ -36,7 +36,7 @@ func TestNewAccessToken(t *testing.T) {
 func TestAccessTokenByNameExists(t *testing.T) {
 	name := "Token Gitea"
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token := &auth_model.AccessToken{
 		UID:  3,
 		Name: name,
@@ -69,7 +69,7 @@ func TestAccessTokenByNameExists(t *testing.T) {
 }
 
 func TestGetAccessTokenBySHA(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token, err := auth_model.GetAccessTokenBySHA(db.DefaultContext, "d2c6c1ba3890b309189a8e618c72a162e4efbf36")
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), token.UID)
@@ -87,7 +87,7 @@ func TestGetAccessTokenBySHA(t *testing.T) {
 }
 
 func TestListAccessTokens(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	tokens, err := db.Find[auth_model.AccessToken](db.DefaultContext, auth_model.ListAccessTokensOptions{UserID: 1})
 	require.NoError(t, err)
 	if assert.Len(t, tokens, 2) {
@@ -113,7 +113,7 @@ func TestUpdateLastUsed(t *testing.T) {
 	timeutil.MockSet(time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))
 	defer timeutil.MockUnset()
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	token := unittest.AssertExistsAndLoadBean(t, &auth_model.AccessToken{ID: 2})
 
 	require.NoError(t, token.UpdateLastUsed(t.Context()))
@@ -123,7 +123,7 @@ func TestUpdateLastUsed(t *testing.T) {
 }
 
 func TestDeleteAccessTokenByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	token, err := auth_model.GetAccessTokenBySHA(db.DefaultContext, "4c6f36e6cf498e2a448662f915d932c09c5a146c")
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestDeleteAccessTokenByID(t *testing.T) {
 }
 
 func TestRegenerateAccessTokenByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	token, err := auth_model.GetAccessTokenBySHA(db.DefaultContext, "4c6f36e6cf498e2a448662f915d932c09c5a146c")
 	require.NoError(t, err)

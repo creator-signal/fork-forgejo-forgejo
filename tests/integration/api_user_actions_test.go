@@ -93,7 +93,7 @@ func TestActionsAPISearchActionJobs_UserRunnerAllPendingJobs(t *testing.T) {
 
 func TestAPIUserActionsRunnerRegistrationTokenOperations(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIUserActionsRunnerRegistrationTokenOperations")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	session := loginUser(t, user2.Name)
@@ -115,7 +115,7 @@ func TestAPIUserActionsRunnerRegistrationTokenOperations(t *testing.T) {
 
 func TestAPIUserActionsRunnerOperations(t *testing.T) {
 	defer unittest.OverrideFixtures("tests/integration/fixtures/TestAPIUserActionsRunnerOperations")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	session := loginUser(t, user2.Name)

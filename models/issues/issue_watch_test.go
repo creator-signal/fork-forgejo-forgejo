@@ -15,7 +15,7 @@ import (
 )
 
 func TestCreateOrUpdateIssueWatch(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	require.NoError(t, issues_model.CreateOrUpdateIssueWatch(db.DefaultContext, 3, 1, true))
 	iw := unittest.AssertExistsAndLoadBean(t, &issues_model.IssueWatch{UserID: 3, IssueID: 1})
@@ -27,7 +27,7 @@ func TestCreateOrUpdateIssueWatch(t *testing.T) {
 }
 
 func TestGetIssueWatch(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_, exists, err := issues_model.GetIssueWatch(db.DefaultContext, 9, 1)
 	assert.True(t, exists)
@@ -44,7 +44,7 @@ func TestGetIssueWatch(t *testing.T) {
 }
 
 func TestGetIssueWatchers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	iws, err := issues_model.GetIssueWatchers(db.DefaultContext, 1, db.ListOptions{})
 	require.NoError(t, err)

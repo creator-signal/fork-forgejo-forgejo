@@ -19,7 +19,7 @@ import (
 )
 
 func Test_InviteTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, true)()
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
@@ -35,7 +35,7 @@ func Test_InviteTeamMember(t *testing.T) {
 }
 
 func Test_AddTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, false)()
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
@@ -51,7 +51,7 @@ func Test_AddTeamMember(t *testing.T) {
 }
 
 func Test_SelfInvite(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.AddMembersByInvitations, true)()
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})

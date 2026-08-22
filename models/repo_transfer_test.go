@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetPendingTransferIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	recipient := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	pendingTransfer := unittest.AssertExistsAndLoadBean(t, &RepoTransfer{RecipientID: recipient.ID, DoerID: doer.ID})

@@ -13,7 +13,7 @@ import (
 )
 
 func TestLookupUserRedirect(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	normalUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

@@ -18,7 +18,7 @@ func TestAddTopic(t *testing.T) {
 	totalNrOfTopics := 6
 	repo1NrOfTopics := 3
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	topics, _, err := repo_model.FindTopics(db.DefaultContext, &repo_model.FindTopicOptions{})
 	require.NoError(t, err)

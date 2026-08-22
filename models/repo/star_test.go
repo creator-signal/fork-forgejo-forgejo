@@ -15,7 +15,7 @@ import (
 )
 
 func TestStarRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	const userID = 2
 	const repoID = 1
 	unittest.AssertNotExistsBean(t, &repo_model.Star{UID: userID, RepoID: repoID})
@@ -28,14 +28,14 @@ func TestStarRepo(t *testing.T) {
 }
 
 func TestIsStaring(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	assert.True(t, repo_model.IsStaring(db.DefaultContext, 2, 4))
 	assert.False(t, repo_model.IsStaring(db.DefaultContext, 3, 4))
 }
 
 func TestRepository_GetStargazers(t *testing.T) {
 	// repo with stargazers
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 4})
 	gazers, err := repo_model.GetStargazers(db.DefaultContext, repo, db.ListOptions{Page: 0})
 	require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestRepository_GetStargazers(t *testing.T) {
 
 func TestRepository_GetStargazers2(t *testing.T) {
 	// repo with stargazers
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
 	gazers, err := repo_model.GetStargazers(db.DefaultContext, repo, db.ListOptions{Page: 0})
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestRepository_GetStargazers2(t *testing.T) {
 }
 
 func TestClearRepoStars(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	const userID = 2
 	const repoID = 1
 	unittest.AssertNotExistsBean(t, &repo_model.Star{UID: userID, RepoID: repoID})

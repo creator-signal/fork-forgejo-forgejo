@@ -14,7 +14,7 @@ import (
 )
 
 func TestForgejoSemVerSetGet(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ctx := db.DefaultContext
 
 	newVersion, err := version.NewVersion("v1.2.3")
@@ -27,7 +27,7 @@ func TestForgejoSemVerSetGet(t *testing.T) {
 }
 
 func TestForgejoSemVerMissing(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ctx := db.DefaultContext
 	e := db.GetEngine(ctx)
 

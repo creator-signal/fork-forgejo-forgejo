@@ -17,7 +17,7 @@ import (
 )
 
 func TestIssueList_LoadRepositories(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issueList := issues_model.IssueList{
 		unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1}),
@@ -34,7 +34,7 @@ func TestIssueList_LoadRepositories(t *testing.T) {
 }
 
 func TestIssueList_LoadAttributes(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	setting.Service.EnableTimetracking = true
 	issueList := issues_model.IssueList{
 		unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1}),
@@ -82,7 +82,7 @@ func TestIssueList_LoadAttributes(t *testing.T) {
 }
 
 func TestIssueListLoadUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})

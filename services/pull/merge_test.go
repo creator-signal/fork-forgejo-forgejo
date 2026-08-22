@@ -187,7 +187,7 @@ func TestLoadMergeMessageTemplates(t *testing.T) {
 }
 
 func TestMergeMergedPR(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 

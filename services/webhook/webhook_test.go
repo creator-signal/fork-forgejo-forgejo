@@ -32,7 +32,7 @@ func activateWebhook(t *testing.T, hookID int64) {
 }
 
 func TestPrepareWebhooks(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	activateWebhook(t, 1)
@@ -62,7 +62,7 @@ func eventType(p api.Payloader) webhook_module.HookEventType {
 }
 
 func TestPrepareWebhooksBranchFilterMatch(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// branch_filter: {master,feature*}
 	w := unittest.AssertExistsAndLoadBean(t, &webhook_model.Webhook{ID: 4})
@@ -86,7 +86,7 @@ func TestPrepareWebhooksBranchFilterMatch(t *testing.T) {
 }
 
 func TestPrepareWebhooksBranchFilterNoMatch(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// branch_filter: {master,feature*}
 	w := unittest.AssertExistsAndLoadBean(t, &webhook_model.Webhook{ID: 4})
@@ -106,7 +106,7 @@ func TestPrepareWebhooksBranchFilterNoMatch(t *testing.T) {
 }
 
 func TestWebhookUserMail(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.Service.NoReplyAddress, "no-reply.com")()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -115,7 +115,7 @@ func TestWebhookUserMail(t *testing.T) {
 }
 
 func TestDeliverTestPayloadWithoutPushEvent(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	done := make(chan struct{}, 1)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

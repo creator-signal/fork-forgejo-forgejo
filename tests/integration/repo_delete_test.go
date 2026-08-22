@@ -19,7 +19,7 @@ import (
 )
 
 func TestTeam_HasRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	test := func(teamID, repoID int64, expected bool) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -35,7 +35,7 @@ func TestTeam_HasRepository(t *testing.T) {
 }
 
 func TestTeam_RemoveRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	testSuccess := func(teamID, repoID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})

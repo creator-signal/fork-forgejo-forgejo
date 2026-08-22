@@ -16,7 +16,7 @@ import (
 )
 
 func TestUser_RemoveMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
 
 	// remove a user that is a member
@@ -39,7 +39,7 @@ func TestUser_RemoveMember(t *testing.T) {
 }
 
 func TestRemoveOrgUser(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(orgID, userID int64) {
 		org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: orgID})
 		expectedNumMembers := org.NumMembers

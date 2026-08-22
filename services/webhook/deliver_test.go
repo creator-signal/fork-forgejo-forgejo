@@ -84,7 +84,7 @@ func TestWebhookProxy(t *testing.T) {
 }
 
 func TestWebhookDeliverAuthorizationHeader(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	done := make(chan struct{}, 1)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +126,7 @@ func TestWebhookDeliverAuthorizationHeader(t *testing.T) {
 }
 
 func TestWebhookDeliverHookTask(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	done := make(chan struct{}, 1)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +218,7 @@ func TestWebhookDeliverHookTask(t *testing.T) {
 }
 
 func TestWebhookDeliverSpecificTypes(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	type hookCase struct {
 		gotBody        chan []byte

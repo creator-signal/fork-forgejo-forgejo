@@ -19,7 +19,7 @@ import (
 )
 
 func TestCreateComment(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})
@@ -48,7 +48,7 @@ func TestCreateComment(t *testing.T) {
 }
 
 func TestFetchCodeConversations(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -91,7 +91,7 @@ func TestAsCommentType(t *testing.T) {
 }
 
 func TestMigrate_InsertIssueComments(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	_ = issue.LoadRepo(db.DefaultContext)
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: issue.Repo.OwnerID})
@@ -118,7 +118,7 @@ func TestMigrate_InsertIssueComments(t *testing.T) {
 }
 
 func TestUpdateCommentsMigrationsByType(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: issue.RepoID})
@@ -144,7 +144,7 @@ func TestUpdateCommentsMigrationsByType(t *testing.T) {
 }
 
 func Test_UpdateIssueNumComments(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue2 := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 
 	require.NoError(t, issues_model.UpdateIssueNumComments(db.DefaultContext, issue2.ID))

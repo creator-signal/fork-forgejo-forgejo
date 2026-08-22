@@ -36,7 +36,7 @@ func registerNotifier() {
 func TestTransferOwnership(t *testing.T) {
 	registerNotifier()
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	require.NoError(t, feed.Init())
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -67,7 +67,7 @@ func TestTransferOwnership(t *testing.T) {
 }
 
 func TestStartRepositoryTransferSetPermission(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	recipient := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
@@ -88,7 +88,7 @@ func TestStartRepositoryTransferSetPermission(t *testing.T) {
 }
 
 func TestRepositoryTransfer(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})

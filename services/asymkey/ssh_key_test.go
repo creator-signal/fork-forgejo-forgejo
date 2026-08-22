@@ -19,7 +19,7 @@ import (
 )
 
 func TestAddLdapSSHPublicKeys(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.SSH.RootPath, t.TempDir())()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

@@ -15,7 +15,7 @@ import (
 
 func TestQuotaUsedGetUsedForUser(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestGetUsedForUser/")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	used, err := quota_model.GetUsedForUser(t.Context(), 5)
 	require.NoError(t, err)

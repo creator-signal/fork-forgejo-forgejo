@@ -26,7 +26,7 @@ import (
 // in DBFS — LogFilename can point at "does-not-exist".
 
 func TestOpenJobLogReader_RepoMismatch(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9001, RepoID: 1, TaskID: 9001})
 
@@ -36,7 +36,7 @@ func TestOpenJobLogReader_RepoMismatch(t *testing.T) {
 }
 
 func TestOpenJobLogReader_JobNotExecuted(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9002, RepoID: 1, TaskID: 0})
 
@@ -46,7 +46,7 @@ func TestOpenJobLogReader_JobNotExecuted(t *testing.T) {
 }
 
 func TestOpenJobLogReader_LogsExpired(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{ID: 9003, LogExpired: true})
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9003, RepoID: 1, TaskID: 9003})
@@ -57,7 +57,7 @@ func TestOpenJobLogReader_LogsExpired(t *testing.T) {
 }
 
 func TestOpenJobLogReader_UnknownAttempt(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionTask{ID: 9004, JobID: 9004, Attempt: 1})
 	unittest.AssertSuccessfulInsert(t, &actions_model.ActionRunJob{ID: 9004, RepoID: 1, TaskID: 9004})
@@ -68,7 +68,7 @@ func TestOpenJobLogReader_UnknownAttempt(t *testing.T) {
 }
 
 func TestOpenJobLogReader_StepOutOfRange(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Task with one real step → FullSteps returns 3 entries (setup, real, complete).
 	// step=99 is out of range.

@@ -57,7 +57,7 @@ func TestGetWorkflowPath(t *testing.T) {
 }
 
 func TestGetCommitLink(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	defer test.MockVariableValue(&setting.AppSubURL, "/sub")()
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -178,7 +178,7 @@ func TestActionRun_CanBeRerun(t *testing.T) {
 }
 
 func TestRepoNumOpenActions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	err := cache.Init()
 	require.NoError(t, err)
 
@@ -217,7 +217,7 @@ func TestRepoNumOpenActions(t *testing.T) {
 }
 
 func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repoID := int64(10)
 	pullRequestID := int64(3)
@@ -270,7 +270,7 @@ func TestActionRun_GetRunsNotDoneByRepoIDAndPullRequestPosterID(t *testing.T) {
 }
 
 func TestActionRun_NeedApproval(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -335,7 +335,7 @@ func TestActionRun_NeedApproval(t *testing.T) {
 }
 
 func TestActionRun_IncompleteMatrix(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -372,7 +372,7 @@ jobs:
 }
 
 func TestActionRun_IncompleteRunsOn(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -406,7 +406,7 @@ jobs:
 }
 
 func TestActionRun_FindOuterWorkflowCall(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -461,7 +461,7 @@ jobs:
 }
 
 func TestActionRun_IncompleteWith(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -509,7 +509,7 @@ jobs:
 }
 
 func TestInsertRunJobs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pullRequestPosterID := int64(4)
 	repoID := int64(10)
@@ -584,7 +584,7 @@ func TestGetRunByID(t *testing.T) {
 		nonexistingRunID = 0xffffffff
 	)
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	_, err := db.GetEngine(t.Context()).Insert(ActionRun{
 		ID: existingRunID,
@@ -605,7 +605,7 @@ func TestGetRunByID(t *testing.T) {
 }
 
 func TestGetQueuedRunsByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	fixtures := []*ActionRun{
 		{ID: 535681, Index: 1, RepoID: 62, OwnerID: 2, Status: StatusSuccess},
@@ -722,7 +722,7 @@ func TestRefreshStatus(t *testing.T) {
 
 func TestUpdateRun(t *testing.T) {
 	t.Run("Truncates title", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := &ActionRun{ID: 7569, OwnerID: 2, RepoID: 62, Title: "Within limits"}
 
@@ -737,7 +737,7 @@ func TestUpdateRun(t *testing.T) {
 	})
 
 	t.Run("Rejects outdated runs", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		originalRun := &ActionRun{ID: 7569, OwnerID: 2, RepoID: 62, Title: "A run"}
 
@@ -759,7 +759,7 @@ func TestUpdateRun(t *testing.T) {
 	})
 
 	t.Run("Updates only given columns", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := &ActionRun{ID: 7569, OwnerID: 2, RepoID: 62, Title: "A run"}
 
@@ -781,7 +781,7 @@ func TestUpdateRun(t *testing.T) {
 	})
 
 	t.Run("Updates zero values when not columns given", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		run := &ActionRun{ID: 7569, OwnerID: 2, RepoID: 62, Title: "A run"}
 
@@ -798,7 +798,7 @@ func TestUpdateRun(t *testing.T) {
 	})
 
 	t.Run("Clears cache", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 		require.NoError(t, cache.Init())
 
 		run := &ActionRun{ID: 7569, OwnerID: 2, RepoID: 62, Title: "A run", Status: StatusRunning}

@@ -99,7 +99,7 @@ func TestQueueAndError(t *testing.T) {
 }
 
 func TestQueueAfterTx(t *testing.T) {
-	// This is a really micro version of unittest.PrepareTestDatabase -- as the unittest package references the stats
+	// This is a really micro version of unittest.PrepareUnitTest -- as the unittest package references the stats
 	// package (for access to `Flush`), we can't use it without causing a circular dependency.  But we need a DB in
 	// order to create a Tx.
 	x, err := xorm.NewEngine("sqlite3", "file::memory:?cache=shared&_txlock=immediate")

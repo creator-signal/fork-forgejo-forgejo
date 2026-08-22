@@ -15,7 +15,7 @@ import (
 )
 
 func TestIsUserAllowed(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pt := &git_model.ProtectedTag{}
 	allowed, err := git_model.IsUserAllowedModifyTag(db.DefaultContext, pt, 1)

@@ -16,7 +16,7 @@ import (
 )
 
 func TestInsertEncryptedSecret(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Global secret", func(t *testing.T) {
 		secret, err := InsertEncryptedSecret(t.Context(), 0, 0, "GLOBAL_SECRET", "some common secret")
@@ -132,7 +132,7 @@ func TestSecretGetDecryptedData(t *testing.T) {
 
 func TestSecretGetSecretByID(t *testing.T) {
 	defer unittest.OverrideFixtures("models/secret/TestSecretGetSecretByID")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testCases := []struct {
 		name          string
@@ -212,7 +212,7 @@ func TestSecretGetSecretByID(t *testing.T) {
 }
 
 func TestSecretUpdateSecret(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	secret, err := InsertEncryptedSecret(t.Context(), 2, 0, "a_secret", "very secret")
 	require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestSecretUpdateSecret(t *testing.T) {
 }
 
 func TestSecretUpdateSecret_RejectsInvalidName(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	secret, err := InsertEncryptedSecret(t.Context(), 2, 0, "a_secret", "very secret")
 	require.NoError(t, err)

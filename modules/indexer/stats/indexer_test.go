@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRepoStatsIndex(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	setting.CfgProvider, _ = setting.NewConfigProviderFromData("")
 
 	setting.LoadQueueSettings()

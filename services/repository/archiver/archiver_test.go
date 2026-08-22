@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestArchive_Basic(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	ctx, _ := contexttest.MockContext(t, "user27/repo49")
 	firstCommit, secondCommit := "51f84af23134", "aacbdfe9e1c4"

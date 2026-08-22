@@ -30,7 +30,7 @@ import (
 
 func TestReducer(t *testing.T) {
 	defer unittest.OverrideFixtures("routers/api/shared/TestReducer")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	makeRecorder := func() *httptest.ResponseRecorder {
 		buff := bytes.NewBufferString("")

@@ -15,7 +15,7 @@ import (
 )
 
 func TestForgejo_PreMigrationSanityChecks(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	ctx := db.DefaultContext
 	e := db.GetEngine(ctx)
 

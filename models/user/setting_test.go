@@ -16,7 +16,7 @@ import (
 
 func TestSettings(t *testing.T) {
 	keyName := "test_user_setting"
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	newSetting := &user_model.Setting{UserID: 99, SettingKey: keyName, SettingValue: "Gitea User Setting Test"}
 

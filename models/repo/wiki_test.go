@@ -16,7 +16,7 @@ import (
 )
 
 func TestRepository_WikiCloneLink(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	cloneLink := repo.WikiCloneLink()
@@ -25,13 +25,13 @@ func TestRepository_WikiCloneLink(t *testing.T) {
 }
 
 func TestWikiPath(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	expected := filepath.Join(setting.RepoRootPath, "user2/repo1.wiki.git")
 	assert.Equal(t, expected, repo_model.WikiPath("user2", "repo1"))
 }
 
 func TestRepository_WikiPath(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	expected := filepath.Join(setting.RepoRootPath, "user2/repo1.wiki.git")
 	assert.Equal(t, expected, repo.WikiPath())

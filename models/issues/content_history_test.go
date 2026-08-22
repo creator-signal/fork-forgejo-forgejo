@@ -16,7 +16,7 @@ import (
 )
 
 func TestContentHistory(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	dbCtx := db.DefaultContext
 	timeStampNow := timeutil.TimeStampNow()
@@ -81,7 +81,7 @@ func TestContentHistory(t *testing.T) {
 }
 
 func TestHasIssueContentHistory(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Ensures that comment_id is into taken account even if it's zero.
 	_ = issues_model.SaveIssueContentHistory(db.DefaultContext, 1, 11, 100, timeutil.TimeStampNow(), "c-a", true)

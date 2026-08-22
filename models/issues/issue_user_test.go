@@ -15,7 +15,7 @@ import (
 )
 
 func Test_NewIssueUsers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	newIssue := &issues_model.Issue{
@@ -37,7 +37,7 @@ func Test_NewIssueUsers(t *testing.T) {
 }
 
 func TestUpdateIssueUserByRead(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 
 	require.NoError(t, issues_model.UpdateIssueUserByRead(db.DefaultContext, 4, issue.ID))
@@ -50,7 +50,7 @@ func TestUpdateIssueUserByRead(t *testing.T) {
 }
 
 func TestUpdateIssueUsersByMentions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 
 	uids := []int64{2, 5}

@@ -21,7 +21,7 @@ import (
 )
 
 func TestGetCommitStatuses(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
@@ -221,7 +221,7 @@ func Test_CalcCommitStatus(t *testing.T) {
 }
 
 func TestFindRepoRecentCommitStatusContexts(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo2 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -274,7 +274,7 @@ func TestFindRepoRecentCommitStatusContexts(t *testing.T) {
 
 func TestCleanupCommitStatus(t *testing.T) {
 	defer unittest.OverrideFixtures("models/git/TestCleanupCommitStatus")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// No changes after a dry run:
 	originalCount := unittest.GetCount(t, &git_model.CommitStatus{})

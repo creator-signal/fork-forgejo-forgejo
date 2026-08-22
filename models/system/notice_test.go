@@ -23,7 +23,7 @@ func TestNotice_TrStr(t *testing.T) {
 }
 
 func TestCreateNotice(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	noticeBean := &system.Notice{
 		Type:        system.NoticeRepository,
@@ -35,7 +35,7 @@ func TestCreateNotice(t *testing.T) {
 }
 
 func TestCreateRepositoryNotice(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	noticeBean := &system.Notice{
 		Type:        system.NoticeRepository,
@@ -49,12 +49,12 @@ func TestCreateRepositoryNotice(t *testing.T) {
 // TODO TestRemoveAllWithNotice
 
 func TestCountNotices(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	assert.Equal(t, int64(3), system.CountNotices(db.DefaultContext))
 }
 
 func TestNotices(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	notices, err := system.Notices(db.DefaultContext, 1, 2)
 	require.NoError(t, err)
@@ -72,7 +72,7 @@ func TestNotices(t *testing.T) {
 
 func TestDeleteNotices(t *testing.T) {
 	// delete a non-empty range
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 1})
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 2})
@@ -85,7 +85,7 @@ func TestDeleteNotices(t *testing.T) {
 
 func TestDeleteNotices2(t *testing.T) {
 	// delete an empty range
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 1})
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 2})
@@ -97,7 +97,7 @@ func TestDeleteNotices2(t *testing.T) {
 }
 
 func TestDeleteNoticesByIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 1})
 	unittest.AssertExistsAndLoadBean(t, &system.Notice{ID: 2})

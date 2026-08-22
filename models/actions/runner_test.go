@@ -35,7 +35,7 @@ func TestUpdateSecret(t *testing.T) {
 
 func TestDeleteRunner(t *testing.T) {
 	const recordID = 12345678
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	before := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: recordID})
 
 	err := DeleteRunner(db.DefaultContext, &ActionRunner{ID: recordID})
@@ -83,7 +83,7 @@ func TestDeleteOfflineRunnersRunnerGlobalOnly(t *testing.T) {
 	timeutil.MockSet(baseTime)
 	defer timeutil.MockUnset()
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	olderThan := timeutil.TimeStampNow().Add(-timeutil.Hour)
 
@@ -112,7 +112,7 @@ func TestDeleteOfflineRunnersAll(t *testing.T) {
 	timeutil.MockSet(baseTime)
 	defer timeutil.MockUnset()
 
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	olderThan := timeutil.TimeStampNow().Add(-timeutil.Hour)
 
@@ -240,7 +240,7 @@ func TestRunnerEditable(t *testing.T) {
 
 func TestRunner_GetVisibleRunnerByID(t *testing.T) {
 	defer unittest.OverrideFixtures("models/actions/TestRunner_GetVisibleRunnerByID")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repository32 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 32, OwnerID: 3})
 	repository1 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 1, OwnerID: 2})
@@ -378,7 +378,7 @@ func TestRunner_GetVisibleRunnerByID(t *testing.T) {
 
 func TestRunner_FindRunnerOptionsToConds(t *testing.T) {
 	defer unittest.OverrideFixtures("models/actions/TestRunner_FindRunnerOptionsToConds")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	runner1 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719931, OwnerID: 3, RepoID: 0}) // Owned by org3
 	runner2 := unittest.AssertExistsAndLoadBean(t, &ActionRunner{ID: 719932, OwnerID: 2, RepoID: 0}) // Owned by user2
@@ -482,7 +482,7 @@ func TestRunner_FindRunnerOptionsToConds(t *testing.T) {
 }
 
 func TestDeleteEphemeralRunner(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	persistentRunnerOne := &ActionRunner{
 		ID:        606526,
@@ -542,7 +542,7 @@ func TestDeleteEphemeralRunner(t *testing.T) {
 
 func TestUpdateRunner(t *testing.T) {
 	t.Run("ownership is not altered", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		runnerUUID := "86b2f19a-3fbb-410b-ace6-2a2ace078a28"
 
@@ -566,7 +566,7 @@ func TestUpdateRunner(t *testing.T) {
 	})
 
 	t.Run("OwnerID and RepoID cannot be set simultaneously", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo62 := unittest.AssertExistsAndLoadBean(t, &repo.Repository{ID: 62, OwnerID: user2.ID})

@@ -18,7 +18,7 @@ import (
 )
 
 func TestActionsTrust_ChangeStatus(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repoID := int64(10)
 	pullRequestPosterID := int64(30)
@@ -245,7 +245,7 @@ jobs:
 
 func TestActionsTrust_GetPullRequestUserIsTrustedWithActions(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestActionsTrust_GetPullRequestUserIsTrustedWithActions")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("implicitly trusted because the pull request is not from a fork", func(t *testing.T) {
 		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 2000})

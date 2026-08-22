@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 
 func TestDeleteOrganization(t *testing.T) {
 	defer unittest.OverrideFixtures("services/org/TestDeleteOrganization")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 6})
 	require.NoError(t, DeleteOrganization(db.DefaultContext, org, false))

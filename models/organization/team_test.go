@@ -17,7 +17,7 @@ import (
 )
 
 func TestTeam(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	owners := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
 	assert.Equal(t, int64(3), owners.GetOrg(db.DefaultContext).ID)
@@ -46,7 +46,7 @@ func TestTeam(t *testing.T) {
 }
 
 func TestTeam_IsMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
 	assert.True(t, team.IsMember(db.DefaultContext, 2))
@@ -60,7 +60,7 @@ func TestTeam_IsMember(t *testing.T) {
 }
 
 func TestTeam_GetRepositories(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(teamID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -75,7 +75,7 @@ func TestTeam_GetRepositories(t *testing.T) {
 }
 
 func TestTeam_GetMembers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(teamID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -90,7 +90,7 @@ func TestTeam_GetMembers(t *testing.T) {
 }
 
 func TestGetTeam(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(orgID int64, name string) {
 		team, err := organization.GetTeam(db.DefaultContext, orgID, name)
@@ -108,7 +108,7 @@ func TestGetTeam(t *testing.T) {
 }
 
 func TestGetTeamByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(teamID int64) {
 		team, err := organization.GetTeamByID(db.DefaultContext, teamID)
@@ -125,7 +125,7 @@ func TestGetTeamByID(t *testing.T) {
 }
 
 func TestIsTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(orgID, teamID, userID int64, expected bool) {
 		isMember, err := organization.IsTeamMember(db.DefaultContext, orgID, teamID, userID)
 		require.NoError(t, err)
@@ -144,7 +144,7 @@ func TestIsTeamMember(t *testing.T) {
 }
 
 func TestGetTeamMembers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(teamID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -162,7 +162,7 @@ func TestGetTeamMembers(t *testing.T) {
 }
 
 func TestGetUserTeams(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(userID int64) {
 		teams, _, err := organization.SearchTeam(db.DefaultContext, &organization.SearchTeamOptions{UserID: userID})
 		require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestGetUserTeams(t *testing.T) {
 }
 
 func TestGetUserOrgTeams(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	test := func(orgID, userID int64) {
 		teams, err := organization.GetUserOrgTeams(db.DefaultContext, orgID, userID)
 		require.NoError(t, err)
@@ -191,7 +191,7 @@ func TestGetUserOrgTeams(t *testing.T) {
 }
 
 func TestHasTeamRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(teamID, repoID int64, expected bool) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -208,7 +208,7 @@ func TestHasTeamRepo(t *testing.T) {
 
 func TestInconsistentOwnerTeam(t *testing.T) {
 	defer unittest.OverrideFixtures("models/organization/TestInconsistentOwnerTeam")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1000, TeamID: 1000, AccessMode: perm.AccessModeNone})
 	unittest.AssertExistsAndLoadBean(t, &organization.TeamUnit{ID: 1001, TeamID: 1000, AccessMode: perm.AccessModeNone})

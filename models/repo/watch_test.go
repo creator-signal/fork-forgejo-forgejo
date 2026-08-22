@@ -16,7 +16,7 @@ import (
 )
 
 func TestIsWatching(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 1, 1))
 	assert.True(t, repo_model.IsWatcher(db.DefaultContext, 4, 1))
@@ -113,7 +113,7 @@ func TestGetSelectWatchers(t *testing.T) {
 }
 
 func TestRepository_GetWatchers(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	watchers, err := repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
@@ -130,7 +130,7 @@ func TestRepository_GetWatchers(t *testing.T) {
 }
 
 func TestWatchRepoExplicitly(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	// There is no record for this watch in the fixture.
 	assert.False(t, repo_model.IsWatcher(db.DefaultContext, 1, 2))
 	{
@@ -199,7 +199,7 @@ func TestWatchRepoExplicitly(t *testing.T) {
 }
 
 func TestWatchIfAutoWatchNewRepos(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	watchers, err := repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
@@ -262,7 +262,7 @@ func TestWatchIfAutoWatchNewRepos(t *testing.T) {
 }
 
 func TestWatchIfAutoWatchOnChanges(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	watchers, err := repo_model.GetRepoWatchers(db.DefaultContext, repo.ID, db.ListOptions{Page: 1})
@@ -325,7 +325,7 @@ func TestWatchIfAutoWatchOnChanges(t *testing.T) {
 }
 
 func TestUnwatchRepos(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Watch{UserID: 4, RepoID: 1})
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Watch{UserID: 4, RepoID: 2})

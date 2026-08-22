@@ -18,7 +18,7 @@ import (
 )
 
 func TestMigrateWhiteBlocklist(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user1"})
 	nonAdminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
@@ -149,7 +149,7 @@ func TestAllowBlockList(t *testing.T) {
 }
 
 func TestURLAllowedSSH(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{Name: "user2"})
 	sshURL := "ssh://git@git.gay/gitgay/forgejo"

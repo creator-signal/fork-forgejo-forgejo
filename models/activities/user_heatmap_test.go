@@ -60,7 +60,7 @@ func TestGetUserHeatmapDataByUser(t *testing.T) {
 		},
 	}
 	// Prepare
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Mock time
 	timeutil.MockSet(time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))

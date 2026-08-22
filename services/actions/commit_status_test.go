@@ -18,7 +18,7 @@ import (
 )
 
 func TestCreateCommitStatus_IncompleteMatrix(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 192})
 
@@ -44,7 +44,7 @@ func TestCreateCommitStatus_IncompleteMatrix(t *testing.T) {
 
 func TestCreateCommitStatus_AvoidsDuplicates(t *testing.T) {
 	defer unittest.OverrideFixtures("services/actions/TestCreateCommitStatus")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	cache.Init()
 
 	job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 400})

@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestUploadAttachment(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 

@@ -23,7 +23,7 @@ import (
 
 func TestToVerification(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestParseCommitWithSSHSignature")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Change the user's primary email address to ensure this value isn't ambiguous with any other return value from
 	// signature verification.
@@ -111,7 +111,7 @@ uf51WIBywxztet6vi+jYJK1jFoY4iA==
 
 func TestToAnnotatedTag(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestParseCommitWithSSHSignature")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	// Align user email for predictable test results (same as TestToVerification).
 	userModel := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

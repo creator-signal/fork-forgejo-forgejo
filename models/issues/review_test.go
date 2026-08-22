@@ -18,7 +18,7 @@ import (
 )
 
 func TestGetReviewByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	review, err := issues_model.GetReviewByID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	assert.Equal(t, "Demo Review", review.Content)
@@ -30,7 +30,7 @@ func TestGetReviewByID(t *testing.T) {
 }
 
 func TestReview_LoadAttributes(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 1})
 	require.NoError(t, review.LoadAttributes(db.DefaultContext))
 	assert.NotNil(t, review.Issue)
@@ -44,7 +44,7 @@ func TestReview_LoadAttributes(t *testing.T) {
 }
 
 func TestReview_LoadCodeComments(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	review := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 4})
 	require.NoError(t, review.LoadAttributes(db.DefaultContext))
@@ -63,7 +63,7 @@ func TestReviewType_Icon(t *testing.T) {
 }
 
 func TestFindReviews(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	reviews, err := issues_model.FindReviews(db.DefaultContext, issues_model.FindReviewOptions{
 		Types:      []issues_model.ReviewType{issues_model.ReviewTypeApprove},
 		IssueID:    2,
@@ -75,7 +75,7 @@ func TestFindReviews(t *testing.T) {
 }
 
 func TestFindLatestReviews(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	reviews, err := issues_model.FindLatestReviews(db.DefaultContext, issues_model.FindReviewOptions{
 		Types:   []issues_model.ReviewType{issues_model.ReviewTypeApprove},
 		IssueID: 11,
@@ -87,7 +87,7 @@ func TestFindLatestReviews(t *testing.T) {
 }
 
 func TestGetCurrentReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 
@@ -105,7 +105,7 @@ func TestGetCurrentReview(t *testing.T) {
 }
 
 func TestCreateReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -122,7 +122,7 @@ func TestCreateReview(t *testing.T) {
 }
 
 func TestGetReviewersByIssueID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -173,7 +173,7 @@ func TestGetReviewersByIssueID(t *testing.T) {
 }
 
 func TestDismissReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	rejectReviewExample := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 9})
 	requestReviewExample := unittest.AssertExistsAndLoadBean(t, &issues_model.Review{ID: 11})
@@ -228,7 +228,7 @@ func TestDismissReview(t *testing.T) {
 }
 
 func TestDeleteReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -263,7 +263,7 @@ func TestDeleteReview(t *testing.T) {
 }
 
 func TestDeleteDismissedReview(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
@@ -292,7 +292,7 @@ func TestDeleteDismissedReview(t *testing.T) {
 }
 
 func TestAddReviewRequest(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
 	require.NoError(t, pull.LoadIssue(db.DefaultContext))
@@ -322,7 +322,7 @@ func TestAddReviewRequest(t *testing.T) {
 }
 
 func TestSubmitPendingReviewDeletesReviewRequest(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
 	require.NoError(t, pull.LoadIssue(db.DefaultContext))
@@ -362,7 +362,7 @@ func TestSubmitPendingReviewDeletesReviewRequest(t *testing.T) {
 // this test is for handling a state correctly that should never exist, but is representable and was
 // achievable thanks to #12243
 func TestReviewRequestDeletesReviewRequestsBeforeRejectedReviews(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	sess := db.GetEngine(db.DefaultContext)
 
 	pull := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
@@ -399,7 +399,7 @@ func TestReviewRequestDeletesReviewRequestsBeforeRejectedReviews(t *testing.T) {
 
 func TestAddTeamReviewRequest(t *testing.T) {
 	defer unittest.OverrideFixtures("models/fixtures/TestAddTeamReviewRequest")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	setupForProtectedBranch := func() (*issues_model.Issue, *user_model.User) {
 		// From override models/fixtures/TestAddTeamReviewRequest/issue.yml; issue #23 is a PR into a protected branch

@@ -67,7 +67,7 @@ Set up a user called "me" for all tests
 
 func TestClientCtx(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	pubID := "myGpgId"
 	cf, err := activitypub.NewClientFactory()
@@ -83,7 +83,7 @@ func TestClientCtx(t *testing.T) {
 
 func TestClientNilHostsCtx(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, false)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	pubID := "myGpgId"
 	cf, err := activitypub.NewClientFactory()
@@ -108,7 +108,7 @@ func TestClientNilHostsCtx(t *testing.T) {
 
 /* TODO: bring this test to work or delete
 func TestActivityPubSignedGet(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1, Name: "me"})
 	pubID := "myGpgId"
 	c, err := NewClient(db.DefaultContext, user, pubID)
@@ -139,7 +139,7 @@ func TestActivityPubSignedGet(t *testing.T) {
 
 func TestActivityPubSignedPost(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	pubID := "https://example.com/pubID"
 
@@ -171,7 +171,7 @@ func TestActivityPubSignedPost(t *testing.T) {
 }
 
 func TestActivityPubRedirect(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
 	pubID := "https://example.com/pubID"
 

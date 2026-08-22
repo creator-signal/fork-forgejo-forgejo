@@ -19,7 +19,7 @@ import (
 )
 
 func TestUpdateIssuesCommit(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pushCommits := []*repository.PushCommit{
 		{
 			Sha1:           "abcdef1",
@@ -121,7 +121,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 }
 
 func TestUpdateIssuesCommit_Colon(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	pushCommits := []*repository.PushCommit{
 		{
 			Sha1:           "abcdef2",
@@ -146,7 +146,7 @@ func TestUpdateIssuesCommit_Colon(t *testing.T) {
 }
 
 func TestUpdateIssuesCommit_Issue5957(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	// Test that push to a non-default branch closes an issue.
@@ -180,7 +180,7 @@ func TestUpdateIssuesCommit_Issue5957(t *testing.T) {
 }
 
 func TestUpdateIssuesCommit_AnotherRepo(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	// Test that a push to default branch closes issue in another repo
@@ -215,7 +215,7 @@ func TestUpdateIssuesCommit_AnotherRepo(t *testing.T) {
 }
 
 func TestUpdateIssuesCommit_AnotherRepo_FullAddress(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	// Test that a push to default branch closes issue in another repo
@@ -250,7 +250,7 @@ func TestUpdateIssuesCommit_AnotherRepo_FullAddress(t *testing.T) {
 }
 
 func TestUpdateIssuesCommit_AnotherRepoNoPermission(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
 
 	// Test that a push with close reference *can not* close issue

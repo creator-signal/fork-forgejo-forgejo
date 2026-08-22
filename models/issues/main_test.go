@@ -13,7 +13,7 @@ import (
 )
 
 func TestFixturesAreConsistent(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	unittest.CheckConsistencyFor(t,
 		&issues_model.Issue{},
 		&issues_model.PullRequest{},

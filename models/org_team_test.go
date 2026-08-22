@@ -20,7 +20,7 @@ import (
 )
 
 func TestTeam_RemoveMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(teamID, userID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -44,7 +44,7 @@ func TestIsUsableTeamName(t *testing.T) {
 }
 
 func TestNewTeam(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	const teamName = "newTeamName"
 	team := &organization.Team{Name: teamName, OrgID: 3}
@@ -55,7 +55,7 @@ func TestNewTeam(t *testing.T) {
 
 func TestUpdateTeam(t *testing.T) {
 	// successful update
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
 	team.LowerName = "newname"
@@ -75,7 +75,7 @@ func TestUpdateTeam(t *testing.T) {
 
 func TestUpdateTeam2(t *testing.T) {
 	// update to already-existing team
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
 	team.LowerName = "owners"
@@ -88,7 +88,7 @@ func TestUpdateTeam2(t *testing.T) {
 }
 
 func TestDeleteTeam(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
 	require.NoError(t, DeleteTeam(db.DefaultContext, team))
@@ -105,7 +105,7 @@ func TestDeleteTeam(t *testing.T) {
 }
 
 func TestAddTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	test := func(teamID, userID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -119,7 +119,7 @@ func TestAddTeamMember(t *testing.T) {
 }
 
 func TestTeam_AddAndReturnTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	for _, testCase := range []struct {
 		name          string
@@ -162,7 +162,7 @@ func TestTeam_AddAndReturnTeamMember(t *testing.T) {
 }
 
 func TestTeam_AddTeamRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	for _, testCase := range []struct {
 		name   string
@@ -209,7 +209,7 @@ func TestTeam_AddTeamRepository(t *testing.T) {
 }
 
 func TestRemoveTeamMember(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	testSuccess := func(teamID, userID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
@@ -228,7 +228,7 @@ func TestRemoveTeamMember(t *testing.T) {
 }
 
 func TestRepository_RecalculateAccesses3(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	team5 := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 5})
 	user29 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 29})
 

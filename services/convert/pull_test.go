@@ -22,7 +22,7 @@ import (
 
 func TestPullRequest_APIFormat(t *testing.T) {
 	// with HeadRepo
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	headRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 	pr := unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{ID: 1})
 	require.NoError(t, pr.LoadAttributes(db.DefaultContext))
@@ -51,7 +51,7 @@ func TestPullRequest_APIFormat(t *testing.T) {
 }
 
 func TestPullReviewList(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Pending review", func(t *testing.T) {
 		reviewer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})

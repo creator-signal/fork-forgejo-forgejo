@@ -18,14 +18,14 @@ import (
 )
 
 func TestLabel_CalOpenIssues(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	label.CalOpenIssues()
 	assert.Equal(t, 2, label.NumOpenIssues)
 }
 
 func TestLabel_LoadSelectedLabelsAfterClick(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	// Loading the label id:8 (scope/label2) which have a scope and an
 	// exclusivity with id:7 (scope/label1)
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 8})
@@ -56,7 +56,7 @@ func TestLabel_LoadSelectedLabelsAfterClick(t *testing.T) {
 }
 
 func TestLabel_ExclusiveScope(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 7})
 	assert.Equal(t, "scope", label.ExclusiveScope())
 
@@ -65,7 +65,7 @@ func TestLabel_ExclusiveScope(t *testing.T) {
 }
 
 func TestNewLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	labels := []*issues_model.Label{
 		{RepoID: 2, Name: "labelName2", Color: "#123456"},
 		{RepoID: 3, Name: "labelName3", Color: "#123"},
@@ -88,7 +88,7 @@ func TestNewLabels(t *testing.T) {
 }
 
 func TestGetLabelByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label, err := issues_model.GetLabelByID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, label.ID)
@@ -98,7 +98,7 @@ func TestGetLabelByID(t *testing.T) {
 }
 
 func TestGetLabelInRepoByName(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label, err := issues_model.GetLabelInRepoByName(db.DefaultContext, 1, "label1")
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, label.ID)
@@ -112,7 +112,7 @@ func TestGetLabelInRepoByName(t *testing.T) {
 }
 
 func TestGetLabelInRepoByNames(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	labelIDs, err := issues_model.GetLabelIDsInRepoByNames(db.DefaultContext, 1, []string{"label1", "label2"})
 	require.NoError(t, err)
 
@@ -123,7 +123,7 @@ func TestGetLabelInRepoByNames(t *testing.T) {
 }
 
 func TestGetLabelInRepoByNamesDiscardsNonExistentLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	// label3 doesn't exists.. See labels.yml
 	labelIDs, err := issues_model.GetLabelIDsInRepoByNames(db.DefaultContext, 1, []string{"label1", "label2", "label3"})
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestGetLabelInRepoByNamesDiscardsNonExistentLabels(t *testing.T) {
 }
 
 func TestGetLabelInRepoByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label, err := issues_model.GetLabelInRepoByID(db.DefaultContext, 1, 1)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, label.ID)
@@ -149,7 +149,7 @@ func TestGetLabelInRepoByID(t *testing.T) {
 }
 
 func TestGetLabelsInRepoByIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	labels, err := issues_model.GetLabelsInRepoByIDs(db.DefaultContext, 1, []int64{1, 2, unittest.NonexistentID})
 	require.NoError(t, err)
 	if assert.Len(t, labels, 2) {
@@ -159,7 +159,7 @@ func TestGetLabelsInRepoByIDs(t *testing.T) {
 }
 
 func TestGetLabelsByRepoID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(repoID int64, sortType string, expectedIssueIDs []int64) {
 		labels, err := issues_model.GetLabelsByRepoID(db.DefaultContext, repoID, sortType, db.ListOptions{})
 		require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestGetLabelsByRepoID(t *testing.T) {
 // Org versions
 
 func TestGetLabelInOrgByName(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label, err := issues_model.GetLabelInOrgByName(db.DefaultContext, 3, "orglabel3")
 	require.NoError(t, err)
 	assert.EqualValues(t, 3, label.ID)
@@ -197,7 +197,7 @@ func TestGetLabelInOrgByName(t *testing.T) {
 }
 
 func TestGetLabelInOrgByID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label, err := issues_model.GetLabelInOrgByID(db.DefaultContext, 3, 3)
 	require.NoError(t, err)
 	assert.EqualValues(t, 3, label.ID)
@@ -216,7 +216,7 @@ func TestGetLabelInOrgByID(t *testing.T) {
 }
 
 func TestGetLabelsInOrgByIDs(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	labels, err := issues_model.GetLabelsInOrgByIDs(db.DefaultContext, 3, []int64{3, 4, unittest.NonexistentID})
 	require.NoError(t, err)
 	if assert.Len(t, labels, 2) {
@@ -226,7 +226,7 @@ func TestGetLabelsInOrgByIDs(t *testing.T) {
 }
 
 func TestGetLabelsByOrgID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(orgID int64, sortType string, expectedIssueIDs []int64) {
 		labels, err := issues_model.GetLabelsByOrgID(db.DefaultContext, orgID, sortType, db.ListOptions{})
 		require.NoError(t, err)
@@ -250,7 +250,7 @@ func TestGetLabelsByOrgID(t *testing.T) {
 //
 
 func TestGetLabelsByIssueID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	labels, err := issues_model.GetLabelsByIssueID(db.DefaultContext, 1)
 	require.NoError(t, err)
 	if assert.Len(t, labels, 1) {
@@ -263,7 +263,7 @@ func TestGetLabelsByIssueID(t *testing.T) {
 }
 
 func TestUpdateLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	// make sure update won't overwrite it
 	update := &issues_model.Label{
@@ -287,7 +287,7 @@ func TestUpdateLabel(t *testing.T) {
 }
 
 func TestDeleteLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	require.NoError(t, issues_model.DeleteLabel(db.DefaultContext, label.RepoID, label.ID))
 	unittest.AssertNotExistsBean(t, &issues_model.Label{ID: label.ID, RepoID: label.RepoID})
@@ -300,14 +300,14 @@ func TestDeleteLabel(t *testing.T) {
 }
 
 func TestHasIssueLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	assert.True(t, issues_model.HasIssueLabel(db.DefaultContext, 1, 1))
 	assert.False(t, issues_model.HasIssueLabel(db.DefaultContext, 1, 2))
 	assert.False(t, issues_model.HasIssueLabel(db.DefaultContext, unittest.NonexistentID, unittest.NonexistentID))
 }
 
 func TestNewIssueLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 2})
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -333,7 +333,7 @@ func TestNewIssueLabel(t *testing.T) {
 }
 
 func TestNewIssueExclusiveLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 18})
 	doer := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
@@ -361,7 +361,7 @@ func TestNewIssueExclusiveLabel(t *testing.T) {
 }
 
 func TestNewIssueLabels(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	label1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 1})
 	label2 := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: 2})
 	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 5})
@@ -392,7 +392,7 @@ func TestNewIssueLabels(t *testing.T) {
 }
 
 func TestDeleteIssueLabel(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	testSuccess := func(labelID, issueID, doerID int64) {
 		label := unittest.AssertExistsAndLoadBean(t, &issues_model.Label{ID: labelID})
 		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: issueID})

@@ -17,7 +17,7 @@ import (
 
 func TestRemoveLogs(t *testing.T) {
 	t.Run("Logs removed", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		_, err := WriteLogs(t.Context(), "test.log", 0,
 			[]*runnerv1.LogRow{{Time: timestamppb.New(time.Now()), Content: "Hello world"}})
@@ -37,7 +37,7 @@ func TestRemoveLogs(t *testing.T) {
 	})
 
 	t.Run("Error if filename is empty", func(t *testing.T) {
-		require.NoError(t, unittest.PrepareTestDatabase())
+		require.NoError(t, unittest.PrepareUnitTest())
 
 		_, err := WriteLogs(t.Context(), "test.log", 0,
 			[]*runnerv1.LogRow{{Time: timestamppb.New(time.Now()), Content: "Hello world"}})

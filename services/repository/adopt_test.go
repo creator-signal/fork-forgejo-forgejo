@@ -37,7 +37,7 @@ func TestCheckUnadoptedRepositories_Add(t *testing.T) {
 }
 
 func TestCheckUnadoptedRepositories(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	//
 	// Non existent user
 	//
@@ -67,7 +67,7 @@ func TestCheckUnadoptedRepositories(t *testing.T) {
 }
 
 func TestListUnadoptedRepositories_ListOptions(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	username := "user2"
 	unadoptedList := []string{path.Join(username, "rendering-test"), path.Join(username, "unadopted1"), path.Join(username, "unadopted2")}
 	for _, unadopted := range unadoptedList {
@@ -88,7 +88,7 @@ func TestListUnadoptedRepositories_ListOptions(t *testing.T) {
 }
 
 func TestAdoptRepository(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	username := "user2"
 
 	unadopted := "unadopted"

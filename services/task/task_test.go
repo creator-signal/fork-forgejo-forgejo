@@ -22,7 +22,7 @@ import (
 )
 
 func TestCreateMigrateTask(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 	t.Run("Transaction failure", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestCreateMigrateTask(t *testing.T) {
 
 func TestRetryMigrateTask(t *testing.T) {
 	defer unittest.OverrideFixtures("services/task/fixtures/TestRetryMigrateTask/")()
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareUnitTest())
 
 	t.Run("Migrate task does not exist", func(t *testing.T) {
 		err := RetryMigrateTask(t.Context(), 100)

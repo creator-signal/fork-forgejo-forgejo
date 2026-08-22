@@ -18,7 +18,7 @@ import (
 // This test verifies common elements that are visible on all pages but most
 // likely to be first seen on `/`
 func TestCommonNavigationElements(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
+	require.NoError(t, unittest.PrepareIntegrationTest())
 
 	session := loginUser(t, "user1")
 	locale := translation.NewLocale("en-US")
