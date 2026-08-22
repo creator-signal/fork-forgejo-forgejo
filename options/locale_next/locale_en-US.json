@@ -1023,5 +1023,6 @@
 	"funding.action.title": "Sponsor %s",
 	"funding.action.close": "Close",
 	"funding.config_has_errors": "The <a href=\"%s\">funding config</a> contains errors.",
+	"funding.docs": "<a target=\"_blank\" rel=\"noopener noreferrer\" href=\"%[1]s\">See the documentation</a> for more details on donation links.",
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."
 }

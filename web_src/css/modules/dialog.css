@@ -152,23 +152,35 @@ dialog .toast-close {
   margin-inline-start: auto;
 }
 
+dialog .content hr {
+  border-top: 1px solid var(--color-secondary);
+  margin: 10px 0;
+}
+
+#funding-modal article {
+  /* paragraphs etc. should not cause the modal to grow beyond reasonable width */
+  max-width: 424px;
+}
+
 #funding-modal ul {
   list-style-type: none;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 0;
+  margin-top: 0;
 }
 
 #funding-modal ul > li {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.5rem;
 }
 
 #funding-modal li > .icon {
   position: relative;
+  flex-shrink: 0;
+  margin-inline-end: 0.5rem;
   width: 22px;
   height: 22px;
 }
