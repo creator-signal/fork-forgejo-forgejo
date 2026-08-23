@@ -105,8 +105,14 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 
 	entry := new(api.RepoFundingEntry)
 	entry.ProviderName = provider.Name
-	entry.Title = fmt.Sprintf(provider.Title, input)
 	entry.Value = urlValue.String()
+	if provider.Name == "custom" {
+		// "custom" entries are distinct from other funding providers in that their URL value is always displayed in full, including scheme and punycode transformations
+		// (we ignore provider.Title here for "custom"'s special behavior)
+		entry.Title = urlValue.String()
+	} else {
+		entry.Title = fmt.Sprintf(provider.Title, input)
+	}
 
 	return entry, nil
 }
