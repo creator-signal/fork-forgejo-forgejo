@@ -92,7 +92,7 @@ test('Funding modal (repo)', async ({page}) => {
   let response = await page.goto('/user2/long-diff-test', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
   await expect(page.locator('#funding-modal')).toBeHidden();
-  await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+  await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
 
   // shown on repo with funding config
   response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
@@ -100,9 +100,9 @@ test('Funding modal (repo)', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
-  await expect(fundingModal).toHaveAccessibleName('Sponsor user2/funding_basic_complete');
+  await expect(fundingModal).toHaveAccessibleName('Donate to user2/funding_basic_complete');
   await expect(fundingModal.locator('.ui.error.message')).toBeHidden();
 
   const items = fundingModal.getByRole('listitem');
@@ -127,10 +127,10 @@ test('Funding modal (repo)', async ({page}) => {
 
 const appearanceCases = [
   // unlike normal repo funding configs, user/org ones always say sposor their user/org, not the repo itself:
-  {kind: 'user', badUrl: '/user2', goodUrl: '/user39', heading: 'Sponsor User39'},
-  {kind: 'user/.profile', badUrl: '/user2', goodUrl: '/user39/.profile', heading: 'Sponsor User39'},
-  {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Sponsor Org Six'},
-  {kind: 'org/.profile', badUrl: '/org25', goodUrl: '/org6/.profile', heading: 'Sponsor Org Six'},
+  {kind: 'user', badUrl: '/user2', goodUrl: '/user39', heading: 'Donate to User39'},
+  {kind: 'user/.profile', badUrl: '/user2', goodUrl: '/user39/.profile', heading: 'Donate to User39'},
+  {kind: 'org', badUrl: '/org25', goodUrl: '/org6', heading: 'Donate to Org Six'},
+  {kind: 'org/.profile', badUrl: '/org25', goodUrl: '/org6/.profile', heading: 'Donate to Org Six'},
 ] as const;
 for (const testCase of appearanceCases) {
   test(`Donation button (${testCase.kind}): appears when a profile has a valid funding config`, async ({page}) => {
@@ -138,7 +138,7 @@ for (const testCase of appearanceCases) {
     let response = await page.goto(testCase.badUrl, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
     await expect(page.locator('#funding-modal')).toBeHidden();
-    await expect(page.getByRole('button').filter({hasText: 'Sponsor'})).toBeHidden();
+    await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
 
     // user/org with a funding config shows the button
     response = await page.goto(testCase.goodUrl, {waitUntil: 'domcontentloaded'});
@@ -146,7 +146,7 @@ for (const testCase of appearanceCases) {
 
     const fundingModal = page.locator('#funding-modal');
     await expect(fundingModal).toBeHidden();
-    const donationButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+    const donationButton = page.getByRole('button').filter({hasText: 'Donate'});
     await expect(donationButton).toBeVisible();
     await donationButton.click();
 
@@ -162,16 +162,16 @@ for (const testCase of appearanceCases) {
 }
 
 const accessibilityCases = [
-  {kind: 'repo', url: '/user2/funding_basic_complete', heading: 'Sponsor user2/funding_basic_complete'},
-  {kind: 'user', url: '/user39', heading: 'Sponsor User39'},
-  {kind: 'org', url: '/org6', heading: 'Sponsor Org Six'},
+  {kind: 'repo', url: '/user2/funding_basic_complete', heading: 'Donate to user2/funding_basic_complete'},
+  {kind: 'user', url: '/user39', heading: 'Donate to User39'},
+  {kind: 'org', url: '/org6', heading: 'Donate to Org Six'},
 ] as const;
 for (const testCase of accessibilityCases) {
   test(`Donation button (${testCase.kind}): accessibility`, async ({page}) => {
     const response = await page.goto(testCase.url, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
 
-    const donationButton = page.getByRole('button').filter({hasText: 'Sponsor'});
+    const donationButton = page.getByRole('button').filter({hasText: 'Donate'});
     await expect(donationButton).toBeVisible();
     await expect(donationButton).toHaveAccessibleName(testCase.heading);
     await expect(page.locator('#funding-modal')).toBeHidden();
@@ -186,7 +186,7 @@ test('Funding modal: accessibility (valid config)', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
   await expect(fundingModal.locator('.ui.error.message')).toBeHidden();
 
@@ -199,9 +199,9 @@ test('Funding modal: accessibility (config errors)', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
-  await expect(fundingModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
+  await expect(fundingModal.getByRole('heading')).toHaveText('Donate to user2/funding_some_valid');
   await expect(fundingModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
   const items = fundingModal.getByRole('listitem');
@@ -231,11 +231,11 @@ for (const testCase of [
 
       const fundingModal = page.locator('#funding-modal');
       await expect(fundingModal).toBeHidden();
-      await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+      await page.getByRole('button').filter({hasText: 'Donate'}).click();
       await expect(fundingModal).toBeVisible();
       await expect(fundingModal.getByRole('heading')).toBeInViewport({ratio: 1}); // shouldn't have to scroll to access a scrolling modal!
 
-      await expect(fundingModal.getByRole('heading')).toHaveText(`Sponsor user2/${testCase.name}`);
+      await expect(fundingModal.getByRole('heading')).toHaveText(`Donate to user2/${testCase.name}`);
       await expect(fundingModal.getByRole('heading')).toBeInViewport({ratio: 1}); // title should remain at least partly visible (perhaps shortened with ellipsis) unless we scroll
 
       await expect(fundingModal.locator('.ui.error.message')).toBeHidden();
@@ -257,7 +257,7 @@ test('Funding modal: closes on Esc', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
 
   await page.keyboard.press('Escape');
@@ -270,7 +270,7 @@ test('Funding modal: closes on outside click', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
 
   // not sure if it's possible to select ::backdrop here, so we manually click just outside of the bounding box for the same effect
@@ -287,7 +287,7 @@ test('Funding modal: closes on Close button', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
 
   await page.getByLabel('Close').click();
@@ -301,12 +301,12 @@ test('Funding modal: links to config file on error', async ({page}) => {
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
 
-  const donationButton = page.getByRole('button').filter({hasText: 'Sponsor'});
-  await expect(donationButton).toHaveAccessibleName('Sponsor user2/funding_some_valid');
+  const donationButton = page.getByRole('button').filter({hasText: 'Donate'});
+  await expect(donationButton).toHaveAccessibleName('Donate to user2/funding_some_valid');
   await donationButton.click();
   await expect(fundingModal).toBeVisible();
 
-  await expect(fundingModal.getByRole('heading')).toHaveText('Sponsor user2/funding_some_valid');
+  await expect(fundingModal.getByRole('heading')).toHaveText('Donate to user2/funding_some_valid');
 
   const items = fundingModal.getByRole('listitem');
   await expect(items).toHaveCount(1);
@@ -329,7 +329,7 @@ test('Funding modal (repo): mitigates XSS', async ({page}) => {
 
   const fundingModal = page.locator('#funding-modal');
   await expect(fundingModal).toBeHidden();
-  await page.getByRole('button').filter({hasText: 'Sponsor'}).click();
+  await page.getByRole('button').filter({hasText: 'Donate'}).click();
   await expect(fundingModal).toBeVisible();
   await expect(fundingModal.locator('.ui.error.message', {hasText: 'The funding config contains errors'})).toBeVisible();
 
