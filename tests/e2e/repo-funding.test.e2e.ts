@@ -39,7 +39,7 @@ test('Repo funding config: single-error readout on file view', async ({browser})
   const response = await page.goto('/user2/funding_one_invalid/src/branch/main/.forgejo/FUNDING.yml', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  const error = page.locator('.ui.error.message').filter({hasText: "Error parsing funding config: Invalid type for key \"custom\", expected a string or string array"});
+  const error = page.locator('.ui.error.message').filter({hasText: 'Error parsing funding config: Invalid type for key "custom", expected a string or string array'});
   await expect(error).toBeVisible();
   await expect(error).not.toContainText('Unknown error');
 });
@@ -54,7 +54,7 @@ test('Repo funding config: multi-error readout on file view', async ({browser}) 
 
   const errors = page.locator('.ui.error.message').filter({hasText: 'Errors parsing funding config:'});
   await expect(errors).toBeVisible();
-  await expect(errors).toContainText("Invalid type for key \"ko_fi\", expected a string or string array");
+  await expect(errors).toContainText('Invalid type for key "ko_fi", expected a string or string array');
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
   await expect(errors).not.toContainText('Unknown error');
 });
@@ -319,7 +319,7 @@ test('Funding modal: links to config file on error', async ({page}) => {
   const errors = page.locator('.ui.error.message').filter({hasText: 'Errors parsing funding config:'});
   await expect(fundingModal).toBeHidden();
   await expect(errors).toBeVisible();
-  await expect(errors).toContainText("Invalid type for key \"ko_fi\", expected a string or string array");
+  await expect(errors).toContainText('Invalid type for key "ko_fi", expected a string or string array');
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
 });
 
