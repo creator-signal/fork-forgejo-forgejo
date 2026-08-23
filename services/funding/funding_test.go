@@ -16,6 +16,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func defaultSettings(t *testing.T) func() {
+	t.Helper()
+
+	resetFundingProviders := test.MockProtect(&setting.FundingProviders)
+	resetMaxFundingEntries := test.MockProtect(&setting.MaxFundingEntriesPerConfig)
+	resetValidSiteURLSchemes := test.MockProtect(&setting.Service.ValidSiteURLSchemes)
+
+	// These should align with server defaults:
+	setting.LoadBuiltInFundingProviders()
+	setting.MaxFundingEntriesPerConfig = 15
+	setting.Service.ValidSiteURLSchemes = []string{"http", "https"}
+
+	return func() {
+		resetFundingProviders()
+		resetMaxFundingEntries()
+		resetValidSiteURLSchemes()
+	}
+}
+
 func getFundingFromConfig(t *testing.T, config string) ([]*api.RepoFundingEntry, []error) {
 	funding, errs, err := getFundingFromBlob([]byte(config))
 	require.NoError(t, err)
@@ -102,9 +121,7 @@ func TestFundingConfigParseErrors(t *testing.T) {
 }
 
 func TestFundingEntriesFromConfig(t *testing.T) {
-	defer test.MockProtect(&setting.FundingProviders)()
-	setting.LoadBuiltInFundingProviders()
-	setting.MaxFundingEntriesPerConfig = 15
+	defer defaultSettings(t)()
 
 	t.Run("Empty config", func(t *testing.T) {
 		funding, errs := getFundingFromConfig(t, "")
@@ -190,8 +207,7 @@ func TestFundingEntriesFromConfig(t *testing.T) {
 }
 
 func TestFundingEntriesWithErrorsFromConfig(t *testing.T) {
-	defer test.MockProtect(&setting.FundingProviders)()
-	setting.LoadBuiltInFundingProviders()
+	defer defaultSettings(t)()
 
 	t.Run("Skips duplicate entries", func(t *testing.T) {
 		configs := [][3]any{
@@ -423,5 +439,51 @@ func TestFundingEntriesWithErrorsFromConfig(t *testing.T) {
 		assertPatreon(t, funding[2], "patreon.com/example", "https://patreon.com/example")
 		assertLiberapay(t, funding[3], "liberapay.com/example", "https://liberapay.com/example")
 		assertGithub(t, funding[4], "github.com/sponsors/example", "https://github.com/sponsors/example")
+	})
+}
+
+func TestFundingEntriesWithCustomSchemes(t *testing.T) {
+	defer defaultSettings(t)()
+
+	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
+		config := "custom: 'https://example.com'"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Empty(t, errs)
+		assert.Len(t, funding, 1)
+		assertCustom(t, funding[0], "https://example.com", "https://example.com")
+	})
+
+	t.Run("an H3 website under default schemes", func(t *testing.T) {
+		config := "custom: 'h3://example.com'"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Empty(t, funding)
+		assert.Len(t, errs, 1)
+		assert.Equal(t, `Invalid URL value for key 'custom': invalid scheme "h3", expected one of: http, https`, errs[0].Error())
+	})
+
+	t.Run("an H3 website under custom schemes", func(t *testing.T) {
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		config := "custom: 'h3://example.com'"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Empty(t, errs)
+		assert.Len(t, funding, 1)
+		assertCustom(t, funding[0], "h3://example.com", "h3://example.com")
+	})
+
+	t.Run("a Gemini website under custom schemes", func(t *testing.T) {
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		config := "custom: 'gemini://example.com'"
+		funding, errs := getFundingFromConfig(t, config)
+
+		assert.Empty(t, funding)
+		assert.Len(t, errs, 1)
+		assert.Equal(t, `Invalid URL value for key 'custom': invalid scheme "gemini", expected one of: http, https, h3`, errs[0].Error())
 	})
 }

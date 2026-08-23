@@ -90,8 +90,7 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 		return nil, ErrCannotParseURL{Name: provider.Name, Err: err}
 	}
 
-	// TODO: Look into whether this should also respect setting.Service.ValidSiteURLSchemes
-	validSchemes := []string{"http", "https"}
+	validSchemes := setting.Service.ValidSiteURLSchemes
 	if !slices.Contains(validSchemes, urlValue.Scheme) {
 		return nil, ErrCannotParseURL{Name: provider.Name, Err: &ErrBadURLScheme{
 			ValidSchemes: validSchemes,
