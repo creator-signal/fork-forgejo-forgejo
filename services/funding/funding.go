@@ -81,8 +81,8 @@ func getFundingEntry(provider *setting.FundingProviderConfig, input string) (*ap
 
 	// Expecting (for now) that the value is to be treated as a URL
 	if !strings.Contains(rawValue, "://") {
-		// assume HTTP before parsing (otherwise, url.Parse may think the *hostname* is the scheme!)
-		rawValue = "http://" + rawValue
+		// assume HTTPS before parsing (otherwise, url.Parse may think the *hostname* is the scheme!)
+		rawValue = "https://" + rawValue
 	}
 
 	urlValue, err := url.Parse(rawValue) // value should parse as a URL; interpolation should never result in something invalid
