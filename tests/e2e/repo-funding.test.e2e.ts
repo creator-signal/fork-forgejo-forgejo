@@ -87,7 +87,11 @@ test('Repo funding config: no error on valid config file view', async ({browser}
   await expect(page.locator('.ui.error.message')).toBeHidden();
 });
 
-test('Funding modal (repo)', async ({page}) => {
+test('Funding modal (repo)', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   // hidden on repo without funding config
   let response = await page.goto('/user2/long-diff-test', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
@@ -133,7 +137,11 @@ const appearanceCases = [
   {kind: 'org/.profile', badUrl: '/org25', goodUrl: '/org6/.profile', heading: 'Donate to Org Six'},
 ] as const;
 for (const testCase of appearanceCases) {
-  test(`Donation button (${testCase.kind}): appears when a profile has a valid funding config`, async ({page}) => {
+  test(`Donation button (${testCase.kind}): appears when a profile has a valid funding config`, async ({browser}) => {
+    // this test doesn't need JS
+    const context = await browser.newContext({javaScriptEnabled: false});
+    const page = await context.newPage();
+
     // user/org without a funding config has no special button
     let response = await page.goto(testCase.badUrl, {waitUntil: 'domcontentloaded'});
     expect(response?.status()).toBe(200);
@@ -251,7 +259,11 @@ for (const testCase of [
   }
 }
 
-test('Funding modal: closes on Esc', async ({page}) => {
+test('Funding modal: closes on Esc', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -264,7 +276,11 @@ test('Funding modal: closes on Esc', async ({page}) => {
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: closes on outside click', async ({page}) => {
+test('Funding modal: closes on outside click', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -281,7 +297,11 @@ test('Funding modal: closes on outside click', async ({page}) => {
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: closes on Close button', async ({page}) => {
+test('Funding modal: closes on Close button', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   const response = await page.goto('/user2/funding_basic_complete', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -294,7 +314,11 @@ test('Funding modal: closes on Close button', async ({page}) => {
   await expect(fundingModal).toBeHidden();
 });
 
-test('Funding modal: links to config file on error', async ({page}) => {
+test('Funding modal: links to config file on error', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   const response = await page.goto('/user2/funding_some_valid', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
@@ -323,7 +347,11 @@ test('Funding modal: links to config file on error', async ({page}) => {
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
 });
 
-test('Funding modal (repo): mitigates XSS', async ({page}) => {
+test('Funding modal (repo): mitigates XSS', async ({browser}) => {
+  // this test doesn't need JS
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+
   const response = await page.goto('/user2/funding_evil', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 

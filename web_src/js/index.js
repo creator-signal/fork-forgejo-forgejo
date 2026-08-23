@@ -65,7 +65,6 @@ import {initUserAuthWebAuthn, initUserAuthWebAuthnRegister} from './features/use
 import {initRepoRelease, initRepoReleaseNew} from './features/repo-release.js';
 import {initRepoEditor} from './features/repo-editor.js';
 import {initAddOrgMemberButton} from './features/add-org-member.ts';
-import {initDonationButton} from './features/repo-funding.ts';
 import {initCompSearchUserBox} from './features/comp/SearchUserBox.js';
 import {initInstall} from './features/install.js';
 import {initCompWebHookEditor} from './features/comp/WebHookEditor.js';
@@ -185,7 +184,6 @@ onDomReady(() => {
   initRepoCodeFrequency();
   initRepoRecentCommits();
   initRepoMilestoneEditor();
-  initDonationButton();
 
   initCommitStatuses();
   initCommitNotes();

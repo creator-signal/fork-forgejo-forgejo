@@ -1,8 +1,8 @@
-<dialog id="funding-modal" aria-labelledby="funding-modal-header">
+<dialog id="funding-modal" closedby="any" aria-labelledby="funding-modal-header">
 	<article>
 		<header>
 			<span role="heading" aria-level="1" id="funding-modal-header">{{ctx.Locale.Tr "funding.action.title" .FundingTarget}}</span>
-			<button type="button" aria-label="{{ctx.Locale.Tr "funding.action.close"}}" class="toast-close cancel">{{svg "octicon-x" 24}}</button>
+			<button type="button" commandfor="funding-modal" command="close" aria-label="{{ctx.Locale.Tr "funding.action.close"}}" class="toast-close">{{svg "octicon-x" 24}}</button>
 		</header>
 		<div class="content">
 			{{if .FundingHasErrors}}
