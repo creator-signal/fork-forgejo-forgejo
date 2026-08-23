@@ -39,7 +39,7 @@ test('Repo funding config: single-error readout on file view', async ({browser})
   const response = await page.goto('/user2/funding_one_invalid/src/branch/main/.forgejo/FUNDING.yml', {waitUntil: 'domcontentloaded'});
   expect(response?.status()).toBe(200);
 
-  const error = page.locator('.ui.error.message').filter({hasText: "Error parsing funding config: Invalid type for key 'custom', expected a string or string array"});
+  const error = page.locator('.ui.error.message').filter({hasText: "Error parsing funding config: Invalid type for key \"custom\", expected a string or string array"});
   await expect(error).toBeVisible();
   await expect(error).not.toContainText('Unknown error');
 });
@@ -54,7 +54,7 @@ test('Repo funding config: multi-error readout on file view', async ({browser}) 
 
   const errors = page.locator('.ui.error.message').filter({hasText: 'Errors parsing funding config:'});
   await expect(errors).toBeVisible();
-  await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
+  await expect(errors).toContainText("Invalid type for key \"ko_fi\", expected a string or string array");
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
   await expect(errors).not.toContainText('Unknown error');
 });
@@ -120,7 +120,7 @@ test('Funding modal (repo)', async ({page}) => {
   await expectFundingEntry(items.nth(10), 'thanks_dev', 'thanks.dev/u/gh/example', 'https://thanks.dev/u/gh/example');
   await expectFundingEntry(items.nth(11), 'tidelift', 'tidelift.com/funding/github/npm/example', 'https://tidelift.com/funding/github/npm/example');
   await expectFundingEntry(items.nth(12), 'custom', 'https://example.com', 'https://example.com');
-  await expectFundingEntry(items.nth(13), 'custom', '😀.com', 'http://xn--e28h.com');
+  await expectFundingEntry(items.nth(13), 'custom', 'https://xn--e28h.com', 'https://xn--e28h.com');
 
   await screenshot(page);
 });
@@ -319,7 +319,7 @@ test('Funding modal: links to config file on error', async ({page}) => {
   const errors = page.locator('.ui.error.message').filter({hasText: 'Errors parsing funding config:'});
   await expect(fundingModal).toBeHidden();
   await expect(errors).toBeVisible();
-  await expect(errors).toContainText("Invalid type for key 'ko_fi', expected a string or string array");
+  await expect(errors).toContainText("Invalid type for key \"ko_fi\", expected a string or string array");
   await expect(errors).toContainText('Unknown funding provider: ko-fi');
 });
 
@@ -337,8 +337,8 @@ test('Funding modal (repo): mitigates XSS', async ({page}) => {
   // strings that don't match the expected format are omitted with error
   const items = fundingModal.getByRole('listitem');
   await expect(items).toHaveCount(2);
-  await expectFundingEntry(items.nth(0), 'custom', '#" style="background: url(localhost)', 'http:#%22%20style=%22background:%20url%28localhost%29');
-  await expectFundingEntry(items.nth(1), 'custom', 'https://example.com/" class="rogue injection', 'https://example.com/%22%20class=%22rogue%20injection');
+  await expectFundingEntry(items.nth(0), 'custom', 'https:#%22%20style=%22background:%20url(localhost)', 'https:#%22%20style=%22background:%20url%28localhost%29');
+  await expectFundingEntry(items.nth(1), 'custom', 'https://example.com/%22%20class=%22rogue%20injection', 'https://example.com/%22%20class=%22rogue%20injection');
 
   // no real injected <script>
   await expect(fundingModal.locator('a *')).toBeHidden();

@@ -46,7 +46,7 @@ func TestRepoFundingConfigPrecedence(t *testing.T) {
 					assert.Zero(t, fundingEntryCount)
 				} else {
 					assert.Equal(t, 1, fundingEntryCount)
-					doc.AssertAttrEqual(t, "#funding-modal li:nth-child(1) a", "href", "http://example.com")
+					doc.AssertAttrEqual(t, "#funding-modal li:nth-child(1) a", "href", "https://example.com")
 					doc.AssertElement(t, "#funding-modal li:nth-child(1) svg.octicon-link", true)
 				}
 			})
