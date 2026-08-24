@@ -10,7 +10,7 @@ jobs:
     if: ( vars.ROLE == 'forgejo-coding' ) && (forgejo.event.comment.body == 'run-coverage')
     runs-on: docker
     container:
-      image: 'data.forgejo.org/oci/ci:2'
+      image: 'data.forgejo.org/oci/ci:3'
     services:
       elasticsearch:
         image: data.forgejo.org/oci/bitnami/elasticsearch:7
@@ -38,14 +38,16 @@ jobs:
         with:
           ref: "refs/pull/${{ forgejo.event.issue.number }}/head"
       - uses: ./.forgejo/workflows-composite/setup-env
-      - name: install git >= 2.42
-        uses: ./.forgejo/workflows-composite/apt-install-from
+      - uses: https://data.forgejo.org/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          packages: git
+          key: playwright-${{ hashFiles('package-lock.json') }}
+          path: |
+            /home/forgejo/.cache/ms-playwright
       - uses: ./.forgejo/workflows-composite/build-backend
       - run: |
           su forgejo -c 'make coverage-run'
           su forgejo -c 'make coverage-run-sqlite'
+          # performance note: oci/ci:3 has the playwright dependencies pre-loaded
           su forgejo -c 'make DEPS_PLAYWRIGHT=true coverage-run-e2e'
           su forgejo -c 'make coverage-merge coverage-show-percentage'
         timeout-minutes: 120
@@ -54,6 +56,6 @@ jobs:
           TEST_MINIO_ENDPOINT: minio:9000
           TEST_LDAP: 1
           TEST_REDIS_SERVER: cacher:6379
-      - uses: https://codeberg.org/clouds666/unkai@d044210b1acb1e44ea59f374c5ee1d3dee6bc6fa # v0.2.7
+      - uses: https://codeberg.org/clouds666/unkai@38909348d9667c49142a90f5026276e96043dd8d # v0.2.8
         with:
           token: ${{ forgejo.TOKEN }}
