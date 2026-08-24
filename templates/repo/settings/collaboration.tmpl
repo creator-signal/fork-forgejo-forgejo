@@ -16,7 +16,7 @@
 								{{template "shared/user/name" .}}
 							</div>
 						</div>
-						<div class="flex-item-trailing">
+						<div class="flex-item-trailing button-sequence">
 							<details class="dropdown dir-rtl access-mode" aria-label="{{ctx.Locale.Tr "repo.settings.collaboration.change_access"}}" data-url="{{$.Link}}/access_mode" data-uid="{{.ID}}">
 								<summary class="options">
 									{{svg "octicon-shield-lock"}}
@@ -31,7 +31,7 @@
 									</ul>
 								</div>
 							</details>
-							<button class="ui red tiny button inline delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}" data-modal-id="delete-collaborator">
+							<button class="danger button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}" data-modal-id="delete-collaborator">
 								{{ctx.Locale.Tr "repo.settings.delete_collaborator"}}
 							</button>
 						</div>
