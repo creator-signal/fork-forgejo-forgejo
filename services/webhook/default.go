@@ -160,7 +160,7 @@ func substituteRefShortName(body string) (string, error) {
 
 	m["ref"] = git.RefName(ref).ShortName()
 
-	buf, err := json.Marshal(m)
+	buf, err := json.MarshalIndent(m, "", "  ")
 	return string(buf), err
 }
 
@@ -176,6 +176,6 @@ func addCompatCompareUrl(body string) (string, error) {
 
 	m["compare"] = compare_url
 
-	buf, err := json.Marshal(m)
+	buf, err := json.MarshalIndent(m, "", "  ")
 	return string(buf), err
 }
