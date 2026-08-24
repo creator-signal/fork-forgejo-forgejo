@@ -78,7 +78,7 @@
 						</div>
 						{{if $allowedToChangeTeams}}
 							<div class="flex-item-trailing" {{if .IncludesAllRepositories}} data-tooltip-content="{{ctx.Locale.Tr "repo.settings.delete_team_tip"}}"{{end}}>
-								<button class="ui red tiny button inline delete-button {{if .IncludesAllRepositories}}disabled{{end}}" data-url="{{$.Link}}/team/delete" data-id="{{.ID}}" data-modal-id="delete-collaborator">
+								<button class="danger button delete-button{{if .IncludesAllRepositories}} disabled{{end}}" data-url="{{$.Link}}/team/delete" data-id="{{.ID}}" data-modal-id="delete-collaborator">
 										{{ctx.Locale.Tr "repo.settings.delete_collaborator"}}
 								</button>
 							</div>
