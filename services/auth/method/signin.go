@@ -34,11 +34,6 @@ func UserSignIn(ctx context.Context, username, password string) (*user_model.Use
 			return nil, nil, err
 		}
 		if has {
-			if !emailAddress.IsActivated {
-				return nil, nil, user_model.ErrEmailAddressNotExist{
-					Email: username,
-				}
-			}
 			user = &user_model.User{ID: emailAddress.UID}
 		}
 	} else {

@@ -14,7 +14,7 @@
 						{{else if .ResendLimited}}
 							<p class="center">{{ctx.Locale.Tr "auth.resent_limit_prompt"}}</p>
 						{{else}}
-							<p>{{ctx.Locale.Tr "auth.confirmation_mail_sent_prompt" .SignedUser.Email .ActiveCodeLives}}</p>
+							{{template "user/auth/activate_email" (dict "Email" .SignedUser.Email "ActiveCodeLives" .ActiveCodeLives)}}
 						{{end}}
 					{{else}}
 						{{if .NeedsPassword}}
@@ -27,7 +27,7 @@
 							</div>
 							<input id="code" name="code" type="hidden" value="{{.Code}}">
 						{{else if .IsSendRegisterMail}}
-							<p>{{ctx.Locale.Tr "auth.confirmation_mail_sent_prompt" .Email .ActiveCodeLives}}</p>
+							{{template "user/auth/activate_email" (dict "Email" .Email "ActiveCodeLives" .ActiveCodeLives)}}
 						{{else if .IsCodeInvalid}}
 							<p>{{ctx.Locale.Tr "auth.invalid_code"}}</p>
 						{{else if .IsPasswordInvalid}}
@@ -35,21 +35,13 @@
 						{{else if .ManualActivationOnly}}
 							<p class="center">{{ctx.Locale.Tr "auth.manual_activation_only"}}</p>
 						{{else}}
-							<p>{{ctx.Locale.Tr "auth.has_unconfirmed_mail" .SignedUser.Name .SignedUser.Email}}</p>
+							<p>{{ctx.Locale.Tr "auth.confirmation.not_activated" .SignedUser.Email}}</p>
+							<button class="ui primary button">{{ctx.Locale.Tr "auth.confirmation.resend_mail"}}</button>
 							<div class="divider"></div>
-							<details class="inline field">
-								<summary>{{ctx.Locale.Tr "auth.change_unconfirmed_email_summary"}}</summary>
-
-								<p>{{ctx.Locale.Tr "auth.change_unconfirmed_email"}}</p>
-								<div class="inline field">
-									<label for="email">{{ctx.Locale.Tr "email"}}</label>
-									<input id="email" name="email" type="email" autocomplete="on">
-								</div>
-							</details>
-
-							<div class="text">
-								<button class="ui primary button">{{ctx.Locale.Tr "auth.resend_mail"}}</button>
-							</div>
+							<label for="email">{{ctx.Locale.Tr "auth.confirmation.change_email_label"}}</label>
+							<input class="inline field" id="email" name="email" type="email" autocomplete="on">
+							<p class="help">{{ctx.Locale.Tr "auth.confirmation.change_email_help"}}</p><br>
+							<button class="ui primary button" name="change_mail" value="true">{{ctx.Locale.Tr "auth.confirmation.change_email"}}</button>
 						{{end}}
 					{{end}}
 				</div>
