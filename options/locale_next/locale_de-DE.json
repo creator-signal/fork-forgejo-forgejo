@@ -1004,5 +1004,22 @@
 		"other": "Diese Einladung läuft in %d Tagen ab."
 	},
 	"members.successfully_invited": "Der Benutzer wurde erfolgreich in die Organisation eingeladen.",
-	"org.pending_invite_notification_single_team": "Du wurdest in das Team „%s“ in dieser Organisation eingeladen."
+	"org.pending_invite_notification_single_team": "Du wurdest in das Team „%s“ in dieser Organisation eingeladen.",
+	"repo.settings.lfs.no_pointers": "In diesem Repository wurden keine Blob-Zeiger gefunden.",
+	"repo.commit": "Commit",
+	"repo.branch": "Branch",
+	"org.pending_invite_notification_multiple_teams": "Du wurdest in die folgenden Teams in dieser Organisation eingeladen: %s.",
+	"org.view_invite": "Betrachten",
+	"funding.yaml_error.heading_one": "Fehler beim parsen der Finanzierungskonfiguration: %s",
+	"funding.yaml_error.heading_few": "Fehler beim Parsen der Finanzierungskonfiguration:",
+	"funding.yaml_error.unknown_provider": "Unbekannter Finanzierungsdienstleister: %s",
+	"funding.yaml_error.duplicate_entry": "Doppelter Eintrag für den Schlüssel '%s': %s",
+	"funding.yaml_error.n_too_many_providers": "Erwartete bis zu %d Finanzierungsdienstleister",
+	"funding.yaml_error.bad_input": "Wert für den Schlüssel '%s' entspricht nicht dem Muster /%s/",
+	"funding.yaml_error.parse_url": "Ungültiger URL-Wert für Schlüssel '%s': %v",
+	"funding.yaml_error.invalid_yaml_type": "Ungültiger Typ für den Schlüssel '%s', erwartete einen String oder ein Array von Strings",
+	"funding.yaml_error.unknown": "Unbekannter Fehler: %s",
+	"keys.ssh.disabled": "SSH-Schlüsselverwaltung auf dieser Instanz wurde durch einen Administrator deaktiviert.",
+	"repo.settings.collaboration.change_access": "Zugriffsmodus ändern",
+	"repo.settings.collaboration.none": " Derzeit gibt es keine Mitarbeiter."
 }

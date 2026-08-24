@@ -1006,5 +1006,20 @@
 	"org.teams.invite_expires_on": "upphör den %[1]s",
 	"org.teams.invited_on": "inbjuden den %[1]s",
 	"org.teams.renew_invite": "Förnya",
-	"repo.settings.lfs.no_pointers": "Inga blobpekare hittades i det här kodförrådet."
+	"repo.settings.lfs.no_pointers": "Inga blobpekare hittades i det här kodförrådet.",
+	"org.pending_invite_notification_single_team": "Du är inbjuden att gå med i team %s i den här organisationen.",
+	"org.pending_invite_notification_multiple_teams": "Du är inbjuden att gå med i följande teams i den här organisationen: %s.",
+	"org.view_invite": "Visa",
+	"funding.yaml_error.heading_one": "Fel vid tolkning av finansieringskonfiguration: %s",
+	"funding.yaml_error.heading_few": "Fel vid tolkning av finansieringskonfiguration:",
+	"funding.yaml_error.unknown_provider": "Okänd finansieringsleverantör: %s",
+	"funding.yaml_error.duplicate_entry": "Duplicerad post för nyckel '%s': %s",
+	"funding.yaml_error.n_too_many_providers": "Förväntas upp till %d finansieringsleverantörer",
+	"funding.yaml_error.bad_input": "Värdet för nyckeln '%s' matchar inte mönster /%s/",
+	"funding.yaml_error.parse_url": "Ogiltigt URL värde för nyckel '%s': %v",
+	"funding.yaml_error.invalid_yaml_type": "Ogiltig typ för nyckel '%s', förväntade sig en sträng eller strängmatris",
+	"funding.yaml_error.unknown": "Okänt fel: %s",
+	"keys.ssh.disabled": "SSH nyckelhantering är inaktiverat på den här instansen av en administratör.",
+	"repo.settings.collaboration.change_access": "Ändra åtkomstläge",
+	"repo.settings.collaboration.none": " Det finns inga medarbetare än."
 }

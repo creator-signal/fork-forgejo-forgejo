@@ -999,5 +999,10 @@
 	"org.pending_invite_notification_multiple_teams": "Вы приглашены в следующие команды в этой организации: %s.",
 	"org.view_invite": "Просмотреть",
 	"repo.settings.lfs.no_pointers": "Указатели blob'ов не найдены в репозитории.",
-	"actions.runs.prioritize_run": "Приоритизировать выполнение"
+	"actions.runs.prioritize_run": "Приоритизировать выполнение",
+	"actions.runs.delete.confirm_action": "Вы точно хотите удалить это выполнение?",
+	"actions.runs.deprioritize_run": "Деприоритизировать",
+	"actions.runs.options": "Опции",
+	"actions.runs.prioritization_success": "Выполнение #%d теперь приоритизовано.",
+	"actions.runs.deprioritization_success": "Выполнение #%d теперь не приоритизовано."
 }
