@@ -80,6 +80,15 @@ func (defaultHandler) NewRequest(ctx context.Context, w *webhook_model.Webhook, 
 		}
 	}
 
+	if w.Type == webhook_module.FORGEJO &&
+		(t.EventType == webhook_module.HookEventPush) {
+		// Add a compare field copying `compare_url` for compatability
+		payloadContent, err = addCompatCompareUrl(payloadContent)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not add compatability compare url: %w", err)
+		}
+	}
+
 	switch w.HTTPMethod {
 	case "":
 		log.Info("HTTP Method for %s webhook %s [ID: %d] is not set, defaulting to POST", w.Type, w.URL, w.ID)
@@ -150,6 +159,22 @@ func substituteRefShortName(body string) (string, error) {
 	}
 
 	m["ref"] = git.RefName(ref).ShortName()
+
+	buf, err := json.Marshal(m)
+	return string(buf), err
+}
+
+func addCompatCompareUrl(body string) (string, error) {
+	var m map[string]any
+	if err := json.Unmarshal([]byte(body), &m); err != nil {
+		return body, err
+	}
+	compare_url, ok := m["compare_url"].(string)
+	if !ok {
+		return body, fmt.Errorf("expected string 'compare_url', got %T", m["compare_url"])
+	}
+
+	m["compare"] = compare_url
 
 	buf, err := json.Marshal(m)
 	return string(buf), err
