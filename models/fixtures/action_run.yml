@@ -46,6 +46,7 @@
         }
       ],
       "compare_url": "http://10.201.14.40:3000/",
+      "compare": "http://10.201.14.40:3000/",
       "head_commit": {
         "added": [
           ".forgejo/workflows/test.yml"
@@ -254,6 +255,7 @@
         }
       ],
       "compare_url": "http://10.201.14.40:3000/",
+      "compare": "http://10.201.14.40:3000/",
       "head_commit": {
         "added": [
           ".forgejo/workflows/test.yml"
