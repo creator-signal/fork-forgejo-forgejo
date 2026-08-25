@@ -16,8 +16,8 @@ import (
 // Parses the given file data for funding entries.
 func getFundingFromBlob(content []byte) (entries []*api.RepoFundingEntry, errs []error) {
 	config := make(rawRepoFundingConfig, 0)
-	if parseErr := yaml.Unmarshal(content, &config); parseErr != nil {
-		errs = append(errs, parseErr)
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		errs = append(errs, err)
 		return entries, errs
 	}
 
