@@ -71,16 +71,18 @@ for (const run of [
       await expect(page.locator('#funding-modal')).toBeHidden();
       await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
 
-      let errors = page.locator('.ui.error.message').filter({hasText: 'Duplicate YAML key: custom'});
+      let errors = page.locator('.ui.error.message').filter({hasText: 'Error parsing funding config: Duplicate YAML key: custom'});
       await expect(errors).toBeVisible();
+      await expect(errors).not.toContainText('Unknown error');
 
       response = await page.goto('/user2/funding_invalid_yaml/src/branch/main/.forgejo/FUNDING.yml', {waitUntil: 'domcontentloaded'});
       expect(response?.status()).toBe(200);
       await expect(page.locator('#funding-modal')).toBeHidden();
       await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
 
-      errors = page.locator('.ui.error.message').filter({hasText: 'Expected YAML mapping, got 8'}); // FIXME: ???
+      errors = page.locator('.ui.error.message').filter({hasText: 'Error parsing funding config: Expected YAML mapping, got str'});
       await expect(errors).toBeVisible();
+      await expect(errors).not.toContainText('Unknown error');
     });
 
     const widthCases = [208, 310, 400, 600] as const;
