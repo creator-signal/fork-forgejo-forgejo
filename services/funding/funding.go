@@ -157,15 +157,11 @@ func GetFundingFromPath(r *repo_model.Repository, path string, commit *git.Commi
 
 	configPath = fmt.Sprintf("%s/src/branch/%s/%s", r.Link(), util.PathEscapeSegments(r.DefaultBranch), configPath)
 
-	data, lineErrors, err := getFundingFromBlob(configContent)
-	if err != nil {
-		return nil, err
-	}
-
+	data, errors := getFundingFromBlob(configContent)
 	funding := &RepoFunding{
 		ConfigPath: configPath,
 		Entries:    data,
-		Errors:     lineErrors,
+		Errors:     errors,
 	}
 	return funding, nil
 }

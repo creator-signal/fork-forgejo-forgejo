@@ -62,6 +62,27 @@ for (const run of [
       await expect(errors).not.toContainText('Unknown error');
     });
 
+    test('Repo funding config: YAML error readout on file view', async ({browser}) => {
+      const context = await browser.newContext({javaScriptEnabled: run.useJs});
+      const page = await context.newPage();
+
+      let response = await page.goto('/user2/funding_invalid_yaml/src/branch/main/FUNDING.yml', {waitUntil: 'domcontentloaded'});
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('#funding-modal')).toBeHidden();
+      await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
+
+      let errors = page.locator('.ui.error.message').filter({hasText: 'Duplicate YAML key: custom'});
+      await expect(errors).toBeVisible();
+
+      response = await page.goto('/user2/funding_invalid_yaml/src/branch/main/.forgejo/FUNDING.yml', {waitUntil: 'domcontentloaded'});
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('#funding-modal')).toBeHidden();
+      await expect(page.getByRole('button').filter({hasText: 'Donate'})).toBeHidden();
+
+      errors = page.locator('.ui.error.message').filter({hasText: 'Expected YAML mapping, got 8'}); // FIXME: ???
+      await expect(errors).toBeVisible();
+    });
+
     const widthCases = [208, 310, 400, 600] as const;
     for (const width of widthCases) {
       test(`Repo funding config: errors readable at ${width}px wide`, async ({browser}) => {
