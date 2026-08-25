@@ -126,10 +126,11 @@ jobs:
       - uses: ./.forgejo/workflows-composite/build-backend
       - name: Decide to run all tests
         id: run-all
-        if: contains(github.event.pull_request.labels.*.name, 'run-all-playwright-tests') || contains(github.event.pull_request.title, 'playwright')
+        if: forgejo.event_name == 'push' || contains(forgejo.event.pull_request.labels.*.name, 'run-all-playwright-tests') || contains(forgejo.event.pull_request.title, 'playwright')
         run: |
           echo "all=1" >> "$GITHUB_OUTPUT"
       - name: Get changed files
+        if: forgejo.event_name == 'pull_request'
         id: changed-files
         uses: https://data.forgejo.org/tj-actions/changed-files@v47
         with:
