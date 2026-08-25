@@ -91,7 +91,7 @@ func TestFundingConfigParse(t *testing.T) {
 			config := make(rawRepoFundingConfig, 0)
 			err := yaml.Unmarshal([]byte(configContent), &config)
 			errString := fmt.Sprintf("Expected YAML mapping, got %v", tag)
-			assert.EqualError(t, err, errString, "config content: %v", configContent)
+			require.EqualError(t, err, errString, "config content: %v", configContent)
 			typeErr, ok := errors.AsType[*NotYAMLMappingError](err)
 			require.True(t, ok)
 			assert.Equal(t, tag, typeErr.ShortTag)
@@ -102,7 +102,7 @@ func TestFundingConfigParse(t *testing.T) {
 		configContent := "a: b\nfoo: bar\nfoo: baz"
 		config := make(rawRepoFundingConfig, 0)
 		err := yaml.Unmarshal([]byte(configContent), &config)
-		assert.EqualError(t, err, "Duplicate YAML key: foo")
+		require.EqualError(t, err, "Duplicate YAML key: foo")
 		dupErr, ok := errors.AsType[*DuplicateYAMLKeyError](err)
 		require.True(t, ok)
 		assert.Equal(t, "foo", dupErr.Key)
