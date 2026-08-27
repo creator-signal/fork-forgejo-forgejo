@@ -8,6 +8,21 @@ on:
         required: true
         type: string
         default: v16.0.3
+      resume_run_id:
+        description: Prior failed release run containing the qualified/published evidence
+        required: false
+        type: string
+        default: ""
+      resume_rootful_digest:
+        description: Immutable rootful digest from that run
+        required: false
+        type: string
+        default: ""
+      resume_rootless_digest:
+        description: Immutable rootless digest from that run
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -25,6 +40,10 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
       prerelease: ${{ steps.plan.outputs.prerelease }}
       release_exists: ${{ steps.plan.outputs.release_exists }}
+      resume: ${{ steps.resume.outputs.resume }}
+      evidence_run_id: ${{ steps.resume.outputs.evidence_run_id }}
+      resume_rootful_digest: ${{ steps.resume.outputs.rootful_digest }}
+      resume_rootless_digest: ${{ steps.resume.outputs.rootless_digest }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -35,10 +54,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: python3 scripts/creator-signal/release_control.py plan-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY" --report release-plan.json
+      - id: resume
+        name: Validate all-or-none recovery inputs
+        env:
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+          ROOTFUL_DIGEST: ${{ inputs.resume_rootful_digest }}
+          ROOTLESS_DIGEST: ${{ inputs.resume_rootless_digest }}
+        run: |
+          provided=0
+          test -z "$RESUME_RUN_ID" || provided=$((provided + 1))
+          test -z "$ROOTFUL_DIGEST" || provided=$((provided + 1))
+          test -z "$ROOTLESS_DIGEST" || provided=$((provided + 1))
+          if [ "$provided" -eq 0 ]; then
+            {
+              echo "resume=false"
+              echo "evidence_run_id=${GITHUB_RUN_ID}"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          test "$provided" -eq 3
+          [[ "$RESUME_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$ROOTFUL_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$ROOTLESS_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$ROOTFUL_DIGEST" != "$ROOTLESS_DIGEST"
+          {
+            echo "resume=true"
+            echo "evidence_run_id=${RESUME_RUN_ID}"
+            echo "rootful_digest=${ROOTFUL_DIGEST}"
+            echo "rootless_digest=${ROOTLESS_DIGEST}"
+          } >> "$GITHUB_OUTPUT"
 
   qualify:
     needs: plan
-    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
       source_ref: ${{ inputs.tag }}
@@ -48,7 +96,7 @@ jobs:
 
   publish-rootful:
     needs: [plan, qualify]
-    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
       source_ref: ${{ inputs.tag }}
@@ -63,7 +111,7 @@ jobs:
 
   publish-rootless:
     needs: [plan, qualify]
-    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
       source_ref: ${{ inputs.tag }}
@@ -77,8 +125,8 @@ jobs:
       id-token: write
 
   finalize:
-    needs: [plan, publish-rootful, publish-rootless]
-    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    needs: [plan, qualify, publish-rootful, publish-rootless]
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.release_exists != 'true' && (needs.plan.outputs.resume == 'true' || (needs.qualify.result == 'success' && needs.publish-rootful.result == 'success' && needs.publish-rootless.result == 'success')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -86,10 +134,11 @@ jobs:
       TAG: ${{ inputs.tag }}
       VERSION: ${{ needs.plan.outputs.version }}
       SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
-      ROOTFUL_DIGEST: ${{ needs.publish-rootful.outputs.digest }}
-      ROOTLESS_DIGEST: ${{ needs.publish-rootless.outputs.digest }}
+      ROOTFUL_DIGEST: ${{ needs.plan.outputs.resume == 'true' && needs.plan.outputs.resume_rootful_digest || needs.publish-rootful.outputs.digest }}
+      ROOTLESS_DIGEST: ${{ needs.plan.outputs.resume == 'true' && needs.plan.outputs.resume_rootless_digest || needs.publish-rootless.outputs.digest }}
     permissions:
       contents: write
+      actions: read
       packages: write
       id-token: write
       attestations: write
@@ -107,14 +156,18 @@ jobs:
       - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          pattern: forgejo-published-*-${{ github.run_id }}
+          pattern: forgejo-published-*-${{ needs.plan.outputs.evidence_run_id }}
           path: evidence
           merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.plan.outputs.evidence_run_id }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          pattern: forgejo-qualification-*-${{ github.run_id }}
+          pattern: forgejo-qualification-*-${{ needs.plan.outputs.evidence_run_id }}
           path: evidence
           merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.plan.outputs.evidence_run_id }}
       - name: Verify both immutable manifest platform sets
         run: |
           python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootful.json
@@ -127,6 +180,8 @@ jobs:
             if [ "$variant" = rootful ]; then digest="$ROOTFUL_DIGEST"; else digest="$ROOTLESS_DIGEST"; fi
             image="ghcr.io/creator-signal/forgejo@${digest}"
             docker pull --platform linux/amd64 "$image"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
             name="forgejo-${variant}-pullback"
             docker run --detach --name "$name" --publish 127.0.0.1::3000 \
               --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \
@@ -199,6 +254,7 @@ jobs:
         env:
           COSIGN_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
           SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
+          GH_TOKEN: ${{ github.token }}
         run: |
           for digest in "$ROOTFUL_DIGEST" "$ROOTLESS_DIGEST"; do
             cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "ghcr.io/creator-signal/forgejo@${digest}"
@@ -210,6 +266,7 @@ jobs:
       - name: Publish immutable GitHub Release record
         env:
           IS_PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           jq -r '.images | to_entries[] | "- \(.key): `\(.value.reference)@\(.value.digest)`"' release-record.json > image-records.md
           {

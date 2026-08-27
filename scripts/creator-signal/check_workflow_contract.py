@@ -61,10 +61,15 @@ def main() -> int:
     require("cosign sign --yes" in release and "gh attestation verify" in release, "signature/attestation controls missing", errors)
     require("release-record.json" in release and "gh release create" in release, "durable GitHub Release record missing", errors)
     require("evidence/creator-signal-base-security-refresh-*.patch" in release, "security refresh provenance is not attached to the release", errors)
+    require(release.count("GH_TOKEN: ${{ github.token }}") >= 3, "GitHub CLI authentication missing", errors)
+    for token in ("resume_run_id", "resume_rootful_digest", "resume_rootless_digest", "Validate all-or-none recovery inputs", "provided=0", "run-id: ${{ needs.plan.outputs.evidence_run_id }}"):
+        require(token in release, f"fail-closed finalization recovery missing {token}", errors)
+    require("needs.plan.outputs.resume == 'true'" in release and "always()" in release, "recovery cannot reach finalization without rebuilding", errors)
     require("release_exists == 'true'" in release and "forgejo-release-verification.yml" in release, "idempotent existing-release path missing", errors)
     require("GH_REPO: ${{ github.repository }}" in release, "GitHub CLI repository binding missing", errors)
     require("ghcr.io/creator-signal/forgejo" in release and "latest-rootless" in release, "governed GHCR aliases missing", errors)
     require("Independent published Forgejo verification" in verify and "docker pull --platform linux/amd64" in verify, "independent pull-back workflow missing", errors)
+    require(release.count("org.opencontainers.image.revision") >= 1 and verify.count("org.opencontainers.image.revision") >= 1, "pull-back source/version label binding missing", errors)
     for forbidden in ("docker.io/gitea/gitea", "gitea/gitea", "s3-sync-action", "DOCKERHUB_", "AWS_S3_BUCKET", "--clobber"):
         require(forbidden not in combined, f"forbidden legacy or overwrite path present: {forbidden}", errors)
     if errors:
