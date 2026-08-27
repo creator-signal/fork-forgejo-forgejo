@@ -1,0 +1,239 @@
+name: Governed Forgejo container release
+run-name: Forgejo ${{ inputs.tag }} release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+        default: v16.0.3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forgejo-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      version: ${{ steps.plan.outputs.version }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      release_exists: ${{ steps.plan.outputs.release_exists }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: python3 scripts/creator-signal/release_control.py plan-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY" --report release-plan.json
+
+  qualify:
+    needs: plan
+    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    uses: ./.github/workflows/forgejo-qualification.yml
+    with:
+      source_ref: ${{ needs.plan.outputs.source_sha }}
+      release_version: ${{ needs.plan.outputs.version }}
+    permissions:
+      contents: read
+
+  publish-rootful:
+    needs: [plan, qualify]
+    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    uses: ./.github/workflows/forgejo-publish-variant.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      version: ${{ needs.plan.outputs.version }}
+      variant: rootful
+      dockerfile: Dockerfile
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  publish-rootless:
+    needs: [plan, qualify]
+    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    uses: ./.github/workflows/forgejo-publish-variant.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      version: ${{ needs.plan.outputs.version }}
+      variant: rootless
+      dockerfile: Dockerfile.rootless
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  finalize:
+    needs: [plan, publish-rootful, publish-rootless]
+    if: ${{ needs.plan.outputs.release_exists != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+      ROOTFUL_DIGEST: ${{ needs.publish-rootful.outputs.digest }}
+      ROOTLESS_DIGEST: ${{ needs.publish-rootless.outputs.digest }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out trusted automation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: forgejo-published-*-${{ github.run_id }}
+          path: evidence
+          merge-multiple: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: forgejo-qualification-*-${{ github.run_id }}
+          path: evidence
+          merge-multiple: true
+      - name: Verify both immutable manifest platform sets
+        run: |
+          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootful.json
+          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootless.json
+      - name: Pull back and smoke exact amd64 manifest digests
+        run: |
+          cleanup() { docker rm -f forgejo-rootful-pullback forgejo-rootless-pullback >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for variant in rootful rootless; do
+            if [ "$variant" = rootful ]; then digest="$ROOTFUL_DIGEST"; else digest="$ROOTLESS_DIGEST"; fi
+            image="ghcr.io/creator-signal/forgejo@${digest}"
+            docker pull --platform linux/amd64 "$image"
+            name="forgejo-${variant}-pullback"
+            docker run --detach --name "$name" --publish 127.0.0.1::3000 \
+              --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \
+              --env FORGEJO__security__INSTALL_LOCK=true "$image"
+            port="$(docker port "$name" 3000/tcp | sed -n 's/.*://p')"
+            ready=false
+            for _ in $(seq 1 90); do
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "evidence/pullback-${variant}-health.json"; then ready=true; break; fi
+              sleep 2
+            done
+            test "$ready" = true
+            jq -e '.status == "pass"' "evidence/pullback-${variant}-health.json"
+            curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "evidence/pullback-${variant}-version.json"
+            jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "evidence/pullback-${variant}-version.json"
+            docker rm -f "$name"
+          done
+      - name: Generate manifest-level SPDX SBOMs
+        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        with:
+          image: ghcr.io/creator-signal/forgejo@${{ env.ROOTFUL_DIGEST }}
+          format: spdx-json
+          output-file: evidence/forgejo-${{ needs.plan.outputs.version }}.spdx.json
+          upload-artifact: false
+      - uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        with:
+          image: ghcr.io/creator-signal/forgejo@${{ env.ROOTLESS_DIGEST }}
+          format: spdx-json
+          output-file: evidence/forgejo-${{ needs.plan.outputs.version }}-rootless.spdx.json
+          upload-artifact: false
+      - name: Promote only verified digests to immutable version tags
+        run: |
+          promote() {
+            target="$1"; digest="$2"
+            existing="$(docker buildx imagetools inspect "$target" --format '{{ .Manifest.Digest }}' 2>/dev/null || true)"
+            test -z "$existing" || test "$existing" = "$digest"
+            docker buildx imagetools create --tag "$target" "ghcr.io/creator-signal/forgejo@${digest}"
+            test "$(docker buildx imagetools inspect "$target" --format '{{ .Manifest.Digest }}')" = "$digest"
+          }
+          promote "ghcr.io/creator-signal/forgejo:${VERSION}" "$ROOTFUL_DIGEST"
+          promote "ghcr.io/creator-signal/forgejo:${VERSION}-rootless" "$ROOTLESS_DIGEST"
+      - name: Sign immutable manifest digests keylessly
+        run: |
+          cosign sign --yes "ghcr.io/creator-signal/forgejo@${ROOTFUL_DIGEST}"
+          cosign sign --yes "ghcr.io/creator-signal/forgejo@${ROOTLESS_DIGEST}"
+      - name: Attest rootful build provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ env.ROOTFUL_DIGEST }}
+          push-to-registry: true
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ env.ROOTLESS_DIGEST }}
+          push-to-registry: true
+      - name: Attest rootful SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ env.ROOTFUL_DIGEST }}
+          sbom-path: evidence/forgejo-${{ needs.plan.outputs.version }}.spdx.json
+          push-to-registry: true
+      - uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ env.ROOTLESS_DIGEST }}
+          sbom-path: evidence/forgejo-${{ needs.plan.outputs.version }}-rootless.spdx.json
+          push-to-registry: true
+      - name: Verify signatures and GitHub attestations
+        env:
+          COSIGN_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
+          SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
+        run: |
+          for digest in "$ROOTFUL_DIGEST" "$ROOTLESS_DIGEST"; do
+            cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "ghcr.io/creator-signal/forgejo@${digest}"
+            gh attestation verify "oci://ghcr.io/creator-signal/forgejo@${digest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
+            gh attestation verify "oci://ghcr.io/creator-signal/forgejo@${digest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
+          done
+      - name: Create durable release record
+        run: python3 scripts/creator-signal/release_control.py write-record --tag "$TAG" --source-sha "$SOURCE_SHA" --rootful-digest "$ROOTFUL_DIGEST" --rootless-digest "$ROOTLESS_DIGEST" --workflow-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --evidence evidence --output release-record.json
+      - name: Publish immutable GitHub Release record
+        env:
+          IS_PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+        run: |
+          jq -r '.images | to_entries[] | "- \(.key): `\(.value.reference)@\(.value.digest)`"' release-record.json > image-records.md
+          {
+            echo "Creator Signal build of authoritative upstream Forgejo ${TAG}."
+            echo
+            echo "Upstream source: https://codeberg.org/forgejo/forgejo/releases/tag/${TAG}"
+            echo "Exact upstream commit: \`${SOURCE_SHA}\`"
+            echo "Workflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            cat image-records.md
+          } > release-notes.md
+          args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/scan-*.json evidence/creator-signal-base-security-refresh-*.patch)
+          if [ "$IS_PRERELEASE" = true ]; then args+=(--prerelease); fi
+          gh release create "${args[@]}"
+      - name: Move stable aliases only after completed release
+        if: ${{ needs.plan.outputs.prerelease != 'true' }}
+        run: |
+          docker buildx imagetools create --tag ghcr.io/creator-signal/forgejo:latest "ghcr.io/creator-signal/forgejo@${ROOTFUL_DIGEST}"
+          docker buildx imagetools create --tag ghcr.io/creator-signal/forgejo:latest-rootless "ghcr.io/creator-signal/forgejo@${ROOTLESS_DIGEST}"
+
+  verify-existing:
+    needs: plan
+    if: ${{ needs.plan.outputs.release_exists == 'true' }}
+    uses: ./.github/workflows/forgejo-release-verification.yml
+    with:
+      tag: ${{ inputs.tag }}
+    permissions:
+      contents: read
+      packages: read
