@@ -29,6 +29,16 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
+      - name: Apply bounded Alpine security refresh
+        env:
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          VARIANT: ${{ inputs.variant }}
+        run: |
+          test "$(grep -Fxc 'FROM data.forgejo.org/oci/alpine:3.23' "$DOCKERFILE")" -eq 1
+          sed -i '/^FROM data\.forgejo\.org\/oci\/alpine:3\.23$/a RUN apk upgrade --no-cache' "$DOCKERFILE"
+          test "$(grep -Fxc 'RUN apk upgrade --no-cache' "$DOCKERFILE")" -eq 1
+          git diff -- "$DOCKERFILE" > "creator-signal-base-security-refresh-${VARIANT}.patch"
+          test -s "creator-signal-base-security-refresh-${VARIANT}.patch"
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -64,6 +74,8 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: forgejo-published-${{ inputs.variant }}-${{ github.run_id }}
-          path: manifest-${{ inputs.variant }}.json
+          path: |
+            manifest-${{ inputs.variant }}.json
+            creator-signal-base-security-refresh-${{ inputs.variant }}.patch
           if-no-files-found: error
           retention-days: 14

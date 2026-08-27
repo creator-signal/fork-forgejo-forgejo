@@ -46,6 +46,16 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$SOURCE_REF^{commit}")"
           git diff --exit-code
+      - name: Apply bounded Alpine security refresh
+        env:
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          test "$(grep -Fxc 'FROM data.forgejo.org/oci/alpine:3.23' "$DOCKERFILE")" -eq 1
+          sed -i '/^FROM data\.forgejo\.org\/oci\/alpine:3\.23$/a RUN apk upgrade --no-cache' "$DOCKERFILE"
+          test "$(grep -Fxc 'RUN apk upgrade --no-cache' "$DOCKERFILE")" -eq 1
+          git diff -- "$DOCKERFILE" > "creator-signal-base-security-refresh-${VARIANT}.patch"
+          test -s "creator-signal-base-security-refresh-${VARIANT}.patch"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build native candidate without publication
@@ -115,6 +125,7 @@ jobs:
           path: |
             health.json
             version.json
+            creator-signal-base-security-refresh-${{ matrix.variant }}.patch
             scan-${{ matrix.variant }}-${{ matrix.arch }}.json
             sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
             forgejo-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}.log

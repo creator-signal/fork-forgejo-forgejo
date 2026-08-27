@@ -48,6 +48,9 @@ def main() -> int:
     require("GOPROXY=https://proxy.golang.org|direct" in qualify, "qualification Go proxy failover missing", errors)
     require("GOPROXY=https://proxy.golang.org|direct" in publish, "publication Go proxy failover missing", errors)
     require("platforms: linux/amd64" in publish, "publication must be AMD64-only", errors)
+    for source, name in ((qualify, "qualification"), (publish, "publication")):
+        require("Apply bounded Alpine security refresh" in source and "RUN apk upgrade --no-cache" in source, f"{name} base security refresh missing", errors)
+        require("grep -Fxc 'FROM data.forgejo.org/oci/alpine:3.23'" in source and "test -s \"creator-signal-base-security-refresh-" in source, f"{name} security refresh is not fail-closed/provenanced", errors)
     require("/api/v1/version" in qualify and "startswith($version + \"+\")" in qualify and "jq -e '.status == \"pass\"'" in qualify, "native API version/readiness smoke controls missing", errors)
     require("/api/v1/version" in release and "/api/v1/version" in verify, "published-image version verification missing", errors)
     require("needs: [plan, qualify]" in release, "publication is not gated on qualification", errors)
@@ -55,6 +58,7 @@ def main() -> int:
     require("verify-platforms" in release and "Pull back and smoke exact" in release, "manifest or pull-back verification missing", errors)
     require("cosign sign --yes" in release and "gh attestation verify" in release, "signature/attestation controls missing", errors)
     require("release-record.json" in release and "gh release create" in release, "durable GitHub Release record missing", errors)
+    require("evidence/creator-signal-base-security-refresh-*.patch" in release, "security refresh provenance is not attached to the release", errors)
     require("release_exists == 'true'" in release and "forgejo-release-verification.yml" in release, "idempotent existing-release path missing", errors)
     require("GH_REPO: ${{ github.repository }}" in release, "GitHub CLI repository binding missing", errors)
     require("ghcr.io/creator-signal/forgejo" in release and "latest-rootless" in release, "governed GHCR aliases missing", errors)

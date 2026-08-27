@@ -35,16 +35,18 @@ For a named upstream tag, `forgejo-release.yml`:
 2. natively builds rootful and rootless images on Linux amd64 without
    publication (ARM64 is intentionally outside Creator Signal's supported host
    contract);
-3. starts each image with isolated SQLite state, requires `/api/healthz`, and
+3. applies a fail-closed Dockerfile overlay that upgrades only the existing
+   Alpine release's base packages, preserving the exact patch as evidence;
+4. starts each image with isolated SQLite state, requires `/api/healthz`, and
    verifies the expected release through `/api/v1/version`;
-4. fails on fixed HIGH or CRITICAL OS/library vulnerabilities;
-5. generates an SPDX JSON SBOM for every variant/platform;
-6. builds Linux amd64 OCI candidates with BuildKit SBOM and provenance;
-7. pulls exact manifest digests back and repeats startup/readiness;
-8. promotes only verified digests to immutable version tags;
-9. keylessly signs and publishes provenance and SBOM attestations; and
-10. creates one GitHub Release containing the source SHA, both manifest
-    digests, SBOMs, scan summaries and workflow link.
+5. fails on fixed HIGH or CRITICAL OS/library vulnerabilities;
+6. generates an SPDX JSON SBOM for every variant/platform;
+7. builds Linux amd64 OCI candidates with BuildKit SBOM and provenance;
+8. pulls exact manifest digests back and repeats startup/readiness;
+9. promotes only verified digests to immutable version tags;
+10. keylessly signs and publishes provenance and SBOM attestations; and
+11. creates one GitHub Release containing the source SHA, both manifest
+    digests, SBOMs, scan summaries, security-refresh patches and workflow link.
 
 The references are `ghcr.io/creator-signal/forgejo:<version>` and
 `ghcr.io/creator-signal/forgejo:<version>-rootless`. Stable aliases move only

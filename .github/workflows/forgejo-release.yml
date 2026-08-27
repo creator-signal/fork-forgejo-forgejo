@@ -219,7 +219,7 @@ jobs:
             echo
             cat image-records.md
           } > release-notes.md
-          args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/scan-*.json)
+          args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/scan-*.json evidence/creator-signal-base-security-refresh-*.patch)
           if [ "$IS_PRERELEASE" = true ]; then args+=(--prerelease); fi
           gh release create "${args[@]}"
       - name: Move stable aliases only after completed release
