@@ -69,6 +69,8 @@ jobs:
             gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
             gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
             docker pull --platform linux/amd64 "$ref"
+            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
+            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
             name="forgejo-independent-${variant}"
             docker run --detach --name "$name" --publish 127.0.0.1::3000 \
               --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \

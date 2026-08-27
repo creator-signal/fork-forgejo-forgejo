@@ -75,8 +75,23 @@ digest. The workflows never use `--clobber`.
 
 If a run stops after a temporary candidate push, retain its evidence and rerun.
 Candidate tags are not stable release selections. If a run stops after an
-immutable version tag but before the GitHub Release, rerun: only the identical
-digest can resume. Never delete a differing tag to make a run pass.
+immutable version tag but before the GitHub Release, resume from the prior
+run's exact evidence and digests so no rebuild can create a conflicting
+candidate:
+
+```sh
+gh workflow run forgejo-release.yml --ref creator-signal/automation \
+  -f tag=v16.0.3 \
+  -f resume_run_id=<failed-run-id> \
+  -f resume_rootful_digest=sha256:<rootful-digest> \
+  -f resume_rootless_digest=sha256:<rootless-digest>
+```
+
+The three recovery inputs are all-or-none and format checked. Finalization
+downloads the named run's qualification/publication evidence, revalidates the
+manifests, exact digest pull-back, runtime, signatures and attestations, and
+requires the existing version tags to match before creating the Release. Never
+delete a differing tag to make a run pass.
 
 Keep the GHCR package private unless an owner explicitly approves public
 visibility. Authenticated consumers pull by the digest in `release-record.json`.
