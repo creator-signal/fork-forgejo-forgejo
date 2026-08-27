@@ -86,7 +86,8 @@ jobs:
           done
           test "$ready" = true
           jq -e '.status == "pass"' health.json
-          docker exec "$CONTAINER" /app/gitea/forgejo-cli --version | grep -F "Forgejo version ${VERSION}+"
+          curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > version.json
+          jq -e --arg version "$VERSION" '.version | startswith($version + "+")' version.json
       - name: Enforce HIGH and CRITICAL vulnerability policy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -113,6 +114,7 @@ jobs:
           name: forgejo-qualification-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             health.json
+            version.json
             scan-${{ matrix.variant }}-${{ matrix.arch }}.json
             sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
             forgejo-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}.log

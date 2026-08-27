@@ -35,7 +35,8 @@ For a named upstream tag, `forgejo-release.yml`:
 2. natively builds rootful and rootless images on Linux amd64 without
    publication (ARM64 is intentionally outside Creator Signal's supported host
    contract);
-3. starts each image with isolated SQLite state and requires `/api/healthz`;
+3. starts each image with isolated SQLite state, requires `/api/healthz`, and
+   verifies the expected release through `/api/v1/version`;
 4. fails on fixed HIGH or CRITICAL OS/library vulnerabilities;
 5. generates an SPDX JSON SBOM for every variant/platform;
 6. builds Linux amd64 OCI candidates with BuildKit SBOM and provenance;
