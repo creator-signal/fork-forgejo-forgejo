@@ -54,6 +54,8 @@ def main() -> int:
     require("/api/v1/version" in qualify and "startswith($version + \"+\")" in qualify and "jq -e '.status == \"pass\"'" in qualify, "native API version/readiness smoke controls missing", errors)
     require("/api/v1/version" in release and "/api/v1/version" in verify, "published-image version verification missing", errors)
     require("needs: [plan, qualify]" in release, "publication is not gated on qualification", errors)
+    require(release.count("source_ref: ${{ inputs.tag }}") == 3, "release builds must check out the semantic tag", errors)
+    require("Verify exact tagged source checkout" in publish and 'test "$(git rev-parse HEAD)" = "$SOURCE_SHA"' in publish, "publication tag checkout is not bound to the planned source SHA", errors)
     require("provenance: mode=max" in publish and "sbom: true" in publish, "registry-native provenance/SBOM missing", errors)
     require("verify-platforms" in release and "Pull back and smoke exact" in release, "manifest or pull-back verification missing", errors)
     require("cosign sign --yes" in release and "gh attestation verify" in release, "signature/attestation controls missing", errors)

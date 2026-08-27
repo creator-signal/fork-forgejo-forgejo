@@ -41,7 +41,7 @@ jobs:
     if: ${{ needs.plan.outputs.release_exists != 'true' }}
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: ${{ needs.plan.outputs.source_sha }}
+      source_ref: ${{ inputs.tag }}
       release_version: ${{ needs.plan.outputs.version }}
     permissions:
       contents: read
@@ -51,6 +51,7 @@ jobs:
     if: ${{ needs.plan.outputs.release_exists != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
+      source_ref: ${{ inputs.tag }}
       source_sha: ${{ needs.plan.outputs.source_sha }}
       version: ${{ needs.plan.outputs.version }}
       variant: rootful
@@ -65,6 +66,7 @@ jobs:
     if: ${{ needs.plan.outputs.release_exists != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
+      source_ref: ${{ inputs.tag }}
       source_sha: ${{ needs.plan.outputs.source_sha }}
       version: ${{ needs.plan.outputs.version }}
       variant: rootless
