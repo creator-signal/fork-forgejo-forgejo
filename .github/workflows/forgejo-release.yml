@@ -131,7 +131,7 @@ jobs:
               --env FORGEJO__security__INSTALL_LOCK=true "$image"
             port="$(docker port "$name" 3000/tcp | sed -n 's/.*://p')"
             ready=false
-            for attempt in $(seq 1 90); do
+            for _ in $(seq 1 90); do
               if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "evidence/pullback-${variant}-health.json"; then ready=true; break; fi
               sleep 2
             done

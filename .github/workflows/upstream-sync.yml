@@ -55,6 +55,7 @@ jobs:
         run: |
           cleanup() { git config --local --unset-all credential.helper || true; }
           trap cleanup EXIT
+          # shellcheck disable=SC2016 -- expand GH_TOKEN only when Git invokes the helper.
           git config --local credential.helper '!f() { test "$1" = get && echo "username=x-access-token" && echo "password=$GH_TOKEN"; }; f'
           python3 scripts/creator-signal/release_control.py sync --mode apply --repository "$GITHUB_REPOSITORY" --report upstream-sync-apply.json
       - if: ${{ always() }}
