@@ -33,7 +33,8 @@ jobs:
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/creator-signal/release_control.py plan-tag --tag "${{ inputs.tag }}" --repository "$GITHUB_REPOSITORY" --report release-plan.json
+          TAG: ${{ inputs.tag }}
+        run: python3 scripts/creator-signal/release_control.py plan-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY" --report release-plan.json
 
   qualify:
     needs: plan

@@ -76,6 +76,7 @@ jobs:
         env:
           IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
           CONTAINER: forgejo-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
+          VERSION: ${{ inputs.release_version }}
         run: |
           cleanup() { docker logs "$CONTAINER" > "${CONTAINER}.log" 2>&1 || true; docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -93,7 +94,7 @@ jobs:
           done
           test "$ready" = true
           grep -Eq '"status"[[:space:]]*:[[:space:]]*"pass"' health.json
-          docker exec "$CONTAINER" forgejo --version | grep -F "Forgejo version ${{ inputs.release_version }}"
+          docker exec "$CONTAINER" forgejo --version | grep -F "Forgejo version $VERSION"
       - name: Enforce HIGH and CRITICAL vulnerability policy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

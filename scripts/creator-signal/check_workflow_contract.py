@@ -27,7 +27,8 @@ def main() -> int:
     combined = "\n".join(sources.values())
     for name, source in sources.items():
         for line in re.findall(r"^\s*-?\s*uses:.*$", source, re.MULTILINE):
-            require(bool(SHA_USE.fullmatch(line)), f"{name}: mutable action reference: {line.strip()}", errors)
+            reference = line.split("uses:", 1)[1].strip()
+            require(reference.startswith("./.github/workflows/") or bool(SHA_USE.fullmatch(line)), f"{name}: mutable action reference: {line.strip()}", errors)
         require("permissions:\n  contents: read" in source, f"{name}: default permissions are not read-only", errors)
         require("timeout-minutes:" in source, f"{name}: bounded timeout missing", errors)
     require("https://codeberg.org/forgejo/forgejo.git" in (ROOT / "scripts/creator-signal/release_control.py").read_text(), "authoritative upstream missing", errors)
