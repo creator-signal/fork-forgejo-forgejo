@@ -1,0 +1,85 @@
+name: Independent published Forgejo verification
+
+on:
+  workflow_call:
+    inputs:
+      tag: {required: true, type: string}
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+        default: v16.0.3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forgejo-published-verification-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/creator-signal/release_control.py plan-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY" --report source-plan.json
+      - name: Download durable release evidence independently
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$TAG" --dir published
+      - name: Verify release record identity
+        run: python3 scripts/creator-signal/release_control.py verify-record --file published/release-record.json --tag "$TAG" --source-sha "${{ steps.plan.outputs.source_sha }}"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+      - name: Pull back exact digests, verify platforms, signatures, attestations, and readiness
+        env:
+          SOURCE_SHA: ${{ steps.plan.outputs.source_sha }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          COSIGN_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
+          SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cleanup() { docker rm -f forgejo-independent-rootful forgejo-independent-rootless >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for variant in rootful rootless; do
+            digest="$(jq -r --arg variant "$variant" '.images[$variant].digest' published/release-record.json)"
+            ref="ghcr.io/creator-signal/forgejo@${digest}"
+            docker buildx imagetools inspect --raw "$ref" > "${variant}-manifest.json"
+            python3 scripts/creator-signal/release_control.py verify-platforms --file "${variant}-manifest.json"
+            cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "$ref"
+            gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
+            gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
+            docker pull --platform linux/amd64 "$ref"
+            name="forgejo-independent-${variant}"
+            docker run --detach --name "$name" --publish 127.0.0.1::3000 \
+              --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \
+              --env FORGEJO__security__INSTALL_LOCK=true "$ref"
+            port="$(docker port "$name" 3000/tcp | sed -n 's/.*://p')"
+            ready=false
+            for attempt in $(seq 1 90); do
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "${variant}-health.json"; then ready=true; break; fi
+              sleep 2
+            done
+            test "$ready" = true
+            docker exec "$name" forgejo --version | grep -F "Forgejo version $VERSION"
+            docker rm -f "$name"
+          done
