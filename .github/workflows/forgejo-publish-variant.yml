@@ -46,7 +46,9 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          build-args: RELEASE_VERSION=${{ inputs.version }}
+          build-args: |
+            RELEASE_VERSION=${{ inputs.version }}
+            GOPROXY=https://proxy.golang.org|direct
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ inputs.source_sha }}

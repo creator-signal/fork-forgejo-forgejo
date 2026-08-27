@@ -68,7 +68,9 @@ jobs:
           push: false
           provenance: false
           sbom: false
-          build-args: RELEASE_VERSION=${{ inputs.release_version }}
+          build-args: |
+            RELEASE_VERSION=${{ inputs.release_version }}
+            GOPROXY=https://proxy.golang.org|direct
           tags: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
           cache-from: type=gha,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}
           cache-to: type=gha,mode=min,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}

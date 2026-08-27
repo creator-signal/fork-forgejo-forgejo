@@ -76,7 +76,7 @@ jobs:
     needs: [contracts, security]
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: ${{ github.sha }}
+      source_ref: v16.0.3
       release_version: 16.0.3
     permissions:
       contents: read
