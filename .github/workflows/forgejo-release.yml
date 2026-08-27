@@ -66,8 +66,10 @@ jobs:
           test -z "$ROOTFUL_DIGEST" || provided=$((provided + 1))
           test -z "$ROOTLESS_DIGEST" || provided=$((provided + 1))
           if [ "$provided" -eq 0 ]; then
-            echo "resume=false" >> "$GITHUB_OUTPUT"
-            echo "evidence_run_id=${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+            {
+              echo "resume=false"
+              echo "evidence_run_id=${GITHUB_RUN_ID}"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           test "$provided" -eq 3
@@ -75,10 +77,12 @@ jobs:
           [[ "$ROOTFUL_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
           [[ "$ROOTLESS_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
           test "$ROOTFUL_DIGEST" != "$ROOTLESS_DIGEST"
-          echo "resume=true" >> "$GITHUB_OUTPUT"
-          echo "evidence_run_id=${RESUME_RUN_ID}" >> "$GITHUB_OUTPUT"
-          echo "rootful_digest=${ROOTFUL_DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "rootless_digest=${ROOTLESS_DIGEST}" >> "$GITHUB_OUTPUT"
+          {
+            echo "resume=true"
+            echo "evidence_run_id=${RESUME_RUN_ID}"
+            echo "rootful_digest=${ROOTFUL_DIGEST}"
+            echo "rootless_digest=${ROOTLESS_DIGEST}"
+          } >> "$GITHUB_OUTPUT"
 
   qualify:
     needs: plan
