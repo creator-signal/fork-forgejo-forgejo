@@ -86,7 +86,7 @@ jobs:
           done
           test "$ready" = true
           jq -e '.status == "pass"' health.json
-          docker exec "$CONTAINER" /app/gitea/gitea --version | grep -F "Forgejo version ${VERSION}+"
+          docker exec "$CONTAINER" /app/gitea/forgejo-cli --version | grep -F "Forgejo version ${VERSION}+"
       - name: Enforce HIGH and CRITICAL vulnerability policy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

@@ -48,7 +48,7 @@ def main() -> int:
     require("GOPROXY=https://proxy.golang.org|direct" in qualify, "qualification Go proxy failover missing", errors)
     require("GOPROXY=https://proxy.golang.org|direct" in publish, "publication Go proxy failover missing", errors)
     require("platforms: linux/amd64" in publish, "publication must be AMD64-only", errors)
-    require("/app/gitea/gitea --version" in qualify and "jq -e '.status == \"pass\"'" in qualify, "native binary/readiness smoke controls missing", errors)
+    require("/app/gitea/forgejo-cli --version" in qualify and "jq -e '.status == \"pass\"'" in qualify, "native binary/readiness smoke controls missing", errors)
     require("needs: [plan, qualify]" in release, "publication is not gated on qualification", errors)
     require("provenance: mode=max" in publish and "sbom: true" in publish, "registry-native provenance/SBOM missing", errors)
     require("verify-platforms" in release and "Pull back and smoke exact" in release, "manifest or pull-back verification missing", errors)

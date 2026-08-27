@@ -81,6 +81,6 @@ jobs:
             done
             test "$ready" = true
             jq -e '.status == "pass"' "${variant}-health.json"
-            docker exec "$name" /app/gitea/gitea --version | grep -F "Forgejo version ${VERSION}+"
+            docker exec "$name" /app/gitea/forgejo-cli --version | grep -F "Forgejo version ${VERSION}+"
             docker rm -f "$name"
           done
