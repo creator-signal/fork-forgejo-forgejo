@@ -32,6 +32,9 @@ ref, preserve the report, and repair through a reviewed automation change.
 For a named upstream tag, `forgejo-release.yml`:
 
 1. proves the mirrored tag commit equals the authoritative Codeberg tag;
+   qualification and publication then check out that semantic tag and bind its
+   resolved commit to the planned source SHA so Forgejo retains its valid
+   release version at build and migration time;
 2. natively builds rootful and rootless images on Linux amd64 without
    publication (ARM64 is intentionally outside Creator Signal's supported host
    contract);
