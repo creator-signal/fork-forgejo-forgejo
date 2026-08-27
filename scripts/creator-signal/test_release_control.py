@@ -10,16 +10,18 @@ from scripts.creator_signal_import import release_control
 
 
 class ReleaseControlTests(unittest.TestCase):
-    def test_platform_verification_requires_exact_linux_pair(self):
+    def test_platform_verification_requires_exact_amd64_platform(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "manifest.json"
             path.write_text(json.dumps({"manifests": [
                 {"platform": {"os": "linux", "architecture": "amd64"}},
-                {"platform": {"os": "linux", "architecture": "arm64"}},
                 {"platform": {"os": "unknown", "architecture": "unknown"}},
             ]}), encoding="utf-8")
             release_control.verify_platforms(argparse.Namespace(file=str(path)))
-            path.write_text(json.dumps({"manifests": [{"platform": {"os": "linux", "architecture": "amd64"}}]}), encoding="utf-8")
+            path.write_text(json.dumps({"manifests": [
+                {"platform": {"os": "linux", "architecture": "amd64"}},
+                {"platform": {"os": "linux", "architecture": "arm64"}},
+            ]}), encoding="utf-8")
             with self.assertRaises(RuntimeError):
                 release_control.verify_platforms(argparse.Namespace(file=str(path)))
 

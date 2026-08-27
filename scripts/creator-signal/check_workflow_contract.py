@@ -38,14 +38,17 @@ def main() -> int:
     qualify = sources.get("forgejo-qualification.yml", "")
     publish = sources.get("forgejo-publish-variant.yml", "")
     verify = sources.get("forgejo-release-verification.yml", "")
-    for token in ("linux/amd64", "linux/arm64", "Dockerfile.rootless", "Dockerfile"):
+    for token in ("linux/amd64", "Dockerfile.rootless", "Dockerfile"):
         require(token in qualify, f"qualification missing {token}", errors)
+    require("linux/arm64" not in combined and "ubuntu-24.04-arm" not in combined, "unsupported ARM64 release path present", errors)
     require(qualify.index("Run isolated native startup") < qualify.index("Enforce HIGH and CRITICAL"), "startup must precede scan", errors)
     require("severity: CRITICAL,HIGH" in qualify and 'exit-code: "1"' in qualify, "strict vulnerability gate missing", errors)
     require("format: spdx-json" in qualify, "SPDX SBOM missing", errors)
     require("source_ref: v16.0.3" in sources.get("automation-validation.yml", ""), "initial qualification must use the exact release tag", errors)
     require("GOPROXY=https://proxy.golang.org|direct" in qualify, "qualification Go proxy failover missing", errors)
     require("GOPROXY=https://proxy.golang.org|direct" in publish, "publication Go proxy failover missing", errors)
+    require("platforms: linux/amd64" in publish, "publication must be AMD64-only", errors)
+    require("/app/gitea/gitea --version" in qualify and "jq -e '.status == \"pass\"'" in qualify, "native binary/readiness smoke controls missing", errors)
     require("needs: [plan, qualify]" in release, "publication is not gated on qualification", errors)
     require("provenance: mode=max" in publish and "sbom: true" in publish, "registry-native provenance/SBOM missing", errors)
     require("verify-platforms" in release and "Pull back and smoke exact" in release, "manifest or pull-back verification missing", errors)

@@ -32,12 +32,13 @@ ref, preserve the report, and repair through a reviewed automation change.
 For a named upstream tag, `forgejo-release.yml`:
 
 1. proves the mirrored tag commit equals the authoritative Codeberg tag;
-2. natively builds rootful and rootless images on amd64 and arm64 without
-   publication;
+2. natively builds rootful and rootless images on Linux amd64 without
+   publication (ARM64 is intentionally outside Creator Signal's supported host
+   contract);
 3. starts each image with isolated SQLite state and requires `/api/healthz`;
 4. fails on fixed HIGH or CRITICAL OS/library vulnerabilities;
 5. generates an SPDX JSON SBOM for every variant/platform;
-6. builds multi-architecture candidates with BuildKit SBOM and provenance;
+6. builds Linux amd64 OCI candidates with BuildKit SBOM and provenance;
 7. pulls exact manifest digests back and repeats startup/readiness;
 8. promotes only verified digests to immutable version tags;
 9. keylessly signs and publishes provenance and SBOM attestations; and

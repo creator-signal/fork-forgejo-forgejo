@@ -30,16 +30,6 @@ jobs:
             platform: linux/amd64
             runner: ubuntu-24.04
             arch: amd64
-          - variant: rootful
-            dockerfile: Dockerfile
-            platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            arch: arm64
-          - variant: rootless
-            dockerfile: Dockerfile.rootless
-            platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
@@ -95,8 +85,8 @@ jobs:
             sleep 2
           done
           test "$ready" = true
-          grep -Eq '"status"[[:space:]]*:[[:space:]]*"pass"' health.json
-          docker exec "$CONTAINER" forgejo --version | grep -F "Forgejo version $VERSION"
+          jq -e '.status == "pass"' health.json
+          docker exec "$CONTAINER" /app/gitea/gitea --version | grep -F "Forgejo version ${VERSION}+"
       - name: Enforce HIGH and CRITICAL vulnerability policy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

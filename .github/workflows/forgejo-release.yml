@@ -136,7 +136,8 @@ jobs:
               sleep 2
             done
             test "$ready" = true
-            docker exec "$name" forgejo --version | grep -F "Forgejo version $VERSION"
+            jq -e '.status == "pass"' "evidence/pullback-${variant}-health.json"
+            docker exec "$name" /app/gitea/gitea --version | grep -F "Forgejo version ${VERSION}+"
             docker rm -f "$name"
           done
       - name: Generate manifest-level SPDX SBOMs

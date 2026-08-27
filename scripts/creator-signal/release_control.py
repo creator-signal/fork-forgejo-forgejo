@@ -16,7 +16,7 @@ UPSTREAM = "https://codeberg.org/forgejo/forgejo.git"
 SEMVER = re.compile(r"^v(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$")
 RELEASE_BRANCH = re.compile(r"^v\d+(?:\.\d+)?/forgejo$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
-PLATFORMS = {"linux/amd64", "linux/arm64"}
+PLATFORMS = {"linux/amd64"}
 
 
 def run(*args: str, check: bool = True) -> str:
