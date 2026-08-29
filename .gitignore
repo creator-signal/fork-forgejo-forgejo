@@ -138,3 +138,7 @@ tests/integration/api_activitypub_person_inbox_useractivity_test.go
 
 # Mise version management
 mise.toml
+
+# Creator Signal release-control tooling
+__pycache__/
+*.pyc

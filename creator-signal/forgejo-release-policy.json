@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "upstreamUrl": "https://codeberg.org/forgejo/forgejo.git",
+  "automationBranch": "creator-signal/automation",
+  "semanticTagPattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$",
+  "downstreamTagPattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+-cs\\.[1-9][0-9]*$",
+  "legacyReleasePlatforms": {
+    "v16.0.3": [
+      "linux/amd64"
+    ]
+  },
+  "downstreamReleases": {
+    "v16.0.3-cs.1": {
+      "baseTag": "v16.0.3",
+      "baseSourceSha": "eccddb2d17c93b42b2c8995725e03e549ac9ec0c",
+      "sourceCommitSha": "ea71be6eb248b928ee5d446ed441bf78d8dd42ee",
+      "sourceTreeSha": "a10677d2b09db7484cd48af7a3ea21eb0b322d1a",
+      "sourceCommitSubject": "release: Forgejo v16.0.3-cs.1 source",
+      "sourcePatchSha256": "2a1452f9cb0d69b63abc3327301928401d395a9af7a74e3e9b95920154ee8c4f",
+      "changedPaths": [
+        "Dockerfile",
+        "Dockerfile.rootless"
+      ],
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "baseImages": {
+        "xx": {
+          "reference": "data.forgejo.org/oci/xx",
+          "digest": "sha256:c64defb9ed5a91eacb37f96ccc3d4cd72521c4bd18d5442905b95e2226b0e707"
+        },
+        "golang": {
+          "reference": "data.forgejo.org/oci/golang:1.26-alpine3.23",
+          "digest": "sha256:b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57"
+        },
+        "alpine": {
+          "reference": "data.forgejo.org/oci/alpine:3.23",
+          "digest": "sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40"
+        }
+      },
+      "securityRefresh": "RUN apk upgrade --no-cache"
+    }
+  },
+  "variants": {
+    "rootful": "Dockerfile",
+    "rootless": "Dockerfile.rootless"
+  },
+  "nativePlatforms": [
+    {
+      "platform": "linux/amd64",
+      "arch": "amd64",
+      "runner": "ubuntu-24.04"
+    },
+    {
+      "platform": "linux/arm64",
+      "arch": "arm64",
+      "runner": "ubuntu-24.04-arm"
+    }
+  ]
+}

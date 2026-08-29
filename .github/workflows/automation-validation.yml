@@ -71,12 +71,15 @@ jobs:
           advanced-security: false
           annotations: false
 
-  initial-release-qualification:
-    name: Initial v16.0.3 container qualification
+  downstream-release-qualification:
+    name: Downstream v16.0.3-cs.1 native qualification
     needs: [contracts, security]
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: v16.0.3
-      release_version: 16.0.3
+      source_ref: ea71be6eb248b928ee5d446ed441bf78d8dd42ee
+      release_tag: v16.0.3-cs.1
+      release_version: 16.0.3-cs.1
+      base_source_sha: eccddb2d17c93b42b2c8995725e03e549ac9ec0c
+      source_patch_sha256: 2a1452f9cb0d69b63abc3327301928401d395a9af7a74e3e9b95920154ee8c4f
     permissions:
       contents: read

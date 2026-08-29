@@ -6,7 +6,16 @@ on:
       source_ref:
         required: true
         type: string
+      release_tag:
+        required: true
+        type: string
       release_version:
+        required: true
+        type: string
+      base_source_sha:
+        required: true
+        type: string
+      source_patch_sha256:
         required: true
         type: string
 
@@ -15,7 +24,7 @@ permissions:
 
 jobs:
   qualify:
-    name: ${{ matrix.variant }} ${{ matrix.platform }} build, smoke, scan, SBOM
+    name: ${{ matrix.variant }} ${{ matrix.platform }} native build, smoke, scan, SBOM
     strategy:
       fail-fast: false
       matrix:
@@ -30,32 +39,42 @@ jobs:
             platform: linux/amd64
             runner: ubuntu-24.04
             arch: amd64
+          - variant: rootful
+            dockerfile: Dockerfile
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+          - variant: rootless
+            dockerfile: Dockerfile.rootless
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
       contents: read
     steps:
-      - name: Check out exact source
+      - name: Check out exact committed downstream source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_ref }}
+          fetch-depth: 2
           persist-credentials: false
-      - name: Verify exact source checkout
+      - name: Verify exact source and committed patch identity
         env:
           SOURCE_REF: ${{ inputs.source_ref }}
-        run: |
-          test "$(git rev-parse HEAD)" = "$(git rev-parse "$SOURCE_REF^{commit}")"
-          git diff --exit-code
-      - name: Apply bounded Alpine security refresh
-        env:
+          BASE_SOURCE_SHA: ${{ inputs.base_source_sha }}
+          PATCH_SHA256: ${{ inputs.source_patch_sha256 }}
           DOCKERFILE: ${{ matrix.dockerfile }}
-          VARIANT: ${{ matrix.variant }}
         run: |
-          test "$(grep -Fxc 'FROM data.forgejo.org/oci/alpine:3.23' "$DOCKERFILE")" -eq 1
-          sed -i '/^FROM data\.forgejo\.org\/oci\/alpine:3\.23$/a RUN apk upgrade --no-cache' "$DOCKERFILE"
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          test "$(git rev-parse HEAD^)" = "$BASE_SOURCE_SHA"
+          test -n "$PATCH_SHA256"
+          git diff --no-ext-diff --binary --abbrev=9 "$BASE_SOURCE_SHA" "$SOURCE_REF" -- Dockerfile Dockerfile.rootless > creator-signal-source.patch
+          echo "${PATCH_SHA256}  creator-signal-source.patch" | sha256sum --check --strict
+          test "$(grep -Fc '@sha256:' "$DOCKERFILE")" -eq 3
           test "$(grep -Fxc 'RUN apk upgrade --no-cache' "$DOCKERFILE")" -eq 1
-          git diff -- "$DOCKERFILE" > "creator-signal-base-security-refresh-${VARIANT}.patch"
-          test -s "creator-signal-base-security-refresh-${VARIANT}.patch"
+          git diff --exit-code
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build native candidate without publication
@@ -71,6 +90,9 @@ jobs:
           build-args: |
             RELEASE_VERSION=${{ inputs.release_version }}
             GOPROXY=https://proxy.golang.org|direct
+          labels: |
+            org.opencontainers.image.revision=${{ inputs.source_ref }}
+            org.opencontainers.image.version=${{ inputs.release_version }}
           tags: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
           cache-from: type=gha,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}
           cache-to: type=gha,mode=min,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}
@@ -98,7 +120,7 @@ jobs:
           jq -e '.status == "pass"' health.json
           curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > version.json
           jq -e --arg version "$VERSION" '.version | startswith($version + "+")' version.json
-      - name: Enforce HIGH and CRITICAL vulnerability policy
+      - name: Enforce fixed HIGH and CRITICAL vulnerability policy natively
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
@@ -110,14 +132,34 @@ jobs:
           scanners: vuln
           vuln-type: os,library
           severity: CRITICAL,HIGH
-      - name: Generate SPDX SBOM
+      - name: Generate native platform SPDX SBOM
         uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
         with:
           image: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
           format: spdx-json
           output-file: sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
           upload-artifact: false
-      - name: Preserve bounded qualification evidence
+      - name: Generate source and native-build provenance
+        env:
+          IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_SHA: ${{ inputs.source_ref }}
+          BASE_SOURCE_SHA: ${{ inputs.base_source_sha }}
+          PATCH_SHA256: ${{ inputs.source_patch_sha256 }}
+          PLATFORM: ${{ matrix.platform }}
+          VARIANT: ${{ matrix.variant }}
+          ARCH: ${{ matrix.arch }}
+          RUNNER_NAME: ${{ runner.name }}
+        run: |
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          image_id="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          jq -n \
+            --arg tag "$RELEASE_TAG" --arg source "$SOURCE_SHA" --arg tree "$source_tree" \
+            --arg base "$BASE_SOURCE_SHA" --arg patch "$PATCH_SHA256" --arg image "$image_id" \
+            --arg platform "$PLATFORM" --arg variant "$VARIANT" --arg runner "$RUNNER_NAME" \
+            '{schema:"creator-signal.forgejo-native-qualification-provenance/v1", releaseTag:$tag, sourceSha:$source, sourceTreeSha:$tree, upstreamBaseSha:$base, sourcePatchSha256:$patch, imageId:$image, platform:$platform, variant:$variant, nativeRunner:$runner}' \
+            > "provenance-${VARIANT}-${ARCH}.json"
+      - name: Preserve bounded native qualification evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -125,9 +167,10 @@ jobs:
           path: |
             health.json
             version.json
-            creator-signal-base-security-refresh-${{ matrix.variant }}.patch
+            creator-signal-source.patch
             scan-${{ matrix.variant }}-${{ matrix.arch }}.json
             sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
+            provenance-${{ matrix.variant }}-${{ matrix.arch }}.json
             forgejo-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}.log
           if-no-files-found: warn
           retention-days: 14

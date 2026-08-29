@@ -7,7 +7,7 @@ on:
       tag:
         required: true
         type: string
-        default: v16.0.3
+        default: v16.0.3-cs.1
       resume_run_id:
         description: Prior failed release run containing the qualified/published evidence
         required: false
@@ -36,7 +36,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
+      source_ref: ${{ steps.plan.outputs.source_ref }}
       source_sha: ${{ steps.plan.outputs.source_sha }}
+      source_tree_sha: ${{ steps.plan.outputs.source_tree_sha }}
+      source_patch_sha256: ${{ steps.plan.outputs.source_patch_sha256 }}
+      base_tag: ${{ steps.plan.outputs.base_tag }}
+      base_source_sha: ${{ steps.plan.outputs.base_source_sha }}
+      downstream: ${{ steps.plan.outputs.downstream }}
+      tag_exists: ${{ steps.plan.outputs.tag_exists }}
       version: ${{ steps.plan.outputs.version }}
       prerelease: ${{ steps.plan.outputs.prerelease }}
       release_exists: ${{ steps.plan.outputs.release_exists }}
@@ -89,17 +96,45 @@ jobs:
     if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: ${{ inputs.tag }}
+      source_ref: ${{ needs.plan.outputs.source_ref }}
+      release_tag: ${{ inputs.tag }}
       release_version: ${{ needs.plan.outputs.version }}
+      base_source_sha: ${{ needs.plan.outputs.base_source_sha }}
+      source_patch_sha256: ${{ needs.plan.outputs.source_patch_sha256 }}
     permissions:
       contents: read
 
-  publish-rootful:
+  publish-source-tag:
     needs: [plan, qualify]
+    if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' && needs.qualify.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out trusted automation and downstream source history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Publish the immutable downstream source tag after native qualification
+        if: ${{ needs.plan.outputs.downstream == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          cleanup() { git config --local --unset-all credential.helper || true; }
+          trap cleanup EXIT
+          # shellcheck disable=SC2016
+          git config --local credential.helper '!f() { test "$1" = get && echo "username=x-access-token" && echo "password=$GH_TOKEN"; }; f'
+          python3 scripts/creator-signal/release_control.py publish-downstream-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY"
+
+  publish-rootful:
+    needs: [plan, qualify, publish-source-tag]
     if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
-      source_ref: ${{ inputs.tag }}
+      source_ref: ${{ needs.plan.outputs.source_sha }}
       source_sha: ${{ needs.plan.outputs.source_sha }}
       version: ${{ needs.plan.outputs.version }}
       variant: rootful
@@ -110,11 +145,11 @@ jobs:
       id-token: write
 
   publish-rootless:
-    needs: [plan, qualify]
+    needs: [plan, qualify, publish-source-tag]
     if: ${{ needs.plan.outputs.release_exists != 'true' && needs.plan.outputs.resume != 'true' }}
     uses: ./.github/workflows/forgejo-publish-variant.yml
     with:
-      source_ref: ${{ inputs.tag }}
+      source_ref: ${{ needs.plan.outputs.source_sha }}
       source_sha: ${{ needs.plan.outputs.source_sha }}
       version: ${{ needs.plan.outputs.version }}
       variant: rootless
@@ -124,9 +159,116 @@ jobs:
       packages: write
       id-token: write
 
-  finalize:
+  verify-published-platforms:
     needs: [plan, qualify, publish-rootful, publish-rootless]
     if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.release_exists != 'true' && (needs.plan.outputs.resume == 'true' || (needs.qualify.result == 'success' && needs.publish-rootful.result == 'success' && needs.publish-rootless.result == 'success')) }}
+    name: Verify published ${{ matrix.platform }} by digest natively
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      TAG: ${{ inputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+      SOURCE_TREE_SHA: ${{ needs.plan.outputs.source_tree_sha }}
+      SOURCE_PATCH_SHA256: ${{ needs.plan.outputs.source_patch_sha256 }}
+      BASE_TAG: ${{ needs.plan.outputs.base_tag }}
+      BASE_SOURCE_SHA: ${{ needs.plan.outputs.base_source_sha }}
+      ROOTFUL_DIGEST: ${{ needs.plan.outputs.resume == 'true' && needs.plan.outputs.resume_rootful_digest || needs.publish-rootful.outputs.digest }}
+      ROOTLESS_DIGEST: ${{ needs.plan.outputs.resume == 'true' && needs.plan.outputs.resume_rootless_digest || needs.publish-rootless.outputs.digest }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Check out trusted verification controls
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Pull exact platform child digests and verify native startup
+        env:
+          ARCH: ${{ matrix.arch }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          cleanup() { docker rm -f "forgejo-rootful-${ARCH}" "forgejo-rootless-${ARCH}" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for variant in rootful rootless; do
+            if [ "$variant" = rootful ]; then digest="$ROOTFUL_DIGEST"; else digest="$ROOTLESS_DIGEST"; fi
+            manifest="published-${variant}-${ARCH}-manifest.json"
+            docker buildx imagetools inspect --raw "ghcr.io/creator-signal/forgejo@${digest}" > "$manifest"
+            python3 scripts/creator-signal/release_control.py verify-platforms --file "$manifest" --tag "$TAG"
+            child="$(jq -er --arg arch "$ARCH" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest' "$manifest")"
+            ref="ghcr.io/creator-signal/forgejo@${child}"
+            docker pull --platform "$PLATFORM" "$ref"
+            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
+            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+            name="forgejo-${variant}-${ARCH}"
+            docker run --detach --name "$name" --publish 127.0.0.1::3000 \
+              --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \
+              --env FORGEJO__security__INSTALL_LOCK=true "$ref"
+            port="$(docker port "$name" 3000/tcp | sed -n 's/.*://p')"
+            ready=false
+            for _ in $(seq 1 90); do
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "published-${variant}-${ARCH}-health.json"; then ready=true; break; fi
+              sleep 2
+            done
+            test "$ready" = true
+            jq -e '.status == "pass"' "published-${variant}-${ARCH}-health.json"
+            curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "published-${variant}-${ARCH}-version.json"
+            jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "published-${variant}-${ARCH}-version.json"
+            docker rm -f "$name"
+            echo "$child" > "published-${variant}-${ARCH}-digest.txt"
+          done
+      - name: Scan exact published rootful platform image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/creator-signal/forgejo@${{ env.ROOTFUL_DIGEST }}
+          version: v0.72.0
+          format: json
+          output: published-scan-rootful-${{ matrix.arch }}.json
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Scan exact published rootless platform image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/creator-signal/forgejo@${{ env.ROOTLESS_DIGEST }}
+          version: v0.72.0
+          format: json
+          output: published-scan-rootless-${{ matrix.arch }}.json
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Preserve exact published native evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: forgejo-published-native-${{ matrix.arch }}-${{ github.run_id }}
+          path: published-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  finalize:
+    needs: [plan, qualify, publish-rootful, publish-rootless, verify-published-platforms]
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.release_exists != 'true' && needs.verify-published-platforms.result == 'success' && (needs.plan.outputs.resume == 'true' || (needs.qualify.result == 'success' && needs.publish-rootful.result == 'success' && needs.publish-rootless.result == 'success')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -146,6 +288,7 @@ jobs:
       - name: Check out trusted automation
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -170,8 +313,8 @@ jobs:
           run-id: ${{ needs.plan.outputs.evidence_run_id }}
       - name: Verify both immutable manifest platform sets
         run: |
-          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootful.json
-          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootless.json
+          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootful.json --tag "$TAG"
+          python3 scripts/creator-signal/release_control.py verify-platforms --file evidence/manifest-rootless.json --tag "$TAG"
       - name: Pull back and smoke exact amd64 manifest digests
         run: |
           cleanup() { docker rm -f forgejo-rootful-pullback forgejo-rootless-pullback >/dev/null 2>&1 || true; }
@@ -211,6 +354,15 @@ jobs:
           format: spdx-json
           output-file: evidence/forgejo-${{ needs.plan.outputs.version }}-rootless.spdx.json
           upload-artifact: false
+      - name: Derive every exact platform child digest
+        id: children
+        run: |
+          for variant in rootful rootless; do
+            for arch in amd64 arm64; do
+              digest="$(jq -er --arg arch "$arch" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest' "evidence/manifest-${variant}.json")"
+              echo "${variant}_${arch}=${digest}" >> "$GITHUB_OUTPUT"
+            done
+          done
       - name: Promote only verified digests to immutable version tags
         run: |
           promote() {
@@ -223,9 +375,15 @@ jobs:
           promote "ghcr.io/creator-signal/forgejo:${VERSION}" "$ROOTFUL_DIGEST"
           promote "ghcr.io/creator-signal/forgejo:${VERSION}-rootless" "$ROOTLESS_DIGEST"
       - name: Sign immutable manifest digests keylessly
+        env:
+          ROOTFUL_AMD64: ${{ steps.children.outputs.rootful_amd64 }}
+          ROOTFUL_ARM64: ${{ steps.children.outputs.rootful_arm64 }}
+          ROOTLESS_AMD64: ${{ steps.children.outputs.rootless_amd64 }}
+          ROOTLESS_ARM64: ${{ steps.children.outputs.rootless_arm64 }}
         run: |
-          cosign sign --yes "ghcr.io/creator-signal/forgejo@${ROOTFUL_DIGEST}"
-          cosign sign --yes "ghcr.io/creator-signal/forgejo@${ROOTLESS_DIGEST}"
+          for digest in "$ROOTFUL_DIGEST" "$ROOTLESS_DIGEST" "$ROOTFUL_AMD64" "$ROOTFUL_ARM64" "$ROOTLESS_AMD64" "$ROOTLESS_ARM64"; do
+            cosign sign --yes "ghcr.io/creator-signal/forgejo@${digest}"
+          done
       - name: Attest rootful build provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
@@ -236,6 +394,30 @@ jobs:
         with:
           subject-name: ghcr.io/creator-signal/forgejo
           subject-digest: ${{ env.ROOTLESS_DIGEST }}
+          push-to-registry: true
+      - name: Attest rootful AMD64 child provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootful_amd64 }}
+          push-to-registry: true
+      - name: Attest rootful ARM64 child provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootful_arm64 }}
+          push-to-registry: true
+      - name: Attest rootless AMD64 child provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootless_amd64 }}
+          push-to-registry: true
+      - name: Attest rootless ARM64 child provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootless_arm64 }}
           push-to-registry: true
       - name: Attest rootful SBOM
         uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
@@ -250,19 +432,51 @@ jobs:
           subject-digest: ${{ env.ROOTLESS_DIGEST }}
           sbom-path: evidence/forgejo-${{ needs.plan.outputs.version }}-rootless.spdx.json
           push-to-registry: true
+      - name: Attest rootful AMD64 child SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootful_amd64 }}
+          sbom-path: evidence/sbom-rootful-amd64.spdx.json
+          push-to-registry: true
+      - name: Attest rootful ARM64 child SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootful_arm64 }}
+          sbom-path: evidence/sbom-rootful-arm64.spdx.json
+          push-to-registry: true
+      - name: Attest rootless AMD64 child SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootless_amd64 }}
+          sbom-path: evidence/sbom-rootless-amd64.spdx.json
+          push-to-registry: true
+      - name: Attest rootless ARM64 child SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ghcr.io/creator-signal/forgejo
+          subject-digest: ${{ steps.children.outputs.rootless_arm64 }}
+          sbom-path: evidence/sbom-rootless-arm64.spdx.json
+          push-to-registry: true
       - name: Verify signatures and GitHub attestations
         env:
           COSIGN_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
           SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
           GH_TOKEN: ${{ github.token }}
+          ROOTFUL_AMD64: ${{ steps.children.outputs.rootful_amd64 }}
+          ROOTFUL_ARM64: ${{ steps.children.outputs.rootful_arm64 }}
+          ROOTLESS_AMD64: ${{ steps.children.outputs.rootless_amd64 }}
+          ROOTLESS_ARM64: ${{ steps.children.outputs.rootless_arm64 }}
         run: |
-          for digest in "$ROOTFUL_DIGEST" "$ROOTLESS_DIGEST"; do
+          for digest in "$ROOTFUL_DIGEST" "$ROOTLESS_DIGEST" "$ROOTFUL_AMD64" "$ROOTFUL_ARM64" "$ROOTLESS_AMD64" "$ROOTLESS_ARM64"; do
             cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "ghcr.io/creator-signal/forgejo@${digest}"
             gh attestation verify "oci://ghcr.io/creator-signal/forgejo@${digest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
             gh attestation verify "oci://ghcr.io/creator-signal/forgejo@${digest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
           done
       - name: Create durable release record
-        run: python3 scripts/creator-signal/release_control.py write-record --tag "$TAG" --source-sha "$SOURCE_SHA" --rootful-digest "$ROOTFUL_DIGEST" --rootless-digest "$ROOTLESS_DIGEST" --workflow-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --evidence evidence --output release-record.json
+        run: python3 scripts/creator-signal/release_control.py write-record --tag "$TAG" --source-sha "$SOURCE_SHA" --rootful-digest "$ROOTFUL_DIGEST" --rootless-digest "$ROOTLESS_DIGEST" --rootful-manifest evidence/manifest-rootful.json --rootless-manifest evidence/manifest-rootless.json --workflow-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --evidence evidence --output release-record.json
       - name: Publish immutable GitHub Release record
         env:
           IS_PRERELEASE: ${{ needs.plan.outputs.prerelease }}
@@ -270,15 +484,18 @@ jobs:
         run: |
           jq -r '.images | to_entries[] | "- \(.key): `\(.value.reference)@\(.value.digest)`"' release-record.json > image-records.md
           {
-            echo "Creator Signal build of authoritative upstream Forgejo ${TAG}."
+            echo "Creator Signal downstream build ${TAG} of authoritative upstream Forgejo ${BASE_TAG}."
             echo
-            echo "Upstream source: https://codeberg.org/forgejo/forgejo/releases/tag/${TAG}"
-            echo "Exact upstream commit: \`${SOURCE_SHA}\`"
+            echo "Upstream source: https://codeberg.org/forgejo/forgejo/releases/tag/${BASE_TAG}"
+            echo "Exact upstream commit: \`${BASE_SOURCE_SHA}\`"
+            echo "Exact downstream source: \`${SOURCE_SHA}\`"
+            echo "Downstream source tree: \`${SOURCE_TREE_SHA}\`"
+            echo "Creator Signal source patch SHA256: \`${SOURCE_PATCH_SHA256}\`"
             echo "Workflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo
             cat image-records.md
           } > release-notes.md
-          args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/scan-*.json evidence/creator-signal-base-security-refresh-*.patch)
+          args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/provenance-*.json evidence/scan-*.json evidence/published-scan-*.json evidence/creator-signal-source.patch)
           if [ "$IS_PRERELEASE" = true ]; then args+=(--prerelease); fi
           gh release create "${args[@]}"
       - name: Move stable aliases only after completed release
