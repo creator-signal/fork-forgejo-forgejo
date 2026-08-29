@@ -9,7 +9,7 @@ on:
       tag:
         required: true
         type: string
-        default: v16.0.3
+        default: v16.0.3-cs.1
 
 permissions:
   contents: read
@@ -19,15 +19,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
+  plan:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: read
-    env:
-      GH_REPO: ${{ github.repository }}
-      TAG: ${{ inputs.tag }}
+    timeout-minutes: 15
+    outputs:
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      version: ${{ steps.plan.outputs.version }}
+      arm64_enabled: ${{ steps.plan.outputs.arm64_enabled }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -36,54 +34,136 @@ jobs:
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
         run: python3 scripts/creator-signal/release_control.py plan-tag --tag "$TAG" --repository "$GITHUB_REPOSITORY" --report source-plan.json
+
+  verify:
+    needs: plan
+    name: ${{ matrix.platform }} exact-digest pull-back
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+      SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Download durable release evidence independently
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release download "$TAG" --dir published
       - name: Verify release record identity
-        run: python3 scripts/creator-signal/release_control.py verify-record --file published/release-record.json --tag "$TAG" --source-sha "${{ steps.plan.outputs.source_sha }}"
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
+        run: python3 scripts/creator-signal/release_control.py verify-record --file published/release-record.json --tag "$TAG" --source-sha "$SOURCE_SHA"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
-      - name: Pull back exact digests, verify platforms, signatures, attestations, and readiness
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
+      - name: Verify manifests, signatures, attestations, and exact native children
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
         env:
-          SOURCE_SHA: ${{ steps.plan.outputs.source_sha }}
-          VERSION: ${{ steps.plan.outputs.version }}
           COSIGN_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
           SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/forgejo-release.yml@refs/heads/creator-signal/automation
           GH_TOKEN: ${{ github.token }}
         run: |
-          cleanup() { docker rm -f forgejo-independent-rootful forgejo-independent-rootless >/dev/null 2>&1 || true; }
+          cleanup() { docker rm -f "forgejo-independent-rootful-${ARCH}" "forgejo-independent-rootless-${ARCH}" >/dev/null 2>&1 || true; }
           trap cleanup EXIT
           for variant in rootful rootless; do
-            digest="$(jq -r --arg variant "$variant" '.images[$variant].digest' published/release-record.json)"
+            digest="$(jq -er --arg variant "$variant" '.images[$variant].digest' published/release-record.json)"
             ref="ghcr.io/creator-signal/forgejo@${digest}"
             docker buildx imagetools inspect --raw "$ref" > "${variant}-manifest.json"
-            python3 scripts/creator-signal/release_control.py verify-platforms --file "${variant}-manifest.json"
+            python3 scripts/creator-signal/release_control.py verify-platforms --file "${variant}-manifest.json" --tag "$TAG"
             cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "$ref"
             gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
             gh attestation verify "oci://${ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
-            docker pull --platform linux/amd64 "$ref"
-            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
-            test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
-            name="forgejo-independent-${variant}"
+            child="$(jq -er --arg arch "$ARCH" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest' "${variant}-manifest.json")"
+            record_child="$(jq -er --arg variant "$variant" --arg platform "$PLATFORM" '.images[$variant].platformDigests[$platform] // empty' published/release-record.json || true)"
+            test -z "$record_child" || test "$record_child" = "$child"
+            child_ref="ghcr.io/creator-signal/forgejo@${child}"
+            cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity "$COSIGN_IDENTITY" "$child_ref"
+            gh attestation verify "oci://${child_ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://slsa.dev/provenance/v1
+            gh attestation verify "oci://${child_ref}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW" --predicate-type https://spdx.dev/Document/v2.3
+            docker pull --platform "$PLATFORM" "$child_ref"
+            test "$(docker image inspect "$child_ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
+            test "$(docker image inspect "$child_ref" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+            name="forgejo-independent-${variant}-${ARCH}"
             docker run --detach --name "$name" --publish 127.0.0.1::3000 \
               --env FORGEJO__database__DB_TYPE=sqlite3 --env FORGEJO__server__DISABLE_SSH=true \
-              --env FORGEJO__security__INSTALL_LOCK=true "$ref"
+              --env FORGEJO__security__INSTALL_LOCK=true "$child_ref"
             port="$(docker port "$name" 3000/tcp | sed -n 's/.*://p')"
             ready=false
             for _ in $(seq 1 90); do
-              if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "${variant}-health.json"; then ready=true; break; fi
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/api/healthz" > "${variant}-${ARCH}-health.json"; then ready=true; break; fi
               sleep 2
             done
             test "$ready" = true
-            jq -e '.status == "pass"' "${variant}-health.json"
-            curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "${variant}-version.json"
-            jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "${variant}-version.json"
+            jq -e '.status == "pass"' "${variant}-${ARCH}-health.json"
+            curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "${variant}-${ARCH}-version.json"
+            jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "${variant}-${ARCH}-version.json"
             docker rm -f "$name"
           done
+      - name: Re-scan exact published rootful platform
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/creator-signal/forgejo:${{ env.VERSION }}
+          version: v0.72.0
+          format: json
+          output: independent-scan-rootful-${{ matrix.arch }}.json
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Re-scan exact published rootless platform
+        if: ${{ matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/creator-signal/forgejo:${{ env.VERSION }}-rootless
+          version: v0.72.0
+          format: json
+          output: independent-scan-rootless-${{ matrix.arch }}.json
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Preserve independent platform evidence
+        if: ${{ always() && (matrix.arch != 'arm64' || needs.plan.outputs.arm64_enabled == 'true') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: forgejo-independent-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            *-manifest.json
+            *-${{ matrix.arch }}-health.json
+            *-${{ matrix.arch }}-version.json
+            independent-scan-*-${{ matrix.arch }}.json
+          if-no-files-found: warn
+          retention-days: 14
