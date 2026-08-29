@@ -63,6 +63,7 @@ jobs:
       - name: Verify exact source and committed patch identity
         env:
           SOURCE_REF: ${{ inputs.source_ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
           BASE_SOURCE_SHA: ${{ inputs.base_source_sha }}
           PATCH_SHA256: ${{ inputs.source_patch_sha256 }}
           DOCKERFILE: ${{ matrix.dockerfile }}
@@ -75,6 +76,9 @@ jobs:
           test "$(grep -Fc '@sha256:' "$DOCKERFILE")" -eq 3
           test "$(grep -Fxc 'RUN apk upgrade --no-cache' "$DOCKERFILE")" -eq 1
           git diff --exit-code
+          test -z "$(git tag --list "$RELEASE_TAG")"
+          git tag "$RELEASE_TAG" "$SOURCE_REF"
+          test "$(git describe --tags --exact-match HEAD)" = "$RELEASE_TAG"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build native candidate without publication

@@ -107,6 +107,7 @@ def main() -> int:
     require("setup-qemu" not in qualification.lower(), "native qualification must not use QEMU", errors)
     require(qualification.count("ubuntu-24.04-arm") == 2, "both ARM64 variants need real hosted ARM64", errors)
     require("sha256sum --check --strict" in qualification and "@sha256:" in qualification, "qualification source/base identity is not fail closed", errors)
+    require("git describe --tags --exact-match HEAD" in qualification, "qualification does not provide exact local semantic-tag context", errors)
     require(qualification.index("Run isolated native startup") < qualification.index("Enforce fixed HIGH and CRITICAL"), "startup must precede native scan", errors)
     require("severity: CRITICAL,HIGH" in qualification and 'exit-code: "1"' in qualification, "strict native vulnerability gate missing", errors)
     require("format: spdx-json" in qualification, "native SPDX SBOM missing", errors)
@@ -115,6 +116,7 @@ def main() -> int:
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)
     require("platforms: linux/amd64,linux/arm64" in publish, "publication is not exactly amd64 plus arm64", errors)
     require("Apply bounded Alpine security refresh" not in publish, "publication still mutates source after checkout", errors)
+    require("git describe --tags --exact-match HEAD" in publish, "publication does not preserve exact semantic-tag build context", errors)
     require("grep -Fc '@sha256:'" in publish and "RUN apk upgrade --no-cache" in publish, "publication does not validate committed source inputs", errors)
     require("provenance: mode=max" in publish and "sbom: true" in publish, "registry provenance/SBOM missing", errors)
 
