@@ -58,9 +58,17 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_ref }}
-          fetch-depth: 2
+          fetch-depth: 33
           persist-credentials: false
+          path: runtime-source
+      - name: Check out exact qualification controller separately from image context
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          path: qualification-control
       - name: Verify exact source and committed patch identity
+        working-directory: runtime-source
         env:
           SOURCE_REF: ${{ inputs.source_ref }}
           RELEASE_TAG: ${{ inputs.release_tag }}
@@ -69,10 +77,16 @@ jobs:
           DOCKERFILE: ${{ matrix.dockerfile }}
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_REF"
-          test "$(git rev-parse HEAD^)" = "$BASE_SOURCE_SHA"
+          if [ "$RELEASE_TAG" = v16.0.3-cs.2 ]; then
+            python3 ../qualification-control/scripts/creator-signal/release_control.py verify-source-checkout \
+              --tag "$RELEASE_TAG" --source-sha "$SOURCE_REF" \
+              --base-source-sha "$BASE_SOURCE_SHA" --patch-sha256 "$PATCH_SHA256"
+          else
+            test "$(git rev-parse HEAD^)" = "$BASE_SOURCE_SHA"
+          fi
           test -n "$PATCH_SHA256"
-          git diff --no-ext-diff --binary --abbrev=9 "$BASE_SOURCE_SHA" "$SOURCE_REF" -- Dockerfile Dockerfile.rootless > creator-signal-source.patch
-          echo "${PATCH_SHA256}  creator-signal-source.patch" | sha256sum --check --strict
+          git diff --no-ext-diff --binary --abbrev=9 "$BASE_SOURCE_SHA" "$SOURCE_REF" -- > ../creator-signal-source.patch
+          echo "${PATCH_SHA256}  ../creator-signal-source.patch" | sha256sum --check --strict
           test "$(grep -Fc '@sha256:' "$DOCKERFILE")" -eq 3
           test "$(grep -Fxc 'RUN apk upgrade --no-cache' "$DOCKERFILE")" -eq 1
           git diff --exit-code
@@ -84,8 +98,8 @@ jobs:
       - name: Build native candidate without publication
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
-          context: .
-          file: ${{ matrix.dockerfile }}
+          context: runtime-source
+          file: runtime-source/${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           load: true
           push: false
@@ -100,6 +114,76 @@ jobs:
           tags: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
           cache-from: type=gha,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}
           cache-to: type=gha,mode=min,scope=forgejo-${{ matrix.variant }}-${{ matrix.arch }}
+      - name: Build the same pinned native compiler stage for atomic runtime tests
+        if: ${{ inputs.release_tag == 'v16.0.3-cs.2' }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: runtime-source
+          file: runtime-source/${{ matrix.dockerfile }}
+          target: build-env
+          platforms: ${{ matrix.platform }}
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          build-args: |
+            RELEASE_VERSION=${{ inputs.release_version }}
+            GOPROXY=https://proxy.golang.org|direct
+          tags: creator-signal-forgejo-test:${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
+      - name: Verify generated Swagger and atomic runtime, migration, and task projection tests
+        if: ${{ inputs.release_tag == 'v16.0.3-cs.2' }}
+        timeout-minutes: 25
+        env:
+          TEST_IMAGE: creator-signal-forgejo-test:${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
+          TEST_CONTAINER: cs-pair-compiler-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
+          VARIANT: ${{ matrix.variant }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          image_id="$(docker image inspect "$TEST_IMAGE" --format '{{.Id}}')"
+          image_entrypoint="$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Entrypoint}}')"
+          test "$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Volumes}}')" = null
+          compiler_script='export TZ=UTC GITEA_ROOT="$PWD"
+          make swagger-check
+          make swagger-validate
+          go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/secret ./services/secrets ./services/actions
+          make generate-ini-sqlite
+          GITEA_CONF=tests/sqlite.ini go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/forgejo_migrations -run ActionSecretPair
+          make "test-sqlite#SecretPair"'
+          container_id=""
+          custody_admitted=false
+          custody() {
+            docker inspect "$TEST_CONTAINER" | jq -e --arg id "$container_id" --arg image "$image_id" --arg name "/$TEST_CONTAINER" --arg script "$compiler_script" --argjson entrypoint "$image_entrypoint" '
+              length == 1 and (.[0] | .Id == $id and .Image == $image and .Name == $name
+              and .Config.Labels["creator-signal.purpose"] == "creator-signal-fork-secret-pair-compiler"
+              and .Config.Entrypoint == $entrypoint and .Config.Cmd == ["timeout","-k","5","1200","sh","-ec",$script]
+              and .Mounts == [] and .HostConfig.Privileged == false and .HostConfig.NetworkMode == "default"
+              and ((.HostConfig.Binds // []) | length) == 0 and ((.HostConfig.VolumesFrom // []) | length) == 0
+              and ((.HostConfig.Devices // []) | length) == 0 and ((.HostConfig.DeviceRequests // []) | length) == 0
+              and ((.HostConfig.CapAdd // []) | length) == 0 and ((.HostConfig.PortBindings // {}) | length) == 0
+              and ((.HostConfig.SecurityOpt // []) | length) == 0
+              and .HostConfig.PidMode == "" and .HostConfig.UTSMode == "" and .HostConfig.IpcMode == "private")' >/dev/null
+          }
+          cleanup() {
+            if [ -n "$container_id" ]; then
+              test "$custody_admitted" = true || return 1
+              custody || return 1
+              docker rm --force --volumes "$TEST_CONTAINER" >/dev/null
+            fi
+          }
+          trap cleanup EXIT
+          container_id="$(docker create --name "$TEST_CONTAINER" \
+            --label creator-signal.purpose=creator-signal-fork-secret-pair-compiler \
+            "$image_id" timeout -k 5 1200 sh -ec "$compiler_script")"
+          custody
+          custody_admitted=true
+          docker start "$TEST_CONTAINER" >/dev/null
+          result="$(docker wait "$TEST_CONTAINER")"
+          docker logs "$TEST_CONTAINER" 2>&1 | head -c 1048577 > "secret-pair-tests-${VARIANT}-${ARCH}.log"
+          test "$(wc -c < "secret-pair-tests-${VARIANT}-${ARCH}.log")" -le 1048576
+          test "$result" = 0
+          test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.Running}}')" = false
+          test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.ExitCode}}')" = 0
+          custody
       - name: Run isolated native startup and readiness acceptance
         env:
           IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
@@ -124,6 +208,20 @@ jobs:
           jq -e '.status == "pass"' health.json
           curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > version.json
           jq -e --arg version "$VERSION" '.version | startswith($version + "+")' version.json
+      - name: Exercise operation replay and tombstones through the actual native image API
+        if: ${{ inputs.release_tag == 'v16.0.3-cs.2' }}
+        env:
+          IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
+          SOURCE_SHA: ${{ inputs.source_ref }}
+          CONTROLLER_SHA: ${{ github.workflow_sha }}
+          VARIANT: ${{ matrix.variant }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          test "$(git -C qualification-control rev-parse HEAD)" = "$CONTROLLER_SHA"
+          image_id="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          python3 qualification-control/scripts/creator-signal/qualify_secret_pair.py \
+            --image "$image_id" --source "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
+            --variant "$VARIANT" --arch "$ARCH" > "secret-pair-${VARIANT}-${ARCH}.json"
       - name: Enforce fixed HIGH and CRITICAL vulnerability policy natively
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -155,7 +253,7 @@ jobs:
           ARCH: ${{ matrix.arch }}
           RUNNER_NAME: ${{ runner.name }}
         run: |
-          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          source_tree="$(git -C runtime-source rev-parse 'HEAD^{tree}')"
           image_id="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
           jq -n \
             --arg tag "$RELEASE_TAG" --arg source "$SOURCE_SHA" --arg tree "$source_tree" \
@@ -172,6 +270,8 @@ jobs:
             health.json
             version.json
             creator-signal-source.patch
+            secret-pair-${{ matrix.variant }}-${{ matrix.arch }}.json
+            secret-pair-tests-${{ matrix.variant }}-${{ matrix.arch }}.log
             scan-${{ matrix.variant }}-${{ matrix.arch }}.json
             sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
             provenance-${{ matrix.variant }}-${{ matrix.arch }}.json

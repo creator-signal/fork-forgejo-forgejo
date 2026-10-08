@@ -232,6 +232,12 @@ jobs:
             jq -e '.status == "pass"' "published-${variant}-${ARCH}-health.json"
             curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "published-${variant}-${ARCH}-version.json"
             jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "published-${variant}-${ARCH}-version.json"
+            if [ "$TAG" = v16.0.3-cs.2 ]; then
+              image_id="$(docker image inspect "$ref" --format '{{.Id}}')"
+              python3 scripts/creator-signal/qualify_secret_pair.py --image "$image_id" \
+                --source "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" --variant "$variant" --arch "$ARCH" \
+                > "published-secret-pair-${variant}-${ARCH}.json"
+            fi
             docker rm -f "$name"
             echo "$child" > "published-${variant}-${ARCH}-digest.txt"
           done
@@ -498,6 +504,7 @@ jobs:
             cat image-records.md
           } > release-notes.md
           args=("$TAG" --verify-tag --title "Forgejo $TAG (Creator Signal images)" --notes-file release-notes.md release-record.json evidence/*.spdx.json evidence/provenance-*.json evidence/scan-*.json evidence/published-scan-*.json evidence/creator-signal-source.patch)
+          if [ "$TAG" = v16.0.3-cs.2 ]; then args+=(evidence/secret-pair-*.json evidence/published-secret-pair-*.json evidence/secret-pair-tests-*.log); fi
           if [ "$IS_PRERELEASE" = true ]; then args+=(--prerelease); fi
           gh release create "${args[@]}"
       - name: Move stable aliases only after completed release

@@ -1,0 +1,155 @@
+"""Contracts for the existing native-only image qualification helper."""
+import importlib.util
+import json
+import os
+from pathlib import Path
+import unittest
+from unittest.mock import Mock, patch
+
+
+spec = importlib.util.spec_from_file_location(
+    "qualify_secret_pair", Path(__file__).with_name("qualify_secret_pair.py")
+)
+native = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(native)
+
+
+class NativeQualificationContracts(unittest.TestCase):
+    def setUp(self):
+        native.DEADLINE = 100
+
+    def test_expired_command_never_starts_process(self):
+        with patch.object(native.time, "monotonic", return_value=101), patch.object(native.subprocess, "Popen") as start:
+            with self.assertRaises(RuntimeError):
+                native.command(["docker", "inspect", "owned"])
+            start.assert_not_called()
+
+    def test_command_cannot_inherit_release_credentials(self):
+        with patch.dict(os.environ, {"PATH": "/bin", "GH_TOKEN": "private", "ACTIONS_RUNTIME_TOKEN": "private"}, clear=True), \
+             patch.object(native.time, "monotonic", return_value=0), \
+             patch.object(native.subprocess, "Popen", side_effect=OSError("closed")) as start:
+            with self.assertRaises(OSError):
+                native.command(["docker", "inspect", "owned"])
+            self.assertEqual(start.call_args.kwargs["env"], {"PATH": "/bin"})
+            self.assertTrue(start.call_args.kwargs["start_new_session"])
+
+    def test_cleanup_custody_checks_original_id_image_and_labels(self):
+        observed = {"Name": "/owned", "Image": "sha256:" + "a" * 64, "Id": "b" * 64,
+                    "Config": {"Labels": {"creator-signal.purpose": native.PURPOSE,
+                                           "creator-signal.operation": "owned"}}}
+        with patch.object(native, "inspect", return_value=observed):
+            self.assertEqual(native.own_container("owned", observed["Image"], observed["Id"]), observed)
+            for identity, image, name in [("c" * 64, observed["Image"], "owned"),
+                                          (observed["Id"], "sha256:" + "c" * 64, "owned"),
+                                          (observed["Id"], observed["Image"], "foreign")]:
+                with self.assertRaises(RuntimeError):
+                    native.own_container(name, image, identity)
+            observed["Config"]["Labels"]["creator-signal.purpose"] = "foreign"
+            with self.assertRaises(RuntimeError):
+                native.own_container("owned", observed["Image"], observed["Id"])
+
+    def provider_response(self, blocks, status=200):
+        response = Mock(status=status)
+        response.read1.side_effect = blocks
+        connection = Mock()
+        connection.getresponse.return_value = response
+        return connection
+
+    def test_provider_fixed_loopback_status_and_private_value_denial(self):
+        provider = native.Provider(1234)
+        provider.token = "token-private"
+        provider.private_values = {b"synthetic-private"}
+        connection = self.provider_response([b'{"value":"synthetic-private"}', b""])
+        with patch.object(native.time, "monotonic", return_value=0), \
+             patch.object(native.http.client, "HTTPConnection", return_value=connection) as start:
+            with self.assertRaisesRegex(RuntimeError, "disclosure denied"):
+                provider.request("POST", "/api/v1/closed", {})
+            self.assertEqual(start.call_args.args, ("127.0.0.1", 1234))
+            connection.close.assert_called_once()
+
+    def test_provider_rejects_redirect_and_oversized_response(self):
+        for blocks, status in [([b"", b""], 302), ([b"x" * 16384] * 5, 200)]:
+            connection = self.provider_response(blocks, status)
+            with patch.object(native.time, "monotonic", return_value=0), \
+                 patch.object(native.http.client, "HTTPConnection", return_value=connection):
+                with self.assertRaises(RuntimeError):
+                    native.Provider(1234).request("GET", "/api/v1/closed")
+                connection.close.assert_called_once()
+
+    def test_provider_rejects_expired_budget_before_network(self):
+        with patch.object(native.time, "monotonic", return_value=101), \
+             patch.object(native.http.client, "HTTPConnection") as start:
+            with self.assertRaises(RuntimeError):
+                native.Provider(1234).request("GET", "/api/healthz")
+            start.assert_not_called()
+
+    def test_unknown_created_container_custody_prevents_cleanup(self):
+        image = "sha256:" + "a" * 64
+        image_info = [{"Id": image, "Architecture": "amd64", "Config": {"Volumes": {"/data": {}}, "Labels": {
+            "org.opencontainers.image.revision": "b" * 40}}}]
+        calls = []
+
+        def command(args):
+            calls.append(args)
+            if args[:3] == ["docker", "image", "inspect"]:
+                return json.dumps(image_info).encode()
+            if args[:3] == ["docker", "network", "create"]:
+                return ("c" * 64).encode()
+            raise RuntimeError("creation response lost")
+
+        with patch.object(native, "command", side_effect=command), \
+             patch.object(native, "own_network", return_value={"Containers": {}}), \
+             patch.object(native, "own_container", side_effect=RuntimeError("custody unknown")):
+            with self.assertRaisesRegex(RuntimeError, "custody unknown"):
+                native.acceptance(image, "b" * 40, "1", "rootful", "amd64")
+        self.assertFalse(any(args[:2] == ["docker", "rm"] for args in calls))
+        self.assertFalse(any(args[:3] == ["docker", "network", "rm"] for args in calls))
+
+    def test_container_resource_guard_denies_foreign_mounts_and_host_access(self):
+        value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
+                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
+                                     "Ports": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                 "Mounts": [{"Type": "volume", "Driver": "local", "Name": "a" * 64,
+                             "Destination": "/data", "Source": "/owned/anonymous", "RW": True}]}
+        expected = native.container_resources(value, "owned-net", "b" * 64, ["/data"])
+        self.assertEqual(expected["mounts"], value["Mounts"])
+        for key, bad in [("Privileged", True), ("Binds", ["/foreign:/data"]),
+                         ("VolumesFrom", ["foreign"]), ("CapAdd", ["SYS_ADMIN"]),
+                         ("NetworkMode", "host"), ("PidMode", "host"), ("IpcMode", "host")]:
+            altered = json.loads(json.dumps(value))
+            altered["HostConfig"][key] = bad
+            with self.assertRaises(RuntimeError):
+                native.container_resources(altered, "owned-net", "b" * 64, ["/data"])
+        value["Mounts"][0]["Type"] = "bind"
+        with self.assertRaises(RuntimeError):
+            native.container_resources(value, "owned-net", "b" * 64, ["/data"])
+
+    def test_container_resource_guard_rejects_nonloopback_or_extra_ports(self):
+        value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
+                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
+                                     "Ports": {"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "1234"}]}},
+                 "Mounts": []}
+        with self.assertRaises(RuntimeError):
+            native.container_resources(value, "owned-net", "b" * 64, [])
+        value["NetworkSettings"]["Ports"]["3000/tcp"][0]["HostIp"] = "127.0.0.1"
+        value["NetworkSettings"]["Ports"]["9999/tcp"] = [{"HostIp": "127.0.0.1", "HostPort": "9999"}]
+        with self.assertRaises(RuntimeError):
+            native.container_resources(value, "owned-net", "b" * 64, [])
+
+    def test_network_guard_requires_original_private_identity(self):
+        network = {"Name": "owned-net", "Id": "b" * 64, "Driver": "bridge", "Internal": True,
+                   "Labels": {"creator-signal.purpose": native.PURPOSE, "creator-signal.operation": "owned-net"}}
+        with patch.object(native, "command", return_value=json.dumps([network]).encode()):
+            self.assertEqual(native.own_network("owned-net", "b" * 64), network)
+            with self.assertRaises(RuntimeError):
+                native.own_network("owned-net", "c" * 64)
+        network["Internal"] = False
+        with patch.object(native, "command", return_value=json.dumps([network]).encode()):
+            with self.assertRaises(RuntimeError):
+                native.own_network("owned-net", "b" * 64)
+
+
+if __name__ == "__main__":
+    unittest.main()

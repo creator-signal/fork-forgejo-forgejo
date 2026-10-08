@@ -113,3 +113,92 @@ gh workflow run forgejo-release.yml --ref creator-signal/automation \
 Never delete or replace an existing tag, manifest, attestation, or Release to
 make a recovery pass. Consumers select the exact manifest digest from
 `release-record.json`; no repository Release authorizes an environment deploy.
+
+## Atomic Actions pair extension (Issue #7)
+
+The `v16.0.3-cs.2` extension uses this same fork release lane. The historical
+upstream mirror, `v16.0.3`, and `v16.0.3-cs.1` remain immutable. Its runtime
+owner uses one Issue #7 branch rooted at the exact `v16.0.3` upstream commit,
+retaining the reviewed cs.1 Dockerfile bytes. The automation owner retains that
+runtime history through the existing no-content merge pattern. One PR into
+`creator-signal/automation` reviews both histories. Policy pins the complete
+ordered linear runtime commit list, source tree, all changed paths, and the raw
+upstream-to-head patch hash. The first runtime commit has only the upstream
+parent; every correction has only its preceding reviewed runtime parent.
+Commit objects are admitted by size before reading, with at most 32 commits,
+64 KiB per object, and 15 seconds per read. No hidden commits or merge parents
+are admitted. The native checkout verification is a local object check;
+the existing parent controller separately authenticates upstream/tag authority.
+
+The repository-admin, Actions-write operation is
+`POST /repos/{owner}/{repo}/actions/secret-pair-operations/{operationId}`.
+Its closed `creator-signal.actions-secret-pair-operation/v1` body contains
+`purpose: vm-artifact-publisher`, the matching lowercase 64-hex operation ID,
+the original lowercase 64-hex `ownershipId`, `transactionId`, and `nonce` in
+`binding`, and exactly the two fixed entries in `secrets`:
+`ZOT_VM_ARTIFACT_USERNAME: vm-image-publisher` and the original intended
+`ZOT_VM_ARTIFACT_PASSWORD` matching `cs-vm-artifact-` plus 43 base64url characters.
+The provider derives the original numeric repository ID from authentication.
+It does not accept a repository ID, caller-selected namespace, secret digest,
+or additional body field. Duplicate JSON fields are malformed.
+
+The database transaction creates both encrypted secret rows and their retained
+operation together. A fresh operation returns 201. An identical replay returns
+200 only after rereading the actual original rows and intended material; it
+does not update them. Both replies have the exact closed result
+`creator-signal.actions-secret-pair-operation-result/v1` with `operationId`,
+`binding`, `state: Applied`, and the boolean `replayed`. Foreign names,
+mismatched binding/material, revoked operations, or inconsistent retained rows
+return generic 409 without private values or secret-derived hashes. Malformed
+requests return 400. Actions disabled denies the operation and task projection
+before database effects. HTTP success is provider evidence only: Normal remains
+`ActionsPending` until independent qualified whole-pair Factory readback.
+
+Central model guards protect both existing names and insert/rename destinations
+across API and UI paths. Legacy mutations of either reserved name conflict;
+they cannot create, update, rotate, or delete the managed pair. Unrelated secrets
+retain their existing behavior. Task materialization admits the pair together;
+workflow-call transport uses `secrets: inherit`. Explicit reserved destinations,
+reserved source AST references, and dynamic/unsupported access capable of
+reading the pair deny before exposure. Repository deletion revokes operations
+in the same transaction and retains terminal tombstones under the original
+numeric repository ID. Recreating the same slug cannot resurrect an operation.
+
+The existing four native rootful/rootless AMD64/ARM64 cells own runtime model,
+service, migration, and task-projection tests, generated Swagger byte comparison,
+and real image API acceptance. `scripts/creator-signal/qualify_secret_pair.py`
+is a helper of those cells and the existing published-platform pull-back and
+independent verification jobs. It takes only the exact observed image ID,
+Source SHA, native run ID, variant, and architecture. It creates synthetic
+SQLite repositories in labeled isolated containers on owned internal networks,
+publishes only random loopback ports, and inherits no release token. It checks atomic creation,
+concurrent no-write replay, conflicts, closed JSON, legacy destination denial,
+unrelated secrets, restart, repository tombstones, and Actions-disabled denial.
+The runtime tests separately cover fault atomicity and actual task projection.
+Each of the four cells also closes, copies, and reopens actual file SQLite
+fixtures before creation, after committed creation, and after terminal
+revocation. Private assertions compare exact database bytes, encrypted material,
+and row identities, then exercise the real task projection with Actions disabled.
+These fixtures prove inactive restore only; no database bytes or private hashes
+are uploaded, and original-provider/history recovery and re-enabling stay unproved.
+The helper has a 600-second monotonic budget, CLI command bounds of 30 seconds
+and 64 KiB, and HTTP read bounds of 15 seconds and 64 KiB. It emits bounded
+identity/check metadata without private material. Cleanup rechecks the original
+container ID, immutable image, labels, isolation settings, and original anonymous
+volume inventory before removing only its container and anonymous volumes. The
+original internal network is removed only after identity and no remaining
+consumers are proved; unknown custody is retained and fails qualification.
+No new job, workflow, provider dispatcher, or publication credential is added.
+
+A restored database is inactive and quarantined with Actions disabled. Its
+operation rows and tombstones alone cannot establish antirollback freshness.
+Reactivation requires the separately governed recovery boundary to fence the
+former writer and independently join original provider operation custody and
+Normal signed history. Missing proof retains quarantine; it never remints an
+operation, replays a blind PUT, restores an old binary capable of bypassing the
+guards, or claims automatic recovery. The Sales Pulse recovery owner supplies
+that admission; the fork does not invent an external ledger or rotation route.
+
+Fork PR/native qualification, signed immutable release publication, Sales Pulse
+Source adoption of its exact digest, and live activation are separate gates.
+This Source extension does not itself publish a release or deploy a provider.

@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Run release-control tests
-        run: python3 -m unittest scripts/creator-signal/test_release_control.py
+        run: python3 -m unittest scripts/creator-signal/test_release_control.py scripts/creator-signal/test_qualify_secret_pair.py
       - name: Enforce workflow and supply-chain contracts
         run: python3 scripts/creator-signal/check_workflow_contract.py
       - name: Exercise live upstream synchronization dry-run
@@ -72,14 +72,14 @@ jobs:
           annotations: false
 
   downstream-release-qualification:
-    name: Downstream v16.0.3-cs.1 native qualification
+    name: Downstream v16.0.3-cs.2 native qualification
     needs: [contracts, security]
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: ea71be6eb248b928ee5d446ed441bf78d8dd42ee
-      release_tag: v16.0.3-cs.1
-      release_version: 16.0.3-cs.1
+      source_ref: 2de10ebfb2657935ad2970aa107a5b28ac60d246
+      release_tag: v16.0.3-cs.2
+      release_version: 16.0.3-cs.2
       base_source_sha: eccddb2d17c93b42b2c8995725e03e549ac9ec0c
-      source_patch_sha256: 2a1452f9cb0d69b63abc3327301928401d395a9af7a74e3e9b95920154ee8c4f
+      source_patch_sha256: b2bd444b1d3b333962cec2bc34af0b0591b7c18a7e11e01784bdeeb666028b65
     permissions:
       contents: read

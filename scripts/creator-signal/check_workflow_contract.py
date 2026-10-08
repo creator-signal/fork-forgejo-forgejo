@@ -91,14 +91,22 @@ def main() -> int:
     require("publish-downstream-tag" in control, "downstream source tag publication control missing", errors)
 
     validation = sources.get("automation-validation.yml", "")
+    runtime = POLICY.get("downstreamReleases", {}).get("v16.0.3-cs.2", {})
+    require(runtime.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1"
+            and runtime.get("baseSourceSha") == configured.get("baseSourceSha")
+            and runtime.get("sourceCommitChain", [])[-1:] == [runtime.get("sourceCommitSha")]
+            and runtime.get("baseImages") == configured.get("baseImages")
+            and runtime.get("platforms") == configured.get("platforms"),
+            "atomic pair runtime source closure drifted", errors)
     qualification = sources.get("forgejo-qualification.yml", "")
     publish = sources.get("forgejo-publish-variant.yml", "")
     release = sources.get("forgejo-release.yml", "")
     verify = sources.get("forgejo-release-verification.yml", "")
 
     require(
-        "source_ref: ea71be6eb248b928ee5d446ed441bf78d8dd42ee" in validation
-        and "release_version: 16.0.3-cs.1" in validation,
+        f"source_ref: {runtime.get('sourceCommitSha')}" in validation
+        and f"source_patch_sha256: {runtime.get('sourcePatchSha256')}" in validation
+        and "release_version: 16.0.3-cs.2" in validation,
         "automation validation is not bound to the committed downstream source",
         errors,
     )
@@ -112,6 +120,8 @@ def main() -> int:
     require("severity: CRITICAL,HIGH" in qualification and 'exit-code: "1"' in qualification, "strict native vulnerability gate missing", errors)
     require("format: spdx-json" in qualification, "native SPDX SBOM missing", errors)
     require("creator-signal.forgejo-native-qualification-provenance/v1" in qualification, "native build provenance missing", errors)
+    for token in ("verify-source-checkout", "make swagger-check", "make swagger-validate", "./models/secret ./services/secrets ./services/actions", "./models/forgejo_migrations", "test-sqlite#SecretPair", "qualify_secret_pair.py", "secret-pair-tests-"):
+        require(token in qualification, f"atomic pair native qualification missing {token}", errors)
 
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)
     require("platforms: linux/amd64,linux/arm64" in publish, "publication is not exactly amd64 plus arm64", errors)
