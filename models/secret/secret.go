@@ -63,6 +63,9 @@ func (err ErrSecretNotFound) Unwrap() error {
 
 // InsertEncryptedSecret Creates, encrypts, and validates a new secret with yet unencrypted data and insert into database
 func InsertEncryptedSecret(ctx context.Context, ownerID, repoID int64, name, data string) (*Secret, error) {
+	if IsManagedSecretName(name) {
+		return nil, ErrManagedSecret
+	}
 	if ownerID != 0 && repoID != 0 {
 		// It's trying to create a secret that belongs to a repository, but OwnerID has been set accidentally.
 		// Remove OwnerID to avoid confusion; it's not worth returning an error here.
@@ -163,47 +166,88 @@ func GetSecretByID(ctx context.Context, ownerID, repoID, id int64) (*Secret, err
 }
 
 func UpdateSecret(ctx context.Context, secret *Secret, columns ...string) error {
-	e := db.GetEngine(ctx)
-
 	if err := ValidateName(secret.Name); err != nil {
 		return err
 	}
 	secret.Name = strings.ToUpper(secret.Name)
 
-	var err error
-	if len(columns) == 0 {
-		_, err = e.ID(secret.ID).AllCols().Update(secret)
-	} else {
-		_, err = e.ID(secret.ID).Cols(columns...).Update(secret)
-	}
-
-	return err
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		current, exists, err := db.GetByID[Secret](ctx, secret.ID)
+		if err != nil {
+			return err
+		}
+		if !exists { return ErrSecretNotFound{} }
+		if IsManagedSecretName(current.Name) || IsManagedSecretName(secret.Name) {
+			return ErrManagedSecret
+		}
+		if len(columns) == 0 {
+			_, err = db.GetEngine(ctx).ID(secret.ID).AllCols().Update(secret)
+		} else {
+			_, err = db.GetEngine(ctx).ID(secret.ID).Cols(columns...).Update(secret)
+		}
+		return err
+	})
 }
 
 func FetchActionSecrets(ctx context.Context, ownerID, repoID int64) (map[string]string, error) {
 	secrets := map[string]string{}
-
-	ownerSecrets, err := db.Find[Secret](ctx, FindSecretsOptions{OwnerID: ownerID})
-	if err != nil {
-		log.Error("find secrets of owner %v: %v", ownerID, err)
-		return nil, err
-	}
-	repoSecrets, err := db.Find[Secret](ctx, FindSecretsOptions{RepoID: repoID})
-	if err != nil {
-		log.Error("find secrets of repo %v: %v", repoID, err)
-		return nil, err
-	}
-
-	for _, secret := range append(ownerSecrets, repoSecrets...) {
-		decryptedData, err := secret.GetDecryptedData()
+	err := db.WithTx(ctx, func(ctx context.Context) error {
+		repository, err := lockPairRepository(ctx, repoID)
 		if err != nil {
-			log.Error("%v", err)
-			return nil, err
+			return err
 		}
-		secrets[secret.Name] = decryptedData
+		ownerID = repository.OwnerID
+		// One snapshot, with owner values applied before repository overrides.
+		var rows []*Secret
+		if err := db.GetEngine(ctx).Where(builder.Or(
+			builder.Eq{"owner_id": ownerID, "repo_id": 0},
+			builder.Eq{"owner_id": 0, "repo_id": repoID})).Asc("repo_id", "id").Find(&rows); err != nil { return err }
+		pair := managedRows(rows)
+		operation, exists, err := db.Get[ActionSecretPairOperation](ctx, builder.Eq{"repo_id": repoID, "purpose": PairPurpose})
+		if err != nil {
+			return ErrPairConflict
+		}
+		if len(pair) != 0 || exists {
+			if !pairActionsAvailable(ctx, repository) {
+				return ErrPairDisabled
+			}
+			if !exists || verifyPairRows(operation, pair) != nil {
+				return ErrPairConflict
+			}
+		}
+		for _, row := range rows {
+			value, err := row.GetDecryptedData()
+			if err != nil {
+				if IsManagedSecretName(row.Name) {
+					return ErrPairConflict
+				}
+				log.Error("%v", err)
+				return err
+			}
+			secrets[row.Name] = value
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
 	return secrets, nil
+}
+
+// DeleteSecret refuses managed rows based on their actual database identity.
+func DeleteSecret(ctx context.Context, id int64) error {
+	return db.WithTx(ctx, func(ctx context.Context) error {
+		current, exists, err := db.GetByID[Secret](ctx, id)
+		if err != nil {
+			return err
+		}
+		if !exists { return ErrSecretNotFound{} }
+		if IsManagedSecretName(current.Name) {
+			return ErrManagedSecret
+		}
+		_, err = db.DeleteByID[Secret](ctx, id)
+		return err
+	})
 }
 
 func ValidateName(name string) error {

@@ -108,7 +108,9 @@ func (Action) CreateOrUpdateSecret(ctx *context.APIContext) {
 
 	_, created, err := secrets_service.CreateOrUpdateSecret(ctx, ctx.Org().Organization.ID, 0, ctx.Params("secretname"), opt.Data)
 	if err != nil {
-		if errors.Is(err, util.ErrInvalidArgument) {
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			ctx.Error(http.StatusConflict, "CreateOrUpdateSecret", secret_model.ErrManagedSecret)
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "CreateOrUpdateSecret", err)
 		} else if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "CreateOrUpdateSecret", err)
@@ -155,7 +157,9 @@ func (Action) DeleteSecret(ctx *context.APIContext) {
 
 	err := secrets_service.DeleteSecretByName(ctx, ctx.Org().Organization.ID, 0, ctx.Params("secretname"))
 	if err != nil {
-		if errors.Is(err, util.ErrInvalidArgument) {
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			ctx.Error(http.StatusConflict, "DeleteSecret", secret_model.ErrManagedSecret)
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "DeleteSecret", err)
 		} else if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "DeleteSecret", err)

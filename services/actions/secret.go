@@ -11,19 +11,27 @@ import (
 	actions_model "forgejo.org/models/actions"
 	secret_model "forgejo.org/models/secret"
 	actions_module "forgejo.org/modules/actions"
+	"forgejo.org/modules/setting"
 
 	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v12/act/model"
 )
 
 func getSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[string]string, error) {
 	secrets, err := getSecretsOfJob(ctx, task.Job)
+	if err != nil {
+		return nil, err
+	}
 	secrets["GITHUB_TOKEN"] = task.Token
 	secrets["GITEA_TOKEN"] = task.Token
 	secrets["FORGEJO_TOKEN"] = task.Token
-	return secrets, err
+	return secrets, nil
 }
 
 func getSecretsOfJob(ctx context.Context, job *actions_model.ActionRunJob) (map[string]string, error) {
+	if !setting.Actions.Enabled {
+		return nil, secret_model.ErrPairDisabled
+	}
 	isInnerWorkflowCall, err := job.IsWorkflowCallInnerJob()
 	if err != nil {
 		return nil, err
@@ -32,6 +40,9 @@ func getSecretsOfJob(ctx context.Context, job *actions_model.ActionRunJob) (map[
 	err = job.LoadRun(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failure to load job run: %w", err)
+	}
+	if err := job.Run.LoadRepo(ctx); err != nil {
+		return nil, err
 	}
 
 	if isInnerWorkflowCall {
@@ -82,7 +93,13 @@ func getSecretsOfInnerWorkflowCall(ctx context.Context, job *actions_model.Actio
 	}
 	_, outerJob := outerWorkflowPayload.Job()
 	if outerJob.InheritSecrets() {
+		if err := secret_model.ValidateManagedSecretProjection(ctx, outerWorkflowCall.Run.Repo.OwnerID, outerWorkflowCall.Run.RepoID, outerSecrets); err != nil {
+			return nil, errors.New("failure to fetch secrets")
+		}
 		return outerSecrets, nil
+	}
+	if err := validatePairWorkflowCallMapping((&model.Job{RawSecrets: outerJob.RawSecrets}).Secrets(), outerSecrets); err != nil {
+		return nil, errors.New("failure to fetch secrets")
 	}
 
 	// Gather all the data that is needed to perform an expression evaluation of the parent job's secrets context:
@@ -128,6 +145,9 @@ func getSecretsOfInnerWorkflowCall(ctx context.Context, job *actions_model.Actio
 		JobOutputs: jobOutputs,
 		JobInputs:  inputs,
 	})
+	if err := secret_model.ValidateManagedSecretProjection(ctx, outerWorkflowCall.Run.Repo.OwnerID, outerWorkflowCall.Run.RepoID, jobSecrets); err != nil {
+		return nil, errors.New("failure to fetch secrets")
+	}
 
 	return jobSecrets, nil
 }

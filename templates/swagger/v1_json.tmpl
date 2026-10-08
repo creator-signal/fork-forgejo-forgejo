@@ -6574,6 +6574,72 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/secret-pair-operations/{operationId}": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Atomically create the operation-bound VM artifact Actions pair",
+        "operationId": "createSecretPairOperation",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "name": "operationId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ActionSecretPairRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Identical replay verified without writes",
+            "schema": {
+              "$ref": "#/definitions/ActionSecretPairResult"
+            }
+          },
+          "201": {
+            "description": "Operation and pair created in one transaction",
+            "schema": {
+              "$ref": "#/definitions/ActionSecretPairResult"
+            }
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "409": {
+            "$ref": "#/responses/error"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "produces": [
@@ -23335,6 +23401,91 @@
           "description": "Version is the self-reported version string of Forgejo Runner.",
           "type": "string",
           "x-go-name": "Version"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionSecretPairBinding": {
+      "type": "object",
+      "title": "ActionSecretPairBinding identifies the original private operation intent.",
+      "properties": {
+        "nonce": {
+          "type": "string",
+          "x-go-name": "Nonce"
+        },
+        "ownershipId": {
+          "type": "string",
+          "x-go-name": "OwnershipID"
+        },
+        "transactionId": {
+          "type": "string",
+          "x-go-name": "TransactionID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionSecretPairMaterial": {
+      "type": "object",
+      "title": "ActionSecretPairMaterial is the sole managed pair. Values are never returned.",
+      "properties": {
+        "ZOT_VM_ARTIFACT_PASSWORD": {
+          "type": "string",
+          "x-go-name": "Password"
+        },
+        "ZOT_VM_ARTIFACT_USERNAME": {
+          "type": "string",
+          "x-go-name": "Username"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionSecretPairRequest": {
+      "type": "object",
+      "title": "ActionSecretPairRequest is accepted only by the bounded, closed parser.",
+      "properties": {
+        "binding": {
+          "$ref": "#/definitions/ActionSecretPairBinding"
+        },
+        "operationId": {
+          "type": "string",
+          "x-go-name": "OperationID"
+        },
+        "purpose": {
+          "type": "string",
+          "x-go-name": "Purpose"
+        },
+        "schema": {
+          "type": "string",
+          "x-go-name": "Schema"
+        },
+        "secrets": {
+          "$ref": "#/definitions/ActionSecretPairMaterial"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionSecretPairResult": {
+      "type": "object",
+      "title": "ActionSecretPairResult contains no secret material or secret-derived hashes.",
+      "properties": {
+        "binding": {
+          "$ref": "#/definitions/ActionSecretPairBinding"
+        },
+        "operationId": {
+          "type": "string",
+          "x-go-name": "OperationID"
+        },
+        "replayed": {
+          "type": "boolean",
+          "x-go-name": "Replayed"
+        },
+        "schema": {
+          "type": "string",
+          "x-go-name": "Schema"
+        },
+        "state": {
+          "type": "string",
+          "x-go-name": "State"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"

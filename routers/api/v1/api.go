@@ -795,6 +795,7 @@ func Routes() *web.Route {
 					reqOwner(unit.TypeActions),
 					repo.NewAction(),
 				)
+				m.Post("/actions/secret-pair-operations/{operationId}", reqToken(), reqOwner(unit.TypeActions), repo.Action{}.CreateSecretPairOperation)
 				m.Group("/hooks/git", func() {
 					m.Combo("").Get(repo.ListGitHooks)
 					m.Group("/{id}", func() {

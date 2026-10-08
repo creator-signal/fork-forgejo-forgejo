@@ -9,6 +9,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	"forgejo.org/models/db"
+	secret_model "forgejo.org/models/secret"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
@@ -55,7 +56,9 @@ func CreateOrUpdateSecret(ctx *context.APIContext) {
 
 	_, created, err := secrets_service.CreateOrUpdateSecret(ctx, ctx.Doer().ID, 0, ctx.Params("secretname"), opt.Data)
 	if err != nil {
-		if errors.Is(err, util.ErrInvalidArgument) {
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			ctx.Error(http.StatusConflict, "CreateOrUpdateSecret", secret_model.ErrManagedSecret)
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "CreateOrUpdateSecret", err)
 		} else if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "CreateOrUpdateSecret", err)
@@ -101,7 +104,9 @@ func DeleteSecret(ctx *context.APIContext) {
 
 	err := secrets_service.DeleteSecretByName(ctx, ctx.Doer().ID, 0, ctx.Params("secretname"))
 	if err != nil {
-		if errors.Is(err, util.ErrInvalidArgument) {
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			ctx.Error(http.StatusConflict, "DeleteSecret", secret_model.ErrManagedSecret)
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "DeleteSecret", err)
 		} else if errors.Is(err, util.ErrNotExist) {
 			ctx.Error(http.StatusNotFound, "DeleteSecret", err)

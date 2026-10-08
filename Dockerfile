@@ -1,6 +1,6 @@
-FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/xx AS xx
+FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/xx@sha256:c64defb9ed5a91eacb37f96ccc3d4cd72521c4bd18d5442905b95e2226b0e707 AS xx
 
-FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.26-alpine3.23 AS build-env
+FROM --platform=$BUILDPLATFORM data.forgejo.org/oci/golang:1.26-alpine3.23@sha256:b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57 AS build-env
 
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY:-https://proxy.golang.org,direct}
@@ -51,7 +51,8 @@ RUN chmod 755 /tmp/local/usr/bin/entrypoint \
               /go/src/forgejo.org/environment-to-ini
 RUN chmod 644 /go/src/forgejo.org/contrib/autocompletion/bash_autocomplete
 
-FROM data.forgejo.org/oci/alpine:3.23
+FROM data.forgejo.org/oci/alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
+RUN apk upgrade --no-cache
 ARG RELEASE_VERSION
 LABEL maintainer="contact@forgejo.org" \
       org.opencontainers.image.authors="Forgejo" \
