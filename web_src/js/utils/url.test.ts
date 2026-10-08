@@ -1,4 +1,5 @@
-import {pathEscapeSegments, isUrl} from './url.js';
+import {expect, test} from 'vitest';
+import {pathEscapeSegments, isUrl} from './url.ts';
 
 test('pathEscapeSegments', () => {
   expect(pathEscapeSegments('a/b/c')).toEqual('a/b/c');

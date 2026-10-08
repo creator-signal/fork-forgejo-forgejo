@@ -2,7 +2,7 @@
 import {nextTick} from 'vue';
 import $ from 'jquery';
 import {SvgIcon} from '../svg.ts';
-import {pathEscapeSegments} from '../utils/url.js';
+import {pathEscapeSegments} from '../utils/url.ts';
 import {showErrorToast} from '../modules/toast.js';
 import {GET} from '../modules/fetch.js';
 

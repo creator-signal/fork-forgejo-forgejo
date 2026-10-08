@@ -1,7 +1,10 @@
-// Convert an absolute or relative URL to an absolute URL with the current origin. It only
-// processes absolute HTTP/HTTPS URLs or relative URLs like '/xxx' or '//host/xxx'.
-// NOTE: Keep this function in sync with clone_script.tmpl
-export function toOriginUrl(urlStr) {
+/**
+ * Convert an absolute or relative URL to an absolute URL with the current origin. It only
+ * processes absolute HTTP/HTTPS URLs or relative URLs like `/xxx` or `//host/xxx`.
+ *
+ * **Note**: Keep this function in sync with clone_script.tmpl
+ */
+export function toOriginUrl(urlStr: string): string {
   try {
     if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('/')) {
       const {origin, protocol, hostname, port} = window.location;

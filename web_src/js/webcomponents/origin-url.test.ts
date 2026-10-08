@@ -1,4 +1,5 @@
-import {toOriginUrl} from './origin-url.js';
+import {expect, test} from 'vitest';
+import {toOriginUrl} from './origin-url.ts';
 
 test('toOriginUrl', () => {
   const oldLocation = window.location.href;

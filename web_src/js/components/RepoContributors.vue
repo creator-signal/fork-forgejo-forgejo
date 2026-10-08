@@ -23,7 +23,7 @@ import {chartJsColors} from '../utils/color.ts';
 import {sleep} from '../utils.ts';
 import 'chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm';
 import $ from 'jquery';
-import {pathEscapeSegments} from '../utils/url.js';
+import {pathEscapeSegments} from '../utils/url.ts';
 
 const customEventListener = {
   id: 'customEventListener',

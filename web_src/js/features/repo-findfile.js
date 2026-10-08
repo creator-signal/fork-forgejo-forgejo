@@ -1,6 +1,6 @@
 import {svg} from '../svg.ts';
 import {toggleElem} from '../utils/dom.js';
-import {pathEscapeSegments} from '../utils/url.js';
+import {pathEscapeSegments} from '../utils/url.ts';
 import {GET} from '../modules/fetch.js';
 
 const threshold = 50;
