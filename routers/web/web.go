@@ -55,6 +55,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/lfs"
+	service_message_service "forgejo.org/services/service_message"
 
 	_ "forgejo.org/modules/session" // to registers all internal adapters
 
@@ -245,6 +246,22 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 	}
 }
 
+func smMiddleware(ctx *context.Context) {
+	// TODO: If more ServiceMessage Types come up, this needs to be generalized
+	if ctx.IsSigned {
+		sm, _ := service_message_service.GetServiceMessage(ctx, service_message_service.SMTypeModal)
+		if sm != nil {
+			log.Debug("Got Service Message of type %s", sm.Type)
+			if sm.Text != "" && ctx.Doer.MustShowServiceMessage(sm.Type, sm.UpdatedUnix) {
+				log.Debug("Setting service message %s in context", sm.Type)
+				ctx.Data["ShowModalServiceMessage"] = true
+				ctx.Data["ModalServiceMessageTitle"] = sm.Title
+				ctx.Data["RenderedContent"] = templates.RenderMarkdownToHtml(ctx, sm.Text)
+			}
+		}
+	}
+}
+
 // verifyAuthWithOptions checks authentication according to options
 func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Context) {
 	crossOriginProtection := http.NewCrossOriginProtection()
@@ -413,8 +430,7 @@ func Routes() *web.Route {
 		},
 		gzipMid, sessioner, context.Contexter(), webAuth(buildAuthGroup()),
 		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
-		user.GetNotificationCount, repo.GetActiveStopwatch,
-		goGet)
+		user.GetNotificationCount, repo.GetActiveStopwatch, goGet, smMiddleware)
 	routes.Group("",
 		func() {
 			registerMixedRoutes(routes)
@@ -878,6 +894,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/forgot_password", auth.ForgotPasswdPost)
 		m.Post("/logout", auth.SignOut)
 		m.Get("/task/{task}", reqSignIn, user.TaskStatus)
+		m.Post("/confirm", reqSignIn, user.SetConfirm)
 		m.Get("/stopwatches", reqSignIn, user.GetStopwatches)
 		m.Get("/search_candidates", ignExploreSignIn, user.SearchCandidates)
 		m.Group("/oauth2", func() {
@@ -907,6 +924,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/test_mail", admin.SendTestMail)
 			m.Post("/test_cache", admin.TestCache)
 			m.Get("/settings", admin.ConfigSettings)
+		})
+
+		m.Group("/service_message", func() {
+			m.Get("", admin.GetServiceMessage)
+			m.Post("", web.Bind(forms.ServiceMessageForm{}), admin.CreateOrUpdateServiceMessage)
+			m.Post("/delete", admin.DeleteServiceMessage)
+			m.Post("/preview", web.Bind(forms.ServiceMessageForm{}), admin.PreviewServiceMessage)
+			m.Post("/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		})
 
 		m.Group("/monitor", func() {
