@@ -141,7 +141,9 @@ jobs:
         run: |
           image_id="$(docker image inspect "$TEST_IMAGE" --format '{{.Id}}')"
           image_entrypoint="$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Entrypoint}}')"
-          test "$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Volumes}}')" = null
+          echo 'compilerNativeObservation=ImageIdentityRead'
+          docker image inspect "$TEST_IMAGE" | jq -e 'length == 1 and (.[0].Config.Volumes == null or .[0].Config.Volumes == {})' >/dev/null
+          echo 'compilerNativeObservation=ImageVolumesEmpty'
           # Expand PWD only inside the admitted compiler container.
           # shellcheck disable=SC2016
           compiler_script='export TZ=UTC GITEA_ROOT="$PWD"
@@ -176,8 +178,10 @@ jobs:
           container_id="$(docker create --name "$TEST_CONTAINER" \
             --label creator-signal.purpose=creator-signal-fork-secret-pair-compiler \
             "$image_id" timeout -k 5 1200 sh -ec "$compiler_script")"
+          echo 'compilerNativeObservation=ContainerCreated'
           custody
           custody_admitted=true
+          echo 'compilerNativeObservation=ContainerCustodyObserved'
           docker start "$TEST_CONTAINER" >/dev/null
           result="$(docker wait "$TEST_CONTAINER")"
           docker logs "$TEST_CONTAINER" 2>&1 | head -c 1048577 > "secret-pair-tests-${VARIANT}-${ARCH}.log"
@@ -186,6 +190,7 @@ jobs:
           test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.Running}}')" = false
           test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.ExitCode}}')" = 0
           custody
+          echo 'compilerNativeObservation=NativeTestsCompleted'
       - name: Run isolated native startup and readiness acceptance
         env:
           IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
