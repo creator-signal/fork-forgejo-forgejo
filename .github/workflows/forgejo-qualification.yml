@@ -144,15 +144,32 @@ jobs:
           echo 'compilerNativeObservation=ImageIdentityRead'
           docker image inspect "$TEST_IMAGE" | jq -e 'length == 1 and (.[0].Config.Volumes == null or .[0].Config.Volumes == {})' >/dev/null
           echo 'compilerNativeObservation=ImageVolumesEmpty'
-          # Expand PWD only inside the admitted compiler container.
-          # shellcheck disable=SC2016
-          compiler_script='export TZ=UTC GITEA_ROOT="$PWD"
+          # Reserve the unprivileged test identity only inside the admitted compiler.
+          compiler_script="$(cat <<'COMPILER'
+          test "$(id -u)" = 0
+          test "$PWD" = /go/src/forgejo.org
+          test ! -e /tmp/creator-signal-compiler-home
+          test ! -L /tmp/creator-signal-compiler-home
+          addgroup -S -g 1000 forgejo
+          adduser -D -u 1000 -G forgejo -h /tmp/creator-signal-compiler-home -s /bin/sh forgejo
+          test "$(id -u forgejo)" = 1000
+          test "$(id -g forgejo)" = 1000
+          chmod 700 /tmp/creator-signal-compiler-home
+          chown -R 1000:1000 /go/src/forgejo.org
+          exec su -s /bin/sh forgejo -c '
+          set -eu
+          test "$(id -u)" = 1000
+          test "$(id -g)" = 1000
+          export HOME=/tmp/creator-signal-compiler-home TZ=UTC GITEA_ROOT="$PWD"
+          export GOPATH="$HOME/go" GOMODCACHE="$HOME/go/pkg/mod" GOCACHE="$HOME/.cache/go-build"
           make swagger-check
           make swagger-validate
           go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/secret ./services/secrets ./services/actions
           make generate-ini-sqlite
           GITEA_CONF=tests/sqlite.ini go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/forgejo_migrations -run ActionSecretPair
           make "test-sqlite#SecretPair"'
+          COMPILER
+          )"
           container_id=""
           custody_admitted=false
           custody() {

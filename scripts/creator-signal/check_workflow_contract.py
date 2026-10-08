@@ -125,6 +125,8 @@ def main() -> int:
     require("creator-signal.forgejo-native-qualification-provenance/v1" in qualification, "native build provenance missing", errors)
     for token in ("verify-source-checkout", "make swagger-check", "make swagger-validate", "./models/secret ./services/secrets ./services/actions", "./models/forgejo_migrations", "test-sqlite#SecretPair", "qualify_secret_pair.py", "secret-pair-tests-"):
         require(token in qualification, f"atomic pair native qualification missing {token}", errors)
+    for token in ("addgroup -S -g 1000 forgejo", "adduser -D -u 1000 -G forgejo", "chown -R 1000:1000 /go/src/forgejo.org", "exec su -s /bin/sh forgejo -c", 'test "$(id -u)" = 1000', 'test "$(id -g)" = 1000', 'GOMODCACHE="$HOME/go/pkg/mod"', 'GOCACHE="$HOME/.cache/go-build"'):
+        require(token in qualification, f"atomic compiler unprivileged execution missing {token}", errors)
 
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)
     require("platforms: linux/amd64,linux/arm64" in publish, "publication is not exactly amd64 plus arm64", errors)

@@ -208,6 +208,15 @@ operation, replays a blind PUT, restores an old binary capable of bypassing the
 guards, or claims automatic recovery. The Sales Pulse recovery owner supplies
 that admission; the fork does not invent an external ledger or rotation route.
 
+The admitted disposable compiler container creates a fixed `forgejo` UID/GID
+1000; existing account, group, or private-home collisions deny. It hands only
+its image checkout to that identity and executes the unchanged tests through
+`su` after checking the actual UID and GID. Its new private home and Go caches
+are confined to the container; the original image module cache stays untouched.
+The existing 20-minute timeout includes setup and tests, and original custody
+and cleanup checks remain required. Forgejo's production root-user guard stays
+enabled; no unsafe root configuration or additional privilege is used.
+
 Fork PR/native qualification, signed immutable release publication, Sales Pulse
 Source adoption of its exact digest, and live activation are separate gates.
 This Source extension does not itself publish a release or deploy a provider.
