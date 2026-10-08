@@ -32,7 +32,11 @@ func CreateSecretPost(ctx *context.Context, ownerID, repoID int64, redirectURL s
 	normalizedData := util.ReserveLineBreakForTextarea(form.Data)
 	secret, err := secret_model.InsertEncryptedSecret(ctx, ownerID, repoID, form.Name, normalizedData)
 	if err != nil {
-		log.Error("InsertEncryptedSecret failed: %v", err)
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			log.Warn("Managed Actions secret mutation denied")
+		} else {
+			log.Error("InsertEncryptedSecret failed: %v", err)
+		}
 		ctx.JSONError(ctx.Tr("secrets.creation.failed"))
 		return
 	}
@@ -60,7 +64,11 @@ func EditSecretPost(ctx *context.Context, ownerID, repoID, id int64, redirectURL
 
 	err = secret_model.UpdateSecret(ctx, secret)
 	if err != nil {
-		log.Error("UpdateSecret failed: %v", err)
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			log.Warn("Managed Actions secret mutation denied")
+		} else {
+			log.Error("UpdateSecret failed: %v", err)
+		}
 		ctx.JSONError(ctx.Tr("actions.secrets.mutation.failure_message", secret.Name))
 		return
 	}
@@ -72,7 +80,11 @@ func EditSecretPost(ctx *context.Context, ownerID, repoID, id int64, redirectURL
 func DeleteSecretPost(ctx *context.Context, ownerID, repoID, id int64, redirectURL string) {
 	err := secrets_service.DeleteSecretByID(ctx, ownerID, repoID, id)
 	if err != nil {
-		log.Error("DeleteSecretByID(%d) failed: %v", id, err)
+		if errors.Is(err, secret_model.ErrManagedSecret) {
+			log.Warn("Managed Actions secret mutation denied")
+		} else {
+			log.Error("DeleteSecretByID(%d) failed: %v", id, err)
+		}
 		ctx.JSONError(ctx.Tr("secrets.deletion.failed"))
 		return
 	}

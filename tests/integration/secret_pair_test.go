@@ -98,7 +98,7 @@ func TestSecretPairAPIAndUI(t *testing.T) {
 func TestSecretPairRepositoryDeletionAndSlugReuse(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	repository, err := repo_service.CreateRepository(t.Context(), owner, owner, repo_service.CreateRepoOptions{Name:"secret-pair-delete", AutoInit:true})
+	repository, err := repo_service.CreateRepository(t.Context(), owner, owner, repo_service.CreateRepoOptions{Name:"secret-pair-delete", AutoInit:true, Readme:"Default"})
 	require.NoError(t, err)
 	require.NoError(t, repo_service.UpdateRepositoryUnits(t.Context(), repository, []repo_model.RepoUnit{{RepoID:repository.ID, Type:unit.TypeActions}}, nil))
 	input := integrationPairRequest()
@@ -109,7 +109,7 @@ func TestSecretPairRepositoryDeletionAndSlugReuse(t *testing.T) {
 	assert.Equal(t, secret_model.PairRevoked, operation.State)
 	assert.Equal(t, repository.ID, operation.RepoID)
 	unittest.AssertCount(t, &secret_model.Secret{RepoID:repository.ID}, 0)
-	recreated, err := repo_service.CreateRepository(t.Context(), owner, owner, repo_service.CreateRepoOptions{Name:repository.Name, AutoInit:true})
+	recreated, err := repo_service.CreateRepository(t.Context(), owner, owner, repo_service.CreateRepoOptions{Name:repository.Name, AutoInit:true, Readme:"Default"})
 	require.NoError(t, err)
 	require.NotEqual(t, repository.ID, recreated.ID)
 	require.NoError(t, repo_service.UpdateRepositoryUnits(t.Context(), recreated, []repo_model.RepoUnit{{RepoID:recreated.ID, Type:unit.TypeActions}}, nil))
