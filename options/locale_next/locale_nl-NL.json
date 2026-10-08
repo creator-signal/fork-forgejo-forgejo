@@ -221,7 +221,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Tabel hook_task opschonen",
 	"admin.dashboard.sync_external_users": "Externe gebruikersgegevens synchroniseren",
 	"admin.dashboard.reinit_missing_repos": "Herinitialiseer alle ontbrekende Git repositories waarvoor records bestaan",
-	"admin.dashboard.resync_all_hooks": "Git hooks van alle repositories opnieuw synchroniseren (pre-receive, update en, post-receive hooks van alle repositories, proc-receive, ...)",
 	"admin.dashboard.resync_all_sshprincipals": "Update het \".ssh/authorized_principals\" bestand met Forgejo SSH verantwoordelijken.",
 	"admin.dashboard.resync_all_sshkeys": "Werk de \".ssh/authorized_keys\" bestand bij met Forgejo SSH sleutels.",
 	"admin.dashboard.git_gc_repos": "Voer garbage collectie uit voor alle repositories",

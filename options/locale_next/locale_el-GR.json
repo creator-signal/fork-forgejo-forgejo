@@ -221,7 +221,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Εκκαθάριση πίνακα hook_task",
 	"admin.dashboard.sync_external_users": "Συγχρονισμός δεδομένων εξωτερικών χρηστών",
 	"admin.dashboard.reinit_missing_repos": "Επανεκκινήστε όλα τα αποθετήρια Git που λείπουν και για τα οποία υπάρχουν εγγραφές",
-	"admin.dashboard.resync_all_hooks": "Επανασυγχρονισμός των Git hook όλων των αποθετηρίων (pre-receive, update, post-receive, proc-receive, …)",
 	"admin.dashboard.resync_all_sshprincipals": "Ενημέρωση του αρχείου «.ssh/authorized_principals» με τις αρχές SSH του Forgejo.",
 	"admin.dashboard.resync_all_sshkeys": "Ενημέρωση του αρχείου «.ssh/authorized_keys» με τα κλειδιά SSH του Forgejo.",
 	"admin.dashboard.git_gc_repos": "Garbage collect όλων των αποθετηρίων",

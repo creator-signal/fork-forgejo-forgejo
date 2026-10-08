@@ -212,7 +212,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Netejar la taula hook_task",
 	"admin.dashboard.sync_external_users": "Sincronitzar dades d'usuari externes",
 	"admin.dashboard.reinit_missing_repos": "Reinicialitza tots els repositoris Git que falten i que tenen registres",
-	"admin.dashboard.resync_all_hooks": "Resincronitzar els ganxos Git de tots els repositoris (pre-receive, update, post-receive, proc-receive, …)",
 	"admin.dashboard.resync_all_sshprincipals": "Actualitzar el fitxer \".ssh/authorized_principals\" amb els principals SSH de Forgejo.",
 	"admin.dashboard.resync_all_sshkeys": "Actualitzar el fitxer \".ssh/authorized_keys\" amb les claus SSH de Forgejo.",
 	"admin.dashboard.git_gc_repos": "Recull la brossa de tots els repositoris",

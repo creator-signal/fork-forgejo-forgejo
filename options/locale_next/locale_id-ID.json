@@ -212,7 +212,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Bersihkan tabel hook_task",
 	"admin.dashboard.sync_external_users": "Sinkronkan data pengguna eksternal",
 	"admin.dashboard.reinit_missing_repos": "Menginstal kembali semua repositori Git yang hilang dimana ada catatan",
-	"admin.dashboard.resync_all_hooks": "Sinkronkan ulang hook Git dari semua repositori (pre-receive, update, post-receive, proc-receive, …)",
 	"admin.dashboard.resync_all_sshprincipals": "Perbarui file \".ssh/authorized_principals\" dengan prinsipal SSH Forgejo.",
 	"admin.dashboard.resync_all_sshkeys": "Perbarui file \".ssh/authorized_keys\" dengan kunci SSH Forgejo.",
 	"admin.dashboard.git_gc_repos": "Lakukan pengumpulan sampah pada semua repositori",

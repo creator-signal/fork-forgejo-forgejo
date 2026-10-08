@@ -618,7 +618,6 @@
 	"admin.dashboard.git_gc_repos": "Összes tároló Git-szemétgyűjtése",
 	"admin.dashboard.resync_all_sshkeys": "A „.ssh/authorized_keys” fájl frissítése a Forgejo SSH-kulcsaival.",
 	"admin.dashboard.resync_all_sshprincipals": "A „.ssh/authorized_principals” fájl frissítése a Forgejo SSH-identitásaival.",
-	"admin.dashboard.resync_all_hooks": "Az összes tároló pre-receive, update és post-receive hookjának újraszinkronizálása",
 	"admin.dashboard.cleanup_hook_task_table": "A hook_task tábla takarítása",
 	"admin.dashboard.cleanup_packages": "Lejárt csomagok takarítása",
 	"admin.dashboard.cleanup_actions": "A műveletek lejárt naplóinak és műtermékeinek takarítása",

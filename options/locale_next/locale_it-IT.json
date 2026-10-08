@@ -224,7 +224,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Pulisci tabella hook_task",
 	"admin.dashboard.sync_external_users": "Sincronizza dati utente esterno",
 	"admin.dashboard.reinit_missing_repos": "Reinizializza tutti i repository Git mancanti per i quali esistono cambiamenti registrati esistenti",
-	"admin.dashboard.resync_all_hooks": "Sincronizza nuovamente gli hook di pre-ricezione, di aggiornamento e di post-ricezione di tutti i progetti",
 	"admin.dashboard.resync_all_sshprincipals": "Aggiorna il file \".ssh/authorized_keys\" con le chiavi principali SSH Forgejo.",
 	"admin.dashboard.resync_all_sshkeys": "Aggiornare il file \".ssh/authorized_keys\" con le chiavi SSH di Forgejo.",
 	"admin.dashboard.git_gc_repos": "Esegui la garbage collection su tutti i repository",

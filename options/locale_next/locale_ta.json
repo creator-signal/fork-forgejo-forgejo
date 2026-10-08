@@ -221,7 +221,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "ஊக்_டாச்க் டேபிளை தூய்மை செய்யவும்",
 	"admin.dashboard.sync_external_users": "வெளிப்புற பயனர் தரவை ஒத்திசைக்கவும்",
 	"admin.dashboard.reinit_missing_repos": "பதிவுகள் இருக்கும் அனைத்து விடுபட்ட Git களஞ்சியங்களையும் மீண்டும் துவக்கவும்",
-	"admin.dashboard.resync_all_hooks": "அனைத்து களஞ்சியங்களின் அறிவிலி ஊக்குகளை மீண்டும் ஒத்திசை (முன் பெறுதல், புதுப்பித்தல், பெறப்பட்ட பின் பெறுதல், ...)",
 	"admin.dashboard.resync_all_sshprincipals": "Forgejo பாஓடு முதன்மைகளுடன் \".ssh/authorized_principals\" கோப்பைப் புதுப்பிக்கவும்.",
 	"admin.dashboard.resync_all_sshkeys": "Forgejo பாஓடு விசைகளுடன் \".ssh/authorized_keys\" கோப்பைப் புதுப்பிக்கவும்.",
 	"admin.dashboard.git_gc_repos": "குப்பைகள் அனைத்து களஞ்சியங்களையும் சேகரிக்கின்றன",

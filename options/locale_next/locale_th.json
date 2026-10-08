@@ -212,7 +212,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "ล้างตาราง hook_task",
 	"admin.dashboard.sync_external_users": "ซิงโครไนซ์ข้อมูลผู้ใช้ภายนอก",
 	"admin.dashboard.reinit_missing_repos": "เริ่มต้นที่เก็บ Git ที่หายไปทั้งหมดที่มีระเบียนอยู่ใหม่",
-	"admin.dashboard.resync_all_hooks": "ซิงโครไนซ์ฮุก pre-receive, update และ post-receive ของที่เก็บทั้งหมดอีกครั้ง",
 	"admin.dashboard.resync_all_sshprincipals": "อัปเดตไฟล์ \".ssh/authorized_principals\" ด้วย Principal SSH ของ Forgejo",
 	"admin.dashboard.resync_all_sshkeys": "อัปเดตไฟล์ \".ssh/authorized_keys\" ด้วยคีย์ SSH ของ Forgejo",
 	"admin.dashboard.git_gc_repos": "เก็บขยะที่เก็บทั้งหมด",

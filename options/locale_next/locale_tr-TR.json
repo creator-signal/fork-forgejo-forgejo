@@ -219,7 +219,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Hook_task tablosunu temizleme",
 	"admin.dashboard.sync_external_users": "Harici kullanıcı verisini senkronize et",
 	"admin.dashboard.reinit_missing_repos": "Kayıtları bulunanlar için tüm eksik Git depolarını yeniden başlat",
-	"admin.dashboard.resync_all_hooks": "Tüm depoların Git kancalarını yeniden eşitle/senkronize et (pre-receive, update, post-receive, proc-receive, …)",
 	"admin.dashboard.resync_all_sshprincipals": "'.ssh/authorized_principals' dosyasını Forgejo SSH sorumlularıyla güncelleyin.",
 	"admin.dashboard.resync_all_sshkeys": "'.ssh/authority_keys' dosyasını Forgejo SSH anahtarlarıyla güncelle.",
 	"admin.dashboard.git_gc_repos": "Depolardaki çöpleri topla",
