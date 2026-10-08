@@ -113,12 +113,20 @@ def container_resources(value: dict, network: str, network_id: str, destinations
         raise RuntimeError("native container network attachment denied")
     ports = value.get("NetworkSettings", {}).get("Ports", {})
     bindings = ports.get("3000/tcp")
-    if (not isinstance(bindings, list) or len(bindings) != 1
-            or bindings[0].get("HostIp") != "127.0.0.1"
-            or not re.fullmatch(r"[1-9][0-9]{0,4}", bindings[0].get("HostPort", ""))
-            or int(bindings[0]["HostPort"]) > 65535
-            or any(binding for port, binding in ports.items() if port != "3000/tcp")):
-        raise RuntimeError("native published port inventory denied")
+    if bindings is None:
+        raise RuntimeError("native published port bindings absent")
+    if not isinstance(bindings, list):
+        raise RuntimeError("native published port binding type denied")
+    if len(bindings) != 1:
+        raise RuntimeError("native published port binding cardinality denied")
+    if bindings[0].get("HostIp") != "127.0.0.1":
+        raise RuntimeError("native published port loopback denied")
+    if not re.fullmatch(r"[1-9][0-9]{0,4}", bindings[0].get("HostPort", "")):
+        raise RuntimeError("native published port syntax denied")
+    if int(bindings[0]["HostPort"]) > 65535:
+        raise RuntimeError("native published port range denied")
+    if any(binding for port, binding in ports.items() if port != "3000/tcp"):
+        raise RuntimeError("native extra published port denied")
     port_config = host.get("PortBindings", {})
     if (set(port_config) != {"3000/tcp"} or len(port_config["3000/tcp"]) != 1
             or port_config["3000/tcp"][0].get("HostIp") != "127.0.0.1"):
@@ -347,7 +355,13 @@ DENIAL_CODES = {
     "native network custody denied": "NetworkCustody",
     "native container isolation denied": "ContainerIsolation",
     "native container network attachment denied": "NetworkAttachment",
-    "native published port inventory denied": "PublishedPortInventory",
+    "native published port bindings absent": "PublishedPortBindingsAbsent",
+    "native published port binding type denied": "PublishedPortBindingType",
+    "native published port binding cardinality denied": "PublishedPortBindingCardinality",
+    "native published port loopback denied": "PublishedPortLoopback",
+    "native published port syntax denied": "PublishedPortSyntax",
+    "native published port range denied": "PublishedPortRange",
+    "native extra published port denied": "ExtraPublishedPort",
     "native declared loopback binding denied": "DeclaredLoopbackBinding",
     "native image volume inventory denied": "ImageVolumeInventory",
     "native anonymous volume custody denied": "AnonymousVolumeCustody",

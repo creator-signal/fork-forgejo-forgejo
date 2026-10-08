@@ -182,6 +182,38 @@ class NativeQualificationContracts(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             native.container_resources(value, "owned-net", "b" * 64, [])
 
+    def test_published_port_denials_are_closed_and_preserve_all_predicates(self):
+        value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
+                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
+                                     "Ports": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}],
+                                               "22/tcp": None}}, "Mounts": []}
+        self.assertEqual(native.container_resources(value, "owned-net", "b" * 64, [])["ports"],
+                         value["NetworkSettings"]["Ports"])
+        cases = [(None, "PublishedPortBindingsAbsent"), ({}, "PublishedPortBindingType"),
+                 ([], "PublishedPortBindingCardinality"),
+                 ([{"HostIp": "127.0.0.1", "HostPort": "1234"}] * 2, "PublishedPortBindingCardinality"),
+                 ([{"HostIp": "0.0.0.0", "HostPort": "1234"}], "PublishedPortLoopback"),
+                 ([{"HostIp": "127.0.0.1", "HostPort": "sensitive-private"}], "PublishedPortSyntax"),
+                 ([{"HostIp": "127.0.0.1", "HostPort": "65536"}], "PublishedPortRange")]
+        for bindings, code in cases:
+            altered = json.loads(json.dumps(value))
+            altered["NetworkSettings"]["Ports"]["3000/tcp"] = bindings
+            with self.assertRaises(RuntimeError) as denied:
+                native.container_resources(altered, "owned-net", "b" * 64, [])
+            self.assertEqual(native.denial_code(denied.exception), code)
+        for port in ["0", "01234", "-1", "655350", "1234\nsensitive-private"]:
+            altered = json.loads(json.dumps(value))
+            altered["NetworkSettings"]["Ports"]["3000/tcp"][0]["HostPort"] = port
+            with self.assertRaises(RuntimeError) as denied:
+                native.container_resources(altered, "owned-net", "b" * 64, [])
+            self.assertEqual(native.denial_code(denied.exception), "PublishedPortSyntax")
+        altered = json.loads(json.dumps(value))
+        altered["NetworkSettings"]["Ports"]["22/tcp"] = [{"HostIp": "127.0.0.1", "HostPort": "1234"}]
+        with self.assertRaises(RuntimeError) as denied:
+            native.container_resources(altered, "owned-net", "b" * 64, [])
+        self.assertEqual(native.denial_code(denied.exception), "ExtraPublishedPort")
+
     def test_network_guard_requires_original_private_identity(self):
         network = {"Name": "owned-net", "Id": "b" * 64, "Driver": "bridge", "Internal": True,
                    "Labels": {"creator-signal.purpose": native.PURPOSE, "creator-signal.operation": "owned-net"}}
