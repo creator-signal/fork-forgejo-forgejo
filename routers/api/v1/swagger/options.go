@@ -217,6 +217,11 @@ type swaggerParameterBodies struct {
 	CreateOrUpdateSecretOption api.CreateOrUpdateSecretOption
 
 	// in:body
+	ActionSecretPairRequest api.ActionSecretPairRequest
+	// in:body
+	ActionSecretPairResult api.ActionSecretPairResult
+
+	// in:body
 	CreateVariableOption api.CreateVariableOption
 
 	// in:body
