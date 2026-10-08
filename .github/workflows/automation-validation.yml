@@ -76,10 +76,10 @@ jobs:
     needs: [contracts, security]
     uses: ./.github/workflows/forgejo-qualification.yml
     with:
-      source_ref: ed43ae59ce84d605684f86aeb8dbcf35fcaa40ce
+      source_ref: ea24b68caa7ae6ade4bd7d51a983f8e7b60c1aa6
       release_tag: v16.0.3-cs.2
       release_version: 16.0.3-cs.2
       base_source_sha: eccddb2d17c93b42b2c8995725e03e549ac9ec0c
-      source_patch_sha256: f178ce5b294a75cd4a9c4de1d9b851c2b4419acdcb6c2a14180404e0d2194033
+      source_patch_sha256: 2fe7728f4ddc813aed5e0f1f68e152c276cc77ee063be6cfc93d8cd06cc1f987
     permissions:
       contents: read
