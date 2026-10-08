@@ -28,7 +28,7 @@ RUN xx-go --wrap
 #
 RUN cp /*-alpine-linux-musl*/lib/ld-musl-*.so.1 /lib || true
 
-RUN apk --no-cache add build-base git nodejs npm
+RUN apk --no-cache add build-base git git-lfs nodejs npm
 
 COPY . ${GOPATH}/src/forgejo.org
 WORKDIR ${GOPATH}/src/forgejo.org
