@@ -164,7 +164,7 @@ jobs:
                 command: (.Config.Cmd == ["timeout","-k","5","1200","sh","-ec",$script]),
                 emptyMounts: (.Mounts == []),
                 unprivileged: (.HostConfig.Privileged == false),
-                defaultNetwork: (.HostConfig.NetworkMode == "default"),
+                defaultNetwork: (.HostConfig.NetworkMode == "bridge"),
                 noBinds: (((.HostConfig.Binds // []) | length) == 0),
                 noVolumesFrom: (((.HostConfig.VolumesFrom // []) | length) == 0),
                 noDevices: (((.HostConfig.Devices // []) | length) == 0),
@@ -185,7 +185,7 @@ jobs:
             fi
           }
           trap cleanup EXIT
-          container_id="$(docker create --name "$TEST_CONTAINER" \
+          container_id="$(docker create --name "$TEST_CONTAINER" --network bridge \
             --label creator-signal.purpose=creator-signal-fork-secret-pair-compiler \
             "$image_id" timeout -k 5 1200 sh -ec "$compiler_script")"
           echo 'compilerNativeObservation=ContainerCreated'
