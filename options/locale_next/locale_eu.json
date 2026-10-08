@@ -584,7 +584,6 @@
 	"admin.dashboard.git_gc_repos": "Bildu zabor gisa biltegi guztiak",
 	"admin.dashboard.resync_all_sshkeys": "Eguneratu \".ssh/authorized_keys\" fitxategia Forgejoren SSH gakoekin.",
 	"admin.dashboard.resync_all_sshprincipals": "Eguneratu \".ssh/authorized_principals\" fitxategia Forgejoren SSH nagusiekin.",
-	"admin.dashboard.resync_all_hooks": "Berrsinkronizatu biltegi guztien Git hook-ak (pre-receive, update, post-receive, proc-receive, …)",
 	"admin.dashboard.reinit_missing_repos": "Berrasieratu erregistroak dituzten baina falta diren Git biltegi guztiak",
 	"admin.dashboard.sync_external_users": "Sinkronizatu kanpoko erabiltzaile-datuak",
 	"admin.dashboard.cleanup_hook_task_table": "Garbitu hook_task taula",

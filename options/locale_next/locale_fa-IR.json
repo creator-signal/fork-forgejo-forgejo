@@ -128,7 +128,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "جدول hook_task تمیز کردن",
 	"admin.dashboard.sync_external_users": "همگام سازی اطلاعات کاربر خارجی",
 	"admin.dashboard.reinit_missing_repos": "تمامی مخازنی که سوابقشان وجود دارند مجدداً گیت آنها مفقود شده است مجدداً مقدمات آنها فراهم شود",
-	"admin.dashboard.resync_all_hooks": "همگام سازی مجدد hook های pre-receive و update و post-receive برای تمامی مخازن.",
 	"admin.dashboard.resync_all_sshprincipals": "فایل '.ssh/authorized_principals' را با اصول Forgejo SSH به روز کنید.",
 	"admin.dashboard.resync_all_sshkeys": "فایل '.ssh/authorized_keys' را با کلیدهای Forgejo SSH به روز کنید.",
 	"admin.dashboard.git_gc_repos": "متراکم کردن تمامی زباله‌های مخازن",

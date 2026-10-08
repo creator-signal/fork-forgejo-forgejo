@@ -977,7 +977,6 @@
 	"admin.dashboard.repo_health_check": "Kjør helsesjekk på alle depoter",
 	"admin.dashboard.check_repo_stats": "Sjekk all depotstatistikk",
 	"admin.dashboard.resync_all_sshkeys": "Oppdater fila «.ssh/authorized_keys» med Forgejo SSH-nøkler.",
-	"admin.dashboard.resync_all_hooks": "Synkroniser Git-hooker for alle depoter på nytt (pre-receive, update, post-receive, proc-receive, …)",
 	"settings.specific_repo_access": "Depottilgang",
 	"settings.access_token.no_repositories_selected": "Ingen depoter er valgt.",
 	"settings.authorized_integration.desc": "Autoriserte integrasjoner lar Forgejo ta imot signerte JWT-er, validere claimene deres mot oppsatte regler og gi dem tilgang til Forgejos API-er.",

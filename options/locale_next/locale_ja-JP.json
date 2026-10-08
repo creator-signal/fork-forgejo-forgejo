@@ -212,7 +212,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "hook_taskテーブルのクリーンアップ",
 	"admin.dashboard.sync_external_users": "外部ユーザーデータの同期",
 	"admin.dashboard.reinit_missing_repos": "レコードが存在するが見当たらないすべてのGitリポジトリを再初期化する",
-	"admin.dashboard.resync_all_hooks": "すべてのリポジトリの Git フックを再同期します (pre-receive、update、post-receive、proc-receive、…)",
 	"admin.dashboard.resync_all_sshprincipals": "Forgejo SSH プリンシパルを使用して\".ssh/authorized_principals\"ファイルを更新します。",
 	"admin.dashboard.resync_all_sshkeys": "Forgejo SSH キーを使用して\".ssh/authorized_keys\"ファイルを更新します。",
 	"admin.dashboard.git_gc_repos": "すべてのリポジトリでガベージコレクションを実行",
@@ -1010,5 +1009,16 @@
 	"form.RunnerName": "名前",
 	"form.website.valid_url_schemes": "許可されているURLスキーム: %s",
 	"graphs.recent_commits.title": "過去1年間のコミット数",
-	"graphs.code_frequency.title": "{0} の履歴におけるコード頻度"
+	"graphs.code_frequency.title": "{0} の履歴におけるコード頻度",
+	"auth.signup.username.prefix.info": "この接頭辞（%s）はユーザー名の先頭に追加され、変更することはできません。",
+	"repo.issues.review.apply_suggestion": "提案を適用する",
+	"repo.issues.review.suggested_change_commit": "提案を適用する",
+	"repo.issues.review.add_suggestion_to_batch": "バッチに提案を追加する",
+	"repo.issues.review.remove_suggestion_from_batch": "バッチから削除",
+	"repo.issues.review.commit_batch_suggestions": "提案をコミットする",
+	"repo.issues.review.discard_batch_suggestions": "破棄",
+	"repo.issues.review.batch_only_on_files_tab": "バッチ処理の提案はファイルタブから行う必要があります",
+	"repo.issues.review.one_suggestion_per_comment": "レビューコメントには、最大で1つの提案を含めることができます",
+	"repo.rss.issue_feed_title": "イシュー %s: %s",
+	"repo.rss.pull_feed_title": "プルリクエスト %s: %s"
 }

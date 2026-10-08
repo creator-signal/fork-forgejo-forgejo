@@ -224,7 +224,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "Iztīrīt tabulu hook_task",
 	"admin.dashboard.sync_external_users": "Sinhronizēt ārējo lietotāju datus",
 	"admin.dashboard.reinit_missing_repos": "Atkārtoti sāknēt visas trūkstošās Git glabātavas, par kurām ir ieraksti",
-	"admin.dashboard.resync_all_hooks": "Atkārtoti sinhronizēt visu glabātavau Git aizķeres (`pre-receive`, `update`, `post-receive`, `proc-receive`, …)",
 	"admin.dashboard.resync_all_sshprincipals": "Atjaunināt datni \".ssh/authorized_principals\" ar Forgejo SSH identitātēm.",
 	"admin.dashboard.resync_all_sshkeys": "Atjaunināt datni \".ssh/authorized_keys\" ar Forgejo SSH atslēgām.",
 	"admin.dashboard.git_gc_repos": "Veikt drazu savākšanu visās glabātavās",
@@ -1013,9 +1012,9 @@
 	"funding.yaml_error.parse_url": "Nederīga atslēgas “%[1]s” URL vērtība: %[2]v",
 	"funding.yaml_error.bad_input": "Atslēgas “%[1]s” vērtība neatbilst paraugam /%[2]s/",
 	"funding.yaml_error.n_too_many_providers": {
-		"zero": "Pieļaujami līdz %[1]d naudas līdzekļu nodrošinātāji",
-		"one": "",
-		"other": ""
+		"zero": "Pieļaujami līdz %[1]d naudas līdzekļu nodrošinātāju",
+		"one": "Pieļaujams līdz %[1]d naudas līdzekļu nodrošinātājs",
+		"other": "Pieļaujami līdz %[1]d naudas līdzekļu nodrošinātāji"
 	},
 	"funding.yaml_error.duplicate_entry": "Atkārtots atslēgas “%[1]s” ieraksts: %[2]s",
 	"funding.yaml_error.unknown_provider": "Nezināms naudas līdzekļu nodrošinātājs: %[1]s",
@@ -1059,5 +1058,22 @@
 	"settings.authorized_integration.ui.generic": "Vispārīgs JWT",
 	"settings.authorized_integration.ui.forgejo_actions_local": "Forgejo darbības (vietējas)",
 	"settings.authorized_integration.none": "Pašreiz nav konfigurēta neviena pilnvarota iekļaušana.",
-	"mail.actions.job_failure_info_run": "Izpilde: <a href=\"%[2]s\">%[1]s</a>"
+	"mail.actions.job_failure_info_run": "Izpilde: <a href=\"%[2]s\">%[1]s</a>",
+	"auth.signup.username.prefix.info": "Šis priedēklis (%s) tiks pievienots pirms lietotājvārda, un to nevar nomainīt.",
+	"repo.issues.review.suggested_change_commit": "Pielietot ieteikumu",
+	"repo.issues.review.commit_batch_suggestions": "Iesūtīt ieteikumus",
+	"repo.issues.review.discard_batch_suggestions": "Atmest",
+	"repo.settings.event_action_do_not_use_label": "neizmantot",
+	"repo.settings.event_action_do_not_use_tooltip": "Neizmantot darbību izpildes notikumus! Tā vietā izmantot darbplūsmas izpildi.",
+	"repo.settings.event_header_workflow_job": "Darbplūsmas darba notikumi",
+	"repo.settings.event_workflow_job_blocked": "Aizturēts",
+	"repo.settings.event_workflow_job_blocked_desc": "Darbu nevar izpildīt, kamēr nosacījums nav piepildījies.",
+	"repo.settings.event_workflow_job_cancelled": "Atcelts",
+	"repo.settings.event_workflow_job_cancelled_desc": "Darbs tika atcelts.",
+	"repo.settings.event_workflow_job_failure": "Kļūme",
+	"repo.settings.event_workflow_job_failure_desc": "Darbā izpildē bija kļūda.",
+	"repo.settings.event_workflow_job_running": "Izpildās",
+	"repo.settings.event_workflow_job_running_desc": "Darbs tiek izpildīts.",
+	"repo.settings.event_workflow_job_skipped": "Izlaists",
+	"repo.settings.event_workflow_job_skipped_desc": "Darbs tika izlaists."
 }

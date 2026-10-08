@@ -212,7 +212,6 @@
 	"admin.dashboard.cleanup_hook_task_table": "清理 hook_task 資料表",
 	"admin.dashboard.sync_external_users": "同步外部使用者資料",
 	"admin.dashboard.reinit_missing_repos": "重新初始化所有記錄存在但遺失的 Git 儲存庫",
-	"admin.dashboard.resync_all_hooks": "重新同步所有儲存庫的 Git hooks（pre-receive、update、post-receive、proc-receive 等）",
 	"admin.dashboard.resync_all_sshprincipals": "使用 Forgejo 的 SSH 規則更新「.ssh/authorized_principals」檔案。",
 	"admin.dashboard.resync_all_sshkeys": "使用 Forgejo 的 SSH 金鑰更新「.ssh/authorized_keys」檔案。",
 	"admin.dashboard.git_gc_repos": "對所有儲存庫進行垃圾回收",
