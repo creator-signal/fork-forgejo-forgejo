@@ -142,6 +142,8 @@ jobs:
           image_id="$(docker image inspect "$TEST_IMAGE" --format '{{.Id}}')"
           image_entrypoint="$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Entrypoint}}')"
           test "$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Volumes}}')" = null
+          # Expand PWD only inside the admitted compiler container.
+          # shellcheck disable=SC2016
           compiler_script='export TZ=UTC GITEA_ROOT="$PWD"
           make swagger-check
           make swagger-validate
