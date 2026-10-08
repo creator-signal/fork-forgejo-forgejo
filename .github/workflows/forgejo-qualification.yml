@@ -157,15 +157,25 @@ jobs:
           custody_admitted=false
           custody() {
             docker inspect "$TEST_CONTAINER" | jq -e --arg id "$container_id" --arg image "$image_id" --arg name "/$TEST_CONTAINER" --arg script "$compiler_script" --argjson entrypoint "$image_entrypoint" '
-              length == 1 and (.[0] | .Id == $id and .Image == $image and .Name == $name
-              and .Config.Labels["creator-signal.purpose"] == "creator-signal-fork-secret-pair-compiler"
-              and .Config.Entrypoint == $entrypoint and .Config.Cmd == ["timeout","-k","5","1200","sh","-ec",$script]
-              and .Mounts == [] and .HostConfig.Privileged == false and .HostConfig.NetworkMode == "default"
-              and ((.HostConfig.Binds // []) | length) == 0 and ((.HostConfig.VolumesFrom // []) | length) == 0
-              and ((.HostConfig.Devices // []) | length) == 0 and ((.HostConfig.DeviceRequests // []) | length) == 0
-              and ((.HostConfig.CapAdd // []) | length) == 0 and ((.HostConfig.PortBindings // {}) | length) == 0
-              and ((.HostConfig.SecurityOpt // []) | length) == 0
-              and .HostConfig.PidMode == "" and .HostConfig.UTSMode == "" and .HostConfig.IpcMode == "private")' >/dev/null
+              if length != 1 then false else (.[0] | {
+                identity: (.Id == $id and .Image == $image and .Name == $name),
+                purpose: (.Config.Labels["creator-signal.purpose"] == "creator-signal-fork-secret-pair-compiler"),
+                entrypoint: (.Config.Entrypoint == $entrypoint),
+                command: (.Config.Cmd == ["timeout","-k","5","1200","sh","-ec",$script]),
+                emptyMounts: (.Mounts == []),
+                unprivileged: (.HostConfig.Privileged == false),
+                defaultNetwork: (.HostConfig.NetworkMode == "default"),
+                noBinds: (((.HostConfig.Binds // []) | length) == 0),
+                noVolumesFrom: (((.HostConfig.VolumesFrom // []) | length) == 0),
+                noDevices: (((.HostConfig.Devices // []) | length) == 0),
+                noDeviceRequests: (((.HostConfig.DeviceRequests // []) | length) == 0),
+                noAddedCapabilities: (((.HostConfig.CapAdd // []) | length) == 0),
+                noPublishedPorts: (((.HostConfig.PortBindings // {}) | length) == 0),
+                noSecurityOverrides: (((.HostConfig.SecurityOpt // []) | length) == 0),
+                privatePid: (.HostConfig.PidMode == ""),
+                privateUts: (.HostConfig.UTSMode == ""),
+                privateIpc: (.HostConfig.IpcMode == "private")
+              }) | . as $checks | {compilerCustodyChecks:$checks}, (all($checks[]; . == true)) end'
           }
           cleanup() {
             if [ -n "$container_id" ]; then
