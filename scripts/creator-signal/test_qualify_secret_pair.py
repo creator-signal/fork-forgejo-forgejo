@@ -1,7 +1,9 @@
 """Contracts for the existing native-only image qualification helper."""
 import importlib.util
+import io
 import json
 import os
+from contextlib import redirect_stdout
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
@@ -17,6 +19,48 @@ spec.loader.exec_module(native)
 class NativeQualificationContracts(unittest.TestCase):
     def setUp(self):
         native.DEADLINE = 100
+
+    def test_denial_codes_match_only_exact_source_owned_messages(self):
+        self.assertEqual(native.denial_code(RuntimeError("native API assertion denied")), "ApiAssertion")
+        for message, code in native.DENIAL_CODES.items():
+            with self.subTest(code=code):
+                self.assertEqual(native.denial_code(RuntimeError(message)), code)
+                for altered in [message + ": sensitive-private", "sensitive-private " + message,
+                                message + "\nsensitive-private", message.upper()]:
+                    self.assertEqual(native.denial_code(RuntimeError(altered)), "UnknownDenied")
+
+    def test_unknown_parser_and_exception_arguments_cannot_be_rendered(self):
+        class HostileError(RuntimeError):
+            def __str__(self):
+                raise AssertionError("exception rendering is forbidden")
+
+        class HostileArgument:
+            def __str__(self):
+                raise AssertionError("argument rendering is forbidden")
+
+        errors = [json.JSONDecodeError("sensitive-private", '{"password":"sensitive-private"}', 1),
+                  OSError("sensitive-private"), RuntimeError(),
+                  RuntimeError("native API assertion denied", "sensitive-private"),
+                  RuntimeError(HostileArgument()), HostileError("native API assertion denied")]
+        for error in errors:
+            with self.subTest(kind=type(error).__name__):
+                self.assertEqual(native.denial_code(error), "UnknownDenied")
+
+    def test_main_denial_remains_failed_and_emits_only_closed_metadata(self):
+        argv = ["qualify_secret_pair", "--image", "sha256:" + "a" * 64,
+                "--source", "b" * 40, "--run-id", "1", "--variant", "rootful", "--arch", "amd64"]
+        for error, code in [(RuntimeError("native API assertion denied"), "ApiAssertion"),
+                            (json.JSONDecodeError("sensitive-private", "sensitive-private", 0), "UnknownDenied"),
+                            (RuntimeError("native API assertion denied: sensitive-private"), "UnknownDenied")]:
+            output = io.StringIO()
+            with patch("sys.argv", argv), patch.object(native.time, "monotonic", return_value=0), \
+                 patch.object(native, "acceptance", side_effect=error) as accept, redirect_stdout(output):
+                self.assertEqual(native.main(), 1)
+            accept.assert_called_once()
+            self.assertEqual(json.loads(output.getvalue()),
+                             {"event": "forgejo-secret-pair-native-denied", "code": code})
+            self.assertEqual(output.getvalue().count("\n"), 1)
+            self.assertNotIn("sensitive-private", output.getvalue())
 
     def test_expired_command_never_starts_process(self):
         with patch.object(native.time, "monotonic", return_value=101), patch.object(native.subprocess, "Popen") as start:

@@ -336,6 +336,55 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
             command(["docker", "network", "rm", network])
 
 
+DENIAL_CODES = {
+    "native acceptance deadline exhausted": "AcceptanceDeadline",
+    "native CLI deadline exhausted": "CliDeadline",
+    "native CLI output exceeded bound": "CliOutputBound",
+    "native CLI denied": "CliDenied",
+    "native container observation denied": "ContainerObservation",
+    "native container custody denied": "ContainerCustody",
+    "native network observation denied": "NetworkObservation",
+    "native network custody denied": "NetworkCustody",
+    "native container isolation denied": "ContainerIsolation",
+    "native container network attachment denied": "NetworkAttachment",
+    "native published port inventory denied": "PublishedPortInventory",
+    "native declared loopback binding denied": "DeclaredLoopbackBinding",
+    "native image volume inventory denied": "ImageVolumeInventory",
+    "native anonymous volume custody denied": "AnonymousVolumeCustody",
+    "native API path denied": "ApiPath",
+    "native API deadline exhausted": "ApiDeadline",
+    "native API response exceeded bound": "ApiResponseBound",
+    "native API assertion denied": "ApiAssertion",
+    "native API private-material disclosure denied": "ApiPrivateMaterialDisclosure",
+    "native image identity denied": "ImageIdentity",
+    "native image declared volumes denied": "ImageDeclaredVolumes",
+    "native network creation response denied": "NetworkCreationResponse",
+    "native creation response denied": "CreationResponse",
+    "native image entrypoint substitution denied": "ImageEntrypointSubstitution",
+    "native loopback binding denied": "LoopbackBinding",
+    "native readiness denied": "Readiness",
+    "native synthetic token denied": "SyntheticToken",
+    "native closed operation reply denied": "ClosedOperationReply",
+    "native concurrent replay denied": "ConcurrentReplay",
+    "native actual secret inventory denied": "ActualSecretInventory",
+    "native restart resource identity denied": "RestartResourceIdentity",
+    "native restart readiness denied": "RestartReadiness",
+    "native restart no-write replay denied": "RestartNoWriteReplay",
+    "native repository identity reuse denied": "RepositoryIdentityReuse",
+    "native revoked operation resurrected": "RevokedOperationResurrection",
+    "native unrelated secret compatibility denied": "UnrelatedSecretCompatibility",
+    "native retained resource cleanup denied": "RetainedResourceCleanup",
+    "native network cleanup has active consumers": "NetworkCleanupActiveConsumers",
+}
+
+
+def denial_code(error: Exception) -> str:
+    # Never render an exception: even parser diagnostics can carry private input.
+    if type(error) is RuntimeError and len(error.args) == 1 and type(error.args[0]) is str:
+        return DENIAL_CODES.get(error.args[0], "UnknownDenied")
+    return "UnknownDenied"
+
+
 def main() -> int:
     global DEADLINE
     parser = argparse.ArgumentParser()
@@ -354,9 +403,10 @@ def main() -> int:
         result["checks"].extend(disabled["checks"])
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 0
-    except Exception:
+    except Exception as error:
         # CLI/API exception text can contain synthetic private material.
-        print('{"event":"forgejo-secret-pair-native-denied"}')
+        print(json.dumps({"event": "forgejo-secret-pair-native-denied", "code": denial_code(error)},
+                         sort_keys=True, separators=(",", ":")))
         return 1
 
 

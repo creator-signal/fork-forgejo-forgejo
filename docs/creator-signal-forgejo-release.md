@@ -192,7 +192,11 @@ These fixtures prove inactive restore only; no database bytes or private hashes
 are uploaded, and original-provider/history recovery and re-enabling stay unproved.
 The helper has a 600-second monotonic budget, CLI command bounds of 30 seconds
 and 64 KiB, and HTTP read bounds of 15 seconds and 64 KiB. It emits bounded
-identity/check metadata without private material. Cleanup rechecks the original
+identity/check metadata without private material. Failed observations emit only
+the denial event and a finite code for an exact Source-owned static guard;
+parser errors, unknown exceptions and altered messages emit `UnknownDenied`.
+Exception text, API responses and private input are never forwarded. A denial
+still exits unsuccessfully and provides no acceptance. Cleanup rechecks the original
 container ID, immutable image, labels, isolation settings, and original anonymous
 volume inventory before removing only its container and anonymous volumes. The
 original internal network is removed only after identity and no remaining
