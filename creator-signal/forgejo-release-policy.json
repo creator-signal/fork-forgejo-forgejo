@@ -14,11 +14,11 @@
       "sourceFormat": "creator-signal.forgejo-secret-pair-source/v1",
       "baseTag": "v16.0.3",
       "baseSourceSha": "eccddb2d17c93b42b2c8995725e03e549ac9ec0c",
-      "sourceCommitChain": ["2de10ebfb2657935ad2970aa107a5b28ac60d246"],
-      "sourceCommitSha": "2de10ebfb2657935ad2970aa107a5b28ac60d246",
-      "sourceTreeSha": "11c8faa3365b69db1008bd5043bad330355e25dd",
-      "sourceCommitSubject": "feat(actions): add immutable atomic publisher secret pair operations",
-      "sourcePatchSha256": "b2bd444b1d3b333962cec2bc34af0b0591b7c18a7e11e01784bdeeb666028b65",
+      "sourceCommitChain": ["2de10ebfb2657935ad2970aa107a5b28ac60d246", "63a5fbf527a79de75886179c7f32cf5d72e63ce9"],
+      "sourceCommitSha": "63a5fbf527a79de75886179c7f32cf5d72e63ce9",
+      "sourceTreeSha": "5dc921ec996b22f0ac89a23ee50df2528ff600f3",
+      "sourceCommitSubject": "fix(build): resolve pinned Go and Alpine through official registry",
+      "sourcePatchSha256": "d33cffb8ac40dfe58cb66cb84944f51dcccbe8abdbfa94c0560c4e7517eaf961",
       "changedPaths": [
         "Dockerfile", "Dockerfile.rootless", "go.mod",
         "models/forgejo_migrations/v17a_add-action-secret-pair-operation.go",
@@ -33,8 +33,8 @@
       "platforms": ["linux/amd64", "linux/arm64"],
       "baseImages": {
         "xx": {"reference": "data.forgejo.org/oci/xx", "digest": "sha256:c64defb9ed5a91eacb37f96ccc3d4cd72521c4bd18d5442905b95e2226b0e707"},
-        "golang": {"reference": "data.forgejo.org/oci/golang:1.26-alpine3.23", "digest": "sha256:b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57"},
-        "alpine": {"reference": "data.forgejo.org/oci/alpine:3.23", "digest": "sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40"}
+        "golang": {"reference": "docker.io/library/golang:1.26-alpine3.23", "digest": "sha256:b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57"},
+        "alpine": {"reference": "docker.io/library/alpine:3.23", "digest": "sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40"}
       },
       "securityRefresh": "RUN apk upgrade --no-cache"
     },

@@ -116,10 +116,19 @@ make a recovery pass. Consumers select the exact manifest digest from
 
 ## Atomic Actions pair extension (Issue #7)
 
+The cs.2 recipes read the original Go and Alpine immutable indexes through their
+Docker Official Images `docker.io/library` repositories. Actual bounded reads
+proved the identical index bytes and hashes after the inherited Forgejo mirror
+returned 404: Go is 10293 bytes at `b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57`,
+and Alpine is 9218 bytes at `fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40`.
+Versions, digests and the available xx reference remain unchanged; cs.1 is frozen.
+This Source transport repair does not establish native image qualification.
+
 The `v16.0.3-cs.2` extension uses this same fork release lane. The historical
 upstream mirror, `v16.0.3`, and `v16.0.3-cs.1` remain immutable. Its runtime
 owner uses one Issue #7 branch rooted at the exact `v16.0.3` upstream commit,
-retaining the reviewed cs.1 Dockerfile bytes. The automation owner retains that
+retaining the reviewed cs.1 versions, digests, and security behavior with the
+documented registry reference repair. The automation owner retains that
 runtime history through the existing no-content merge pattern. One PR into
 `creator-signal/automation` reviews both histories. Policy pins the complete
 ordered linear runtime commit list, source tree, all changed paths, and the raw

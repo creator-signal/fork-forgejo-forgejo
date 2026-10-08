@@ -95,7 +95,10 @@ def main() -> int:
     require(runtime.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1"
             and runtime.get("baseSourceSha") == configured.get("baseSourceSha")
             and runtime.get("sourceCommitChain", [])[-1:] == [runtime.get("sourceCommitSha")]
-            and runtime.get("baseImages") == configured.get("baseImages")
+            and {name: item.get("digest") for name, item in runtime.get("baseImages", {}).items()}
+                == {name: item.get("digest") for name, item in configured.get("baseImages", {}).items()}
+            and {name: item.get("reference") for name, item in runtime.get("baseImages", {}).items()}
+                == {"xx": "data.forgejo.org/oci/xx", "golang": "docker.io/library/golang:1.26-alpine3.23", "alpine": "docker.io/library/alpine:3.23"}
             and runtime.get("platforms") == configured.get("platforms"),
             "atomic pair runtime source closure drifted", errors)
     qualification = sources.get("forgejo-qualification.yml", "")
