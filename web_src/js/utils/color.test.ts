@@ -1,4 +1,5 @@
-import {contrastColor} from './color.js';
+import {expect, test} from 'vitest';
+import {contrastColor} from './color.ts';
 
 test('contrastColor', () => {
   expect(contrastColor('#d73a4a')).toBe('#fff');

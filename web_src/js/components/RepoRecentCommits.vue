@@ -14,7 +14,7 @@ import {
   firstStartDateAfterDate,
   fillEmptyStartDaysWithZeroes,
 } from '../utils/time.js';
-import {chartJsColors} from '../utils/color.js';
+import {chartJsColors} from '../utils/color.ts';
 import {sleep} from '../utils.ts';
 import 'chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm';
 
@@ -81,7 +81,7 @@ export default {
           {
             data: data.map((i) => ({x: i.week, y: i.commits})),
             label: 'Commits',
-            backgroundColor: chartJsColors['commits'],
+            backgroundColor: chartJsColors.commits,
             borderWidth: 0,
             tension: 0.3,
           },

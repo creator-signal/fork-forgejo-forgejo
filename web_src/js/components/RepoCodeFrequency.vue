@@ -16,7 +16,7 @@ import {
   firstStartDateAfterDate,
   fillEmptyStartDaysWithZeroes,
 } from '../utils/time.js';
-import {chartJsColors} from '../utils/color.js';
+import {chartJsColors} from '../utils/color.ts';
 import {sleep} from '../utils.ts';
 import 'chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm';
 
@@ -89,7 +89,7 @@ export default {
             pointHitRadius: 0,
             fill: true,
             label: 'Additions',
-            backgroundColor: chartJsColors['additions'],
+            backgroundColor: chartJsColors.additions,
             borderWidth: 0,
             tension: 0.3,
           },
@@ -99,7 +99,7 @@ export default {
             pointHitRadius: 0,
             fill: true,
             label: 'Deletions',
-            backgroundColor: chartJsColors['deletions'],
+            backgroundColor: chartJsColors.deletions,
             borderWidth: 0,
             tension: 0.3,
           },
