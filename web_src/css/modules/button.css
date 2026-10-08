@@ -39,6 +39,8 @@
   &:hover,
   &:focus {
     text-decoration: none;
+    background: var(--button-background-hover, var(--button-background));
+    color: var(--button-color-hover, var(--button-color));
   }
 
   &.disabled {
@@ -57,26 +59,18 @@
 
 .button.primary {
   --button-background: var(--color-primary);
+  --button-background-hover: var(--color-primary-hover);
   --button-border-color: var(--color-primary-dark-2);
   --button-color: var(--color-primary-contrast);
   --button-outline-color: oklch(from var(--button-background) l c h / 0.3);
-
-  &:hover,
-  &:focus {
-    --button-background: var(--color-primary-hover);
-  }
 }
 
 .button.secondary {
   --button-background: var(--color-button);
   --button-border-color: var(--color-light-border);
   --button-color: var(--color-text-light);
+  --button-color-hover: var(--color-text);
   --button-outline-color: oklch(from var(--button-border-color) l c h / 0.1);
-
-  &:hover,
-  &:focus {
-    --button-color: var(--color-text);
-  }
 }
 
 .button.danger {
@@ -84,12 +78,8 @@
   --button-background: var(--color-danger-bg, var(--color-error-bg));
   --button-border-color: var(--color-thin-red);
   --button-color: var(--color-thin-red);
+  --button-color-hover: var(--color-thin-red-highlight, var(--color-red));
   --button-outline-color: oklch(from var(--button-border-color) l c h / 0.3);
-
-  &:hover,
-  &:focus {
-    --button-color: var(--color-thin-red-highlight, var(--color-red));
-  }
 }
 
 /* Dropdown openers should be at least tall as buttons they are in line with, and
