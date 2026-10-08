@@ -42,7 +42,7 @@
 								<div class="flex-item-trailing">
 									{{if and $.IsOrganizationOwner (not (and ($.Team.IsOwnerTeam) (eq (len $.Team.Members) 1)))}}
 										<form>
-											<button class="ui danger button delete-button" data-modal-id="remove-team-member"
+											<button class="danger button delete-button" data-modal-id="remove-team-member"
 												data-url="{{$.OrgLink}}/teams/{{$.Team.LowerName | PathEscape}}/action/remove" data-datauid="{{.User.ID}}"
 												data-name="{{.User.DisplayName}}"
 												data-data-team-name="{{$.Team.Name}}">{{ctx.Locale.Tr "org.members.remove"}}</button>

@@ -33,7 +33,7 @@
 				{{end}}
 				<form action="{{$.OrgLink}}/teams/{{$.Team.LowerName | PathEscape}}/action/remove_invite" method="post">
 					<input type="hidden" name="iid" value="{{.ID}}">
-					<button class="ui danger button">{{ctx.Locale.Tr "org.members.remove"}}</button>
+					<button class="danger button">{{ctx.Locale.Tr "org.members.remove"}}</button>
 				</form>
 			</div>
 		</div>
