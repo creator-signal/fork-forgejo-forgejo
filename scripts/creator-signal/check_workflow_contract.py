@@ -137,11 +137,14 @@ def main() -> int:
                       "GOSUMDB=sum.golang.org GOTOOLCHAIN=local", "unset GOPRIVATE GONOPROXY GONOSUMDB GOFLAGS",
                       "creator-signal.forgejo-dependency-capture/v1", "qualified:false",
                       "DependencyCaptureRetainedUnqualified", 'cmp runtime-source/go.mod "$capture_dir/go.mod"',
-                      'cmp runtime-source/go.sum "$capture_dir/go.sum"', 'exit 1\n          echo'):
+                      'cmp runtime-source/go.sum "$capture_dir/go.sum"',
+                      'if test -f "$HOME/dependency-capture/go.mod"; then exit 0; fi'):
             require(token in capture, f"dependency custody-only gate missing {token}", errors)
         require(capture.index("test \"$result\" = 0") < capture.index("docker cp"), "dependency copy precedes stopped-success proof", errors)
         require(capture.index("go mod tidy") < capture.index("exit 0") < capture.index("make swagger-check"), "capture could claim tests without running them", errors)
         require(capture.index("DependencyCaptureRetainedUnqualified") < capture.index("cmp runtime-source/go.mod"), "capture comparison precedes retained packet", errors)
+        require(capture.rstrip().endswith("exit 1"), "capture must fail even if comparison matches", errors)
+        require("NativeTestsCompleted" not in capture, "capture cannot emit native test acceptance", errors)
 
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)
     require("platforms: linux/amd64,linux/arm64" in publish, "publication is not exactly amd64 plus arm64", errors)

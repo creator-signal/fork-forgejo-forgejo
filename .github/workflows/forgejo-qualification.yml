@@ -184,7 +184,7 @@ jobs:
           done
           (cd "$HOME/dependency-capture" && sha256sum go.mod go.sum > SHA256SUMS)
           chmod 400 "$HOME/dependency-capture/SHA256SUMS"
-          exit 0
+          if test -f "$HOME/dependency-capture/go.mod"; then exit 0; fi
           make swagger-check
           make swagger-validate
           go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/secret ./services/secrets ./services/actions
@@ -279,7 +279,6 @@ jobs:
           cmp runtime-source/go.sum "$capture_dir/go.sum"
           # Even identical output cannot qualify through this temporary capture route.
           exit 1
-          echo 'compilerNativeObservation=NativeTestsCompleted'
       - name: Run isolated native startup and readiness acceptance
         env:
           IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
