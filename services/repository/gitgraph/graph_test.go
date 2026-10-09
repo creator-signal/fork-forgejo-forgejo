@@ -36,7 +36,7 @@ func BenchmarkGetCommitGraph(b *testing.B) {
 }
 
 func BenchmarkParseCommitString(b *testing.B) {
-	testString := "* DATA:abc123||4e61bacab44e9b4730e44a6615d04098dd3a8eaf|Tue, 20 Dec 2016 21:10:41 +0100|4e61bac|Add route for graph"
+	testString := "* DATA:abc123\x1e\x1e4e61bacab44e9b4730e44a6615d04098dd3a8eaf\x1eTue, 20 Dec 2016 21:10:41 +0100\x1e4e61bac\x1eAdd route for graph"
 
 	parser := &Parser{}
 	parser.Reset()
@@ -227,14 +227,14 @@ func TestParseGlyphs(t *testing.T) {
 }
 
 func TestCommitStringParsing(t *testing.T) {
-	dataFirstPart := "* DATA:abc123||4e61bacab44e9b4730e44a6615d04098dd3a8eaf|Tue, 20 Dec 2016 21:10:41 +0100|4e61bac|"
+	dataFirstPart := "* DATA:abc123\x1e\x1e4e61bacab44e9b4730e44a6615d04098dd3a8eaf\x1eTue, 20 Dec 2016 21:10:41 +0100\x1e4e61bac\x1e"
 	tests := []struct {
 		shouldPass    bool
 		testName      string
 		commitMessage string
 	}{
 		{true, "normal", "not a fancy message"},
-		{true, "extra pipe", "An extra pipe: |"},
+		{true, "extra pipe", "An extra separator: \x1e"},
 		{true, "extra 'Data:'", "DATA: might be trouble"},
 	}
 
@@ -263,17 +263,17 @@ func TestNewCommitParentHashes(t *testing.T) {
 	}{
 		{
 			name:            "no parents (orphan)",
-			data:            "||4e61bacab44e9b4730e44a6615d04098dd3a8eaf|Tue, 20 Dec 2016 21:10:41 +0100|4e61bac|subject",
+			data:            "\x1e\x1e4e61bacab44e9b4730e44a6615d04098dd3a8eaf\x1eTue, 20 Dec 2016 21:10:41 +0100\x1e4e61bac\x1esubject",
 			expectedParents: nil,
 		},
 		{
 			name:            "single parent",
-			data:            "abc123||4e61bacab44e9b4730e44a6615d04098dd3a8eaf|Tue, 20 Dec 2016 21:10:41 +0100|4e61bac|subject",
+			data:            "abc123\x1e\x1e4e61bacab44e9b4730e44a6615d04098dd3a8eaf\x1eTue, 20 Dec 2016 21:10:41 +0100\x1e4e61bac\x1esubject",
 			expectedParents: []string{"abc123"},
 		},
 		{
 			name:            "multiple parents (merge)",
-			data:            "abc123 def456||4e61bacab44e9b4730e44a6615d04098dd3a8eaf|Tue, 20 Dec 2016 21:10:41 +0100|4e61bac|subject",
+			data:            "abc123 def456\x1e\x1e4e61bacab44e9b4730e44a6615d04098dd3a8eaf\x1eTue, 20 Dec 2016 21:10:41 +0100\x1e4e61bac\x1esubject",
 			expectedParents: []string{"abc123", "def456"},
 		},
 	}

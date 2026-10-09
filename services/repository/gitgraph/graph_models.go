@@ -263,7 +263,7 @@ var RelationCommit = &Commit{
 
 // NewCommit creates a new commit from a provided line
 func NewCommit(row, column int, line []byte) (*Commit, error) {
-	data := bytes.SplitN(line, []byte("|"), 6)
+	data := bytes.SplitN(line, []byte{0x1e}, 6)
 	if len(data) < 6 {
 		return nil, fmt.Errorf("malformed data section on line %d with commit: %s", row, string(line))
 	}
