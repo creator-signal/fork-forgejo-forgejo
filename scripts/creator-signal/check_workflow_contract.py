@@ -143,7 +143,7 @@ def main() -> int:
         require(capture.index("test \"$result\" = 0") < capture.index("docker cp"), "dependency copy precedes stopped-success proof", errors)
         require(capture.index("go mod tidy") < capture.index("exit 0") < capture.index("make swagger-check"), "capture could claim tests without running them", errors)
         require(capture.index("DependencyCaptureRetainedUnqualified") < capture.index("cmp runtime-source/go.mod"), "capture comparison precedes retained packet", errors)
-        require(capture.rstrip().endswith("exit 1"), "capture must fail even if comparison matches", errors)
+        require(capture.rstrip().endswith("false"), "capture must fail even if comparison matches", errors)
         require("NativeTestsCompleted" not in capture, "capture cannot emit native test acceptance", errors)
 
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)

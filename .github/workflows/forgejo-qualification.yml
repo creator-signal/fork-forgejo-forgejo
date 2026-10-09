@@ -278,7 +278,7 @@ jobs:
           cmp runtime-source/go.mod "$capture_dir/go.mod"
           cmp runtime-source/go.sum "$capture_dir/go.sum"
           # Even identical output cannot qualify through this temporary capture route.
-          exit 1
+          false
       - name: Run isolated native startup and readiness acceptance
         env:
           IMAGE: creator-signal-forgejo-qualification:${{ matrix.variant }}-${{ matrix.arch }}
