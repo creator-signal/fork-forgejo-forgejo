@@ -1,6 +1,6 @@
 import {encodeURLEncodedBase64, decodeURLEncodedBase64} from '../utils.ts';
 import {showElem} from '../utils/dom.js';
-import {GET, POST} from '../modules/fetch.js';
+import {GET, POST} from '../modules/fetch.ts';
 
 const {appSubUrl} = window.config;
 

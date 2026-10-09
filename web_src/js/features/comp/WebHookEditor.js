@@ -1,4 +1,4 @@
-import {POST} from '../../modules/fetch.js';
+import {POST} from '../../modules/fetch.ts';
 import {toggleElem} from '../../utils/dom.js';
 
 export function initCompWebHookEditor() {

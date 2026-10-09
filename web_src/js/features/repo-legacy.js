@@ -25,7 +25,7 @@ import {initRepoPullRequestCommitStatus} from './repo-issue-pr-status.js';
 import {hideElem, showElem} from '../utils/dom.js';
 import {getComboMarkdownEditor, initComboMarkdownEditor} from './comp/ComboMarkdownEditor.js';
 import {attachRefIssueContextPopup} from './contextpopup.js';
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {MarkdownQuote} from '@github/quote-selection';
 import {toAbsoluteUrl} from '../utils.ts';
 import {initDropzone, initDisabledInputs} from './common-global.js';

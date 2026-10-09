@@ -1,5 +1,5 @@
 import {hideElem, showElem} from '../utils/dom.js';
-import {GET, POST} from '../modules/fetch.js';
+import {GET, POST} from '../modules/fetch.ts';
 import {showErrorToast} from '../modules/toast.js';
 import {createTomSelect} from '../modules/tom-select.ts';
 

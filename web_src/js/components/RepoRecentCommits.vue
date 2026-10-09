@@ -7,7 +7,7 @@ import {
   LinearScale,
   TimeScale,
 } from 'chart.js';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 import {Bar} from 'vue-chartjs';
 import {
   startDaysBetween,

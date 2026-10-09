@@ -4,7 +4,7 @@ import {toggleElem, hideElem, isElemHidden} from '../utils/dom.js';
 import {htmlEscape} from 'escape-goat';
 import {showErrorToast} from '../modules/toast.js';
 import {createSortable} from '../modules/sortable.js';
-import {DELETE, POST} from '../modules/fetch.js';
+import {DELETE, POST} from '../modules/fetch.ts';
 import {parseDom} from '../utils.ts';
 import {showModal} from '../modules/modal.ts';
 

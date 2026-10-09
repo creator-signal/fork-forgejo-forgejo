@@ -1,4 +1,4 @@
-import {POST} from '../../modules/fetch.js';
+import {POST} from '../../modules/fetch.ts';
 import {getPastedContent, replaceTextareaSelection} from '../../utils/dom.js';
 import {isUrl} from '../../utils/url.ts';
 

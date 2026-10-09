@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import {minimatch} from 'minimatch';
 import {onInputDebounce, toggleElem} from '../utils/dom.js';
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {createCodemirror} from './codemirror.ts';
 
 const {appSubUrl, i18n} = window.config;

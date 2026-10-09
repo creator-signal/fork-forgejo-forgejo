@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import {hideElem, queryElems, showElem} from '../utils/dom.js';
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {showErrorToast} from '../modules/toast.js';
 import {sleep} from '../utils.ts';
 

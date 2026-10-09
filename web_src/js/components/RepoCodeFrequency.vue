@@ -9,7 +9,7 @@ import {
   LineElement,
   Filler,
 } from 'chart.js';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 import {Line as ChartLine} from 'vue-chartjs';
 import {
   startDaysBetween,

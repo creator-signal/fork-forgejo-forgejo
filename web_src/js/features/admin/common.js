@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import {checkAppUrl} from '../common-global.js';
 import {hideElem, showElem, toggleElem} from '../../utils/dom.js';
-import {POST} from '../../modules/fetch.js';
+import {POST} from '../../modules/fetch.ts';
 import {showModal} from '../../modules/modal.ts';
 
 const {appSubUrl} = window.config;

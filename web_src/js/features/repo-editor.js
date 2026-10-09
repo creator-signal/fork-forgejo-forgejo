@@ -3,7 +3,7 @@ import {htmlEscape} from 'escape-goat';
 import {hideElem, showElem, createElementFromHTML} from '../utils/dom.js';
 import {initMarkupContent} from '../markup/content.js';
 import {attachRefIssueContextPopup} from './contextpopup.js';
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {initTab} from '../modules/tab.ts';
 import {showModal} from '../modules/modal.ts';
 import {createCodeEditor} from './codeeditor.ts';

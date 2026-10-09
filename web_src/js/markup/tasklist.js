@@ -1,4 +1,4 @@
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {showErrorToast} from '../modules/toast.js';
 
 const preventListener = (e) => e.preventDefault();

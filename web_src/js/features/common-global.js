@@ -9,8 +9,8 @@ import {hideElem, showElem, toggleElem, resetForms, initSubmitEventPolyfill, sub
 import {htmlEscape} from 'escape-goat';
 import {showTemporaryTooltip} from '../modules/tippy.js';
 import {showErrorToast} from '../modules/toast.js';
-import {request, POST, GET} from '../modules/fetch.js';
-import '../htmx.js';
+import {request, POST, GET} from '../modules/fetch.ts';
+import '../htmx.ts';
 import {initTab} from '../modules/tab.ts';
 import {initGlobalShowModal} from './show-modal.ts';
 import {showModal} from '../modules/modal.ts';

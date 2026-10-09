@@ -6,7 +6,7 @@ import {setFileFolding} from './file-fold.js';
 import {getComboMarkdownEditor, initComboMarkdownEditor} from './comp/ComboMarkdownEditor.js';
 import {toAbsoluteUrl} from '../utils.ts';
 import {initDropzone} from './common-global.js';
-import {POST, GET} from '../modules/fetch.js';
+import {POST, GET} from '../modules/fetch.ts';
 import {showErrorToast} from '../modules/toast.js';
 
 const {appSubUrl} = window.config;

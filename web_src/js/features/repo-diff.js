@@ -9,7 +9,7 @@ import {initViewedCheckboxListenerFor, countAndUpdateViewedFiles, initExpandAndC
 import {initImageDiff} from './imagediff.js';
 import {showErrorToast} from '../modules/toast.js';
 import {submitEventSubmitter, queryElemSiblings, hideElem, showElem} from '../utils/dom.js';
-import {POST, GET} from '../modules/fetch.js';
+import {POST, GET} from '../modules/fetch.ts';
 import {clearMultiLineSelection, refreshMultiLineCommentHighlights} from './repo-issue.js';
 import {renderSuggestions} from '../markup/suggestion.js';
 import {syncSuggestionBatchUI} from './repo-suggestion.js';

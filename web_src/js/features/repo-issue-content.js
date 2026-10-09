@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import {svg} from '../svg.ts';
 import {showErrorToast} from '../modules/toast.js';
-import {GET, POST} from '../modules/fetch.js';
+import {GET, POST} from '../modules/fetch.ts';
 import {showElem} from '../utils/dom.js';
 
 const {appSubUrl} = window.config;

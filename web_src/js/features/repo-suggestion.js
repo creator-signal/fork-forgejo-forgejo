@@ -1,5 +1,5 @@
 import {showModal} from '../modules/modal.ts';
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 import {showErrorToast} from '../modules/toast.js';
 
 // Suggestions queued for a batch apply, keyed by comment id; the value is the (shared) apply endpoint.

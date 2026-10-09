@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 import {toggleElem} from '../utils/dom.js';
 
 const {appSubUrl, notificationSettings, assetVersionEncoded} = window.config;

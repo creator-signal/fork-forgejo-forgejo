@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import {contrastColor} from '../utils/color.ts';
 import {createSortable} from '../modules/sortable.js';
-import {POST, DELETE, PUT} from '../modules/fetch.js';
+import {POST, DELETE, PUT} from '../modules/fetch.ts';
 
 function updateIssueCount(cards) {
   const parent = cards.parentElement;

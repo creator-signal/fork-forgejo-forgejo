@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 import {hideElem, loadElem, queryElemChildren} from '../utils/dom.js';
 import {parseDom} from '../utils.ts';
 

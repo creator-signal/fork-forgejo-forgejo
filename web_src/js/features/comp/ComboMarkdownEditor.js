@@ -9,7 +9,7 @@ import {renderPreviewPanelContent} from '../repo-editor.js';
 import {easyMDEToolbarActions} from './EasyMDEToolbarActions.js';
 import {initTextExpander} from './TextExpander.js';
 import {showErrorToast, showHintToast} from '../../modules/toast.js';
-import {POST} from '../../modules/fetch.js';
+import {POST} from '../../modules/fetch.ts';
 import {initTab} from '../../modules/tab.ts';
 
 /**

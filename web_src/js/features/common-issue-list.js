@@ -1,5 +1,5 @@
 import {isElemHidden, onInputDebounce, submitEventSubmitter, toggleElem} from '../utils/dom.js';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 
 const {appSubUrl} = window.config;
 const reIssueIndex = /^(\d+)$/; // eg: "123"

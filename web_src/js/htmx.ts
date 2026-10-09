@@ -9,18 +9,18 @@ htmx.config.requestClass = 'is-loading';
 htmx.config.scrollIntoViewOnBoost = false;
 
 // https://htmx.org/events/#htmx:sendError
-document.body.addEventListener('htmx:sendError', (event) => {
+document.body.addEventListener('htmx:sendError', (event: CustomEvent) => {
   // TODO: add translations
   showErrorToast(`Network error when calling ${event.detail.requestConfig.path}`);
 });
 
 // https://htmx.org/events/#htmx:responseError
-document.body.addEventListener('htmx:responseError', (event) => {
+document.body.addEventListener('htmx:responseError', (event: CustomEvent) => {
   // hide any previous flash message to avoid confusions (in case the
   // error toast would have been shown over a success/info message)
   const flashMsgDiv = document.getElementById('flash-message');
   if (flashMsgDiv) {
-    flashMsgDiv.innerHTML = '';
+    flashMsgDiv.textContent = '';
     flashMsgDiv.className = '';
   }
   // TODO: add translations

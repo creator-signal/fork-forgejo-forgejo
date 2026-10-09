@@ -11,7 +11,7 @@ import {
   LineElement,
   Filler,
 } from 'chart.js';
-import {GET} from '../modules/fetch.js';
+import {GET} from '../modules/fetch.ts';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import {Line as ChartLine} from 'vue-chartjs';
 import {

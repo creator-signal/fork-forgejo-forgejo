@@ -1,4 +1,5 @@
-import {GET, POST, PATCH, PUT, DELETE} from './fetch.js';
+import {expect, test} from 'vitest';
+import {GET, POST, PATCH, PUT, DELETE} from './fetch.ts';
 
 // tests here are only to satisfy the linter for unused functions
 test('exports', () => {
