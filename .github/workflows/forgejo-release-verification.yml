@@ -127,6 +127,12 @@ jobs:
             jq -e '.status == "pass"' "${variant}-${ARCH}-health.json"
             curl --fail --silent --show-error "http://127.0.0.1:${port}/api/v1/version" > "${variant}-${ARCH}-version.json"
             jq -e --arg version "$VERSION" '.version | startswith($version + "+")' "${variant}-${ARCH}-version.json"
+            if [ "$TAG" = v16.0.3-cs.2 ]; then
+              image_id="$(docker image inspect "$child_ref" --format '{{.Id}}')"
+              python3 scripts/creator-signal/qualify_secret_pair.py --image "$image_id" \
+                --source "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" --variant "$variant" --arch "$ARCH" \
+                > "independent-secret-pair-${variant}-${ARCH}.json"
+            fi
             docker rm -f "$name"
           done
       - name: Re-scan exact published rootful platform
@@ -165,5 +171,6 @@ jobs:
             *-${{ matrix.arch }}-health.json
             *-${{ matrix.arch }}-version.json
             independent-scan-*-${{ matrix.arch }}.json
+            independent-secret-pair-*-${{ matrix.arch }}.json
           if-no-files-found: warn
           retention-days: 14

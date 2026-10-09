@@ -10,6 +10,35 @@
     ]
   },
   "downstreamReleases": {
+    "v16.0.3-cs.2": {
+      "sourceFormat": "creator-signal.forgejo-secret-pair-source/v1",
+      "baseTag": "v16.0.3",
+      "baseSourceSha": "eccddb2d17c93b42b2c8995725e03e549ac9ec0c",
+      "sourceCommitChain": ["2de10ebfb2657935ad2970aa107a5b28ac60d246", "63a5fbf527a79de75886179c7f32cf5d72e63ce9", "ed43ae59ce84d605684f86aeb8dbcf35fcaa40ce", "ea24b68caa7ae6ade4bd7d51a983f8e7b60c1aa6", "2d1f5bea847d1c9d2336e1f22e5b90ada5f8ada9", "c20a0f497886b88cd845e8af6bead67850e5b8bf"],
+      "sourceCommitSha": "c20a0f497886b88cd845e8af6bead67850e5b8bf",
+      "sourceTreeSha": "638cae535e3266679e40114aa4074eaefed0189d",
+      "sourceCommitSubject": "fix(deps): adopt native captured gRPC security update",
+      "sourcePatchSha256": "b6cbcb5c218eb3ddb316cbd5142661ebc9c60ec4ad71cf8bfc2496fa03c99120",
+      "changedPaths": [
+        "Dockerfile", "Dockerfile.rootless", "go.mod", "go.sum",
+        "models/forgejo_migrations/v17a_add-action-secret-pair-operation.go",
+        "models/forgejo_migrations/v17a_add-action-secret-pair-operation_test.go",
+        "models/secret/pair_operation.go", "models/secret/pair_operation_test.go", "models/secret/secret.go",
+        "modules/structs/action_secret_pair.go", "routers/api/v1/api.go", "routers/api/v1/org/action.go",
+        "routers/api/v1/repo/action.go", "routers/api/v1/repo/action_secret_pair.go", "routers/api/v1/swagger/options.go", "routers/api/v1/user/action.go",
+        "routers/web/shared/secrets/secrets.go",
+        "services/actions/secret.go", "services/actions/secret_pair_mapping.go", "services/actions/secret_pair_test.go",
+        "services/repository/delete.go", "services/secrets/pair_operation.go", "services/secrets/pair_operation_test.go",
+        "services/secrets/secrets.go", "templates/swagger/v1_json.tmpl", "tests/integration/secret_pair_test.go"
+      ],
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "baseImages": {
+        "xx": {"reference": "data.forgejo.org/oci/xx", "digest": "sha256:c64defb9ed5a91eacb37f96ccc3d4cd72521c4bd18d5442905b95e2226b0e707"},
+        "golang": {"reference": "docker.io/library/golang:1.26-alpine3.23", "digest": "sha256:b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57"},
+        "alpine": {"reference": "docker.io/library/alpine:3.23", "digest": "sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40"}
+      },
+      "securityRefresh": "RUN apk upgrade --no-cache"
+    },
     "v16.0.3-cs.1": {
       "baseTag": "v16.0.3",
       "baseSourceSha": "eccddb2d17c93b42b2c8995725e03e549ac9ec0c",

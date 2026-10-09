@@ -113,3 +113,156 @@ gh workflow run forgejo-release.yml --ref creator-signal/automation \
 Never delete or replace an existing tag, manifest, attestation, or Release to
 make a recovery pass. Consumers select the exact manifest digest from
 `release-record.json`; no repository Release authorizes an environment deploy.
+
+## Atomic Actions pair extension (Issue #7)
+
+The cs.2 recipes read the original Go and Alpine immutable indexes through their
+Docker Official Images `docker.io/library` repositories. Actual bounded reads
+proved the identical index bytes and hashes after the inherited Forgejo mirror
+returned 404: Go is 10293 bytes at `b17af760035fc2f338eed92d448a6c67f2d45438844fc6c60678fa5f99e44b57`,
+and Alpine is 9218 bytes at `fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40`.
+Versions, digests and the available xx reference remain unchanged; cs.1 is frozen.
+This Source transport repair does not establish native image qualification.
+
+The `v16.0.3-cs.2` extension uses this same fork release lane. The historical
+upstream mirror, `v16.0.3`, and `v16.0.3-cs.1` remain immutable. Its runtime
+owner uses one Issue #7 branch rooted at the exact `v16.0.3` upstream commit,
+retaining the reviewed cs.1 versions, digests, and security behavior with the
+documented registry reference repair. The automation owner retains that
+runtime history through the existing no-content merge pattern. One PR into
+`creator-signal/automation` reviews both histories. Policy pins the complete
+ordered linear runtime commit list, source tree, all changed paths, and the raw
+upstream-to-head patch hash. The first runtime commit has only the upstream
+parent; every correction has only its preceding reviewed runtime parent.
+Commit objects are admitted by size before reading, with at most 32 commits,
+64 KiB per object, and 15 seconds per read. No hidden commits or merge parents
+are admitted. The native checkout verification is a local object check;
+the existing parent controller separately authenticates upstream/tag authority.
+
+The repository-admin, Actions-write operation is
+`POST /repos/{owner}/{repo}/actions/secret-pair-operations/{operationId}`.
+Its closed `creator-signal.actions-secret-pair-operation/v1` body contains
+`purpose: vm-artifact-publisher`, the matching lowercase 64-hex operation ID,
+the original lowercase 64-hex `ownershipId`, `transactionId`, and `nonce` in
+`binding`, and exactly the two fixed entries in `secrets`:
+`ZOT_VM_ARTIFACT_USERNAME: vm-image-publisher` and the original intended
+`ZOT_VM_ARTIFACT_PASSWORD` matching `cs-vm-artifact-` plus 43 base64url characters.
+The provider derives the original numeric repository ID from authentication.
+It does not accept a repository ID, caller-selected namespace, secret digest,
+or additional body field. Duplicate JSON fields are malformed.
+
+The database transaction creates both encrypted secret rows and their retained
+operation together. A fresh operation returns 201. An identical replay returns
+200 only after rereading the actual original rows and intended material; it
+does not update them. Both replies have the exact closed result
+`creator-signal.actions-secret-pair-operation-result/v1` with `operationId`,
+`binding`, `state: Applied`, and the boolean `replayed`. Foreign names,
+mismatched binding/material, revoked operations, or inconsistent retained rows
+return generic 409 without private values or secret-derived hashes. Malformed
+requests return 400. Actions disabled denies the operation and task projection
+before database effects. HTTP success is provider evidence only: Normal remains
+`ActionsPending` until independent qualified whole-pair Factory readback.
+
+Central model guards protect both existing names and insert/rename destinations
+across API and UI paths. Legacy mutations of either reserved name conflict;
+they cannot create, update, rotate, or delete the managed pair. Unrelated secrets
+retain their existing behavior. Task materialization admits the pair together;
+workflow-call transport uses `secrets: inherit`. Explicit reserved destinations,
+reserved source AST references, and dynamic/unsupported access capable of
+reading the pair deny before exposure. Repository deletion revokes operations
+in the same transaction and retains terminal tombstones under the original
+numeric repository ID. Recreating the same slug cannot resurrect an operation.
+
+The existing four native rootful/rootless AMD64/ARM64 cells own runtime model,
+service, migration, and task-projection tests, generated Swagger byte comparison,
+and real image API acceptance. `scripts/creator-signal/qualify_secret_pair.py`
+is a helper of those cells and the existing published-platform pull-back and
+independent verification jobs. It takes only the exact observed image ID,
+Source SHA, native run ID, variant, and architecture. It creates synthetic
+SQLite repositories in labeled isolated containers on owned internal networks,
+publishes no host ports, and inherits no release token. Actual Native run
+37860923026 observed missing published bindings on these internal networks.
+The probe therefore uses only the original container's observed IPv4 endpoint
+on that network, at fixed port 3000. The exact network ID, sole original
+container, matching endpoint ID and address inside its canonical RFC1918 subnet
+are independently joined. Container, mounts, network and endpoint custody are
+reproved before and after each HTTP request and privileged CLI operation;
+only a controlled original-container restart may bind a successor endpoint.
+No caller URL, address, remote context or additional network is accepted.
+Every Docker command uses the fixed local `unix:///var/run/docker.sock` route
+observed in the existing hosted Native workflow. The same process holds an
+`O_PATH` descriptor for `/run/docker.sock`, proves its named and held identities,
+Root ownership and mode 0600 or trusted-group 0660, and rechecks protected
+ancestors and the Root-owned `/var/run` alias before and after commands.
+The socket is observed without changing it. It checks atomic creation,
+concurrent no-write replay, conflicts, closed JSON, legacy destination denial,
+unrelated secrets, restart, repository tombstones, and Actions-disabled denial.
+The runtime tests separately cover fault atomicity and actual task projection.
+Each of the four cells also closes, copies, and reopens actual file SQLite
+fixtures before creation, after committed creation, and after terminal
+revocation. Private assertions compare exact database bytes, encrypted material,
+and row identities, then exercise the real task projection with Actions disabled.
+These fixtures prove inactive restore only; no database bytes or private hashes
+are uploaded, and original-provider/history recovery and re-enabling stay unproved.
+The helper has a 600-second monotonic budget, CLI command bounds of 30 seconds
+and 64 KiB, and HTTP read bounds of 15 seconds and 64 KiB. It emits bounded
+identity/check metadata without private material. Failed observations emit only
+the denial event and a finite code for an exact Source-owned static guard;
+parser errors, unknown exceptions and altered messages emit `UnknownDenied`.
+Exception text, API responses and private input are never forwarded. A denial
+still exits unsuccessfully and provides no acceptance. Cleanup rechecks the original
+container ID, immutable image, labels, isolation settings, and original anonymous
+volume inventory before removing only its container and anonymous volumes. The
+original internal network is removed only after identity and no remaining
+consumers are proved; unknown custody is retained and fails qualification.
+No new job, workflow, provider dispatcher, or publication credential is added.
+
+A restored database is inactive and quarantined with Actions disabled. Its
+operation rows and tombstones alone cannot establish antirollback freshness.
+Reactivation requires the separately governed recovery boundary to fence the
+former writer and independently join original provider operation custody and
+Normal signed history. Missing proof retains quarantine; it never remints an
+operation, replays a blind PUT, restores an old binary capable of bypassing the
+guards, or claims automatic recovery. The Sales Pulse recovery owner supplies
+that admission; the fork does not invent an external ledger or rotation route.
+
+The admitted disposable compiler container creates a fixed `forgejo` UID/GID
+1000; existing account, group, or private-home collisions deny. It hands only
+its image checkout to that identity and executes the unchanged tests through
+`su` after checking the actual UID and GID. Its new private home and Go caches
+are confined to the container; the original image module cache stays untouched.
+The existing 20-minute timeout includes setup and tests, and original custody
+and cleanup checks remain required. Forgejo's production root-user guard stays
+enabled; no unsafe root configuration or additional privilege is used.
+
+Run `37863274204` passed all four runtime tests and actual-image pair acceptance,
+then failed the unchanged HIGH/CRITICAL scan on gRPC v1.82.1 (CVE-2026-84304
+and CVE-2026-84445). Maintainer advisories identify v1.83.2 as covering both.
+The four existing native compiler cells earned the exact dependency graph in
+run `37865773618`, using fixed `go get google.golang.org/grpc@v1.83.2` and
+`go mod tidy` on disposable runtime Source
+`2d1f5bea847d1c9d2336e1f22e5b90ada5f8ada9`, controller
+`c252e0417be64c6117958c25352e85b73459227a`, pinned compiler/private UID/cache,
+public checksum database and the existing 20-minute bound. All four profiles
+retained identical go.mod (12,228 bytes, SHA256
+`d9a03c8c768ae437c49c7eea48732118185cee883ae437d96ad13fe42210dbaf`) and
+go.sum (98,447 bytes, SHA256
+`de83295bc4f3d574409ad0ff0bbfe6689fc65e2fb04809562557d2400eb5defc`).
+Artifacts `11588123212`, `11588945123`, `11588786104` and `11588217471`
+bind their exact Source/controller/compiler/run/profile receipts; each has
+`qualified:false`. Original stopped exit-zero, four complete custody readbacks,
+exact public checksums and the retained marker precede the expected committed
+go.mod comparison failure. The whole capture run failed and supplies no test,
+image or release qualification.
+
+The independently reviewed graph changes only the gRPC and required genproto
+RPC module rows plus their checksums and five required OpenTelemetry checksum
+pairs. Ordinary qualification restores the original test commands and removes
+the temporary graph capture, copyback and deliberate failure. The new linear
+runtime Source must pass all four complete native tests, actual-image acceptance,
+unchanged scans, SBOM and provenance gates. No checksum waiver, workstation Go
+execution, release or live provider action is authorized.
+
+Fork PR/native qualification, signed immutable release publication, Sales Pulse
+Source adoption of its exact digest, and live activation are separate gates.
+This Source extension does not itself publish a release or deploy a provider.

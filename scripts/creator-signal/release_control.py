@@ -123,6 +123,32 @@ def source_patch_identity(
     return hashlib.sha256(patch).hexdigest(), actual_paths
 
 
+def validate_runtime_commit_chain(configured: dict[str, Any]) -> None:
+    """Read the exact reviewed linear custody chain; never discover extra commits."""
+    chain = configured.get("sourceCommitChain")
+    if (not isinstance(chain, list) or not 1 <= len(chain) <= 32
+            or any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha) for sha in chain)
+            or len(set(chain)) != len(chain)
+            or chain[-1] != configured["sourceCommitSha"]):
+        raise ControlError("runtime source requires a closed reviewed commit chain")
+    previous = configured["baseSourceSha"]
+    for sha in chain:
+        size = subprocess.run(["git", "cat-file", "-s", sha], capture_output=True, timeout=15, check=False)
+        if size.returncode or not re.fullmatch(rb"[1-9][0-9]{0,5}\n?", size.stdout):
+            raise ControlError("runtime commit object size unavailable")
+        if int(size.stdout) > 65536:
+            raise ControlError("runtime commit object exceeds custody bound")
+        # The immutable object was size-admitted before this bounded read.
+        value = subprocess.run(["git", "cat-file", "commit", sha], capture_output=True, timeout=15, check=False)
+        if value.returncode or len(value.stdout) != int(size.stdout):
+            raise ControlError("runtime commit object readback denied")
+        header = value.stdout.split(b"\n\n", 1)[0]
+        parents = [line[7:] for line in header.split(b"\n") if line.startswith(b"parent ")]
+        if parents != [previous.encode("ascii")]:
+            raise ControlError("runtime commit chain contains an unreviewed parent or merge")
+        previous = sha
+
+
 def validate_downstream_source(
     tag: str, configured: dict[str, Any], upstream_tags: dict[str, str], origin_tags: dict[str, str]
 ) -> dict[str, Any]:
@@ -136,12 +162,27 @@ def validate_downstream_source(
         )
     if tag in upstream_tags:
         raise ControlError(f"Creator Signal downstream tag collides with upstream: {tag}")
+    identity = validate_downstream_objects(configured)
+    existing = origin_tags.get(tag)
+    if existing and existing != identity["sourceSha"]:
+        raise ControlError(
+            f"immutable downstream tag mismatch: GitHub={existing} policy={identity['sourceSha']}"
+        )
+    return {**identity, "tagExists": bool(existing)}
+
+
+def validate_downstream_objects(configured: dict[str, Any]) -> dict[str, Any]:
+    """Verify local committed objects; remote tag admission belongs to the parent."""
+    base_sha = configured["baseSourceSha"]
     source_sha = configured["sourceCommitSha"]
     if not exact_commit_exists(source_sha):
         raise ControlError(f"committed downstream source is unavailable: {source_sha}")
-    parents = run("git", "rev-list", "--parents", "-n", "1", source_sha).split()
-    if parents != [source_sha, base_sha]:
-        raise ControlError(f"downstream source must have sole upstream parent {base_sha}")
+    if configured.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1":
+        validate_runtime_commit_chain(configured)
+    else:
+        parents = run("git", "rev-list", "--parents", "-n", "1", source_sha).split()
+        if parents != [source_sha, base_sha]:
+            raise ControlError(f"downstream source must have sole upstream parent {base_sha}")
     source_tree = run("git", "rev-parse", f"{source_sha}^{{tree}}")
     if source_tree != configured["sourceTreeSha"]:
         raise ControlError(
@@ -162,7 +203,17 @@ def validate_downstream_source(
             f"downstream patch digest mismatch: actual={patch_digest} "
             f"policy={configured['sourcePatchSha256']}"
         )
-    for path in configured["changedPaths"]:
+    # The historical cs.1 receipt is Dockerfile-only. Runtime extensions bind
+    # their complete Git diff above; image-input checks apply to the two image
+    # recipes, never to unrelated Go, migration, or acceptance source text.
+    recipe_paths = configured["changedPaths"]
+    if configured.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1":
+        recipe_paths = ["Dockerfile", "Dockerfile.rootless"]
+        if not all(path in configured["changedPaths"] for path in recipe_paths):
+            raise ControlError("runtime source must retain both reviewed image recipes")
+    elif "sourceFormat" in configured:
+        raise ControlError("unsupported downstream source format")
+    for path in recipe_paths:
         source = run("git", "show", f"{source_sha}:{path}")
         if source.count(configured["securityRefresh"]) != 1:
             raise ControlError(f"{path} does not contain the exact bounded security refresh once")
@@ -170,19 +221,25 @@ def validate_downstream_source(
             token = f"{image['reference']}@{image['digest']}"
             if token not in source:
                 raise ControlError(f"{path} is missing pinned base input {token}")
-    existing = origin_tags.get(tag)
-    if existing and existing != source_sha:
-        raise ControlError(
-            f"immutable downstream tag mismatch: GitHub={existing} policy={source_sha}"
-        )
     return {
-        "baseTag": base_tag,
+        "baseTag": configured["baseTag"],
         "baseSourceSha": base_sha,
         "sourceSha": source_sha,
         "sourceTreeSha": source_tree,
         "sourcePatchSha256": patch_digest,
-        "tagExists": bool(existing),
     }
+
+
+def verify_source_checkout(args: argparse.Namespace) -> None:
+    configured = load_policy()["downstreamReleases"].get(args.tag)
+    if not configured or configured.get("sourceFormat") != "creator-signal.forgejo-secret-pair-source/v1":
+        raise ControlError("runtime checkout requires its reviewed downstream policy")
+    expected = (configured["sourceCommitSha"], configured["baseSourceSha"], configured["sourcePatchSha256"])
+    if (args.source_sha, args.base_source_sha, args.patch_sha256) != expected:
+        raise ControlError("native checkout inputs differ from reviewed controller policy")
+    if run("git", "rev-parse", "HEAD") != args.source_sha:
+        raise ControlError("native checkout is not the selected runtime source")
+    validate_downstream_objects(configured)
 
 
 def sync(args: argparse.Namespace) -> None:
@@ -378,6 +435,34 @@ def verify_platforms(args: argparse.Namespace) -> None:
         )
 
 
+def validate_pair_evidence(directory: Path, source_sha: str) -> set[str]:
+    required: set[str] = set()
+    checks = ["atomic-create", "concurrent-replay", "binding-conflict", "legacy-mutation-denial",
+              "closed-json", "restart-no-write-replay", "repository-tombstone",
+              "reserved-destination-denial", "unrelated-secret-compatibility", "actions-disabled-route-denial"]
+    for variant in ("rootful", "rootless"):
+        for arch in ("amd64", "arm64"):
+            log_name = f"secret-pair-tests-{variant}-{arch}.log"
+            log = directory / log_name
+            if not log.is_file() or log.is_symlink() or not 0 < log.stat().st_size <= 1048576:
+                raise ControlError("atomic pair native test evidence denied")
+            required.add(log_name)
+            for prefix in ("secret-pair-", "published-secret-pair-"):
+                name = f"{prefix}{variant}-{arch}.json"
+                path = directory / name
+                if not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= 65536:
+                    raise ControlError("atomic pair native API evidence denied")
+                data = json.loads(path.read_bytes())
+                if (set(data) != {"schema", "sourceRevision", "imageId", "variant", "architecture", "checks", "sourceQualified", "factoryQualified"}
+                        or data["schema"] != "creator-signal.forgejo-secret-pair-native/v1"
+                        or data["sourceRevision"] != source_sha or data["variant"] != variant or data["architecture"] != arch
+                        or not DIGEST.fullmatch(data["imageId"]) or data["checks"] != checks
+                        or data["sourceQualified"] is not False or data["factoryQualified"] is not False):
+                    raise ControlError("atomic pair native API evidence binding denied")
+                required.add(name)
+    return required
+
+
 def write_record(args: argparse.Namespace) -> None:
     policy = load_policy()
     for value in (args.rootful_digest, args.rootless_digest):
@@ -403,6 +488,11 @@ def write_record(args: argparse.Namespace) -> None:
         "sourceTreeSha": run("git", "rev-parse", f"{args.source_sha}^{{tree}}"),
     }
     if configured:
+        if configured.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1":
+            required = validate_pair_evidence(Path(args.evidence), args.source_sha)
+            if not required.issubset(evidence):
+                raise ControlError("atomic pair native evidence inventory incomplete")
+            source_identity.update({"sourceFormat": configured["sourceFormat"], "sourceCommitChain": configured["sourceCommitChain"]})
         source_identity.update(
             {
                 "upstreamBaseTag": configured["baseTag"],
@@ -470,6 +560,13 @@ def verify_record(args: argparse.Namespace) -> None:
             "sourcePatchSha256": configured["sourcePatchSha256"],
             "baseImages": configured["baseImages"],
         }
+        if configured.get("sourceFormat") == "creator-signal.forgejo-secret-pair-source/v1":
+            checks.update({"sourceFormat": configured["sourceFormat"], "sourceCommitChain": configured["sourceCommitChain"], "changedPaths": configured["changedPaths"]})
+            directory = Path(args.file).parent
+            for name in validate_pair_evidence(directory, args.source_sha):
+                actual = "sha256:" + hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                if record.get("evidence", {}).get(name) != actual:
+                    raise ControlError("atomic pair durable evidence checksum mismatch")
         for key, expected_value in checks.items():
             if identity.get(key) != expected_value:
                 raise ControlError(f"release record downstream identity mismatch: {key}")
@@ -492,6 +589,10 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("--tag", required=True)
     command.add_argument("--repository", required=True)
     command.set_defaults(handler=publish_downstream_tag)
+    command = commands.add_parser("verify-source-checkout")
+    for name in ("tag", "source-sha", "base-source-sha", "patch-sha256"):
+        command.add_argument(f"--{name}", required=True)
+    command.set_defaults(handler=verify_source_checkout)
     command = commands.add_parser("verify-platforms")
     command.add_argument("--file", required=True)
     command.add_argument("--tag", required=True)
