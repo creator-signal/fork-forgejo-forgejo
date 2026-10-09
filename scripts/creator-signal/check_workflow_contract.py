@@ -127,6 +127,21 @@ def main() -> int:
         require(token in qualification, f"atomic pair native qualification missing {token}", errors)
     for token in ("addgroup -S -g 1000 forgejo", "adduser -D -u 1000 -G forgejo", "chown -R 1000:1000 /go/src/forgejo.org", "exec su -s /bin/sh forgejo -c", 'test "$(id -u)" = 1000', 'test "$(id -g)" = 1000', 'GOMODCACHE="$HOME/go/pkg/mod"', 'GOCACHE="$HOME/.cache/go-build"'):
         require(token in qualification, f"atomic compiler unprivileged execution missing {token}", errors)
+    # Temporary cs.2 Source materialization is deliberately not a qualification cell.
+    capture = qualification.split("      - name: Capture bounded grpc dependency graph without qualification", 1)
+    require(len(capture) == 2, "fixed dependency capture missing", errors)
+    if len(capture) == 2:
+        capture = capture[1].split("      - name: Run isolated native startup", 1)[0]
+        for token in ('test "$SOURCE_SHA" = 2d1f5bea847d1c9d2336e1f22e5b90ada5f8ada9',
+                      "go get google.golang.org/grpc@v1.83.2", "go mod tidy",
+                      "GOSUMDB=sum.golang.org GOTOOLCHAIN=local", "unset GOPRIVATE GONOPROXY GONOSUMDB GOFLAGS",
+                      "creator-signal.forgejo-dependency-capture/v1", "qualified:false",
+                      "DependencyCaptureRetainedUnqualified", 'cmp runtime-source/go.mod "$capture_dir/go.mod"',
+                      'cmp runtime-source/go.sum "$capture_dir/go.sum"', 'exit 1\n          echo'):
+            require(token in capture, f"dependency custody-only gate missing {token}", errors)
+        require(capture.index("test \"$result\" = 0") < capture.index("docker cp"), "dependency copy precedes stopped-success proof", errors)
+        require(capture.index("go mod tidy") < capture.index("exit 0") < capture.index("make swagger-check"), "capture could claim tests without running them", errors)
+        require(capture.index("DependencyCaptureRetainedUnqualified") < capture.index("cmp runtime-source/go.mod"), "capture comparison precedes retained packet", errors)
 
     require("docker/setup-qemu-action@" in publish, "multi-architecture publication builder missing", errors)
     require("platforms: linux/amd64,linux/arm64" in publish, "publication is not exactly amd64 plus arm64", errors)

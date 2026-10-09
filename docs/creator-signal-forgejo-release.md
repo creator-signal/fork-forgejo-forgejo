@@ -235,6 +235,26 @@ The existing 20-minute timeout includes setup and tests, and original custody
 and cleanup checks remain required. Forgejo's production root-user guard stays
 enabled; no unsafe root configuration or additional privilege is used.
 
+The current cs.2 correction temporarily uses those same four native compiler
+cells to materialize the gRPC dependency graph for exact runtime Source
+`2d1f5bea847d1c9d2336e1f22e5b90ada5f8ada9`. Actual run `37863274204`
+passed all four runtime tests and actual-image pair acceptance, then failed
+the unchanged HIGH/CRITICAL scan on gRPC v1.82.1 (CVE-2026-84304 and
+CVE-2026-84445). Maintainer advisories identify v1.83.2 as covering both.
+The fixed `go get google.golang.org/grpc@v1.83.2` and `go mod tidy` run only
+in the admitted disposable compiler checkout, with its private UID/cache,
+existing pinned compiler image, public Go checksum database and 20-minute bound.
+Only bounded public go.mod/go.sum bytes (each at most 1 MiB) and a 4 KiB
+Source/controller/compiler/run/profile/hash receipt enter the existing evidence
+upload after stopped exit-zero and original container custody proof. The exact
+two-file checksum manifest and public gRPC sums are checked before retention.
+Changed bytes deliberately fail comparison; even identical bytes cannot earn
+qualification through this temporary route. The native graph must be reviewed
+and committed through the existing linear runtime history; withdraw this
+capture path before rerunning ordinary full four-cell qualification, tests,
+actual-image acceptance, scans, SBOM and provenance. No checksum waiver,
+workstation Go execution, release or live provider action is authorized.
+
 Fork PR/native qualification, signed immutable release publication, Sales Pulse
 Source adoption of its exact digest, and live activation are separate gates.
 This Source extension does not itself publish a release or deploy a provider.

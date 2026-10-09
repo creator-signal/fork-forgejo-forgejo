@@ -130,7 +130,7 @@ jobs:
             RELEASE_VERSION=${{ inputs.release_version }}
             GOPROXY=https://proxy.golang.org|direct
           tags: creator-signal-forgejo-test:${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
-      - name: Verify generated Swagger and atomic runtime, migration, and task projection tests
+      - name: Capture bounded grpc dependency graph without qualification
         if: ${{ inputs.release_tag == 'v16.0.3-cs.2' }}
         timeout-minutes: 25
         env:
@@ -138,7 +138,13 @@ jobs:
           TEST_CONTAINER: cs-pair-compiler-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}
           VARIANT: ${{ matrix.variant }}
           ARCH: ${{ matrix.arch }}
+          SOURCE_SHA: ${{ inputs.source_ref }}
+          CONTROLLER_SHA: ${{ github.workflow_sha }}
         run: |
+          test "$SOURCE_SHA" = 2d1f5bea847d1c9d2336e1f22e5b90ada5f8ada9
+          test "$(git -C runtime-source rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git -C qualification-control rev-parse HEAD)" = "$CONTROLLER_SHA"
+          git -C runtime-source diff --exit-code
           image_id="$(docker image inspect "$TEST_IMAGE" --format '{{.Id}}')"
           image_entrypoint="$(docker image inspect "$TEST_IMAGE" --format '{{json .Config.Entrypoint}}')"
           echo 'compilerNativeObservation=ImageIdentityRead'
@@ -162,6 +168,23 @@ jobs:
           test "$(id -g)" = 1000
           export HOME=/tmp/creator-signal-compiler-home TZ=UTC GITEA_ROOT="$PWD"
           export GOPATH="$HOME/go" GOMODCACHE="$HOME/go/pkg/mod" GOCACHE="$HOME/.cache/go-build"
+          export GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org GOTOOLCHAIN=local
+          unset GOPRIVATE GONOPROXY GONOSUMDB GOFLAGS
+          umask 077
+          mkdir "$HOME/dependency-capture"
+          go get google.golang.org/grpc@v1.83.2
+          go mod tidy
+          for name in go.mod go.sum; do
+            test -f "$name" && test ! -L "$name"
+            test "$(stat -c %h "$name")" = 1
+            test "$(wc -c < "$name")" -gt 0
+            test "$(wc -c < "$name")" -le 1048576
+            cp "$name" "$HOME/dependency-capture/$name"
+            chmod 400 "$HOME/dependency-capture/$name"
+          done
+          (cd "$HOME/dependency-capture" && sha256sum go.mod go.sum > SHA256SUMS)
+          chmod 400 "$HOME/dependency-capture/SHA256SUMS"
+          exit 0
           make swagger-check
           make swagger-validate
           go test -count=1 -tags "sqlite sqlite_unlock_notify" ./models/secret ./services/secrets ./services/actions
@@ -217,6 +240,45 @@ jobs:
           test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.Running}}')" = false
           test "$(docker inspect "$TEST_CONTAINER" --format '{{.State.ExitCode}}')" = 0
           custody
+          capture_dir="dependency-capture-${VARIANT}-${ARCH}"
+          test ! -e "$capture_dir" && test ! -L "$capture_dir"
+          mkdir -m 700 "$capture_dir"
+          for name in go.mod go.sum SHA256SUMS; do
+            docker cp "$container_id:/tmp/creator-signal-compiler-home/dependency-capture/$name" "$capture_dir/$name"
+            test -f "$capture_dir/$name" && test ! -L "$capture_dir/$name"
+            test "$(stat -c %h "$capture_dir/$name")" = 1
+            test "$(wc -c < "$capture_dir/$name")" -gt 0
+            test "$(wc -c < "$capture_dir/$name")" -le 1048576
+          done
+          custody
+          test "$(wc -l < "$capture_dir/SHA256SUMS")" = 2
+          test "$(wc -c < "$capture_dir/SHA256SUMS")" -le 160
+          test "$(head -n 1 "$capture_dir/SHA256SUMS" | cut -c 65-)" = '  go.mod'
+          test "$(tail -n 1 "$capture_dir/SHA256SUMS" | cut -c 65-)" = '  go.sum'
+          test "$(grep -Ec '^[0-9a-f]{64}  go\.(mod|sum)$' "$capture_dir/SHA256SUMS")" = 2
+          (cd "$capture_dir" && sha256sum --check --strict SHA256SUMS)
+          grep -Fqx 'google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=' "$capture_dir/go.sum"
+          grep -Fqx 'google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=' "$capture_dir/go.sum"
+          mod_sha="$(sha256sum "$capture_dir/go.mod" | cut -d' ' -f1)"
+          sum_sha="$(sha256sum "$capture_dir/go.sum" | cut -d' ' -f1)"
+          mod_size="$(wc -c < "$capture_dir/go.mod")"
+          sum_size="$(wc -c < "$capture_dir/go.sum")"
+          compiler_sha="$(git -C runtime-source rev-parse 'HEAD:${{ matrix.dockerfile }}')"
+          jq -n --arg source "$SOURCE_SHA" --arg controller "$CONTROLLER_SHA" \
+            --arg image "$image_id" --arg container "$container_id" --arg compiler "$compiler_sha" \
+            --arg run "$GITHUB_RUN_ID" --arg variant "$VARIANT" --arg arch "$ARCH" \
+            --arg mod "$mod_sha" --arg sum "$sum_sha" --argjson modSize "$mod_size" --argjson sumSize "$sum_size" \
+            '{schema:"creator-signal.forgejo-dependency-capture/v1",sourceSha:$source,controllerSha:$controller,compilerImageId:$image,compilerDockerfileBlob:$compiler,containerId:$container,runId:$run,variant:$variant,architecture:$arch,module:"google.golang.org/grpc",version:"v1.83.2",files:{"go.mod":{sha256:$mod,size:$modSize},"go.sum":{sha256:$sum,size:$sumSize}},qualified:false}' \
+            > "$capture_dir/receipt.json"
+          test "$(wc -c < "$capture_dir/receipt.json")" -le 4096
+          rm "$capture_dir/SHA256SUMS"
+          test "$(git -C runtime-source rev-parse HEAD)" = "$SOURCE_SHA"
+          git -C runtime-source diff --exit-code
+          echo 'compilerNativeObservation=DependencyCaptureRetainedUnqualified'
+          cmp runtime-source/go.mod "$capture_dir/go.mod"
+          cmp runtime-source/go.sum "$capture_dir/go.sum"
+          # Even identical output cannot qualify through this temporary capture route.
+          exit 1
           echo 'compilerNativeObservation=NativeTestsCompleted'
       - name: Run isolated native startup and readiness acceptance
         env:
@@ -307,6 +369,9 @@ jobs:
             secret-pair-${{ matrix.variant }}-${{ matrix.arch }}.json
             secret-pair-tests-${{ matrix.variant }}-${{ matrix.arch }}.log
             scan-${{ matrix.variant }}-${{ matrix.arch }}.json
+            dependency-capture-${{ matrix.variant }}-${{ matrix.arch }}/go.mod
+            dependency-capture-${{ matrix.variant }}-${{ matrix.arch }}/go.sum
+            dependency-capture-${{ matrix.variant }}-${{ matrix.arch }}/receipt.json
             sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
             provenance-${{ matrix.variant }}-${{ matrix.arch }}.json
             forgejo-${{ matrix.variant }}-${{ matrix.arch }}-${{ github.run_id }}.log
