@@ -180,7 +180,21 @@ is a helper of those cells and the existing published-platform pull-back and
 independent verification jobs. It takes only the exact observed image ID,
 Source SHA, native run ID, variant, and architecture. It creates synthetic
 SQLite repositories in labeled isolated containers on owned internal networks,
-publishes only random loopback ports, and inherits no release token. It checks atomic creation,
+publishes no host ports, and inherits no release token. Actual Native run
+37860923026 observed missing published bindings on these internal networks.
+The probe therefore uses only the original container's observed IPv4 endpoint
+on that network, at fixed port 3000. The exact network ID, sole original
+container, matching endpoint ID and address inside its canonical RFC1918 subnet
+are independently joined. Container, mounts, network and endpoint custody are
+reproved before and after each HTTP request and privileged CLI operation;
+only a controlled original-container restart may bind a successor endpoint.
+No caller URL, address, remote context or additional network is accepted.
+Every Docker command uses the fixed local `unix:///var/run/docker.sock` route
+observed in the existing hosted Native workflow. The same process holds an
+`O_PATH` descriptor for `/run/docker.sock`, proves its named and held identities,
+Root ownership and mode 0600 or trusted-group 0660, and rechecks protected
+ancestors and the Root-owned `/var/run` alias before and after commands.
+The socket is observed without changing it. It checks atomic creation,
 concurrent no-write replay, conflicts, closed JSON, legacy destination denial,
 unrelated secrets, restart, repository tombstones, and Actions-disabled denial.
 The runtime tests separately cover fault atomicity and actual task projection.

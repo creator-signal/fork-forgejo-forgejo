@@ -9,12 +9,14 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import http.client
+import ipaddress
 import json
 import os
 import re
 import secrets
 import selectors
 import signal
+import stat
 import subprocess
 import time
 
@@ -22,6 +24,57 @@ import time
 PURPOSE = "creator-signal-fork-secret-pair-native"
 NAMES = ["ZOT_VM_ARTIFACT_PASSWORD", "ZOT_VM_ARTIFACT_USERNAME"]
 DEADLINE = 0.0
+LOCAL_DOCKER = None
+
+
+class LocalDockerRoute:
+    """Held metadata custody of the existing hosted Native Unix daemon route."""
+
+    def __init__(self):
+        self.fd = None
+        self.pid = os.getpid()
+        self.ancestors = self._ancestors()
+        before = os.lstat("/run/docker.sock")
+        if (not stat.S_ISSOCK(before.st_mode) or before.st_uid != 0
+                or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) not in (0o600, 0o660)):
+            raise RuntimeError("native local Docker socket custody denied")
+        self.identity = self._identity(before)
+        self.fd = os.open("/run/docker.sock", os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            self.check()
+        except BaseException:
+            self.close()
+            raise
+
+    @staticmethod
+    def _identity(value):
+        return (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid,
+                value.st_nlink, value.st_ctime_ns)
+
+    @staticmethod
+    def _ancestors():
+        identities = []
+        for path in ("/", "/var", "/run"):
+            value = os.lstat(path)
+            if not stat.S_ISDIR(value.st_mode) or value.st_uid != 0 or value.st_mode & 0o022:
+                raise RuntimeError("native local Docker route denied")
+            identities.append(LocalDockerRoute._identity(value)[:5])
+        alias = os.lstat("/var/run")
+        if not stat.S_ISLNK(alias.st_mode) or alias.st_uid != 0 or os.readlink("/var/run") != "/run":
+            raise RuntimeError("native local Docker route denied")
+        identities.append(LocalDockerRoute._identity(alias)[:5])
+        return tuple(identities)
+
+    def check(self):
+        if (os.getpid() != self.pid or self._ancestors() != self.ancestors or self.fd is None
+                or self._identity(os.fstat(self.fd)) != self.identity
+                or self._identity(os.lstat("/run/docker.sock")) != self.identity):
+            raise RuntimeError("native local Docker socket custody denied")
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
 
 
 def remaining(cap: float = 30) -> float:
@@ -33,14 +86,20 @@ def remaining(cap: float = 30) -> float:
 
 def command(args: list[str]) -> bytes:
     # Do not inherit publication tokens into the CLI or image entrypoints.
-    env = {key: value for key, value in os.environ.items() if key in
-           {"PATH", "HOME", "DOCKER_HOST", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"}}
+    if (LOCAL_DOCKER is None or not args or args[0] != "docker"
+            or any(arg in ("-H", "--host", "--context") or arg.startswith(("--host=", "--context=", "-H"))
+                   for arg in args[1:])):
+        raise RuntimeError("native fixed Docker command denied")
+    LOCAL_DOCKER.check()
+    env = {key: value for key, value in os.environ.items() if key in {"PATH", "HOME"}}
     deadline = time.monotonic() + remaining()
-    child = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             env=env, start_new_session=True)
+    child = None
     output = bytearray()
     total = 0
     try:
+        child = subprocess.Popen(["docker", "--host", "unix:///var/run/docker.sock", *args[1:]],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 env=env, start_new_session=True)
         with selectors.DefaultSelector() as watcher:
             watcher.register(child.stdout, selectors.EVENT_READ, True)
             watcher.register(child.stderr, selectors.EVENT_READ, False)
@@ -65,11 +124,15 @@ def command(args: list[str]) -> bytes:
             raise RuntimeError("native CLI denied")
         return bytes(output)
     finally:
-        if child.poll() is None:
-            os.killpg(child.pid, signal.SIGKILL)
-            child.wait(timeout=5)
-        child.stdout.close()
-        child.stderr.close()
+        try:
+            if child is not None:
+                if child.poll() is None:
+                    os.killpg(child.pid, signal.SIGKILL)
+                    child.wait(timeout=5)
+                child.stdout.close()
+                child.stderr.close()
+        finally:
+            LOCAL_DOCKER.check()
 
 
 def inspect(container: str) -> dict:
@@ -112,25 +175,11 @@ def container_resources(value: dict, network: str, network_id: str, destinations
     if set(networks) != {network} or networks[network].get("NetworkID") != network_id:
         raise RuntimeError("native container network attachment denied")
     ports = value.get("NetworkSettings", {}).get("Ports", {})
-    bindings = ports.get("3000/tcp")
-    if bindings is None:
-        raise RuntimeError("native published port bindings absent")
-    if not isinstance(bindings, list):
-        raise RuntimeError("native published port binding type denied")
-    if len(bindings) != 1:
-        raise RuntimeError("native published port binding cardinality denied")
-    if bindings[0].get("HostIp") != "127.0.0.1":
-        raise RuntimeError("native published port loopback denied")
-    if not re.fullmatch(r"[1-9][0-9]{0,4}", bindings[0].get("HostPort", "")):
-        raise RuntimeError("native published port syntax denied")
-    if int(bindings[0]["HostPort"]) > 65535:
-        raise RuntimeError("native published port range denied")
-    if any(binding for port, binding in ports.items() if port != "3000/tcp"):
-        raise RuntimeError("native extra published port denied")
+    if not isinstance(ports, dict) or any(binding is not None for binding in ports.values()):
+        raise RuntimeError("native published port inventory denied")
     port_config = host.get("PortBindings", {})
-    if (set(port_config) != {"3000/tcp"} or len(port_config["3000/tcp"]) != 1
-            or port_config["3000/tcp"][0].get("HostIp") != "127.0.0.1"):
-        raise RuntimeError("native declared loopback binding denied")
+    if port_config not in (None, {}):
+        raise RuntimeError("native declared port publication denied")
     mounts = value.get("Mounts")
     if not isinstance(mounts, list) or sorted(row.get("Destination", "") for row in mounts) != sorted(destinations):
         raise RuntimeError("native image volume inventory denied")
@@ -144,9 +193,65 @@ def container_resources(value: dict, network: str, network_id: str, destinations
                                 "command": value.get("Config", {}).get("Cmd")}, sort_keys=True))
 
 
+class ProbeCustody:
+    def __init__(self, container, image, identity, network, network_id, destinations, resources):
+        self.container, self.image, self.identity = container, image, identity
+        self.network, self.network_id = network, network_id
+        self.destinations, self.resources = destinations, resources
+        self.endpoint = self._observe()
+
+    def _observe(self):
+        value = own_container(self.container, self.image, self.identity)
+        if container_resources(value, self.network, self.network_id, self.destinations) != self.resources:
+            raise RuntimeError("native probe resource identity denied")
+        network = own_network(self.network, self.network_id)
+        configs = network.get("IPAM", {}).get("Config")
+        peers = network.get("Containers", {})
+        endpoint = value.get("NetworkSettings", {}).get("Networks", {}).get(self.network, {})
+        if (network.get("EnableIPv6") is not False or network.get("IPAM", {}).get("Driver") != "default"
+                or not isinstance(configs, list) or len(configs) != 1
+                or set(peers) != {self.identity}):
+            raise RuntimeError("native probe endpoint denied")
+        subnet = ipaddress.IPv4Network(configs[0].get("Subnet", ""), strict=True)
+        private = [ipaddress.IPv4Network(prefix) for prefix in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
+        address = ipaddress.IPv4Address(endpoint.get("IPAddress", ""))
+        peer = peers[self.identity]
+        endpoint_id = endpoint.get("EndpointID", "")
+        if (not any(subnet.subnet_of(block) for block in private)
+                or address not in subnet or address in (subnet.network_address, subnet.broadcast_address)
+                or str(address) == configs[0].get("Gateway")
+                or endpoint.get("IPPrefixLen") != subnet.prefixlen
+                or not re.fullmatch(r"[0-9a-f]{64}", endpoint_id)
+                or peer.get("Name") != self.container or peer.get("EndpointID") != endpoint_id
+                or peer.get("IPv4Address") != f"{address}/{subnet.prefixlen}"
+                or endpoint.get("GlobalIPv6Address", "") or peer.get("IPv6Address", "")):
+            raise RuntimeError("native probe endpoint denied")
+        return str(address), endpoint_id, str(subnet), configs[0].get("Gateway")
+
+    def prove(self):
+        LOCAL_DOCKER.check()
+        if self._observe() != self.endpoint:
+            raise RuntimeError("native probe endpoint identity denied")
+        LOCAL_DOCKER.check()
+        return self.endpoint[0]
+
+    def restart(self):
+        # Only this original-container restart may earn a successor endpoint.
+        self.prove()
+        command(["docker", "restart", "--time", "10", self.identity])
+        self.endpoint = self._observe()
+
+    def exec(self, args):
+        self.prove()
+        try:
+            return command(["docker", "exec", "--user", "git", self.identity, *args])
+        finally:
+            self.prove()
+
+
 class Provider:
-    def __init__(self, port: int):
-        self.port = port
+    def __init__(self, custody: ProbeCustody):
+        self.custody = custody
         self.token: str | None = None
         self.private_values: set[bytes] = set()
 
@@ -157,7 +262,8 @@ class Provider:
         if self.token:
             headers["Authorization"] = "token " + self.token
         raw = body if isinstance(body, bytes) else (json.dumps(body).encode() if body is not None else None)
-        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=remaining(15))
+        address = self.custody.prove()
+        connection = http.client.HTTPConnection(address, 3000, timeout=remaining(15))
         deadline = time.monotonic() + remaining(15)
         try:
             connection.request(method, path, raw, headers)
@@ -187,6 +293,7 @@ class Provider:
             return json.loads(received) if received else None
         finally:
             connection.close()
+            self.custody.prove()
 
 
 def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, actions_enabled: bool = True) -> dict:
@@ -217,7 +324,6 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
                            "--label", "creator-signal.purpose=" + PURPOSE,
                            "--label", "creator-signal.operation=" + container,
                            "--network", network,
-                           "--publish", "127.0.0.1::3000",
                            "--env", "FORGEJO__database__DB_TYPE=sqlite3",
                            "--env", "FORGEJO__server__DISABLE_SSH=true",
                            "--env", "FORGEJO__security__INSTALL_LOCK=true",
@@ -230,10 +336,7 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
         if (mounts["entrypoint"] != image_info.get("Config", {}).get("Entrypoint")
                 or mounts["command"] != image_info.get("Config", {}).get("Cmd")):
             raise RuntimeError("native image entrypoint substitution denied")
-        bindings = value.get("NetworkSettings", {}).get("Ports", {}).get("3000/tcp")
-        if not isinstance(bindings, list) or len(bindings) != 1 or bindings[0].get("HostIp") != "127.0.0.1":
-            raise RuntimeError("native loopback binding denied")
-        provider = Provider(int(bindings[0]["HostPort"]))
+        provider = Provider(ProbeCustody(container, image, identity, network, network_id, destinations, mounts))
         for _ in range(90):
             try:
                 provider.request("GET", "/api/healthz")
@@ -242,10 +345,10 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
                 time.sleep(min(2, remaining()))
         else:
             raise RuntimeError("native readiness denied")
-        command(["docker", "exec", "--user", "git", container, "forgejo", "admin", "user", "create",
+        provider.custody.exec(["forgejo", "admin", "user", "create",
                  "--username", "cs-pair-native", "--email", "native@example.invalid", "--random-password",
                  "--must-change-password=false", "--admin"])
-        token = command(["docker", "exec", "--user", "git", container, "forgejo", "admin", "user",
+        token = provider.custody.exec(["forgejo", "admin", "user",
                          "generate-access-token", "--username", "cs-pair-native", "--token-name", "pair-native",
                          "--scopes", "write:repository,write:user", "--raw"]).decode().strip()
         if not re.fullmatch(r"[0-9a-f]{40,64}", token):
@@ -293,8 +396,7 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
         before = provider.request("GET", prefix + "/actions/secrets")
         if not isinstance(before, list) or sorted(row.get("name") for row in before) != NAMES:
             raise RuntimeError("native actual secret inventory denied")
-        own_container(container, image, identity)
-        command(["docker", "restart", "--time", "10", container])
+        provider.custody.restart()
         if container_resources(own_container(container, image, identity), network, network_id, destinations) != mounts:
             raise RuntimeError("native restart resource identity denied")
         for _ in range(45):
@@ -336,12 +438,12 @@ def acceptance(image: str, source: str, run_id: str, variant: str, arch: str, ac
             current_mounts = container_resources(own_container(container, image, identity), network, network_id, destinations)
             if mounts is None or current_mounts != mounts:
                 raise RuntimeError("native retained resource cleanup denied")
-            command(["docker", "rm", "--force", "--volumes", container])
+            command(["docker", "rm", "--force", "--volumes", identity])
         if network_id:
             current_network = own_network(network, network_id)
             if current_network.get("Containers"):
                 raise RuntimeError("native network cleanup has active consumers")
-            command(["docker", "network", "rm", network])
+            command(["docker", "network", "rm", network_id])
 
 
 DENIAL_CODES = {
@@ -355,14 +457,14 @@ DENIAL_CODES = {
     "native network custody denied": "NetworkCustody",
     "native container isolation denied": "ContainerIsolation",
     "native container network attachment denied": "NetworkAttachment",
-    "native published port bindings absent": "PublishedPortBindingsAbsent",
-    "native published port binding type denied": "PublishedPortBindingType",
-    "native published port binding cardinality denied": "PublishedPortBindingCardinality",
-    "native published port loopback denied": "PublishedPortLoopback",
-    "native published port syntax denied": "PublishedPortSyntax",
-    "native published port range denied": "PublishedPortRange",
-    "native extra published port denied": "ExtraPublishedPort",
-    "native declared loopback binding denied": "DeclaredLoopbackBinding",
+    "native published port inventory denied": "PublishedPortInventory",
+    "native declared port publication denied": "DeclaredPortPublication",
+    "native local Docker route denied": "LocalDockerRoute",
+    "native local Docker socket custody denied": "LocalDockerSocketCustody",
+    "native fixed Docker command denied": "FixedDockerCommand",
+    "native probe resource identity denied": "ProbeResourceIdentity",
+    "native probe endpoint denied": "ProbeEndpoint",
+    "native probe endpoint identity denied": "ProbeEndpointIdentity",
     "native image volume inventory denied": "ImageVolumeInventory",
     "native anonymous volume custody denied": "AnonymousVolumeCustody",
     "native API path denied": "ApiPath",
@@ -375,7 +477,6 @@ DENIAL_CODES = {
     "native network creation response denied": "NetworkCreationResponse",
     "native creation response denied": "CreationResponse",
     "native image entrypoint substitution denied": "ImageEntrypointSubstitution",
-    "native loopback binding denied": "LoopbackBinding",
     "native readiness denied": "Readiness",
     "native synthetic token denied": "SyntheticToken",
     "native closed operation reply denied": "ClosedOperationReply",
@@ -400,7 +501,7 @@ def denial_code(error: Exception) -> str:
 
 
 def main() -> int:
-    global DEADLINE
+    global DEADLINE, LOCAL_DOCKER
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", required=True)
     parser.add_argument("--source", required=True)
@@ -411,10 +512,13 @@ def main() -> int:
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", args.image) or not re.fullmatch(r"[0-9a-f]{40}", args.source) or not re.fullmatch(r"[1-9][0-9]{0,19}", args.run_id):
         parser.error("invalid immutable native binding")
     DEADLINE = time.monotonic() + 600
+    LOCAL_DOCKER = None
     try:
+        LOCAL_DOCKER = LocalDockerRoute()
         result = acceptance(args.image, args.source, args.run_id, args.variant, args.arch)
         disabled = acceptance(args.image, args.source, args.run_id, args.variant, args.arch, actions_enabled=False)
         result["checks"].extend(disabled["checks"])
+        LOCAL_DOCKER.check()
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 0
     except Exception as error:
@@ -422,6 +526,10 @@ def main() -> int:
         print(json.dumps({"event": "forgejo-secret-pair-native-denied", "code": denial_code(error)},
                          sort_keys=True, separators=(",", ":")))
         return 1
+    finally:
+        if LOCAL_DOCKER is not None:
+            LOCAL_DOCKER.close()
+            LOCAL_DOCKER = None
 
 
 if __name__ == "__main__":

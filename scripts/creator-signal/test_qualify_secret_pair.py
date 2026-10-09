@@ -3,8 +3,10 @@ import importlib.util
 import io
 import json
 import os
+import stat
 from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
@@ -19,6 +21,10 @@ spec.loader.exec_module(native)
 class NativeQualificationContracts(unittest.TestCase):
     def setUp(self):
         native.DEADLINE = 100
+        native.LOCAL_DOCKER = Mock()
+
+    def provider(self):
+        return native.Provider(Mock(prove=Mock(return_value="172.18.0.2")))
 
     def test_denial_codes_match_only_exact_source_owned_messages(self):
         self.assertEqual(native.denial_code(RuntimeError("native API assertion denied")), "ApiAssertion")
@@ -54,6 +60,7 @@ class NativeQualificationContracts(unittest.TestCase):
                             (RuntimeError("native API assertion denied: sensitive-private"), "UnknownDenied")]:
             output = io.StringIO()
             with patch("sys.argv", argv), patch.object(native.time, "monotonic", return_value=0), \
+                 patch.object(native, "LocalDockerRoute"), \
                  patch.object(native, "acceptance", side_effect=error) as accept, redirect_stdout(output):
                 self.assertEqual(native.main(), 1)
             accept.assert_called_once()
@@ -99,8 +106,8 @@ class NativeQualificationContracts(unittest.TestCase):
         connection.getresponse.return_value = response
         return connection
 
-    def test_provider_fixed_loopback_status_and_private_value_denial(self):
-        provider = native.Provider(1234)
+    def test_provider_fixed_owned_endpoint_status_and_private_value_denial(self):
+        provider = self.provider()
         provider.token = "token-private"
         provider.private_values = {b"synthetic-private"}
         connection = self.provider_response([b'{"value":"synthetic-private"}', b""])
@@ -108,7 +115,7 @@ class NativeQualificationContracts(unittest.TestCase):
              patch.object(native.http.client, "HTTPConnection", return_value=connection) as start:
             with self.assertRaisesRegex(RuntimeError, "disclosure denied"):
                 provider.request("POST", "/api/v1/closed", {})
-            self.assertEqual(start.call_args.args, ("127.0.0.1", 1234))
+            self.assertEqual(start.call_args.args, ("172.18.0.2", 3000))
             connection.close.assert_called_once()
 
     def test_provider_rejects_redirect_and_oversized_response(self):
@@ -117,14 +124,14 @@ class NativeQualificationContracts(unittest.TestCase):
             with patch.object(native.time, "monotonic", return_value=0), \
                  patch.object(native.http.client, "HTTPConnection", return_value=connection):
                 with self.assertRaises(RuntimeError):
-                    native.Provider(1234).request("GET", "/api/v1/closed")
+                    self.provider().request("GET", "/api/v1/closed")
                 connection.close.assert_called_once()
 
     def test_provider_rejects_expired_budget_before_network(self):
         with patch.object(native.time, "monotonic", return_value=101), \
              patch.object(native.http.client, "HTTPConnection") as start:
             with self.assertRaises(RuntimeError):
-                native.Provider(1234).request("GET", "/api/healthz")
+                self.provider().request("GET", "/api/healthz")
             start.assert_not_called()
 
     def test_unknown_created_container_custody_prevents_cleanup(self):
@@ -151,9 +158,9 @@ class NativeQualificationContracts(unittest.TestCase):
 
     def test_container_resource_guard_denies_foreign_mounts_and_host_access(self):
         value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
-                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                                "PortBindings": {}},
                  "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
-                                     "Ports": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
+                                     "Ports": {"3000/tcp": None}},
                  "Mounts": [{"Type": "volume", "Driver": "local", "Name": "a" * 64,
                              "Destination": "/data", "Source": "/owned/anonymous", "RW": True}]}
         expected = native.container_resources(value, "owned-net", "b" * 64, ["/data"])
@@ -169,50 +176,127 @@ class NativeQualificationContracts(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             native.container_resources(value, "owned-net", "b" * 64, ["/data"])
 
-    def test_container_resource_guard_rejects_nonloopback_or_extra_ports(self):
+    def probe_fixture(self):
         value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
-                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
-                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
-                                     "Ports": {"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "1234"}]}},
-                 "Mounts": []}
-        with self.assertRaises(RuntimeError):
-            native.container_resources(value, "owned-net", "b" * 64, [])
-        value["NetworkSettings"]["Ports"]["3000/tcp"][0]["HostIp"] = "127.0.0.1"
-        value["NetworkSettings"]["Ports"]["9999/tcp"] = [{"HostIp": "127.0.0.1", "HostPort": "9999"}]
+                                "PortBindings": {}},
+                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64,
+                        "EndpointID": "c" * 64, "IPAddress": "172.18.0.2", "IPPrefixLen": 16}},
+                                     "Ports": {"3000/tcp": None, "22/tcp": None}}, "Mounts": []}
+        network = {"IPAM": {"Driver": "default", "Config": [{"Subnet": "172.18.0.0/16", "Gateway": "172.18.0.1"}]},
+                   "EnableIPv6": False, "Containers": {"a" * 64: {"Name": "owned", "EndpointID": "c" * 64,
+                                                              "IPv4Address": "172.18.0.2/16"}}}
+        resources = native.container_resources(value, "owned-net", "b" * 64, [])
+        return value, network, resources
+
+    def test_nonpublished_internal_probe_denies_any_host_publication(self):
+        value, _, resources = self.probe_fixture()
+        self.assertEqual(resources["ports"], {"3000/tcp": None, "22/tcp": None})
+        for key, bad in [("3000/tcp", [{"HostIp": "127.0.0.1", "HostPort": "1234"}]),
+                         ("22/tcp", [{"HostIp": "0.0.0.0", "HostPort": "22"}]), ("3000/tcp", [])]:
+            altered = json.loads(json.dumps(value))
+            altered["NetworkSettings"]["Ports"][key] = bad
+            with self.assertRaises(RuntimeError):
+                native.container_resources(altered, "owned-net", "b" * 64, [])
+        value["HostConfig"]["PortBindings"] = {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": ""}]}
         with self.assertRaises(RuntimeError):
             native.container_resources(value, "owned-net", "b" * 64, [])
 
-    def test_published_port_denials_are_closed_and_preserve_all_predicates(self):
-        value = {"HostConfig": {"NetworkMode": "owned-net", "Privileged": False, "IpcMode": "private",
-                                "PortBindings": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}]}},
-                 "NetworkSettings": {"Networks": {"owned-net": {"NetworkID": "b" * 64}},
-                                     "Ports": {"3000/tcp": [{"HostIp": "127.0.0.1", "HostPort": "1234"}],
-                                               "22/tcp": None}}, "Mounts": []}
-        self.assertEqual(native.container_resources(value, "owned-net", "b" * 64, [])["ports"],
-                         value["NetworkSettings"]["Ports"])
-        cases = [(None, "PublishedPortBindingsAbsent"), ({}, "PublishedPortBindingType"),
-                 ([], "PublishedPortBindingCardinality"),
-                 ([{"HostIp": "127.0.0.1", "HostPort": "1234"}] * 2, "PublishedPortBindingCardinality"),
-                 ([{"HostIp": "0.0.0.0", "HostPort": "1234"}], "PublishedPortLoopback"),
-                 ([{"HostIp": "127.0.0.1", "HostPort": "sensitive-private"}], "PublishedPortSyntax"),
-                 ([{"HostIp": "127.0.0.1", "HostPort": "65536"}], "PublishedPortRange")]
-        for bindings, code in cases:
-            altered = json.loads(json.dumps(value))
-            altered["NetworkSettings"]["Ports"]["3000/tcp"] = bindings
-            with self.assertRaises(RuntimeError) as denied:
-                native.container_resources(altered, "owned-net", "b" * 64, [])
-            self.assertEqual(native.denial_code(denied.exception), code)
-        for port in ["0", "01234", "-1", "655350", "1234\nsensitive-private"]:
-            altered = json.loads(json.dumps(value))
-            altered["NetworkSettings"]["Ports"]["3000/tcp"][0]["HostPort"] = port
-            with self.assertRaises(RuntimeError) as denied:
-                native.container_resources(altered, "owned-net", "b" * 64, [])
-            self.assertEqual(native.denial_code(denied.exception), "PublishedPortSyntax")
-        altered = json.loads(json.dumps(value))
-        altered["NetworkSettings"]["Ports"]["22/tcp"] = [{"HostIp": "127.0.0.1", "HostPort": "1234"}]
-        with self.assertRaises(RuntimeError) as denied:
-            native.container_resources(altered, "owned-net", "b" * 64, [])
-        self.assertEqual(native.denial_code(denied.exception), "ExtraPublishedPort")
+    def test_probe_requires_original_endpoint_and_only_original_private_network_peer(self):
+        value, network, resources = self.probe_fixture()
+        with patch.object(native, "own_container", return_value=value), patch.object(native, "own_network", return_value=network):
+            custody = native.ProbeCustody("owned", "sha256:" + "d" * 64, "a" * 64, "owned-net", "b" * 64, [], resources)
+            self.assertEqual(custody.prove(), "172.18.0.2")
+            mutations = []
+            for address in ("8.8.8.8", "172.19.0.2", "172.18.0.0", "172.18.255.255", "172.18.0.1"):
+                changed_value, changed_network = json.loads(json.dumps(value)), json.loads(json.dumps(network))
+                changed_value["NetworkSettings"]["Networks"]["owned-net"]["IPAddress"] = address
+                changed_network["Containers"]["a" * 64]["IPv4Address"] = address + "/16"
+                mutations.append((changed_value, changed_network))
+            changed_network = json.loads(json.dumps(network))
+            changed_network["Containers"]["e" * 64] = changed_network["Containers"]["a" * 64]
+            mutations.append((value, changed_network))
+            changed_value = json.loads(json.dumps(value))
+            changed_value["NetworkSettings"]["Networks"]["foreign"] = {}
+            mutations.append((changed_value, network))
+            changed_value, changed_network = json.loads(json.dumps(value)), json.loads(json.dumps(network))
+            changed_value["NetworkSettings"]["Networks"]["owned-net"]["EndpointID"] = "e" * 64
+            changed_network["Containers"]["a" * 64]["EndpointID"] = "e" * 64
+            mutations.append((changed_value, changed_network))
+            for changed_value, changed_network in mutations:
+                with patch.object(native, "own_container", return_value=changed_value), \
+                     patch.object(native, "own_network", return_value=changed_network), self.assertRaises((RuntimeError, ValueError)):
+                    custody.prove()
+
+    def test_http_proves_original_custody_before_and_after_and_denies_drift(self):
+        provider = self.provider()
+        connection = self.provider_response([b"{}", b""])
+        with patch.object(native.time, "monotonic", return_value=0), \
+             patch.object(native.http.client, "HTTPConnection", return_value=connection):
+            self.assertEqual(provider.request("GET", "/api/healthz"), {})
+            self.assertEqual(provider.custody.prove.call_count, 2)
+        provider.custody.prove.side_effect = RuntimeError("native probe endpoint identity denied")
+        with patch.object(native.http.client, "HTTPConnection") as start, self.assertRaises(RuntimeError):
+            provider.request("GET", "/api/healthz")
+        start.assert_not_called()
+        provider.custody.prove.side_effect = ["172.18.0.2", RuntimeError("native probe endpoint identity denied")]
+        with patch.object(native.time, "monotonic", return_value=0), \
+             patch.object(native.http.client, "HTTPConnection", return_value=self.provider_response([b"{}", b""])), \
+             self.assertRaises(RuntimeError):
+            provider.request("GET", "/api/healthz")
+
+    def test_only_controlled_original_restart_can_adopt_successor_endpoint(self):
+        value, network, resources = self.probe_fixture()
+        with patch.object(native, "own_container", return_value=value), patch.object(native, "own_network", return_value=network), \
+             patch.object(native, "command") as run:
+            custody = native.ProbeCustody("owned", "sha256:" + "d" * 64, "a" * 64, "owned-net", "b" * 64, [], resources)
+            with patch.object(custody, "_observe", side_effect=[custody.endpoint, ("172.18.0.2", "e" * 64, "172.18.0.0/16", "172.18.0.1")]):
+                custody.restart()
+            run.assert_called_once_with(["docker", "restart", "--time", "10", "a" * 64])
+            self.assertEqual(custody.endpoint[1], "e" * 64)
+
+    def test_local_socket_route_holds_named_identity_and_denies_mutable_ancestors(self):
+        def metadata(mode, inode=1, uid=0):
+            return SimpleNamespace(st_mode=mode, st_dev=1, st_ino=inode, st_uid=uid, st_gid=123,
+                                   st_nlink=1, st_ctime_ns=1)
+        paths = {path: metadata(stat.S_IFDIR | 0o755) for path in ("/", "/var", "/run")}
+        paths["/var/run"] = metadata(stat.S_IFLNK | 0o777)
+        paths["/run/docker.sock"] = metadata(stat.S_IFSOCK | 0o660, 2)
+        with patch.object(native.os, "lstat", side_effect=lambda path: paths[path]), \
+             patch.object(native.os, "readlink", return_value="/run"), patch.object(native.os, "open", return_value=99) as opened, \
+             patch.object(native.os, "fstat", return_value=paths["/run/docker.sock"]), patch.object(native.os, "close") as close:
+            route = native.LocalDockerRoute()
+            opened.assert_called_once_with("/run/docker.sock", os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
+            route.check()
+            paths["/run/docker.sock"] = metadata(stat.S_IFSOCK | 0o660, 3)
+            with self.assertRaises(RuntimeError):
+                route.check()
+            route.close()
+            close.assert_called_once_with(99)
+            paths["/run"] = metadata(stat.S_IFDIR | 0o777)
+            with self.assertRaises(RuntimeError):
+                native.LocalDockerRoute()
+        for mode in (stat.S_IFSOCK | 0o666, stat.S_IFREG | 0o660, stat.S_IFLNK | 0o777):
+            paths["/run"] = metadata(stat.S_IFDIR | 0o755)
+            paths["/run/docker.sock"] = metadata(mode)
+            with patch.object(native.os, "lstat", side_effect=lambda path: paths[path]), \
+                 patch.object(native.os, "readlink", return_value="/run"), patch.object(native.os, "open") as opened:
+                with self.assertRaises(RuntimeError):
+                    native.LocalDockerRoute()
+                opened.assert_not_called()
+
+    def test_command_uses_fixed_local_route_without_context_or_remote_environment(self):
+        with patch.dict(os.environ, {"PATH": "/bin", "HOME": "/home/native", "DOCKER_HOST": "tcp://foreign:2375",
+                                     "DOCKER_TLS_VERIFY": "1", "DOCKER_CERT_PATH": "/private"}, clear=True), \
+             patch.object(native.time, "monotonic", return_value=0), \
+             patch.object(native.subprocess, "Popen", side_effect=OSError("closed")) as start:
+            with self.assertRaises(OSError):
+                native.command(["docker", "inspect", "owned"])
+            self.assertEqual(start.call_args.args[0], ["docker", "--host", "unix:///var/run/docker.sock", "inspect", "owned"])
+            self.assertEqual(start.call_args.kwargs["env"], {"PATH": "/bin", "HOME": "/home/native"})
+        for args in (["other", "inspect"], ["docker", "--host", "tcp://foreign"], ["docker", "--context=foreign", "inspect"]):
+            with patch.object(native.subprocess, "Popen") as start, self.assertRaises(RuntimeError):
+                native.command(args)
+            start.assert_not_called()
 
     def test_network_guard_requires_original_private_identity(self):
         network = {"Name": "owned-net", "Id": "b" * 64, "Driver": "bridge", "Internal": True,
