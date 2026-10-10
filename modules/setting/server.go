@@ -5,10 +5,8 @@
 package setting
 
 import (
-	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -154,12 +152,7 @@ func loadServerFrom(rootCfg ConfigProvider) {
 	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
 
-	defaultListenerPath := "/run/forgejo/internal.sock"
-	if runtimePath := os.Getenv("XDG_RUNTIME_DIR"); len(runtimePath) != 0 {
-		defaultListenerPath = fmt.Sprintf("%s/forgejo/internal.sock", runtimePath)
-	}
-
-	InternalListenerPath = sec.Key("INTERNAL_LISTENER_PATH").MustString(defaultListenerPath)
+	InternalListenerPath = sec.Key("INTERNAL_LISTENER_PATH").MustString("run/forgejo.sock")
 	if !filepath.IsAbs(InternalListenerPath) {
 		InternalListenerPath = filepath.Join(AppWorkPath, InternalListenerPath)
 	}
